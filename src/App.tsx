@@ -1675,7 +1675,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
         justifyContent: "flex-end",
       }}
     >
-      <WalletConnectControl disconnectedLabel="Launch App (devnet)" connectingLabel="Launching..." />
+      <WalletConnectControl disconnectedLabel={isMobile ? "Launch" : "Launch App (devnet)"} connectingLabel="Launching..." />
     </div>
     <div
       aria-hidden="true"
@@ -1790,13 +1790,13 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
             >
               Devnet live now
             </div>
-            <div className="landing-sub" style={{ maxWidth: "min(100%, 820px)", margin: "0 auto", fontSize: isMobile ? 13 : 15, letterSpacing: isMobile ? 1 : 2.6, lineHeight: 1.8 }}>
+            <div className="landing-sub" style={{ maxWidth: isMobile ? "min(100%, 300px)" : 820, margin: "0 auto", fontSize: isMobile ? 12 : 15, letterSpacing: isMobile ? 0.4 : 2.6, lineHeight: 1.8 }}>
               An on-chain space strategy project on Solana where players build planets,
               expand production, research technologies, and launch fleets across a persistent galaxy.
             </div>
             <div
               style={{
-                maxWidth: 760,
+                maxWidth: isMobile ? 310 : 760,
                 margin: "0 auto",
                 fontSize: isMobile ? 14 : 17,
                 lineHeight: 1.9,
