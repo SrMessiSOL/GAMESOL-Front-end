@@ -31,7 +31,7 @@ import {
   describeError,
   CreateOfferParams,
 } from "./market-client";
-import type { PlayerState, Resources } from "./game-state";
+import { fmtCountdown, type PlayerState, type Resources } from "./game-state";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -103,9 +103,10 @@ const OfferCard: React.FC<{
   offer: MarketOffer;
   antimatterBalance: bigint;
   txBusy: boolean;
+  marketUnlocked: boolean;
   onBuy: (offer: MarketOffer) => void;
   onCancel: (offer: MarketOffer) => void;
-}> = ({ offer, antimatterBalance, txBusy, onBuy, onCancel }) => {
+}> = ({ offer, antimatterBalance, txBusy, marketUnlocked, onBuy, onCancel }) => {
   const canBuy = antimatterBalance >= offer.priceAntimatter;
   const shortSeller = `${offer.seller.slice(0, 4)}...${offer.seller.slice(-4)}`;
 
@@ -161,8 +162,8 @@ const OfferCard: React.FC<{
         ) : (
           <button
             onClick={() => onBuy(offer)}
-            disabled={txBusy || !canBuy}
-            title={!canBuy ? `Need ${formatAm(offer.priceAntimatter)} AM` : undefined}
+            disabled={txBusy || !canBuy || !marketUnlocked}
+            title={!marketUnlocked ? "Market is still locked for this planet." : !canBuy ? `Need ${formatAm(offer.priceAntimatter)} AM` : undefined}
             style={{
               fontFamily: "'Share Tech Mono', monospace",
               fontSize: 10, letterSpacing: 1,
@@ -170,7 +171,7 @@ const OfferCard: React.FC<{
               border: canBuy ? "1px solid var(--cyan)" : "1px solid var(--border)",
               background: canBuy ? "rgba(0,245,212,0.08)" : "transparent",
               color: canBuy ? "var(--cyan)" : "var(--dim)",
-              cursor: canBuy && !txBusy ? "pointer" : "not-allowed",
+              cursor: canBuy && marketUnlocked && !txBusy ? "pointer" : "not-allowed",
               transition: "all 0.15s",
             }}
           >
@@ -404,9 +405,11 @@ const BuyConfirmModal: React.FC<{
   offer: MarketOffer;
   antimatterBalance: bigint;
   txBusy: boolean;
+  marketUnlocked: boolean;
+  marketUnlockLeft: number;
   onClose: () => void;
   onConfirm: () => Promise<void>;
-}> = ({ offer, antimatterBalance, txBusy, onClose, onConfirm }) => {
+}> = ({ offer, antimatterBalance, txBusy, marketUnlocked, marketUnlockLeft, onClose, onConfirm }) => {
   const [submitting, setSubmitting] = useState(false);
   const [localErr, setLocalErr] = useState<string | null>(null);
   const canAfford = antimatterBalance >= offer.priceAntimatter;
@@ -472,6 +475,15 @@ const BuyConfirmModal: React.FC<{
             Insufficient ANTIMATTER. You have {formatAm(antimatterBalance)} AM, need {formatAm(offer.priceAntimatter)} AM.
           </div>
         )}
+        {!marketUnlocked && (
+          <div style={{
+            padding: "8px 12px", borderRadius: 3, marginBottom: 14,
+            background: "rgba(255,214,10,0.08)", border: "1px solid rgba(255,214,10,0.3)",
+            fontSize: 10, color: "var(--warn)", letterSpacing: 0.5,
+          }}>
+            Market unlocks for this planet in {fmtCountdown(marketUnlockLeft)}.
+          </div>
+        )}
 
         {localErr && <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 10 }}>{localErr}</div>}
 
@@ -487,7 +499,7 @@ const BuyConfirmModal: React.FC<{
           >CANCEL</button>
           <button
             onClick={() => void handleConfirm()}
-            disabled={!canAfford || submitting || txBusy}
+            disabled={!canAfford || !marketUnlocked || submitting || txBusy}
             style={{
               flex: 2, padding: "12px 16px", borderRadius: 2,
               border: `1px solid ${canAfford ? "var(--cyan)" : "var(--border)"}`,
@@ -626,7 +638,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [buyTarget, setBuyTarget] = useState<MarketOffer | null>(null);
   const [lastRefresh, setLastRefresh] = useState(0);
+  const [nowTs, setNowTs] = useState(() => Math.floor(Date.now() / 1000));
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const marketUnlockLeft = state ? Math.max(0, state.planet.marketUnlockedAt - nowTs) : 0;
+  const marketUnlocked = marketUnlockLeft === 0;
 
   // ── Market config state ──────────────────────────────────────────────────
   // undefined = loading, null = not initialized, MarketConfig = initialized
@@ -719,6 +734,11 @@ const MarketTab: React.FC<MarketTabProps> = ({
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchOffers]);
 
+  useEffect(() => {
+    const timer = setInterval(() => setNowTs(Math.floor(Date.now() / 1000)), 1_000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Re-fetch when view changes to myoffers
   useEffect(() => {
     if (view === "myoffers") void fetchOffers();
@@ -737,6 +757,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   const handleCreateOffer = async (params: CreateOfferParams) => {
     if (!client) return;
+    if (!marketUnlocked) {
+      onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
+      return;
+    }
     if (!marketConfig) {
       onTxEnd("Market is not initialized yet. Initialize it first using the admin panel.");
       return;
@@ -766,6 +790,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   const handleAcceptOffer = async (offer: MarketOffer) => {
     if (!client) return;
+    if (!marketUnlocked) {
+      onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
+      return;
+    }
     onTxStart("Purchasing...");
     try {
       await client.acceptOffer(offer);
@@ -1003,7 +1031,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            disabled={txBusy || !state}
+            disabled={txBusy || !state || !marketUnlocked}
             style={{
               fontFamily: "'Orbitron', sans-serif",
               fontSize: 12, fontWeight: 700, letterSpacing: 2,
@@ -1016,6 +1044,11 @@ const MarketTab: React.FC<MarketTabProps> = ({
           >
             + CREATE NEW LISTING
           </button>
+          {!marketUnlocked && state && (
+            <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
+              Market unlocks for this planet in {fmtCountdown(marketUnlockLeft)}.
+            </div>
+          )}
           {!state && (
             <div style={{ fontSize: 10, color: "var(--dim)", textAlign: "center" }}>
               No planet loaded - cannot verify resources.
@@ -1055,6 +1088,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                   offer={offer}
                   antimatterBalance={antimatterBalance}
                   txBusy={txBusy}
+                  marketUnlocked={marketUnlocked}
                   onBuy={o => setBuyTarget(o)}
                   onCancel={o => void handleCancelOffer(o)}
                 />
@@ -1079,6 +1113,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
           offer={buyTarget}
           antimatterBalance={antimatterBalance}
           txBusy={txBusy}
+          marketUnlocked={marketUnlocked}
+          marketUnlockLeft={marketUnlockLeft}
           onClose={() => setBuyTarget(null)}
           onConfirm={() => handleAcceptOffer(buyTarget)}
         />

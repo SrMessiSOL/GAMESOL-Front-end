@@ -34,6 +34,16 @@ export const UI_ART_EXPECTED_KEYS = [
   "smallCargo",
   "largeCargo",
   "colonyShip",
+  "rocketLauncher",
+  "lightLaser",
+  "heavyLaser",
+  "gaussCannon",
+  "ionCannon",
+  "plasmaTurret",
+  "smallShieldDome",
+  "largeShieldDome",
+  "antiBallisticMissile",
+  "interplanetaryMissile",
 ] as const;
 
 function toLookupKey(key: string): string {
@@ -43,4 +53,8 @@ function toLookupKey(key: string): string {
 export function resolveGameArt(key: string, fallback: string): string {
   const resolved = artIndex.get(toLookupKey(key));
   return resolved ? `url("${resolved}")` : fallback;
+}
+
+export function resolveGameArtUrl(key: string): string | null {
+  return artIndex.get(toLookupKey(key)) ?? null;
 }

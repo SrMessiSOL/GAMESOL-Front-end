@@ -46,13 +46,8 @@ const WalletLayer: React.FC<PropsWithChildren> = ({ children }) => {
 
   return (
     <ConnectionProvider endpoint={RPC_ENDPOINT}>
-      {/*
-       * autoConnect: true is intentional — on reconnect the adapter will
-       * attempt to reuse a cached session without a new popup.
-       * On MWA this triggers the wallet app association handshake on mount,
-       * which is the desired UX for a native app.
-       */}
-      <WalletProvider wallets={wallets} autoConnect>
+      {/* Keep the landing page visible on load and only connect from explicit user action. */}
+      <WalletProvider wallets={wallets} autoConnect={false}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

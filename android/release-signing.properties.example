@@ -1,0 +1,7 @@
+# Copy this file to `android/release-signing.properties` and fill in your real values.
+# This file is gitignored, so your signing secrets stay local.
+
+RELEASE_STORE_FILE=release.keystore
+RELEASE_STORE_PASSWORD=change-me
+RELEASE_KEY_ALIAS=gamesol
+RELEASE_KEY_PASSWORD=change-me

@@ -1,6 +1,30 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
 
+def releaseSigningProps = new Properties()
+def releaseSigningFile = rootProject.file("release-signing.properties")
+if (releaseSigningFile.exists()) {
+    releaseSigningFile.withInputStream { stream ->
+        releaseSigningProps.load(stream)
+    }
+}
+
+def resolveConfigValue = { String key ->
+    def fileProp = releaseSigningProps.getProperty(key)
+    if (fileProp != null && fileProp.toString().trim()) return fileProp.toString().trim()
+    def prop = project.findProperty(key)
+    if (prop != null && prop.toString().trim()) return prop.toString().trim()
+    def env = System.getenv(key)
+    if (env != null && env.toString().trim()) return env.toString().trim()
+    return null
+}
+
+def releaseStoreFile = resolveConfigValue("RELEASE_STORE_FILE")
+def releaseStorePassword = resolveConfigValue("RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = resolveConfigValue("RELEASE_KEY_ALIAS")
+def releaseKeyPassword = resolveConfigValue("RELEASE_KEY_PASSWORD")
+def hasCustomReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
 android {
     namespace = "com.chaineduniverse.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -17,10 +41,29 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasCustomReleaseSigning) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig hasCustomReleaseSigning ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    applicationVariants.all { variant ->
+        if (variant.buildType.name == "release") {
+            variant.outputs.all { output ->
+                outputFileName = "GAMESOL.apk"
+            }
         }
     }
 }

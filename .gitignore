@@ -8,4 +8,7 @@ test/
 *.aar
 android/.kotlin/
 android/local.properties
+android/*.jks
+android/*.keystore
+android/release-signing.properties
 .tmp_research.txt

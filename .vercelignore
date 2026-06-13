@@ -1,0 +1,9 @@
+.git
+.vercel
+node_modules
+dist
+android
+test
+docs
+*.log
+.tmp_research.txt

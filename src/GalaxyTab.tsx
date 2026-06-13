@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { GameClient, Planet, PlayerState } from "./game-state";
 
+const MAX_GALAXY = 999;
+const MAX_SYSTEM = 999;
+const MAX_POSITION = 15;
+
 interface GalaxyTabProps {
   client: GameClient | null;
   currentPlanet: Planet;
@@ -51,7 +55,7 @@ const GalaxyTab: React.FC<GalaxyTabProps> = ({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const SLOTS = Array.from({ length: 15 }, (_, i) => i + 1);
+  const SLOTS = Array.from({ length: MAX_POSITION }, (_, i) => i + 1);
 
   return (
     <div>
@@ -61,15 +65,15 @@ const GalaxyTab: React.FC<GalaxyTabProps> = ({
       <div style={{ marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div>
           <div className="modal-label">Galaxy</div>
-          <input type="number" min={1} max={9} value={galaxy}
-            onChange={e => setGalaxy(Math.max(1, Math.min(9, parseInt(e.target.value) || 1)))}
+          <input type="number" min={1} max={MAX_GALAXY} value={galaxy}
+            onChange={e => setGalaxy(Math.max(1, Math.min(MAX_GALAXY, parseInt(e.target.value) || 1)))}
             style={{ width: 90, padding: "8px 10px", fontSize: 13, background: "var(--panel)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 2 }}
           />
         </div>
         <div>
           <div className="modal-label">System</div>
-          <input type="number" min={1} max={499} value={system}
-            onChange={e => setSystem(Math.max(1, Math.min(499, parseInt(e.target.value) || 1)))}
+          <input type="number" min={1} max={MAX_SYSTEM} value={system}
+            onChange={e => setSystem(Math.max(1, Math.min(MAX_SYSTEM, parseInt(e.target.value) || 1)))}
             style={{ width: 110, padding: "8px 10px", fontSize: 13, background: "var(--panel)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 2 }}
           />
         </div>

@@ -21,9 +21,6 @@ const DEFAULT_TX_COMPUTE_UNITS = 250_000;
 const DEFAULT_PRIORITY_FEE_MICROLAMPORTS = 0;
 const VAULT_BACKUP_VERSION = 1;
 const VAULT_RECOVERY_MESSAGE_PREFIX = "GAMESOL vault recovery v1";
-const VAULT_CACHE_VERSION = 1;
-const VAULT_CACHE_STORAGE_PREFIX = "chained_universe_vault_cache_v1";
-const VAULT_CACHE_DEVICE_KEY_STORAGE = "chained_universe_vault_cache_device_key_v1";
 
 // Max attempts for homeworld random coord selection before giving up
 const HOMEWORLD_MAX_COORD_ATTEMPTS = 20;
@@ -35,6 +32,7 @@ const PLANET_COORDS_DISCRIMINATOR  = Buffer.from([227, 189, 46, 7, 82, 27, 239, 
 const AUTHORIZED_VAULT_DISCRIMINATOR = Buffer.from([224, 162, 234, 3, 170, 103, 243, 244]);
 const VAULT_BACKUP_DISCRIMINATOR     = Buffer.from([167, 172, 2, 221, 196, 20, 199, 27]);
 const GAME_CONFIG_DISCRIMINATOR      = Buffer.from([45, 146, 146, 33, 170, 69, 96, 133]);
+const BATTLE_RESOLVED_EVENT_DISCRIMINATOR = Buffer.from([205, 161, 192, 151, 125, 116, 201, 210]);
 
 // ─── Instruction Discriminators ───────────────────────────────────────────────
 // NOTE: These must be updated after `anchor build` generates the new IDL.
@@ -68,6 +66,11 @@ const IX = {
   finishShipBuild:        Buffer.from([95, 62, 255, 233, 232, 122, 224, 23]),
   finishShipBuildVault:   Buffer.from([191, 208, 60, 173, 69, 244, 125, 195]),
 
+  buildDefense:           Buffer.from([187, 0, 140, 48, 98, 96, 110, 21]),
+  buildDefenseVault:      Buffer.from([250, 214, 5, 208, 91, 68, 81, 34]),
+  finishDefenseBuild:     Buffer.from([31, 32, 15, 101, 243, 146, 238, 193]),
+  finishDefenseBuildVault: Buffer.from([172, 250, 106, 201, 205, 8, 82, 167]),
+
   launchFleet:            Buffer.from([54, 168, 21, 184, 175, 6, 32, 5]),
   launchFleetVault:       Buffer.from([11, 245, 64, 137, 202, 190, 124, 7]),
 
@@ -75,6 +78,9 @@ const IX = {
   resolveTransportVault:  Buffer.from([168, 164, 6, 82, 122, 24, 118, 35]),
   resolveTransportEmpty:  Buffer.from([11, 148, 12, 64, 192, 185, 94, 126]),
   resolveTransportEmptyVault: Buffer.from([122, 88, 238, 190, 70, 125, 222, 175]),
+
+  resolveAttack:          Buffer.from([77, 153, 65, 199, 69, 106, 169, 209]),
+  resolveAttackVault:     Buffer.from([98, 245, 31, 242, 130, 131, 221, 205]),
 
   resolveColonize:        Buffer.from([229, 191, 212, 205, 242, 178, 50, 79]),
   resolveColonizeVault:   Buffer.from([144, 28, 197, 235, 65, 250, 241, 88]),
@@ -122,6 +128,52 @@ export interface Mission {
   cargoDeuterium: bigint;
   applied: boolean;
   speedFactor: number;
+  combatRounds: number;
+  attackerWon: boolean;
+}
+
+export interface BattleResolvedEvent {
+  sourcePlanet: string;
+  destinationPlanet: string;
+  attacker: string;
+  defender: string;
+  sourceGalaxy: number;
+  sourceSystem: number;
+  sourcePosition: number;
+  targetGalaxy: number;
+  targetSystem: number;
+  targetPosition: number;
+  resolvedAt: number;
+  missionSlot: number;
+  combatRounds: number;
+  attackerWon: boolean;
+  attackerDestroyed: boolean;
+  defenderSurvived: boolean;
+  lootMetal: bigint;
+  lootCrystal: bigint;
+  lootDeuterium: bigint;
+  debrisMetal: bigint;
+  debrisCrystal: bigint;
+  attackerSmallCargo: number;
+  attackerLargeCargo: number;
+  attackerLightFighter: number;
+  attackerHeavyFighter: number;
+  attackerCruiser: number;
+  attackerBattleship: number;
+  attackerBattlecruiser: number;
+  attackerBomber: number;
+  attackerDestroyer: number;
+  attackerDeathstar: number;
+  attackerRecycler: number;
+  attackerEspionageProbe: number;
+  attackerColonyShip: number;
+}
+
+export interface BattleResolvedEventRecord {
+  signature: string;
+  slot: number;
+  blockTime: number | null;
+  event: BattleResolvedEvent;
 }
 
 export interface Planet {
@@ -137,6 +189,12 @@ export interface Planet {
   temperature: number;
   maxFields: number;
   usedFields: number;
+  createdAt: number;
+  protectionUntilTs: number;
+  marketUnlockedAt: number;
+  attackUnlockedAt: number;
+  lastAttackLaunchTs: number;
+  lastAttackedTs: number;
   metalMine: number;
   crystalMine: number;
   deuteriumSynthesizer: number;
@@ -150,12 +208,28 @@ export interface Planet {
   deuteriumTank: number;
   researchLab: number;
   missileSilo: number;
+  weaponsTechnology: number;
+  shieldingTechnology: number;
+  armorTechnology: number;
   buildQueueItem: number;
   buildQueueTarget: number;
   buildFinishTs: number;
   shipBuildItem: number;
   shipBuildQty: number;
   shipBuildFinishTs: number;
+  defenseBuildItem: number;
+  defenseBuildQty: number;
+  defenseBuildFinishTs: number;
+  rocketLauncher: number;
+  lightLaser: number;
+  heavyLaser: number;
+  gaussCannon: number;
+  ionCannon: number;
+  plasmaTurret: number;
+  smallShieldDome: number;
+  largeShieldDome: number;
+  antiBallisticMissile: number;
+  interplanetaryMissile: number;
 }
 
 export interface Research {
@@ -167,6 +241,9 @@ export interface Research {
   computerTech: number;
   astrophysics: number;
   igrNetwork: number;
+  weaponsTechnology: number;
+  shieldingTechnology: number;
+  armorTechnology: number;
   queueItem: number;
   queueTarget: number;
   researchFinishTs: number;
@@ -250,6 +327,7 @@ export type VaultStatus =
 
 interface GameClientOptions {
   requestVaultRecoveryPassphrase?: VaultRecoveryPromptHandler;
+  onVaultRecoveryPassphraseRejected?: (wallet: string) => void;
 }
 
 // ─── Internal account types ───────────────────────────────────────────────────
@@ -290,6 +368,9 @@ interface PlanetStateAccount {
   computerTech: number;
   astrophysics: number;
   igrNetwork: number;
+  weaponsTechnology: number;
+  shieldingTechnology: number;
+  armorTechnology: number;
   researchQueueItem: number;
   researchQueueTarget: number;
   researchFinishTs: number;
@@ -311,6 +392,12 @@ interface PlanetStateAccount {
   crystalCap: bigint;
   deuteriumCap: bigint;
   lastUpdateTs: number;
+  createdAt: number;
+  protectionUntilTs: number;
+  marketUnlockedAt: number;
+  attackUnlockedAt: number;
+  lastAttackLaunchTs: number;
+  lastAttackedTs: number;
   smallCargo: number;
   largeCargo: number;
   lightFighter: number;
@@ -325,8 +412,21 @@ interface PlanetStateAccount {
   espionageProbe: number;
   colonyShip: number;
   solarSatellite: number;
+  rocketLauncher: number;
+  lightLaser: number;
+  heavyLaser: number;
+  gaussCannon: number;
+  ionCannon: number;
+  plasmaTurret: number;
+  smallShieldDome: number;
+  largeShieldDome: number;
+  antiBallisticMissile: number;
+  interplanetaryMissile: number;
   activeMissions: number;
   missions: Mission[];
+  defenseBuildItem: number;
+  defenseBuildQty: number;
+  defenseBuildFinishTs: number;
 }
 
 interface AuthorizedVaultAccount {
@@ -353,15 +453,6 @@ interface GameConfigAccount {
   admin: PublicKey;
   antimatterMint: PublicKey;
   bump: number;
-}
-
-interface VaultLocalCacheRecord {
-  version: number;
-  wallet: string;
-  vault: string;
-  iv: string;
-  ciphertext: string;
-  updatedAt: number;
 }
 
 // ─── Borsh Writer ─────────────────────────────────────────────────────────────
@@ -393,6 +484,86 @@ function readI64(d: Buffer, o: number): number { return Number(d.readBigInt64LE(
 function readPubkeyRaw(d: Buffer, o: number): PublicKey { return new PublicKey(d.slice(o, o + 32)); }
 function readFixedString(data: Buffer, offset: number, length: number): string {
   return Buffer.from(data.slice(offset, offset + length)).toString("utf8").replace(/\0/g, "").trim();
+}
+
+function decodeBattleResolvedEvent(data: Buffer): BattleResolvedEvent | null {
+  if (data.length < 251 || !data.slice(0, 8).equals(BATTLE_RESOLVED_EVENT_DISCRIMINATOR)) {
+    return null;
+  }
+
+  let o = 8;
+  const sourcePlanet = readPubkeyRaw(data, o).toBase58(); o += 32;
+  const destinationPlanet = readPubkeyRaw(data, o).toBase58(); o += 32;
+  const attacker = readPubkeyRaw(data, o).toBase58(); o += 32;
+  const defender = readPubkeyRaw(data, o).toBase58(); o += 32;
+  const sourceGalaxy = readU16(data, o); o += 2;
+  const sourceSystem = readU16(data, o); o += 2;
+  const sourcePosition = readU8(data, o); o += 1;
+  const targetGalaxy = readU16(data, o); o += 2;
+  const targetSystem = readU16(data, o); o += 2;
+  const targetPosition = readU8(data, o); o += 1;
+  const resolvedAt = readI64(data, o); o += 8;
+  const missionSlot = readU8(data, o); o += 1;
+  const combatRounds = readU8(data, o); o += 1;
+  const attackerWon = readU8(data, o) !== 0; o += 1;
+  const attackerDestroyed = readU8(data, o) !== 0; o += 1;
+  const defenderSurvived = readU8(data, o) !== 0; o += 1;
+  const lootMetal = readU64(data, o); o += 8;
+  const lootCrystal = readU64(data, o); o += 8;
+  const lootDeuterium = readU64(data, o); o += 8;
+  const debrisMetal = readU64(data, o); o += 8;
+  const debrisCrystal = readU64(data, o); o += 8;
+
+  return {
+    sourcePlanet,
+    destinationPlanet,
+    attacker,
+    defender,
+    sourceGalaxy,
+    sourceSystem,
+    sourcePosition,
+    targetGalaxy,
+    targetSystem,
+    targetPosition,
+    resolvedAt,
+    missionSlot,
+    combatRounds,
+    attackerWon,
+    attackerDestroyed,
+    defenderSurvived,
+    lootMetal,
+    lootCrystal,
+    lootDeuterium,
+    debrisMetal,
+    debrisCrystal,
+    attackerSmallCargo: readU32(data, o),
+    attackerLargeCargo: readU32(data, o + 4),
+    attackerLightFighter: readU32(data, o + 8),
+    attackerHeavyFighter: readU32(data, o + 12),
+    attackerCruiser: readU32(data, o + 16),
+    attackerBattleship: readU32(data, o + 20),
+    attackerBattlecruiser: readU32(data, o + 24),
+    attackerBomber: readU32(data, o + 28),
+    attackerDestroyer: readU32(data, o + 32),
+    attackerDeathstar: readU32(data, o + 36),
+    attackerRecycler: readU32(data, o + 40),
+    attackerEspionageProbe: readU32(data, o + 44),
+    attackerColonyShip: readU32(data, o + 48),
+  };
+}
+
+function parseBattleResolvedEventFromLogs(logs: string[] | null | undefined): BattleResolvedEvent | null {
+  for (const log of logs ?? []) {
+    const payload = log.startsWith("Program data: ") ? log.slice("Program data: ".length).trim() : "";
+    if (!payload) continue;
+    try {
+      const event = decodeBattleResolvedEvent(Buffer.from(payload, "base64"));
+      if (event) return event;
+    } catch {
+      // Ignore unrelated program data logs.
+    }
+  }
+  return null;
 }
 
 // ─── Instruction Encoders ─────────────────────────────────────────────────────
@@ -480,6 +651,14 @@ function encodeColonyArgs(now: number, mission: Mission): Buffer {
 function encodeBuildShipArgs(shipType: number, quantity: number, now: number): Buffer {
   const writer = new BorshWriter();
   writer.writeU8(shipType);
+  writer.writeU32(quantity);
+  writer.writeI64(now);
+  return writer.toBuffer();
+}
+
+function encodeBuildDefenseArgs(defenseType: number, quantity: number, now: number): Buffer {
+  const writer = new BorshWriter();
+  writer.writeU8(defenseType);
   writer.writeU32(quantity);
   writer.writeI64(now);
   return writer.toBuffer();
@@ -609,9 +788,9 @@ async function isCoordOccupied(
  */
 function deriveHomeworldCoordsFromWallet(walletPubkey: PublicKey): { galaxy: number; system: number; position: number } {
   const b = walletPubkey.toBytes();
-  const galaxy = (b[0] % 9) + 1;
-  const system = (((b[1] | (b[2] << 8)) >>> 0) % 499) + 1;
-  const position = (b[3] % 15) + 1;
+  const galaxy = (((b[0] | (b[1] << 8)) >>> 0) % 999) + 1;
+  const system = (((b[2] | (b[3] << 8)) >>> 0) % 999) + 1;
+  const position = (b[4] % 15) + 1;
   return { galaxy, system, position };
 }
 
@@ -620,8 +799,8 @@ function deriveHomeworldCoordsFromWallet(walletPubkey: PublicKey): { galaxy: num
  */
 function randomCoords(): { galaxy: number; system: number; position: number } {
   return {
-    galaxy:   Math.floor(Math.random() * 9)   + 1,   // 1–9
-    system:   Math.floor(Math.random() * 499) + 1,   // 1–499
+    galaxy:   Math.floor(Math.random() * 999) + 1,   // 1–999
+    system:   Math.floor(Math.random() * 999) + 1,   // 1–999
     position: Math.floor(Math.random() * 15)  + 1,   // 1–15
   };
 }
@@ -665,6 +844,8 @@ function deserializeMission(data: Buffer, offset: number): { mission: Mission; b
   const cargoDeuterium = readU64(data, o); o += 8;
   const applied = readU8(data, o) !== 0; o += 1;
   const speedFactor = readU8(data, o); o += 1;
+  const combatRounds = readU8(data, o); o += 1;
+  const attackerWon = readU8(data, o) !== 0; o += 1;
 
   return {
     mission: {
@@ -675,6 +856,7 @@ function deserializeMission(data: Buffer, offset: number): { mission: Mission; b
       sBattleship, sBattlecruiser, sBomber, sDestroyer, sDeathstar,
       sRecycler, sEspionageProbe, sColonyShip,
       cargoMetal, cargoCrystal, cargoDeuterium, applied, speedFactor,
+      combatRounds, attackerWon,
     },
     bytesRead: o - offset,
   };
@@ -717,6 +899,9 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const computerTech = readU8(data, o); o += 1;
   const astrophysics = readU8(data, o); o += 1;
   const igrNetwork = readU8(data, o); o += 1;
+  const weaponsTechnology = readU8(data, o); o += 1;
+  const shieldingTechnology = readU8(data, o); o += 1;
+  const armorTechnology = readU8(data, o); o += 1;
   const researchQueueItem = readU8(data, o); o += 1;
   const researchQueueTarget = readU8(data, o); o += 1;
   const researchFinishTs = readI64(data, o); o += 8;
@@ -736,6 +921,12 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const crystalCap = readU64(data, o); o += 8;
   const deuteriumCap = readU64(data, o); o += 8;
   const lastUpdateTs = readI64(data, o); o += 8;
+  const createdAt = readI64(data, o); o += 8;
+  const protectionUntilTs = readI64(data, o); o += 8;
+  const marketUnlockedAt = readI64(data, o); o += 8;
+  const attackUnlockedAt = readI64(data, o); o += 8;
+  const lastAttackLaunchTs = readI64(data, o); o += 8;
+  const lastAttackedTs = readI64(data, o); o += 8;
   const smallCargo = readU32(data, o); o += 4;
   const largeCargo = readU32(data, o); o += 4;
   const lightFighter = readU32(data, o); o += 4;
@@ -750,6 +941,16 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const espionageProbe = readU32(data, o); o += 4;
   const colonyShip = readU32(data, o); o += 4;
   const solarSatellite = readU32(data, o); o += 4;
+  const rocketLauncher = readU32(data, o); o += 4;
+  const lightLaser = readU32(data, o); o += 4;
+  const heavyLaser = readU32(data, o); o += 4;
+  const gaussCannon = readU32(data, o); o += 4;
+  const ionCannon = readU32(data, o); o += 4;
+  const plasmaTurret = readU32(data, o); o += 4;
+  const smallShieldDome = readU32(data, o); o += 4;
+  const largeShieldDome = readU32(data, o); o += 4;
+  const antiBallisticMissile = readU32(data, o); o += 4;
+  const interplanetaryMissile = readU32(data, o); o += 4;
   const activeMissions = readU8(data, o); o += 1;
 
   const missions: Mission[] = [];
@@ -764,6 +965,9 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const shipBuildItem = readU8(data, o); o += 1;
   const shipBuildQty = readU32(data, o); o += 4;
   const shipBuildFinishTs = readI64(data, o); o += 8;
+  const defenseBuildItem = readU8(data, o); o += 1;
+  const defenseBuildQty = readU32(data, o); o += 4;
+  const defenseBuildFinishTs = readI64(data, o); o += 8;
 
   void bump;
 
@@ -774,6 +978,7 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
     roboticsFactory, naniteFactory, shipyard,
     metalStorage, crystalStorage, deuteriumTank, researchLab, missileSilo,
     energyTech, combustionDrive, impulseDrive, hyperspaceDrive, computerTech, astrophysics, igrNetwork,
+    weaponsTechnology, shieldingTechnology, armorTechnology,
     researchQueueItem, researchQueueTarget, researchFinishTs,
     buildQueueItem, buildQueueTarget, buildFinishTs,
     shipBuildItem, shipBuildQty, shipBuildFinishTs,
@@ -781,9 +986,15 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
     metalHour, crystalHour, deuteriumHour,
     energyProduction, energyConsumption,
     metalCap, crystalCap, deuteriumCap, lastUpdateTs,
+    createdAt, protectionUntilTs, marketUnlockedAt, attackUnlockedAt,
+    lastAttackLaunchTs, lastAttackedTs,
     smallCargo, largeCargo, lightFighter, heavyFighter, cruiser, battleship,
     battlecruiser, bomber, destroyer, deathstar, recycler, espionageProbe,
-    colonyShip, solarSatellite, activeMissions, missions,
+    colonyShip, solarSatellite,
+    rocketLauncher, lightLaser, heavyLaser, gaussCannon, ionCannon, plasmaTurret,
+    smallShieldDome, largeShieldDome, antiBallisticMissile, interplanetaryMissile,
+    activeMissions, missions,
+    defenseBuildItem, defenseBuildQty, defenseBuildFinishTs,
   };
 }
 
@@ -855,6 +1066,12 @@ function adaptPlanetState(planetPda: PublicKey, account: PlanetStateAccount): Pl
       temperature: account.temperature,
       maxFields: account.maxFields,
       usedFields: account.usedFields,
+      createdAt: account.createdAt,
+      protectionUntilTs: account.protectionUntilTs,
+      marketUnlockedAt: account.marketUnlockedAt,
+      attackUnlockedAt: account.attackUnlockedAt,
+      lastAttackLaunchTs: account.lastAttackLaunchTs,
+      lastAttackedTs: account.lastAttackedTs,
       metalMine: account.metalMine,
       crystalMine: account.crystalMine,
       deuteriumSynthesizer: account.deuteriumSynthesizer,
@@ -868,12 +1085,28 @@ function adaptPlanetState(planetPda: PublicKey, account: PlanetStateAccount): Pl
       deuteriumTank: account.deuteriumTank,
       researchLab: account.researchLab,
       missileSilo: account.missileSilo,
+      weaponsTechnology: account.weaponsTechnology,
+      shieldingTechnology: account.shieldingTechnology,
+      armorTechnology: account.armorTechnology,
       buildQueueItem: account.buildQueueItem,
       buildQueueTarget: account.buildQueueTarget,
       buildFinishTs: account.buildFinishTs,
       shipBuildItem: account.shipBuildItem,
       shipBuildQty: account.shipBuildQty,
       shipBuildFinishTs: account.shipBuildFinishTs,
+      defenseBuildItem: account.defenseBuildItem,
+      defenseBuildQty: account.defenseBuildQty,
+      defenseBuildFinishTs: account.defenseBuildFinishTs,
+      rocketLauncher: account.rocketLauncher,
+      lightLaser: account.lightLaser,
+      heavyLaser: account.heavyLaser,
+      gaussCannon: account.gaussCannon,
+      ionCannon: account.ionCannon,
+      plasmaTurret: account.plasmaTurret,
+      smallShieldDome: account.smallShieldDome,
+      largeShieldDome: account.largeShieldDome,
+      antiBallisticMissile: account.antiBallisticMissile,
+      interplanetaryMissile: account.interplanetaryMissile,
     },
     resources: {
       metal: account.metal,
@@ -917,6 +1150,9 @@ function adaptPlanetState(planetPda: PublicKey, account: PlanetStateAccount): Pl
       computerTech: account.computerTech,
       astrophysics: account.astrophysics,
       igrNetwork: account.igrNetwork,
+      weaponsTechnology: account.weaponsTechnology,
+      shieldingTechnology: account.shieldingTechnology,
+      armorTechnology: account.armorTechnology,
       queueItem: account.researchQueueItem,
       queueTarget: account.researchQueueTarget,
       researchFinishTs: account.researchFinishTs,
@@ -939,8 +1175,44 @@ function describeTxError(err: unknown): string {
   return String(err);
 }
 
+function mapSendTransactionError(message: string, logs: string[]): string {
+  const details = [message, ...logs].join("\n");
+  if (details.includes("NewPlayerProtected") || details.includes("new-player protection") || details.includes("custom program error: 0x17a3")) {
+    return "Target planet is still under new-player protection.";
+  }
+  if (details.includes("GameplayLocked") || details.includes("gameplay action") || details.includes("custom program error: 0x17a4")) {
+    return "This action is still locked for this planet. Wait for the unlock timer.";
+  }
+  if (details.includes("AttackCooldown") || details.includes("attacker is still on attack cooldown") || details.includes("custom program error: 0x17a5")) {
+    return "Attack launch cooldown is still active.";
+  }
+  if (details.includes("TargetCooldown") || details.includes("target is still on attack cooldown") || details.includes("custom program error: 0x17a6")) {
+    return "Target planet was attacked recently. Wait for its cooldown.";
+  }
+  if (details.includes("AttackPowerTooLow") || details.includes("attacking fleet is too weak") || details.includes("custom program error: 0x17a7")) {
+    return "Attack fleet is too weak. Send at least 1,000 combat points.";
+  }
+  if (details.includes("InvalidTimestamp") || details.includes("timestamp is invalid") || details.includes("custom program error: 0x17a2")) {
+    return "The chain timestamp check failed. Refresh planet state and try again.";
+  }
+  if (
+    details.includes("InvalidVaultAuthorization") ||
+    details.includes("provided vault authorization is invalid") ||
+    details.includes("custom program error: 0x1795")
+  ) {
+    return "Vault authorization mismatch. Please retry; if it persists, restore the vault with the saved password.";
+  }
+  if (
+    details.includes("NoMissionSlot") ||
+    details.includes("No free mission slot is available") ||
+    details.includes("custom program error: 0x1788")
+  ) {
+    return "No mission slots available. Resolve an existing mission first.";
+  }
+  return message;
+}
+
 function bytesToBase64(bytes: Uint8Array): string { return Buffer.from(bytes).toString("base64"); }
-function base64ToBytes(value: string): Uint8Array { return new Uint8Array(Buffer.from(value, "base64")); }
 function utf8Bytes(value: string): Uint8Array { return new TextEncoder().encode(value); }
 function asCryptoBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(new ArrayBuffer(bytes.length));
@@ -952,10 +1224,6 @@ function buildVaultRecoveryMessage(authority: PublicKey, salt: Uint8Array): Uint
   return utf8Bytes(
     `${VAULT_RECOVERY_MESSAGE_PREFIX}\nAuthority:${authority.toBase58()}\nSalt:${bytesToBase64(salt)}`,
   );
-}
-
-function vaultLocalCacheKey(authority: PublicKey): string {
-  return `${VAULT_CACHE_STORAGE_PREFIX}:${authority.toBase58()}`;
 }
 
 // ─── GameClient ───────────────────────────────────────────────────────────────
@@ -985,6 +1253,64 @@ export class GameClient {
     return this.vaultKeypair !== null;
   }
 
+  async fetchBattleResolvedEvent(signature: string): Promise<BattleResolvedEvent | null> {
+    const tx = await this.connection.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+    return parseBattleResolvedEventFromLogs(tx?.meta?.logMessages);
+  }
+
+  async fetchBattleResolvedEventsForPlanets(
+    planetPdas: Array<PublicKey | string>,
+    limitPerPlanet = 40,
+  ): Promise<BattleResolvedEventRecord[]> {
+    const planetKeys = planetPdas.map(planet => planet instanceof PublicKey ? planet.toBase58() : planet);
+    const planetSet = new Set(planetKeys);
+    const signatures = new Map<string, { slot: number; blockTime: number | null }>();
+
+    for (const planetKey of planetKeys) {
+      const entries = await this.connection.getSignaturesForAddress(
+        new PublicKey(planetKey),
+        { limit: limitPerPlanet },
+        "confirmed",
+      );
+      for (const entry of entries) {
+        if (!signatures.has(entry.signature)) {
+          signatures.set(entry.signature, { slot: entry.slot, blockTime: entry.blockTime ?? null });
+        }
+      }
+    }
+
+    const records: BattleResolvedEventRecord[] = [];
+    for (const [signature, meta] of signatures) {
+      try {
+        const tx = await this.connection.getTransaction(signature, {
+          commitment: "confirmed",
+          maxSupportedTransactionVersion: 0,
+        });
+        const event = parseBattleResolvedEventFromLogs(tx?.meta?.logMessages);
+        if (!event || (!planetSet.has(event.sourcePlanet) && !planetSet.has(event.destinationPlanet))) {
+          continue;
+        }
+        records.push({
+          signature,
+          slot: tx?.slot ?? meta.slot,
+          blockTime: tx?.blockTime ?? meta.blockTime,
+          event,
+        });
+      } catch {
+        // Historical transaction lookup is best-effort and depends on the RPC node.
+      }
+    }
+
+    return records.sort((a, b) => {
+      const bTime = b.event.resolvedAt || b.blockTime || 0;
+      const aTime = a.event.resolvedAt || a.blockTime || 0;
+      return bTime - aTime;
+    });
+  }
+
   /**
    * Returns a structured vault status for the UI to show appropriate recovery options.
    * Call after ensureVault() has been attempted.
@@ -1004,10 +1330,6 @@ export class GameClient {
    */
   async restoreExistingVault(reportProgress?: ProgressReporter): Promise<Keypair | null> {
     if (this.vaultKeypair) return this.vaultKeypair;
-
-    const cached = await this.tryRestoreVaultFromLocalCache();
-    if (cached) return cached;
-
     return this.tryRestoreVaultFromBackup(reportProgress);
   }
 
@@ -1104,79 +1426,6 @@ export class GameClient {
     tx.feePayer = this.provider.wallet.publicKey;
 
     return this.provider.sendAndConfirm(tx, [], { commitment: "confirmed" });
-  }
-
-  private getCacheDeviceKeyBytes(): Uint8Array | null {
-    if (typeof localStorage === "undefined") return null;
-    let encoded = localStorage.getItem(VAULT_CACHE_DEVICE_KEY_STORAGE);
-    if (!encoded) {
-      const fresh = crypto.getRandomValues(new Uint8Array(32));
-      encoded = bytesToBase64(fresh);
-      localStorage.setItem(VAULT_CACHE_DEVICE_KEY_STORAGE, encoded);
-    }
-    try { return asCryptoBytes(base64ToBytes(encoded)); }
-    catch { localStorage.removeItem(VAULT_CACHE_DEVICE_KEY_STORAGE); return null; }
-  }
-
-  private async getCacheDeviceKey(): Promise<CryptoKey | null> {
-    const keyBytes = this.getCacheDeviceKeyBytes();
-    if (!keyBytes) return null;
-    return crypto.subtle.importKey("raw", keyBytes.slice().buffer, "AES-GCM", false, ["encrypt", "decrypt"]);
-  }
-
-  private async persistLocalVaultCache(vault: Keypair): Promise<void> {
-    if (typeof localStorage === "undefined") return;
-    const key = await this.getCacheDeviceKey();
-    if (!key) return;
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = new Uint8Array(
-      await crypto.subtle.encrypt({ name: "AES-GCM", iv: asCryptoBytes(iv) }, key, asCryptoBytes(vault.secretKey)),
-    );
-    const record: VaultLocalCacheRecord = {
-      version: VAULT_CACHE_VERSION,
-      wallet: this.provider.wallet.publicKey.toBase58(),
-      vault: vault.publicKey.toBase58(),
-      iv: bytesToBase64(iv),
-      ciphertext: bytesToBase64(ciphertext),
-      updatedAt: Date.now(),
-    };
-    localStorage.setItem(vaultLocalCacheKey(this.provider.wallet.publicKey), JSON.stringify(record));
-  }
-
-  private async tryRestoreVaultFromLocalCache(): Promise<Keypair | null> {
-    if (typeof localStorage === "undefined") return null;
-    const raw = localStorage.getItem(vaultLocalCacheKey(this.provider.wallet.publicKey));
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw) as VaultLocalCacheRecord;
-      if (
-        parsed.version !== VAULT_CACHE_VERSION ||
-        parsed.wallet !== this.provider.wallet.publicKey.toBase58()
-      ) {
-        localStorage.removeItem(vaultLocalCacheKey(this.provider.wallet.publicKey));
-        return null;
-      }
-      const key = await this.getCacheDeviceKey();
-      if (!key) return null;
-      const secretKey = new Uint8Array(
-        await crypto.subtle.decrypt(
-          { name: "AES-GCM", iv: asCryptoBytes(base64ToBytes(parsed.iv)) },
-          key,
-          asCryptoBytes(base64ToBytes(parsed.ciphertext)),
-        ),
-      );
-      const vault = Keypair.fromSecretKey(secretKey);
-      if (vault.publicKey.toBase58() !== parsed.vault) {
-        throw new Error("Cached vault key mismatch.");
-      }
-      this.vaultKeypair = vault;
-      console.log("[GAME_STATE:vault_cache] restored", { vault: vault.publicKey.toBase58() });
-      return vault;
-    } catch (error) {
-      console.warn("[GAME_STATE:vault_cache] invalid", error);
-      localStorage.removeItem(vaultLocalCacheKey(this.provider.wallet.publicKey));
-      return null;
-    }
   }
 
   private async getVaultRecoverySignature(salt: Uint8Array): Promise<Uint8Array | null> {
@@ -1291,6 +1540,7 @@ export class GameClient {
       console.warn("[GAME_STATE:vault_backup] decryption failed", err);
       this.vaultBackupDecryptFailed = true;
       this.clearCachedVaultRecoveryPassphrase();
+      this.options.onVaultRecoveryPassphraseRejected?.(this.provider.wallet.publicKey.toBase58());
       return null;
     }
     this.vaultBackupDecryptFailed = false;
@@ -1310,16 +1560,12 @@ export class GameClient {
       }
     }
     this.vaultKeypair = vault;
-    await this.persistLocalVaultCache(vault);
     console.log("[GAME_STATE:vault_backup] restored", { vault: vault.publicKey.toBase58() });
     return vault;
   }
 
   // ── Vault setup ─────────────────────────────────────────────────────────────
   async ensureVault(reportProgress?: ProgressReporter): Promise<Keypair> {
-    const cached = await this.tryRestoreVaultFromLocalCache();
-    if (cached) return cached;
-
     const restored = await this.tryRestoreVaultFromBackup(reportProgress);
     if (restored) return restored;
 
@@ -1334,7 +1580,6 @@ export class GameClient {
     );
     await this.provider.sendAndConfirm(fundTx, [], { commitment: "confirmed" });
     this.vaultKeypair = vault;
-    await this.persistLocalVaultCache(vault);
     return vault;
   }
 
@@ -1343,46 +1588,59 @@ export class GameClient {
     instructions: TransactionInstruction[],
     extraSigners: Keypair[] = [],
   ): Promise<string> {
-    const fullInstructions = [
-      ComputeBudgetProgram.setComputeUnitLimit({ units: DEFAULT_TX_COMPUTE_UNITS }),
-      ...instructions,
-    ];
-    if (DEFAULT_PRIORITY_FEE_MICROLAMPORTS > 0) {
-      fullInstructions.splice(
-        1,
-        0,
-        ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: DEFAULT_PRIORITY_FEE_MICROLAMPORTS,
-        }),
-      );
+    try {
+      const fullInstructions = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: DEFAULT_TX_COMPUTE_UNITS }),
+        ...instructions,
+      ];
+      if (DEFAULT_PRIORITY_FEE_MICROLAMPORTS > 0) {
+        fullInstructions.splice(
+          1,
+          0,
+          ComputeBudgetProgram.setComputeUnitPrice({
+            microLamports: DEFAULT_PRIORITY_FEE_MICROLAMPORTS,
+          }),
+        );
+      }
+
+      const tx = new Transaction().add(...fullInstructions);
+
+      const { blockhash, lastValidBlockHeight } =
+        await this.connection.getLatestBlockhash("confirmed");
+
+      tx.recentBlockhash = blockhash;
+
+      if (extraSigners.length > 0) {
+        tx.feePayer = extraSigners[0].publicKey;
+        tx.sign(...extraSigners);
+
+        const sig = await this.connection.sendRawTransaction(tx.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: "confirmed",
+        });
+
+        await this.connection.confirmTransaction(
+          { signature: sig, blockhash, lastValidBlockHeight },
+          "confirmed",
+        );
+
+        return sig;
+      }
+
+      tx.feePayer = this.provider.wallet.publicKey;
+      return this.provider.sendAndConfirm(tx, [], { commitment: "confirmed" });
+    } catch (err) {
+      if (err instanceof SendTransactionError) {
+        let logs = err.logs ?? [];
+        try {
+          logs = (await err.getLogs(this.connection)) ?? logs;
+        } catch {
+          // Keep the original error if logs cannot be fetched.
+        }
+        throw new Error(mapSendTransactionError(err.message, logs));
+      }
+      throw err;
     }
-
-    const tx = new Transaction().add(...fullInstructions);
-
-    const { blockhash, lastValidBlockHeight } =
-      await this.connection.getLatestBlockhash("confirmed");
-
-    tx.recentBlockhash = blockhash;
-
-    if (extraSigners.length > 0) {
-      tx.feePayer = extraSigners[0].publicKey;
-      tx.sign(...extraSigners);
-
-      const sig = await this.connection.sendRawTransaction(tx.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
-      });
-
-      await this.connection.confirmTransaction(
-        { signature: sig, blockhash, lastValidBlockHeight },
-        "confirmed",
-      );
-
-      return sig;
-    }
-
-    tx.feePayer = this.provider.wallet.publicKey;
-    return this.provider.sendAndConfirm(tx, [], { commitment: "confirmed" });
   }
 
   private vaultSigners(): Keypair[] {
@@ -1400,7 +1658,8 @@ export class GameClient {
 
     const existing = await this.connection.getAccountInfo(profilePda, "confirmed");
     if (existing) {
-      await this.ensureVault(reportProgress);
+      const restored = await this.restoreAuthorizedVaultForExistingProfile(authority, reportProgress);
+      this.vaultKeypair = restored;
       return;
     }
 
@@ -1482,7 +1741,6 @@ export class GameClient {
 
     await this.sendInstruction([ix]);
     this.vaultKeypair = newVault;
-    await this.persistLocalVaultCache(newVault);
   }
 
   /**
@@ -1578,13 +1836,9 @@ export class GameClient {
     const authorizedVaultPda = deriveAuthorizedVaultPda(authority);
     const vaultBackupPda = deriveVaultBackupPda(authority);
 
-    // Clear any stale cached state
     this.vaultKeypair = null;
     this.vaultBackupDecryptFailed = false;
     this.clearCachedVaultRecoveryPassphrase();
-    if (typeof localStorage !== "undefined") {
-      localStorage.removeItem(vaultLocalCacheKey(authority));
-    }
 
     const newVault = Keypair.generate();
     reportProgress?.("Signing with wallet: funding new vault keypair");
@@ -1623,14 +1877,13 @@ export class GameClient {
 
     await this.sendInstruction([ix]);
     this.vaultKeypair = newVault;
-    await this.persistLocalVaultCache(newVault);
     reportProgress?.("Vault recovered successfully.");
   }
 
   /**
    * Retry vault restoration with a fresh password attempt.
    * Call this when the user wants to try a different password after a
-   * `wrong_password` status. Clears the cached passphrase and retries
+   * `wrong_password` status. Clears the in-memory passphrase and retries
    * `tryRestoreVaultFromBackup`.
    */
   async retryVaultPassword(reportProgress?: ProgressReporter): Promise<boolean> {
@@ -1713,12 +1966,16 @@ export class GameClient {
   async initializePlanet(planetName = "Homeworld", reportProgress?: ProgressReporter): Promise<PlayerState> {
     const authority = this.provider.wallet.publicKey;
 
-    await this.ensureVault(reportProgress);
-    const vault = this.vaultKeypair!;
-
     const profile = await this.fetchPlayerProfile(authority);
+    let vault: Keypair;
     if (!profile) {
       await this.initializePlayer(reportProgress);
+      if (!this.vaultKeypair) {
+        throw new Error("Vault setup failed before homeworld creation.");
+      }
+      vault = this.vaultKeypair;
+    } else {
+      vault = await this.restoreAuthorizedVaultForExistingProfile(authority, reportProgress);
     }
 
     const updatedProfile = await this.fetchPlayerProfile(authority);
@@ -1771,7 +2028,15 @@ export class GameClient {
       } catch (err) {
         // Tx failed — could be a race condition where someone else claimed the slot.
         // Log and try the next candidate.
-        console.warn(`[GAME_STATE:homeworld] tx failed for ${galaxy}:${system}:${position}:`, describeTxError(err));
+        const message = describeTxError(err);
+        if (
+          message.includes("InvalidVaultAuthorization") ||
+          message.includes("Vault authorization mismatch") ||
+          message.includes("custom program error: 0x1795")
+        ) {
+          throw err;
+        }
+        console.warn(`[GAME_STATE:homeworld] tx failed for ${galaxy}:${system}:${position}:`, message);
         lastError = err;
       }
     }
@@ -1788,6 +2053,11 @@ export class GameClient {
 
   async getPlanetStateByPda(planetPda: PublicKey): Promise<PlayerState | null> {
     return this.loadPlanetStateByPda(planetPda);
+  }
+
+  async getPlanetStateByCoordinates(galaxy: number, system: number, position: number): Promise<PlayerState | null> {
+    const planetPda = await this.findPlanetByCoordinates(galaxy, system, position);
+    return planetPda ? this.loadPlanetStateByPda(planetPda) : null;
   }
 
   async findPlanets(walletPubkey: PublicKey): Promise<PlayerState[]> {
@@ -1807,6 +2077,31 @@ export class GameClient {
   async findPlanet(walletPubkey: PublicKey): Promise<PlayerState | null> {
     const planets = await this.findPlanets(walletPubkey);
     return planets[0] ?? null;
+  }
+
+  private async fetchAuthorizedVault(authority: PublicKey): Promise<AuthorizedVaultAccount | null> {
+    const account = await this.connection.getAccountInfo(deriveAuthorizedVaultPda(authority), "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeAuthorizedVault(Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
+  private async restoreAuthorizedVaultForExistingProfile(
+    authority: PublicKey,
+    reportProgress?: ProgressReporter,
+  ): Promise<Keypair> {
+    const restored = await this.tryRestoreVaultFromBackup(reportProgress);
+    if (!restored) {
+      throw new Error("This wallet already has a player profile. Restore the saved vault password before creating a homeworld.");
+    }
+
+    const authorizedVault = await this.fetchAuthorizedVault(authority);
+    if (authorizedVault && !authorizedVault.vault.equals(restored.publicKey)) {
+      throw new Error("Vault authorization mismatch. Please retry; if it persists, restore the vault with the saved password.");
+    }
+
+    this.vaultKeypair = restored;
+    return restored;
   }
 
   async getSystemPlanets(galaxy: number, system: number): Promise<Planet[]> {
@@ -1891,6 +2186,40 @@ export class GameClient {
         { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
       ],
       data: encodeInstruction(IX.resolveTransport, args),
+    });
+  }
+
+  private buildVaultAttackInstruction(
+    sourcePlanetPda: PublicKey,
+    destinationPlanetPda: PublicKey,
+    destinationCoordsPda: PublicKey,
+    planetAuthority: PublicKey,
+    args: Buffer,
+  ): TransactionInstruction {
+    if (this.preferVaultSigning && this.vaultKeypair) {
+      const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
+      return new TransactionInstruction({
+        programId: GAME_STATE_PROGRAM_ID,
+        keys: [
+          { pubkey: this.vaultKeypair.publicKey, isSigner: true,  isWritable: true  },
+          { pubkey: authorizedVaultPda,           isSigner: false, isWritable: false },
+          { pubkey: sourcePlanetPda,              isSigner: false, isWritable: true  },
+          { pubkey: destinationPlanetPda,         isSigner: false, isWritable: true  },
+          { pubkey: destinationCoordsPda,         isSigner: false, isWritable: true  },
+        ],
+        data: encodeInstruction(IX.resolveAttackVault, args),
+      });
+    }
+
+    return new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: this.provider.wallet.publicKey, isSigner: true,  isWritable: true  },
+        { pubkey: sourcePlanetPda,                isSigner: false, isWritable: true  },
+        { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
+        { pubkey: destinationCoordsPda,           isSigner: false, isWritable: true  },
+      ],
+      data: encodeInstruction(IX.resolveAttack, args),
     });
   }
 
@@ -1983,6 +2312,40 @@ export class GameClient {
     );
   }
 
+  async buildDefense(entityPda: PublicKey, defenseType: number, quantity: number): Promise<string> {
+    await this.ensureVault();
+    const state = await this.loadPlanetStateByPda(entityPda);
+    const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    return this.sendInstruction(
+      [this.buildVaultMutationInstruction(
+        IX.buildDefenseVault,
+        IX.buildDefense,
+        entityPda,
+        authority,
+        encodeBuildDefenseArgs(defenseType, quantity, Math.floor(Date.now() / 1000)),
+      )],
+      this.vaultSigners(),
+    );
+  }
+
+  async finishDefenseBuild(entityPda: PublicKey): Promise<string> {
+    await this.ensureVault();
+    const writer = new BorshWriter();
+    writer.writeI64(Math.floor(Date.now() / 1000));
+    const state = await this.loadPlanetStateByPda(entityPda);
+    const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    return this.sendInstruction(
+      [this.buildVaultMutationInstruction(
+        IX.finishDefenseBuildVault,
+        IX.finishDefenseBuild,
+        entityPda,
+        authority,
+        writer.toBuffer(),
+      )],
+      this.vaultSigners(),
+    );
+  }
+
   async launchFleet(
     entityPda: PublicKey,
     ships: { lf?: number; hf?: number; cr?: number; bs?: number; bc?: number; bm?: number; ds?: number; de?: number; sc?: number; lc?: number; rec?: number; ep?: number; col?: number },
@@ -2063,6 +2426,38 @@ export class GameClient {
 
     return this.sendInstruction(
       [this.buildVaultTransportInstruction(sourceEntityPda, destinationPlanetPda, authority, writer.toBuffer())],
+      this.vaultSigners(),
+    );
+  }
+
+  async resolveAttack(sourceEntityPda: PublicKey, mission: Mission, slot: number): Promise<string> {
+    await this.ensureVault();
+    const destinationPlanetPda = await this.findPlanetByCoordinates(
+      mission.targetGalaxy, mission.targetSystem, mission.targetPosition,
+    );
+    if (!destinationPlanetPda) {
+      throw new Error("Target planet not found for attack resolution.");
+    }
+
+    const destinationCoordsPda = derivePlanetCoordsPda(
+      mission.targetGalaxy,
+      mission.targetSystem,
+      mission.targetPosition,
+    );
+    const state = await this.loadPlanetStateByPda(sourceEntityPda);
+    const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    const writer = new BorshWriter();
+    writer.writeU8(slot);
+    writer.writeI64(Math.floor(Date.now() / 1000));
+
+    return this.sendInstruction(
+      [this.buildVaultAttackInstruction(
+        sourceEntityPda,
+        destinationPlanetPda,
+        destinationCoordsPda,
+        authority,
+        writer.toBuffer(),
+      )],
       this.vaultSigners(),
     );
   }
@@ -2289,7 +2684,7 @@ export const SHIP_TYPE_IDX: Record<string, number> = {
   recycler: 10, espionageProbe: 11, colonyShip: 12, solarSatellite: 13,
 };
 
-export const MISSION_LABELS: Record<number, string> = { 2: "TRANSPORT", 5: "COLONIZE" };
+export const MISSION_LABELS: Record<number, string> = { 1: "ATTACK", 2: "TRANSPORT", 5: "COLONIZE" };
 
 const BASE_COSTS: Record<number, [number, number, number]> = {
   0: [60, 15, 0], 1: [48, 24, 0], 2: [225, 75, 0], 3: [75, 30, 0],
@@ -2333,8 +2728,10 @@ export function fmtCountdown(totalSecs: number): string {
 
 export function missionProgress(m: Mission, nowTs: number): number {
   if (m.applied) {
-    const total = m.returnTs - m.arriveTs;
-    const elapsed = nowTs - m.arriveTs;
+    const outboundDuration = Math.max(1, m.arriveTs - m.departTs);
+    const returnStartTs = m.returnTs - outboundDuration;
+    const total = m.returnTs - returnStartTs;
+    const elapsed = nowTs - returnStartTs;
     return total <= 0 ? 100 : Math.min(100, Math.floor((elapsed / total) * 100));
   }
   const total = m.arriveTs - m.departTs;

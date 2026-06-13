@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useConnection, useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import {
   GameClient,
   type GameConfigState,
+  type BattleResolvedEvent,
+  type BattleResolvedEventRecord,
   type VaultRecoveryPromptRequest,
   Planet, Resources, Fleet, Mission, PlayerState, Research,
   BUILDINGS, SHIPS, SHIP_TYPE_IDX, MISSION_LABELS,
@@ -17,14 +20,17 @@ import { MarketClient } from "./market-client";
 import { BUILDING_REQUIREMENTS, RESEARCH_REQUIREMENTS, type Requirement } from "./combat-engine";
 import { getPlanetTheme } from "./art-direction";
 import { getPlanetIdentity } from "./planet-generation";
-import { resolveGameArt } from "./ui-art";
+import { resolveGameArt, resolveGameArtUrl } from "./ui-art";
 import { usePsg1Controls } from "./usePsg1Controls";
 import WalletConnectControl from "./WalletConnectControl";
+import { PUBLIC_APP_URL } from "./mobileWalletAdapter";
+import gamesolLogo from "./assets/ui/logobg.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Tab = "overview" | "resources" | "buildings" | "shipyard" | "fleet" | "missions" | "research" | "galaxy" | "market";
+type Tab = "overview" | "resources" | "buildings" | "research" | "shipyard" | "defense" | "fleet" | "missions" | "activity" | "galaxy" | "market";
 
 type LaunchTargetInput =
+  | { kind: "attack"; galaxy: number; system: number; position: number }
   | { kind: "transport"; mode: "owned"; destinationEntity: string }
   | { kind: "transport"; mode: "coords"; galaxy: number; system: number; position: number }
   | { kind: "colonize"; galaxy: number; system: number; position: number; colonyName: string };
@@ -33,10 +39,91 @@ type ConfirmationState =
   | null
   | { kind: "resolveColonize"; mission: Mission; slotIdx: number };
 
+type BattleReport = {
+  id: string;
+  wallet: string;
+  sourcePlanet: string;
+  sourceCoords: string;
+  targetCoords: string;
+  slot: number;
+  departTs: number;
+  arriveTs: number;
+  resolvedTs: number;
+  completedTs?: number;
+  combatRounds: number;
+  attackerWon: boolean;
+  status: "returning" | "completed" | "destroyed";
+  cargoMetal: string;
+  cargoCrystal: string;
+  cargoDeuterium: string;
+  debrisMetal?: string;
+  debrisCrystal?: string;
+  attacker?: string;
+  defender?: string;
+  destinationPlanet?: string;
+  attackerDestroyed?: boolean;
+  defenderSurvived?: boolean;
+  role?: "attacker" | "defender" | "observer";
+  survivors: Record<string, number>;
+  signature?: string;
+};
+
 const DEV_CONFIG_ADMIN_WALLET = "HAHnFdgoASDzzma7fP9nfKo5nByU1uStYR964QhWnL2X";
 const DEFAULT_ANTIMATTER_MINT = "FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh";
 const DEFAULT_ANTIMATTER_DECIMALS = 6;
 const SPL_TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const MAX_GALAXY = 999;
+const MAX_SYSTEM = 999;
+const MAX_POSITION = 15;
+const MAX_RESOURCE_SETTLEMENT_SECONDS = 86_400;
+const ATTACK_LAUNCH_COOLDOWN_SECONDS = 60;
+const TARGET_ATTACK_COOLDOWN_SECONDS = 120;
+const MIN_ATTACK_COMBAT_POINTS = 1_000;
+const VAULT_PASSWORD_STORAGE_PREFIX = "gamesol:vault-password";
+const APK_DOWNLOAD_URL = import.meta.env.VITE_APK_DOWNLOAD_URL?.trim() || "https://we.tl/t-Qwpa1XZbhuBcgaXc";
+const IS_NATIVE_ANDROID_APP = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+
+function vaultPasswordStorageKey(wallet: string): string {
+  return `${VAULT_PASSWORD_STORAGE_PREFIX}:${wallet}`;
+}
+
+function readRememberedVaultPassword(wallet: string): string | null {
+  try {
+    return window.localStorage.getItem(vaultPasswordStorageKey(wallet));
+  } catch {
+    return null;
+  }
+}
+
+function writeRememberedVaultPassword(wallet: string, password: string): void {
+  try {
+    window.localStorage.setItem(vaultPasswordStorageKey(wallet), password);
+  } catch {
+    /* local password cache is optional */
+  }
+}
+
+function clearRememberedVaultPassword(wallet: string): void {
+  try {
+    window.localStorage.removeItem(vaultPasswordStorageKey(wallet));
+  } catch {
+    /* local password cache is optional */
+  }
+}
+
+function getMaxUsableMissionSlots(computerTech: number): number {
+  return Math.min(4, 1 + Math.floor(computerTech / 5));
+}
+
+function getActiveMissionSlotCount(fleet: Fleet, computerTech: number): number {
+  const usableSlots = getMaxUsableMissionSlots(computerTech);
+  return fleet.missions.slice(0, usableSlots).filter(mission => mission.missionType !== 0).length;
+}
+
+function getFreeMissionSlotCount(fleet: Fleet, computerTech: number): number {
+  const usableSlots = getMaxUsableMissionSlots(computerTech);
+  return fleet.missions.slice(0, usableSlots).filter(mission => mission.missionType === 0).length;
+}
 
 function formatTokenAmount(raw: bigint, decimals: number): string {
   const base = 10n ** BigInt(decimals);
@@ -52,6 +139,149 @@ function formatSolBalance(lamports: bigint): string {
   if (sol === 0) return "0";
   if (sol < 0.001) return "<0.001";
   return sol.toFixed(3);
+}
+
+const BATTLE_SHIP_FIELDS = [
+  ["smallCargo", "Small Cargo", "sSmallCargo"],
+  ["largeCargo", "Large Cargo", "sLargeCargo"],
+  ["lightFighter", "Light Fighter", "sLightFighter"],
+  ["heavyFighter", "Heavy Fighter", "sHeavyFighter"],
+  ["cruiser", "Cruiser", "sCruiser"],
+  ["battleship", "Battleship", "sBattleship"],
+  ["battlecruiser", "Battlecruiser", "sBattlecruiser"],
+  ["bomber", "Bomber", "sBomber"],
+  ["destroyer", "Destroyer", "sDestroyer"],
+  ["deathstar", "Deathstar", "sDeathstar"],
+  ["recycler", "Recycler", "sRecycler"],
+  ["espionageProbe", "Espionage Probe", "sEspionageProbe"],
+  ["colonyShip", "Colony Ship", "sColonyShip"],
+] as const;
+
+const BATTLE_EVENT_SHIP_FIELDS = [
+  ["Small Cargo", "attackerSmallCargo"],
+  ["Large Cargo", "attackerLargeCargo"],
+  ["Light Fighter", "attackerLightFighter"],
+  ["Heavy Fighter", "attackerHeavyFighter"],
+  ["Cruiser", "attackerCruiser"],
+  ["Battleship", "attackerBattleship"],
+  ["Battlecruiser", "attackerBattlecruiser"],
+  ["Bomber", "attackerBomber"],
+  ["Destroyer", "attackerDestroyer"],
+  ["Deathstar", "attackerDeathstar"],
+  ["Recycler", "attackerRecycler"],
+  ["Espionage Probe", "attackerEspionageProbe"],
+  ["Colony Ship", "attackerColonyShip"],
+] as const;
+
+function battleReportId(wallet: string, sourcePlanet: string, slot: number, mission: Mission): string {
+  return [
+    wallet,
+    sourcePlanet,
+    slot,
+    mission.targetGalaxy,
+    mission.targetSystem,
+    mission.targetPosition,
+  ].join(":");
+}
+
+function battleEventReportId(wallet: string, event: BattleResolvedEvent): string {
+  return [
+    wallet,
+    event.sourcePlanet,
+    event.missionSlot,
+    event.targetGalaxy,
+    event.targetSystem,
+    event.targetPosition,
+  ].join(":");
+}
+
+function buildBattleReport(wallet: string, source: PlayerState, slot: number, mission: Mission, signature?: string, completed = false): BattleReport {
+  const survivors = Object.fromEntries(
+    BATTLE_SHIP_FIELDS
+      .map(([, label, field]) => [label, Number((mission as any)[field] ?? 0)] as const)
+      .filter(([, count]) => count > 0),
+  );
+  const destroyed = Object.values(survivors).reduce((sum, count) => sum + count, 0) === 0;
+  return {
+    id: battleReportId(wallet, source.planetPda, slot, mission),
+    wallet,
+    sourcePlanet: source.planet.name || `Planet ${source.planet.planetIndex + 1}`,
+    sourceCoords: `${source.planet.galaxy}:${source.planet.system}:${source.planet.position}`,
+    targetCoords: `${mission.targetGalaxy}:${mission.targetSystem}:${mission.targetPosition}`,
+    slot,
+    departTs: mission.departTs,
+    arriveTs: mission.arriveTs,
+    resolvedTs: Math.floor(Date.now() / 1000),
+    completedTs: completed ? Math.floor(Date.now() / 1000) : undefined,
+    combatRounds: mission.combatRounds,
+    attackerWon: mission.attackerWon,
+    status: destroyed ? "destroyed" : completed ? "completed" : "returning",
+    cargoMetal: mission.cargoMetal.toString(),
+    cargoCrystal: mission.cargoCrystal.toString(),
+    cargoDeuterium: mission.cargoDeuterium.toString(),
+    survivors,
+    signature,
+  };
+}
+
+function shortAddress(value: string): string {
+  return `${value.slice(0, 6)}...${value.slice(-6)}`;
+}
+
+function buildBattleReportFromEvent(wallet: string, source: PlayerState | undefined, event: BattleResolvedEvent, signature?: string): BattleReport {
+  const survivors = Object.fromEntries(
+    BATTLE_EVENT_SHIP_FIELDS
+      .map(([label, field]) => [label, Number(event[field] ?? 0)] as const)
+      .filter(([, count]) => count > 0),
+  );
+  const role = event.attacker === wallet ? "attacker" : event.defender === wallet ? "defender" : "observer";
+  return {
+    id: battleEventReportId(wallet, event),
+    wallet,
+    sourcePlanet: source?.planet.name || shortAddress(event.sourcePlanet),
+    sourceCoords: `${event.sourceGalaxy}:${event.sourceSystem}:${event.sourcePosition}`,
+    targetCoords: `${event.targetGalaxy}:${event.targetSystem}:${event.targetPosition}`,
+    slot: event.missionSlot,
+    departTs: 0,
+    arriveTs: 0,
+    resolvedTs: event.resolvedAt,
+    combatRounds: event.combatRounds,
+    attackerWon: event.attackerWon,
+    status: role === "defender" ? "completed" : event.attackerDestroyed ? "destroyed" : "returning",
+    cargoMetal: event.lootMetal.toString(),
+    cargoCrystal: event.lootCrystal.toString(),
+    cargoDeuterium: event.lootDeuterium.toString(),
+    debrisMetal: event.debrisMetal.toString(),
+    debrisCrystal: event.debrisCrystal.toString(),
+    attacker: event.attacker,
+    defender: event.defender,
+    destinationPlanet: event.destinationPlanet,
+    attackerDestroyed: event.attackerDestroyed,
+    defenderSurvived: event.defenderSurvived,
+    role,
+    survivors,
+    signature,
+  };
+}
+
+function buildBattleReportsFromEventRecords(wallet: string, planets: PlayerState[], records: BattleResolvedEventRecord[]): BattleReport[] {
+  const sourceByPda = new Map(planets.map(planet => [planet.planetPda, planet]));
+  return records.map(record => buildBattleReportFromEvent(
+    wallet,
+    sourceByPda.get(record.event.sourcePlanet),
+    record.event,
+    record.signature,
+  ));
+}
+
+function mergeBattleReportList(reports: BattleReport[], nextReport: BattleReport): BattleReport[] {
+  const existingIndex = reports.findIndex(report => report.id === nextReport.id);
+  const mergedReport = existingIndex >= 0
+    ? { ...reports[existingIndex], ...nextReport, signature: nextReport.signature ?? reports[existingIndex].signature }
+    : nextReport;
+  return (existingIndex >= 0
+    ? reports.map((report, index) => index === existingIndex ? mergedReport : report)
+    : [mergedReport, ...reports]).slice(0, 80);
 }
 
 const AntimatterIcon: React.FC<{ size?: number }> = ({ size = 14 }) => (
@@ -77,17 +307,34 @@ function useIsMobile() {
 // ─── Ship requirements ────────────────────────────────────────────────────────
 interface ShipRequirement { label: string; met: boolean; current: number; required: number; }
 interface ShipRequirementsCheck { shipName: string; shipIcon: string; requirements: ShipRequirement[]; allMet: boolean; }
+interface DefenseRequirementsCheck { defenseName: string; defenseIcon: string; requirements: ShipRequirement[]; allMet: boolean; }
 interface RequirementStatus { label: string; met: boolean; current: number; required: number; type: "building" | "research"; }
 interface RequirementCheck { title: string; icon: string; categoryLabel: string; subtitle: string; hint: string; requirements: RequirementStatus[]; allMet: boolean; }
 
 const RESEARCH_TECHS = [
-  { idx: 0, name: "Energy Technology", icon: "⚡", field: "energyTech", labReq: 1 },
-  { idx: 1, name: "Combustion Drive", icon: "🔥", field: "combustionDrive", labReq: 1 },
-  { idx: 2, name: "Impulse Drive", icon: "🚀", field: "impulseDrive", labReq: 5 },
-  { idx: 3, name: "Hyperspace Drive", icon: "🌌", field: "hyperspaceDrive", labReq: 7 },
-  { idx: 4, name: "Computer Technology", icon: "💻", field: "computerTech", labReq: 1 },
-  { idx: 5, name: "Astrophysics", icon: "🔭", field: "astrophysics", labReq: 3 },
-  { idx: 6, name: "Intergalactic Research Network", icon: "📡", field: "igrNetwork", labReq: 10 },
+  { idx: 0, name: "Energy Technology", icon: "⚡", field: "energyTech", labReq: 1, baseCost: [0, 800, 400] },
+  { idx: 1, name: "Combustion Drive", icon: "🔥", field: "combustionDrive", labReq: 1, baseCost: [400, 0, 600] },
+  { idx: 2, name: "Impulse Drive", icon: "🚀", field: "impulseDrive", labReq: 2, baseCost: [2000, 4000, 600] },
+  { idx: 3, name: "Hyperspace Drive", icon: "🌌", field: "hyperspaceDrive", labReq: 7, baseCost: [10000, 20000, 6000] },
+  { idx: 4, name: "Computer Technology", icon: "💻", field: "computerTech", labReq: 1, baseCost: [0, 400, 600] },
+  { idx: 5, name: "Astrophysics", icon: "🔭", field: "astrophysics", labReq: 3, baseCost: [4000, 2000, 1000] },
+  { idx: 6, name: "Intergalactic Research Network", icon: "📡", field: "igrNetwork", labReq: 10, baseCost: [240000, 400000, 160000] },
+  { idx: 7, name: "Weapons Technology", icon: "⚔", field: "weaponsTechnology", labReq: 4, baseCost: [800, 200, 0] },
+  { idx: 8, name: "Shielding Technology", icon: "🛡", field: "shieldingTechnology", labReq: 6, baseCost: [200, 600, 0] },
+  { idx: 9, name: "Armor Technology", icon: "🧱", field: "armorTechnology", labReq: 2, baseCost: [1000, 0, 0] },
+] as const;
+
+const DEFENSE_DEFS = [
+  { idx: 0, key: "rocketLauncher", name: "Rocket Launcher", icon: "🚀", cost: { m: 2000, c: 0, d: 0 } },
+  { idx: 1, key: "lightLaser", name: "Light Laser", icon: "🔴", cost: { m: 1500, c: 500, d: 0 } },
+  { idx: 2, key: "heavyLaser", name: "Heavy Laser", icon: "🟠", cost: { m: 6000, c: 2000, d: 0 } },
+  { idx: 3, key: "gaussCannon", name: "Gauss Cannon", icon: "⚡", cost: { m: 20000, c: 15000, d: 2000 } },
+  { idx: 4, key: "ionCannon", name: "Ion Cannon", icon: "🔵", cost: { m: 2000, c: 6000, d: 0 } },
+  { idx: 5, key: "plasmaTurret", name: "Plasma Turret", icon: "🟣", cost: { m: 50000, c: 50000, d: 30000 } },
+  { idx: 6, key: "smallShieldDome", name: "Small Shield Dome", icon: "🛡", cost: { m: 10000, c: 10000, d: 0 } },
+  { idx: 7, key: "largeShieldDome", name: "Large Shield Dome", icon: "🏰", cost: { m: 50000, c: 50000, d: 0 } },
+  { idx: 8, key: "antiBallisticMissile", name: "Anti-Ballistic Missile", icon: "🎯", cost: { m: 8000, c: 0, d: 2000 } },
+  { idx: 9, key: "interplanetaryMissile", name: "Interplanetary Missile", icon: "☄", cost: { m: 12500, c: 2500, d: 10000 } },
 ] as const;
 
 const SUPPORTED_RESEARCH_KEYS = new Set(RESEARCH_TECHS.map(tech => tech.field));
@@ -338,6 +585,109 @@ const SHIP_ART: Record<string, string> = {
   ),
 };
 
+const DEFENSE_ART: Record<string, string> = {
+  rocketLauncher: buildCardArt(
+    "#2f120d",
+    "#6f2417",
+    "#ff9b6b",
+    `<g>
+      <rect x="86" y="90" width="138" height="18" rx="8" fill="#2c0d09" fill-opacity="0.92"/>
+      <rect x="112" y="62" width="96" height="22" rx="8" fill="#ffcfbf" fill-opacity="0.9"/>
+      <rect x="192" y="48" width="62" height="10" rx="5" transform="rotate(18 192 48)" fill="#ff8a65" fill-opacity="0.88"/>
+    </g>`
+  ),
+  lightLaser: buildCardArt(
+    "#140d2f",
+    "#2e1f74",
+    "#85d8ff",
+    `<g>
+      <rect x="92" y="92" width="136" height="16" rx="8" fill="#0f1332" fill-opacity="0.92"/>
+      <circle cx="154" cy="78" r="20" fill="#d8e8ff" fill-opacity="0.88"/>
+      <path d="M172 68L248 42" stroke="#7de3ff" stroke-width="7" stroke-linecap="round"/>
+    </g>`
+  ),
+  heavyLaser: buildCardArt(
+    "#0f152d",
+    "#243f7b",
+    "#9ed0ff",
+    `<g>
+      <rect x="82" y="94" width="150" height="16" rx="8" fill="#11182f" fill-opacity="0.94"/>
+      <rect x="118" y="58" width="78" height="26" rx="10" fill="#e2ecff" fill-opacity="0.9"/>
+      <path d="M188 64L266 32" stroke="#9ed0ff" stroke-width="9" stroke-linecap="round"/>
+    </g>`
+  ),
+  gaussCannon: buildCardArt(
+    "#1a1f33",
+    "#46506c",
+    "#b7d8ff",
+    `<g>
+      <rect x="74" y="96" width="162" height="14" rx="7" fill="#1c2239" fill-opacity="0.95"/>
+      <rect x="124" y="58" width="74" height="28" rx="10" fill="#dfe7f5" fill-opacity="0.9"/>
+      <path d="M194 60L278 22" stroke="#dceeff" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="282" cy="20" r="12" fill="#b7d8ff" fill-opacity="0.9"/>
+    </g>`
+  ),
+  ionCannon: buildCardArt(
+    "#102733",
+    "#1e6474",
+    "#7ef7ff",
+    `<g>
+      <rect x="84" y="94" width="144" height="15" rx="7" fill="#0b1821" fill-opacity="0.94"/>
+      <circle cx="160" cy="76" r="24" fill="#d6ffff" fill-opacity="0.86"/>
+      <path d="M178 72L254 48" stroke="#79f7ff" stroke-width="8" stroke-linecap="round"/>
+    </g>`
+  ),
+  plasmaTurret: buildCardArt(
+    "#24112d",
+    "#5d1f69",
+    "#ff8ee7",
+    `<g>
+      <rect x="88" y="95" width="144" height="14" rx="7" fill="#1e0c22" fill-opacity="0.96"/>
+      <circle cx="160" cy="76" r="24" fill="#ffd2fb" fill-opacity="0.9"/>
+      <circle cx="160" cy="76" r="11" fill="#ff67dd" fill-opacity="0.92"/>
+      <path d="M180 68L254 42" stroke="#ff8ee7" stroke-width="8" stroke-linecap="round"/>
+    </g>`
+  ),
+  smallShieldDome: buildCardArt(
+    "#11263a",
+    "#24557f",
+    "#7ad9ff",
+    `<g>
+      <path d="M72 108C78 68 112 42 160 42C208 42 242 68 248 108Z" fill="#d8f6ff" fill-opacity="0.34" stroke="#7ad9ff" stroke-width="6"/>
+      <rect x="124" y="96" width="72" height="14" rx="7" fill="#173349" fill-opacity="0.92"/>
+    </g>`
+  ),
+  largeShieldDome: buildCardArt(
+    "#0d2038",
+    "#204e87",
+    "#c4ecff",
+    `<g>
+      <path d="M56 110C64 60 106 28 160 28C214 28 256 60 264 110Z" fill="#e5f8ff" fill-opacity="0.28" stroke="#c4ecff" stroke-width="7"/>
+      <rect x="118" y="96" width="84" height="14" rx="7" fill="#14283f" fill-opacity="0.92"/>
+    </g>`
+  ),
+  antiBallisticMissile: buildCardArt(
+    "#2d1512",
+    "#71312a",
+    "#ffbc8a",
+    `<g>
+      <rect x="92" y="94" width="136" height="14" rx="7" fill="#24100d" fill-opacity="0.94"/>
+      <path d="M126 88L190 52L208 70L150 92Z" fill="#ffe2cf" fill-opacity="0.9"/>
+      <path d="M188 54L244 34" stroke="#ffbc8a" stroke-width="7" stroke-linecap="round"/>
+    </g>`
+  ),
+  interplanetaryMissile: buildCardArt(
+    "#2b1111",
+    "#7a2121",
+    "#ff6f61",
+    `<g>
+      <rect x="74" y="96" width="164" height="14" rx="7" fill="#220d0d" fill-opacity="0.95"/>
+      <path d="M108 88L202 44L222 64L130 94Z" fill="#ffd4d0" fill-opacity="0.92"/>
+      <path d="M202 46L274 22" stroke="#ff6f61" stroke-width="8" stroke-linecap="round"/>
+    </g>`
+  ),
+};
+
 function getBuildingArt(key: string): string {
   const fallback = BUILDING_ART[key] ?? buildCardArt("#172133", "#283b5b", "#8db0ff", `<g><rect x="78" y="48" width="164" height="70" rx="18" fill="#d6e0ff" fill-opacity="0.84"/></g>`);
   return resolveGameArt(key, fallback);
@@ -350,6 +700,19 @@ function getResearchArt(key: string): string {
 
 function getShipArt(key: string): string {
   const fallback = SHIP_ART[key] ?? buildCardArt("#152032", "#263f63", "#9dbfff", `<g><rect x="72" y="58" width="176" height="46" rx="16" fill="#dbe8ff" fill-opacity="0.86"/></g>`);
+  return resolveGameArt(key, fallback);
+}
+
+function getShipArtUrl(key: string): string {
+  const resolved = resolveGameArtUrl(key);
+  if (resolved) return resolved;
+  const fallback = getShipArt(key);
+  const match = fallback.match(/^url\(["']?(.*?)["']?\)$/);
+  return match?.[1] ?? fallback;
+}
+
+function getDefenseArt(key: string): string {
+  const fallback = DEFENSE_ART[key] ?? buildCardArt("#1a2133", "#30405f", "#b0c5ff", `<g><rect x="84" y="92" width="152" height="16" rx="8" fill="#dbe8ff" fill-opacity="0.84"/></g>`);
   return resolveGameArt(key, fallback);
 }
 
@@ -373,9 +736,21 @@ function checkResearchRequirements(
   planet: Planet,
   research: Research,
 ): RequirementCheck {
+  const backendResearchRequirements: Record<string, Requirement[]> = {
+    energyTech: [],
+    combustionDrive: [{ type: "research", key: "energyTech", level: 1 }],
+    impulseDrive: [{ type: "research", key: "energyTech", level: 1 }],
+    hyperspaceDrive: [],
+    computerTech: [],
+    astrophysics: [{ type: "research", key: "impulseDrive", level: 3 }],
+    igrNetwork: [{ type: "research", key: "computerTech", level: 8 }],
+    weaponsTechnology: [],
+    shieldingTechnology: [{ type: "research", key: "energyTech", level: 3 }],
+    armorTechnology: [],
+  };
   const requirements = [
     { type: "building", key: "researchLab", level: tech.labReq } as Requirement,
-    ...(RESEARCH_REQUIREMENTS[tech.field] ?? []),
+    ...(backendResearchRequirements[tech.field] ?? []),
   ];
   return buildRequirementCheck(
     tech.name,
@@ -392,15 +767,80 @@ function checkResearchRequirements(
 function checkShipRequirements(shipKey: string, research: Research, planet: Planet): ShipRequirementsCheck | null {
   const ship = SHIPS.find(s => s.key === shipKey);
   if (!ship) return null;
-  const requirements: ShipRequirement[] = [];
-  requirements.push({ label: "Shipyard", met: planet.shipyard >= 1, current: planet.shipyard, required: 1 });
-  if (shipKey === "smallCargo") requirements.push({ label: "Combustion Drive", met: research.combustionDrive >= 2, current: research.combustionDrive, required: 2 });
-  if (shipKey === "largeCargo") requirements.push({ label: "Combustion Drive", met: research.combustionDrive >= 6, current: research.combustionDrive, required: 6 });
-  if (shipKey === "colonyShip") {
-    requirements.push({ label: "Impulse Drive", met: research.impulseDrive >= 3, current: research.impulseDrive, required: 3 });
-    requirements.push({ label: "Astrophysics", met: research.astrophysics >= 4, current: research.astrophysics, required: 4 });
-  }
+  const req = (label: string, current: number, required: number): ShipRequirement => ({
+    label,
+    current,
+    required,
+    met: current >= required,
+  });
+  const requirementsByShip: Record<string, ShipRequirement[]> = {
+    smallCargo: [req("Shipyard", planet.shipyard, 2), req("Combustion Drive", research.combustionDrive, 2)],
+    largeCargo: [req("Shipyard", planet.shipyard, 4), req("Combustion Drive", research.combustionDrive, 6)],
+    lightFighter: [req("Shipyard", planet.shipyard, 1)],
+    heavyFighter: [req("Shipyard", planet.shipyard, 3), req("Armor Technology", research.armorTechnology, 2), req("Impulse Drive", research.impulseDrive, 2)],
+    cruiser: [req("Shipyard", planet.shipyard, 5), req("Impulse Drive", research.impulseDrive, 4)],
+    battleship: [req("Shipyard", planet.shipyard, 7), req("Hyperspace Drive", research.hyperspaceDrive, 4)],
+    battlecruiser: [req("Shipyard", planet.shipyard, 8), req("Hyperspace Drive", research.hyperspaceDrive, 5), req("Computer Technology", research.computerTech, 5), req("Weapons Technology", research.weaponsTechnology, 5)],
+    bomber: [req("Shipyard", planet.shipyard, 8), req("Impulse Drive", research.impulseDrive, 6), req("Hyperspace Drive", research.hyperspaceDrive, 5), req("Weapons Technology", research.weaponsTechnology, 5)],
+    destroyer: [req("Shipyard", planet.shipyard, 9), req("Hyperspace Drive", research.hyperspaceDrive, 6), req("Armor Technology", research.armorTechnology, 6)],
+    deathstar: [req("Shipyard", planet.shipyard, 12), req("Hyperspace Drive", research.hyperspaceDrive, 7), req("Weapons Technology", research.weaponsTechnology, 10), req("Energy Technology", research.energyTech, 12)],
+    recycler: [req("Shipyard", planet.shipyard, 4), req("Combustion Drive", research.combustionDrive, 6), req("Shielding Technology", research.shieldingTechnology, 2)],
+    espionageProbe: [req("Shipyard", planet.shipyard, 3), req("Combustion Drive", research.combustionDrive, 3)],
+    colonyShip: [req("Shipyard", planet.shipyard, 4), req("Impulse Drive", research.impulseDrive, 3), req("Astrophysics", research.astrophysics, 4)],
+    solarSatellite: [req("Shipyard", planet.shipyard, 1)],
+  };
+  const requirements = requirementsByShip[shipKey] ?? [req("Shipyard", planet.shipyard, 1)];
   return { shipName: ship.name, shipIcon: ship.icon, requirements, allMet: requirements.every(r => r.met) };
+}
+
+function checkDefenseRequirements(defenseKey: string, research: Research, planet: Planet): DefenseRequirementsCheck | null {
+  const defense = DEFENSE_DEFS.find(entry => entry.key === defenseKey);
+  if (!defense) return null;
+  const requirements: ShipRequirement[] = [{ label: "Shipyard", met: planet.shipyard >= 1, current: planet.shipyard, required: 1 }];
+
+  switch (defenseKey) {
+    case "lightLaser":
+      requirements.push({ label: "Shipyard", met: planet.shipyard >= 2, current: planet.shipyard, required: 2 });
+      break;
+    case "heavyLaser":
+      requirements.push({ label: "Shipyard", met: planet.shipyard >= 4, current: planet.shipyard, required: 4 });
+      break;
+    case "gaussCannon":
+      requirements.push({ label: "Shipyard", met: planet.shipyard >= 6, current: planet.shipyard, required: 6 });
+      requirements.push({ label: "Weapons Technology", met: research.weaponsTechnology >= 3, current: research.weaponsTechnology, required: 3 });
+      break;
+    case "ionCannon":
+      requirements.push({ label: "Shipyard", met: planet.shipyard >= 4, current: planet.shipyard, required: 4 });
+      requirements.push({ label: "Shielding Technology", met: research.shieldingTechnology >= 2, current: research.shieldingTechnology, required: 2 });
+      break;
+    case "plasmaTurret":
+      requirements.push({ label: "Shipyard", met: planet.shipyard >= 8, current: planet.shipyard, required: 8 });
+      requirements.push({ label: "Shielding Technology", met: research.shieldingTechnology >= 8, current: research.shieldingTechnology, required: 8 });
+      requirements.push({ label: "Weapons Technology", met: research.weaponsTechnology >= 10, current: research.weaponsTechnology, required: 10 });
+      requirements.push({ label: "Energy Technology", met: research.energyTech >= 8, current: research.energyTech, required: 8 });
+      break;
+    case "smallShieldDome":
+      requirements.push({ label: "Shielding Technology", met: research.shieldingTechnology >= 2, current: research.shieldingTechnology, required: 2 });
+      requirements.push({ label: "Unique", met: planet.smallShieldDome === 0, current: planet.smallShieldDome, required: 0 });
+      break;
+    case "largeShieldDome":
+      requirements.push({ label: "Shielding Technology", met: research.shieldingTechnology >= 6, current: research.shieldingTechnology, required: 6 });
+      requirements.push({ label: "Unique", met: planet.largeShieldDome === 0, current: planet.largeShieldDome, required: 0 });
+      break;
+    case "antiBallisticMissile":
+    case "interplanetaryMissile":
+      requirements.push({ label: "Missile Silo", met: planet.missileSilo >= 1, current: planet.missileSilo, required: 1 });
+      break;
+    default:
+      break;
+  }
+
+  return {
+    defenseName: defense.name,
+    defenseIcon: defense.icon,
+    requirements,
+    allMet: requirements.every(requirement => requirement.met),
+  };
 }
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
@@ -439,6 +879,11 @@ const CSS = `
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .header-right { display: flex; align-items: center; gap: 12px; }
   .header-cluster { display:flex; align-items:center; gap:10px; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:18px; background: rgba(4,7,17,0.45); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+  .desktop-planet-chip { display:flex; align-items:center; gap:10px; min-width:0; padding:7px 12px; border:1px solid rgba(255,255,255,0.08); border-radius:999px; background:rgba(4,7,17,0.38); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
+  .desktop-planet-orbit { width:9px; height:9px; border-radius:50%; background:var(--planet-accent, var(--cyan)); box-shadow:0 0 14px var(--planet-accent, var(--cyan)); flex:0 0 auto; }
+  .desktop-planet-copy { min-width:0; display:grid; gap:1px; }
+  .desktop-planet-name { max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:'Orbitron',sans-serif; font-size:11px; color:white; letter-spacing:0.8px; }
+  .desktop-planet-coords { font-size:9px; color:rgba(200,214,229,0.52); letter-spacing:1.3px; text-transform:uppercase; }
   .brand-stack { display:flex; flex-direction:column; gap:2px; }
   .brand-kicker { font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:rgba(200,214,229,0.46); }
   .header-callout { font-size:10px; color:var(--dim); letter-spacing:1.1px; }
@@ -502,6 +947,19 @@ const CSS = `
   .desktop-resource-cap { margin-top:10px; height:3px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; }
   .desktop-resource-cap-fill { height:100%; border-radius:999px; }
   .desktop-tab-body { min-width:0; }
+  .tab-masthead { position:relative; overflow:hidden; display:flex; align-items:flex-end; justify-content:space-between; gap:18px; padding:16px 18px; border-radius:18px; border:1px solid rgba(255,255,255,0.08); background:linear-gradient(135deg, rgba(255,255,255,0.055), rgba(8,10,22,0.9)); box-shadow:var(--shell-shadow); }
+  .tab-masthead::before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 12% 20%, var(--planet-accent, rgba(0,245,212,0.18)), transparent 24%), linear-gradient(120deg, rgba(255,255,255,0.04), transparent 52%); opacity:0.18; pointer-events:none; }
+  .tab-masthead > * { position:relative; z-index:1; }
+  .tab-masthead-copy { min-width:0; display:grid; gap:6px; }
+  .tab-eyebrow { font-size:9px; color:rgba(200,214,229,0.5); letter-spacing:2.4px; text-transform:uppercase; }
+  .tab-title { font-family:'Orbitron',sans-serif; color:white; font-size:18px; font-weight:700; letter-spacing:1px; line-height:1.15; }
+  .tab-subtitle { color:rgba(200,214,229,0.66); font-size:11px; line-height:1.55; max-width:66ch; }
+  .tab-masthead-rail { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; flex:0 0 auto; }
+  .status-chip { display:inline-flex; align-items:center; gap:7px; min-height:30px; padding:7px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.09); background:rgba(4,7,17,0.45); color:rgba(200,214,229,0.78); font-size:10px; letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
+  .status-chip strong { color:white; font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:0.6px; }
+  .status-chip.action { color:var(--cyan); border-color:rgba(0,245,212,0.32); background:rgba(0,245,212,0.08); cursor:pointer; }
+  .status-chip.action:hover:not(:disabled) { background:var(--cyan); color:var(--void); box-shadow:var(--glow-c); }
+  .status-chip:disabled { opacity:0.48; cursor:not-allowed; }
   .sidebar-top-offset { flex: 0 0 auto; height: 10px; margin: 20px 16px 8px; border-top: 1px solid rgba(255,255,255,0.08); opacity: 0.75; }
   .shell-error { border:1px solid rgba(255,0,110,0.28); background: linear-gradient(135deg, rgba(255,0,110,0.08), rgba(255,255,255,0.02)); color: #ff8fb7; padding: 12px 14px; border-radius: 12px; font-size: 11px; letter-spacing: 0.8px; margin-bottom: 16px; box-shadow: var(--shell-shadow); }
   .shell-panel { border:1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(8,10,22,0.92)); box-shadow: var(--shell-shadow); backdrop-filter: blur(16px); }
@@ -603,11 +1061,12 @@ const CSS = `
     height: var(--bottom-bar); background: rgba(6,6,18,0.97);
     border-top: 1px solid var(--border); backdrop-filter: blur(20px);
     display: flex; align-items: stretch; z-index: 50;
-    padding-bottom: env(safe-area-inset-bottom, 0px); }
+    padding-bottom: env(safe-area-inset-bottom, 0px); overflow-x:auto; scrollbar-width:none; }
+  .mobile-bottom-bar::-webkit-scrollbar { display:none; }
   .mobile-nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center;
     justify-content: center; gap: 3px; cursor: pointer; border: none;
     background: transparent; color: var(--dim); transition: all 0.15s;
-    -webkit-tap-highlight-color: transparent; position: relative; padding: 0; }
+    -webkit-tap-highlight-color: transparent; position: relative; padding: 0; min-width:64px; }
   .mobile-nav-btn.active { color: var(--cyan); }
   .mobile-nav-btn.active::after { content: ''; position: absolute; top: 0; left: 20%; right: 20%;
     height: 2px; background: var(--cyan); border-radius: 0 0 2px 2px;
@@ -649,7 +1108,7 @@ const CSS = `
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
   .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
-  .card { position:relative; overflow:hidden; background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(8,10,22,0.94)); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; transition: border-color 0.2s, transform 0.2s; box-shadow: var(--shell-shadow); }
+  .card { position:relative; overflow:hidden; background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(8,10,22,0.94)); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px; transition: border-color 0.2s, transform 0.2s; box-shadow: var(--shell-shadow); }
   .card::before { content:""; position:absolute; inset:0; background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent 42%, rgba(255,255,255,0.02)); pointer-events:none; }
   .card:hover { border-color: rgba(155,93,229,0.3); transform: translateY(-1px); }
   .card-label { font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 6px; }
@@ -733,7 +1192,8 @@ const CSS = `
   .mission-ship-badge { font-size: 10px; background: rgba(155,93,229,0.08); border: 1px solid var(--border); border-radius: 2px; padding: 2px 6px; color: var(--text); }
   .mission-ship-media { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; }
   .mission-ship-card { width: 112px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(8,10,22,0.94)); box-shadow: var(--shell-shadow); }
-  .mission-ship-card-art { height: 68px; background-size: cover; background-position: center; }
+  .mission-ship-card-art { height: 68px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, rgba(0,245,212,0.12), rgba(4,6,18,0.92)); }
+  .mission-ship-card-art img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .mission-ship-card-copy { padding: 8px 10px; display: flex; justify-content: space-between; gap: 8px; font-size: 9px; letter-spacing: 0.8px; color: var(--text); }
   .apply-btn { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px;
     padding: 6px 14px; border-radius: 2px; border: 1px solid var(--success); background: rgba(6,214,160,0.1);
@@ -776,7 +1236,8 @@ const CSS = `
   .modal-ship-avail { font-size: 9px; color: var(--dim); }
   .modal-ship-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
   .modal-ship-copy { display:grid; gap:4px; }
-  .modal-ship-art { height: 88px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background-size: cover; background-position: center; background-color: rgba(9,12,24,0.92); overflow:hidden; }
+  .modal-ship-art { height: 88px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: radial-gradient(circle at 50% 38%, rgba(125,216,255,0.12), transparent 54%), rgba(9,12,24,0.92); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .modal-ship-art img { width: 100%; height: 100%; object-fit: contain; display:block; }
   .modal-input { width: 64px; padding: 6px 8px; font-size: 12px; border-radius: 10px; text-align: right;
     background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: var(--text); }
   .modal-select { padding: 8px 10px; font-size: 12px; border-radius: 2px; width: 100%;
@@ -833,6 +1294,11 @@ const CSS = `
     .overview-hero { padding:18px; border-radius:20px; min-height:unset; }
     .command-section-head { padding:16px; border-radius:16px; }
     .hero-title { max-width:none; }
+    .tab-masthead { align-items:flex-start; flex-direction:column; gap:12px; padding:14px; border-radius:16px; margin-bottom:14px; }
+    .tab-title { font-size:15px; }
+    .tab-subtitle { font-size:10px; }
+    .tab-masthead-rail { justify-content:flex-start; width:100%; }
+    .status-chip { min-height:28px; padding:6px 9px; font-size:9px; }
     .sidebar-planet-card, .res-panel.shell-panel, .nav.shell-panel { margin-left:12px; margin-right:12px; }
     .card-value { font-size: 16px; }
     .section-title { font-size: 10px; letter-spacing: 2px; margin-bottom: 14px; }
@@ -1054,19 +1520,529 @@ const PlanetSceneCard: React.FC<{ planet: Planet; size?: number; compact?: boole
 
 // ─── Small shared components ──────────────────────────────────────────────────
 const LogoSVG: React.FC<{ size?: number }> = ({ size = 32 }) => (
-  <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-    <defs><linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#9b5de5"/><stop offset="100%" stopColor="#00f5d4"/></linearGradient></defs>
-    <rect x="18" y="18" width="48" height="48" rx="8" transform="rotate(45 50 50)" stroke="url(#lg1)" strokeWidth="5" fill="none"/>
-    <rect x="26" y="26" width="36" height="36" rx="6" transform="rotate(45 50 50)" stroke="url(#lg1)" strokeWidth="4" fill="none" opacity="0.85"/>
-    <rect x="36" y="36" width="20" height="20" rx="4" transform="rotate(45 50 50)" stroke="url(#lg1)" strokeWidth="3.5" fill="none" opacity="0.7"/>
-  </svg>
+  <img
+    src={gamesolLogo}
+    alt="GAMESOL"
+    width={size}
+    height={size}
+    style={{
+      display: "block",
+      width: size,
+      height: size,
+      objectFit: "contain",
+    }}
+  />
 );
 
 const LandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => (
   <div className="landing">
     <div className="landing-logo"><LogoSVG size={isMobile ? 80 : 120}/></div>
-    <div><div className="landing-title">GAMESOL</div><div className="landing-sub">On-chain space strategy Â· Solana</div></div>
+    <div><div className="landing-title">GAMESOL</div><div className="landing-sub">On-chain space strategy - Solana</div></div>
     <WalletConnectControl/>
+  </div>
+);
+
+const LANDING_PLANET: Planet = {
+  creator: "landing",
+  entity: "landing",
+  owner: "landing",
+  name: "Gamesol Prime",
+  galaxy: 777,
+  system: 404,
+  position: 8,
+  planetIndex: 0,
+  diameter: 14200,
+  temperature: 32,
+  maxFields: 208,
+  usedFields: 64,
+  createdAt: 0,
+  protectionUntilTs: 0,
+  marketUnlockedAt: 0,
+  attackUnlockedAt: 0,
+  lastAttackLaunchTs: 0,
+  lastAttackedTs: 0,
+  metalMine: 16,
+  crystalMine: 14,
+  deuteriumSynthesizer: 12,
+  solarPlant: 14,
+  fusionReactor: 8,
+  roboticsFactory: 10,
+  naniteFactory: 3,
+  shipyard: 12,
+  metalStorage: 8,
+  crystalStorage: 8,
+  deuteriumTank: 7,
+  researchLab: 10,
+  missileSilo: 4,
+  weaponsTechnology: 8,
+  shieldingTechnology: 7,
+  armorTechnology: 7,
+  buildQueueItem: 255,
+  buildQueueTarget: 0,
+  buildFinishTs: 0,
+  shipBuildItem: 255,
+  shipBuildQty: 0,
+  shipBuildFinishTs: 0,
+  defenseBuildItem: 255,
+  defenseBuildQty: 0,
+  defenseBuildFinishTs: 0,
+  rocketLauncher: 120,
+  lightLaser: 40,
+  heavyLaser: 18,
+  gaussCannon: 6,
+  ionCannon: 10,
+  plasmaTurret: 4,
+  smallShieldDome: 1,
+  largeShieldDome: 0,
+  antiBallisticMissile: 8,
+  interplanetaryMissile: 0,
+};
+
+function useRevealOnScroll(options?: IntersectionObserverInit) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || visible) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, {
+      threshold: 0.18,
+      rootMargin: "0px 0px -10% 0px",
+      ...options,
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible, options]);
+
+  return { ref, visible };
+}
+
+const ScrollReveal: React.FC<{
+  children: React.ReactNode;
+  delay?: number;
+  distance?: number;
+  style?: React.CSSProperties;
+}> = ({ children, delay = 0, distance = 28, style }) => {
+  const { ref, visible } = useRevealOnScroll();
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0px) scale(1)" : `translateY(${distance}px) scale(0.985)`,
+        filter: visible ? "blur(0px)" : "blur(8px)",
+        transition: `opacity 700ms ease, transform 900ms cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms, filter 700ms ease ${delay}ms`,
+        willChange: "opacity, transform, filter",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => (
+  <div
+    className="landing"
+    style={{
+      minHeight: "100dvh",
+      height: "auto",
+      width: "100%",
+      padding: isMobile ? "0 16px 36px" : "0 24px 52px",
+      boxSizing: "border-box",
+      position: "relative",
+      zIndex: 1,
+      display: "block",
+      overflowX: "hidden",
+      overflowY: "auto",
+    }}
+  >
+    <div
+      style={{
+        position: "absolute",
+        top: isMobile ? 16 : 24,
+        right: isMobile ? 16 : 28,
+        zIndex: 5,
+      }}
+    >
+      <WalletConnectControl disconnectedLabel="Launch App (devnet)" connectingLabel="Launching..." />
+    </div>
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: [
+          "radial-gradient(circle at 18% 18%, rgba(0,245,212,0.14), transparent 28%)",
+          "radial-gradient(circle at 82% 24%, rgba(255,214,10,0.10), transparent 24%)",
+          "radial-gradient(circle at 52% 76%, rgba(82,160,255,0.12), transparent 30%)",
+        ].join(","),
+        pointerEvents: "none",
+      }}
+    />
+    <div
+      className="shell-panel"
+      style={{
+        width: "100%",
+        maxWidth: isMobile ? 1180 : 1320,
+        margin: "0 auto",
+        borderRadius: isMobile ? 32 : 0,
+        padding: isMobile ? "24px 16px 18px" : "0 18px",
+        boxSizing: "border-box",
+        background: isMobile ? "linear-gradient(180deg, rgba(7,12,24,0.94), rgba(10,16,32,0.92) 38%, rgba(13,20,38,0.9))" : "transparent",
+        border: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
+        boxShadow: isMobile ? "0 36px 100px rgba(0,0,0,0.42)" : "none",
+        position: "relative",
+        overflow: isMobile ? "hidden" : "visible",
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: -160,
+          right: -90,
+          width: 360,
+          height: 360,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(0,245,212,0.12), rgba(0,245,212,0.01) 65%, transparent 72%)",
+          pointerEvents: "none",
+          display: isMobile ? "block" : "none",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          bottom: -220,
+          left: -120,
+          width: 420,
+          height: 420,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255,214,10,0.10), rgba(255,214,10,0.01) 62%, transparent 72%)",
+          pointerEvents: "none",
+          display: isMobile ? "block" : "none",
+        }}
+      />
+
+      <div style={{ position: "relative", zIndex: 1, display: "grid", gap: isMobile ? 22 : 26 }}>
+        <ScrollReveal
+          style={{
+            display: "grid",
+            justifyItems: "center",
+            textAlign: "center",
+            gap: 18,
+            padding: isMobile ? "28px 4px 24px" : "42px 24px 36px",
+            minHeight: isMobile ? "92dvh" : "100dvh",
+            alignContent: "center",
+          }}
+        >
+          <div
+            className="landing-logo"
+            style={{
+              width: isMobile ? 180 : 260,
+              height: isMobile ? 180 : 260,
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            <LogoSVG size={isMobile ? 160 : 240} />
+          </div>
+
+          <div style={{ display: "grid", gap: 10, justifyItems: "center" }}>
+            <div className="landing-title" style={{ marginBottom: 0, letterSpacing: isMobile ? "4px" : "8px", fontSize: isMobile ? "clamp(34px, 12vw, 56px)" : "clamp(60px, 8vw, 94px)", lineHeight: 0.95 }}>GAMESOL</div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 12px",
+                borderRadius: 999,
+                border: "1px solid rgba(255,214,10,0.22)",
+                background: "rgba(255,214,10,0.07)",
+                color: "var(--warn)",
+                fontSize: 11,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+              }}
+            >
+              Devnet live now
+            </div>
+            <div className="landing-sub" style={{ maxWidth: 820, margin: "0 auto", fontSize: isMobile ? 13 : 15, letterSpacing: isMobile ? 1.6 : 2.6, lineHeight: 1.8 }}>
+              An on-chain space strategy project on Solana where players build planets,
+              expand production, research technologies, and launch fleets across a persistent galaxy.
+            </div>
+            <div
+              style={{
+                maxWidth: 760,
+                margin: "0 auto",
+                fontSize: isMobile ? 14 : 17,
+                lineHeight: 1.9,
+                color: "rgba(203,217,230,0.82)",
+              }}
+            >
+              A strategy game first, not just a wallet demo. The landing page introduces the world, the current gameplay loop, and the path toward audits, funding, and mainnet.
+            </div>
+          </div>
+
+          <div
+            aria-hidden="true"
+            style={{
+              display: "grid",
+              justifyItems: "center",
+              gap: 8,
+              marginTop: isMobile ? 8 : 14,
+              color: "rgba(200,214,229,0.66)",
+              animation: "pulse 2.2s ease-in-out infinite",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: 2.2,
+                textTransform: "uppercase",
+              }}
+            >
+              Scroll to explore
+            </div>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M6 9L12 15L18 9"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        </ScrollReveal>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1.04fr 0.96fr",
+            gap: isMobile ? 18 : 22,
+            alignItems: "start",
+            paddingTop: isMobile ? 8 : 34,
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <div style={{ display: "grid", gap: 16 }}>
+          <ScrollReveal
+            delay={120}
+            style={{
+              padding: isMobile ? "22px 18px" : "28px 26px",
+              borderRadius: 28,
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(10,13,28,0.82))",
+              boxShadow: "0 22px 60px rgba(0,0,0,0.20)",
+            }}
+          >
+            <div style={{ display: "grid", gap: isMobile ? 20 : 24 }}>
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ fontSize: 11, letterSpacing: 1.8, textTransform: "uppercase", color: "var(--warn)" }}>
+                  What comes next
+                </div>
+                <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: isMobile ? 24 : 36, lineHeight: 1.1, color: "rgba(248,250,252,0.96)", maxWidth: 760 }}>
+                  Funding, audits, and mainnet are the next milestones.
+                </div>
+                <div style={{ fontSize: isMobile ? 14 : 16, lineHeight: 1.9, color: "rgba(214,223,232,0.84)", maxWidth: 760 }}>
+                  We are preparing for foundation support, audits, and a stronger public rollout while planning attack and defense systems, guilds, wars, and deeper competitive play.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                  gap: 16,
+                  alignItems: "stretch",
+                }}
+              >
+                <div
+                  style={{
+                    padding: isMobile ? "18px 16px" : "20px 18px",
+                    borderRadius: 20,
+                    border: "1px solid rgba(255,214,10,0.22)",
+                    background: "linear-gradient(180deg, rgba(255,214,10,0.08), rgba(24,18,6,0.32))",
+                    height: "100%",
+                  }}
+                >
+                  <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 12, letterSpacing: 1.2, color: "var(--warn)", marginBottom: 8 }}>
+                    Coming soon
+                  </div>
+                  <div style={{ fontSize: 13, lineHeight: 1.8, color: "rgba(255,250,232,0.88)" }}>
+                    We are going to raise funds soon for the foundation of the project, security audits, and the path toward a mainnet launch.
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: isMobile ? "18px 16px" : "20px 18px",
+                    borderRadius: 20,
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(7,11,22,0.56)",
+                    height: "100%",
+                  }}
+                >
+                  <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 12, letterSpacing: 1.2, color: "var(--text)", marginBottom: 8 }}>
+                    Development status
+                  </div>
+                  <div style={{ fontSize: 13, lineHeight: 1.8, color: "rgba(200,214,229,0.88)" }}>
+                    The main gameplay loop is already complete. We still need to add attack and defense systems, guilds, wars, and more advanced competitive features.
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  paddingTop: 2,
+                  borderTop: "1px solid rgba(255,255,255,0.08)",
+                  display: "grid",
+                  gap: 12,
+                }}
+              >
+                <div style={{ fontSize: 11, letterSpacing: 1.8, textTransform: "uppercase", color: "var(--cyan)", marginTop: 14 }}>
+                  How the game works
+                </div>
+                <div style={{ display: "grid", gap: 10, fontSize: isMobile ? 14 : 15, lineHeight: 1.9, color: "rgba(203,217,230,0.84)" }}>
+                  <div>Each planet is an on-chain state account that stores coordinates, building levels, research levels, ship counts, queued construction, mission slots, and current resources.</div>
+                  <div>Resource production is settled from timestamps and production formulas, so metal, crystal, and deuterium accumulate over time based on mines, storage, energy production, and energy consumption.</div>
+                  <div>Buildings and research run through timed queues. Ship production also uses its own queue, with durations derived from shipyard and nanite levels before fleets become available for missions.</div>
+                  <div>Fleet launches encode the target coordinates, mission type, cargo, and speed factor. Travel time is then resolved from distance, ship drive research, and the slowest ship in the selected fleet.</div>
+                  <div>Mission slots, transport resolution, and colonization all depend on live on-chain state, which is why the client checks slot availability and mission status before sending transactions.</div>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+
+        <div style={{ display: "grid", gap: 14, alignContent: "start" }}>
+          <ScrollReveal
+            delay={120}
+            style={{
+              position: isMobile ? "relative" : "sticky",
+              top: isMobile ? undefined : 26,
+              alignSelf: "start",
+              padding: isMobile ? "22px 18px" : "28px 26px",
+              borderRadius: 28,
+              border: "1px solid rgba(0,245,212,0.16)",
+              background: "linear-gradient(180deg, rgba(0,245,212,0.08), rgba(8,14,30,0.94) 34%, rgba(9,14,27,0.94))",
+              boxShadow: "0 22px 60px rgba(0,0,0,0.24)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                display: "grid",
+                justifyItems: "center",
+                marginBottom: 16,
+              }}
+            >
+                <div
+                  style={{
+                    width: isMobile ? 240 : 320,
+                    height: isMobile ? 240 : 320,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    background: "radial-gradient(circle, rgba(0,245,212,0.14), rgba(0,245,212,0.02) 62%, transparent 72%)",
+                    boxShadow: "inset 0 0 60px rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <OrbitingPlanetVisual planet={LANDING_PLANET} size={isMobile ? 210 : 270} />
+                </div>
+              </div>
+            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 14, letterSpacing: 1.2, color: "var(--cyan)", marginBottom: 10 }}>
+              Open the beta
+            </div>
+            <div style={{ fontSize: isMobile ? 13 : 14, color: "rgba(200,214,229,0.8)", lineHeight: 1.8, marginBottom: 16, maxWidth: 420, marginInline: "auto" }}>
+              Connect your wallet to access the live Solana devnet client and begin building your first position in the galaxy.
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <WalletConnectControl disconnectedLabel="OPEN GAME (BETA)" connectingLabel="OPENING..." />
+            </div>
+            {!IS_NATIVE_ANDROID_APP && (
+              <>
+                <a
+                  href={APK_DOWNLOAD_URL || "#"}
+                  target={APK_DOWNLOAD_URL ? "_blank" : undefined}
+                  rel={APK_DOWNLOAD_URL ? "noreferrer" : undefined}
+                  onClick={event => {
+                    if (!APK_DOWNLOAD_URL) event.preventDefault();
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    padding: "12px 14px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(255,214,10,0.24)",
+                    color: APK_DOWNLOAD_URL ? "var(--warn)" : "rgba(255,214,10,0.55)",
+                    textDecoration: "none",
+                    fontSize: 12,
+                    letterSpacing: 1,
+                    textTransform: "uppercase",
+                    background: APK_DOWNLOAD_URL ? "rgba(255,214,10,0.06)" : "rgba(255,255,255,0.03)",
+                    marginTop: 10,
+                    cursor: APK_DOWNLOAD_URL ? "pointer" : "not-allowed",
+                  }}
+                  aria-disabled={!APK_DOWNLOAD_URL}
+                  title={APK_DOWNLOAD_URL ? "Download Android APK" : "Set VITE_APK_DOWNLOAD_URL to enable APK download"}
+                >
+                  Download Android APK
+                </a>
+                <div style={{ marginTop: 10, fontSize: 11, lineHeight: 1.7, color: "rgba(200,214,229,0.68)", maxWidth: 420, marginInline: "auto" }}>
+                  We are requesting listing on the Seeker and PSG1 app stores.
+                </div>
+              </>
+            )}
+            <div
+              style={{
+                marginTop: 14,
+                padding: "14px 14px 12px",
+                borderRadius: 16,
+                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(6,10,22,0.46)",
+                textAlign: "left",
+                maxWidth: 420,
+                marginInline: "auto",
+              }}
+            >
+              <div style={{ fontSize: 10, color: "var(--dim)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
+                Before you play
+              </div>
+              <div style={{ display: "grid", gap: 8, fontSize: 11, lineHeight: 1.75, color: "rgba(200,214,229,0.76)" }}>
+                <div>You will need to fund a vault to sign transactions. You can deposit to it and withdraw from it later.</div>
+                <div>You will set a vault password and must save it. If you lose that password, you can lose access to the vault funds and your progress.</div>
+                <div>Each transaction costs about `0.000005 SOL`.</div>
+                <div>Each new planet creation costs about `0.0085 SOL`.</div>
+                <div>That planet creation value can be claimed back anytime by destroying the planet forever, together with all progress on that planet.</div>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </div>
+      </div>
+    </div>
   </div>
 );
 
@@ -1113,7 +2089,7 @@ function useInterpolatedResources(res: Resources | undefined, nowTs: number): Re
   return React.useMemo(()=>{
     if(!res) return undefined;
     if(res.lastUpdateTs<=0) return res;
-    const dt=Math.max(0,nowTs-res.lastUpdateTs);
+    const dt=Math.min(MAX_RESOURCE_SETTLEMENT_SECONDS,Math.max(0,nowTs-res.lastUpdateTs));
     if(dt===0) return res;
     const eff=res.energyConsumption===0n?1.0:Math.min(1.0,Number(res.energyProduction)/Number(res.energyConsumption));
     const produce=(current: bigint,ratePerHour: bigint,cap: bigint): bigint=>{
@@ -1125,10 +2101,11 @@ function useInterpolatedResources(res: Resources | undefined, nowTs: number): Re
 }
 
 // ─── Modals ───────────────────────────────────────────────────────────────────
-const VaultRecoveryModal: React.FC<{ request: VaultRecoveryPromptRequest|null; busy?: boolean; error?: string|null; onCancel: ()=>void; onSubmit: (p:string)=>void }> =
+const VaultRecoveryModal: React.FC<{ request: VaultRecoveryPromptRequest|null; busy?: boolean; error?: string|null; onCancel: ()=>void; onSubmit: (p:string, remember:boolean)=>void }> =
   ({ request, busy=false, error=null, onCancel, onSubmit }) => {
     const [password,setPassword]=useState(""); const [confirmPassword,setConfirmPassword]=useState("");
-    useEffect(()=>{setPassword("");setConfirmPassword("");},[request?.mode,request?.wallet]);
+    const [remember,setRemember]=useState(false);
+    useEffect(()=>{setPassword("");setConfirmPassword("");setRemember(false);},[request?.mode,request?.wallet]);
     if(!request) return null;
     const isCreate=request.mode==="create";
     const canSubmit=isCreate?password.trim().length>=8&&password===confirmPassword:password.trim().length>0;
@@ -1149,10 +2126,17 @@ const VaultRecoveryModal: React.FC<{ request: VaultRecoveryPromptRequest|null; b
             <input className="modal-select" type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Repeat the recovery password" disabled={busy}/>
             <div style={{fontSize:"10px",color:"var(--dim)",marginTop:8}}>Use at least 8 characters.</div>
           </div>}
+          <label style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:14,fontSize:"10px",lineHeight:1.5,color:"var(--dim)",cursor:busy?"not-allowed":"pointer"}}>
+            <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} disabled={busy} style={{marginTop:2}}/>
+            <span>
+              <span style={{color:"var(--text)",display:"block",marginBottom:2}}>Remember on this device</span>
+              Save this recovery password in this browser's local storage so vault restore can run without asking next time.
+            </span>
+          </label>
           {error&&<div style={{color:"var(--danger)",fontSize:"10px",marginBottom:8}}>{error}</div>}
           <div className="modal-footer">
             <button className="modal-btn secondary" onClick={onCancel} disabled={busy}>CANCEL</button>
-            <button className="modal-btn primary" disabled={!canSubmit||busy} onClick={()=>onSubmit(password.trim())}>{isCreate?"SAVE PASSWORD":"RESTORE VAULT"}</button>
+            <button className="modal-btn primary" disabled={!canSubmit||busy} onClick={()=>onSubmit(password.trim(),remember)}>{isCreate?"SAVE PASSWORD":"RESTORE VAULT"}</button>
           </div>
         </div>
       </div>
@@ -1392,9 +2376,48 @@ const InstantFinishButton: React.FC<{ secondsLeft: number; balance: bigint; txBu
 
 type CoordStatus = "idle" | "checking" | "free" | "occupied";
 
-const LaunchModal: React.FC<{ fleet: Fleet; res: Resources; ownedPlanets: PlayerState[]; currentPlanetPda: string; onClose: () => void; txBusy: boolean; onCheckCoord: (galaxy: number, system: number, position: number) => Promise<boolean>; onLaunch: (ships: Record<string, number>, cargo: { metal: bigint; crystal: bigint; deuterium: bigint }, missionType: number, speedFactor: number, target: LaunchTargetInput) => Promise<void>; prefillTarget?: { galaxy: number; system: number; position: number; missionType?: number }; }> =
-  ({ fleet, res, ownedPlanets, currentPlanetPda, onClose, onLaunch, txBusy, onCheckCoord, prefillTarget }) => {
-    const featuredLaunchShips = new Set(["smallCargo", "largeCargo", "colonyShip"]);
+const SHIP_COMBAT_POINTS: Record<string, number> = {
+  lightFighter: 50,
+  heavyFighter: 150,
+  cruiser: 400,
+  battleship: 1_000,
+  battlecruiser: 700,
+  bomber: 1_000,
+  destroyer: 2_000,
+  deathstar: 200_000,
+  smallCargo: 5,
+  largeCargo: 5,
+  recycler: 1,
+  espionageProbe: 1,
+  colonyShip: 50,
+};
+
+function fleetCombatPoints(ships: Record<string, number>): number {
+  return Object.entries(ships).reduce((sum, [key, qty]) => sum + (SHIP_COMBAT_POINTS[key] ?? 0) * Math.max(0, qty), 0);
+}
+
+function getMissionShipCount(mission: Mission, shipKey: string): number {
+  const fieldByShip: Record<string, keyof Mission> = {
+    smallCargo: "sSmallCargo",
+    largeCargo: "sLargeCargo",
+    lightFighter: "sLightFighter",
+    heavyFighter: "sHeavyFighter",
+    cruiser: "sCruiser",
+    battleship: "sBattleship",
+    battlecruiser: "sBattlecruiser",
+    bomber: "sBomber",
+    destroyer: "sDestroyer",
+    deathstar: "sDeathstar",
+    recycler: "sRecycler",
+    espionageProbe: "sEspionageProbe",
+    colonyShip: "sColonyShip",
+  };
+  const field = fieldByShip[shipKey];
+  return field ? Number(mission[field] ?? 0) : 0;
+}
+
+const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number; res: Resources; ownedPlanets: PlayerState[]; currentPlanetPda: string; nowTs: number; onClose: () => void; txBusy: boolean; onCheckCoord: (galaxy: number, system: number, position: number) => Promise<boolean>; onLoadTargetPlanet: (galaxy: number, system: number, position: number) => Promise<PlayerState | null>; onLaunch: (ships: Record<string, number>, cargo: { metal: bigint; crystal: bigint; deuterium: bigint }, missionType: number, speedFactor: number, target: LaunchTargetInput) => Promise<void>; prefillTarget?: { galaxy: number; system: number; position: number; missionType?: number }; }> =
+  ({ planet, fleet, computerTech, res, ownedPlanets, currentPlanetPda, nowTs, onClose, onLaunch, txBusy, onCheckCoord, onLoadTargetPlanet, prefillTarget }) => {
     const [shipQty, setShipQty] = useState<Record<string, number>>({});
     const [missionType, setMissionType] = useState(prefillTarget?.missionType ?? 2);
     const [cargoM, setCargoM] = useState(0); const [cargoC, setCargoC] = useState(0); const [cargoD, setCargoD] = useState(0);
@@ -1406,15 +2429,26 @@ const LaunchModal: React.FC<{ fleet: Fleet; res: Resources; ownedPlanets: Player
     const [colonyName, setColonyName] = useState("Colony");
     const [launching, setLaunching] = useState(false); const [localErr, setLocalErr] = useState<string | null>(null);
     const [coordStatus, setCoordStatus] = useState<CoordStatus>("idle");
+    const [targetPlanetState, setTargetPlanetState] = useState<PlayerState | null>(null);
     const coordCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const selectableOwned = ownedPlanets.filter(p => p.planetPda !== currentPlanetPda);
     const [targetEntity, setTargetEntity] = useState(selectableOwned[0]?.entityPda ?? "");
+    const usableMissionSlots = getMaxUsableMissionSlots(computerTech);
+    const activeMissionSlots = getActiveMissionSlotCount(fleet, computerTech);
+    const freeMissionSlots = getFreeMissionSlotCount(fleet, computerTech);
+    const hasFreeMissionSlot = freeMissionSlots > 0;
     const getQty = (key: string) => shipQty[key] ?? 0;
     const setQty = (key: string, v: number) => setShipQty(prev => ({ ...prev, [key]: Math.max(0, Math.min((fleet as any)[key] ?? 0, v)) }));
     const totalSent = Object.values(shipQty).reduce((a, b) => a + b, 0);
     const cargoCap = getQty("smallCargo")*5000+getQty("largeCargo")*25000+getQty("recycler")*20000+getQty("cruiser")*800+getQty("battleship")*1500;
     const cargoUsed = cargoM + cargoC + cargoD;
-    const scheduleCoordCheck = useCallback((g: number, s: number, p: number) => { setCoordStatus("checking"); if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current); coordCheckTimer.current = setTimeout(async () => { try { const free = await onCheckCoord(g, s, p); setCoordStatus(free ? "free" : "occupied"); } catch { setCoordStatus("idle"); } }, 400); }, [onCheckCoord]);
+    const attackPoints = fleetCombatPoints(shipQty);
+    const attackUnlockLeft = missionType === 1 ? Math.max(0, planet.attackUnlockedAt - nowTs) : 0;
+    const attackLaunchCooldownLeft = missionType === 1 && planet.lastAttackLaunchTs > 0 ? Math.max(0, planet.lastAttackLaunchTs + ATTACK_LAUNCH_COOLDOWN_SECONDS - nowTs) : 0;
+    const targetProtectionLeft = missionType === 1 && targetPlanetState ? Math.max(0, targetPlanetState.planet.protectionUntilTs - nowTs) : 0;
+    const targetCooldownLeft = missionType === 1 && targetPlanetState && targetPlanetState.planet.lastAttackedTs > 0 ? Math.max(0, targetPlanetState.planet.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - nowTs) : 0;
+    const attackBlocked = missionType === 1 && (attackUnlockLeft > 0 || attackLaunchCooldownLeft > 0 || targetProtectionLeft > 0 || targetCooldownLeft > 0 || attackPoints < MIN_ATTACK_COMBAT_POINTS || coordStatus === "checking" || coordStatus === "free");
+    const scheduleCoordCheck = useCallback((g: number, s: number, p: number) => { setCoordStatus("checking"); setTargetPlanetState(null); if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current); coordCheckTimer.current = setTimeout(async () => { try { const free = await onCheckCoord(g, s, p); setCoordStatus(free ? "free" : "occupied"); if (!free) setTargetPlanetState(await onLoadTargetPlanet(g, s, p)); } catch { setCoordStatus("idle"); setTargetPlanetState(null); } }, 400); }, [onCheckCoord, onLoadTargetPlanet]);
 
     // Auto-check coords if prefilled for colonize
     useEffect(() => {
@@ -1424,10 +2458,11 @@ const LaunchModal: React.FC<{ fleet: Fleet; res: Resources; ownedPlanets: Player
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-      if (missionType === 5 || (missionType === 2 && transportMode === "coords")) {
+      if (missionType === 1 || missionType === 5 || (missionType === 2 && transportMode === "coords")) {
         scheduleCoordCheck(targetGalaxy, targetSystem, targetPosition);
       } else {
         setCoordStatus("idle");
+        setTargetPlanetState(null);
         if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current);
       }
       return () => {
@@ -1436,19 +2471,22 @@ const LaunchModal: React.FC<{ fleet: Fleet; res: Resources; ownedPlanets: Player
     }, [missionType, transportMode, targetGalaxy, targetSystem, targetPosition, scheduleCoordCheck]);
     const handleColonyCoordChange = (galaxy: number, system: number, position: number, setterG: (v: number) => void, setterS: (v: number) => void, setterP: (v: number) => void, changedField: "g" | "s" | "p", value: number) => { const ng=changedField==="g"?value:galaxy; const ns=changedField==="s"?value:system; const np=changedField==="p"?value:position; if(changedField==="g")setterG(ng); if(changedField==="s")setterS(ns); if(changedField==="p")setterP(np); };
     const coordStatusConfig: Record<CoordStatus, { color: string; text: string }> = { idle:{color:"var(--dim)",text:""}, checking:{color:"var(--warn)",text:"CHECKING..."}, free:{color:"var(--success)",text:"✓ SLOT FREE"}, occupied:{color:"var(--danger)",text:"✗ ALREADY OCCUPIED"} };
-    const handleSubmit = async () => { try { setLocalErr(null); if(totalSent<=0)throw new Error("Select at least one ship."); if(cargoUsed>cargoCap)throw new Error("Cargo exceeds fleet capacity."); if(fleet.activeMissions>=4)throw new Error("No mission slots available."); if(missionType===5&&getQty("colonyShip")<=0)throw new Error("Colonize requires at least 1 colony ship."); if(missionType===5&&coordStatus==="occupied")throw new Error("That coordinate slot is already occupied."); if(missionType===2&&transportMode==="coords"&&coordStatus==="free")throw new Error("Transport missions can only target occupied planets."); let target: LaunchTargetInput; if(missionType===2){if(transportMode==="owned"){if(!targetEntity)throw new Error("Select a destination planet."); target={kind:"transport",mode:"owned",destinationEntity:targetEntity};}else{target={kind:"transport",mode:"coords",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}}else{target={kind:"colonize",galaxy:targetGalaxy,system:targetSystem,position:targetPosition,colonyName:colonyName.trim()||"Colony"};} setLaunching(true); await onLaunch(shipQty,{metal:BigInt(cargoM),crystal:BigInt(cargoC),deuterium:BigInt(cargoD)},missionType,speed,target); onClose(); }catch(e:any){setLocalErr(e?.message||String(e));}finally{setLaunching(false);}};
+    const handleSubmit = async () => { try { setLocalErr(null); if(totalSent<=0)throw new Error("Select at least one ship."); if(cargoUsed>cargoCap)throw new Error("Cargo exceeds fleet capacity."); if(!hasFreeMissionSlot)throw new Error("No mission slots available. Resolve an existing mission first."); if(missionType===1){if(attackUnlockLeft>0)throw new Error(`Attack launches unlock in ${fmtCountdown(attackUnlockLeft)}.`); if(attackLaunchCooldownLeft>0)throw new Error(`Attack launch cooldown: ${fmtCountdown(attackLaunchCooldownLeft)} remaining.`); if(attackPoints<MIN_ATTACK_COMBAT_POINTS)throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`); if(targetProtectionLeft>0)throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`); if(targetCooldownLeft>0)throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);} if(missionType===5&&getQty("colonyShip")<=0)throw new Error("Colonize requires at least 1 colony ship."); if(missionType===5&&coordStatus==="occupied")throw new Error("That coordinate slot is already occupied."); if((missionType===1||(missionType===2&&transportMode==="coords"))&&coordStatus==="free")throw new Error(missionType===1?"Attack missions can only target occupied planets.":"Transport missions can only target occupied planets."); let target: LaunchTargetInput; if(missionType===1){target={kind:"attack",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}else if(missionType===2){if(transportMode==="owned"){if(!targetEntity)throw new Error("Select a destination planet."); target={kind:"transport",mode:"owned",destinationEntity:targetEntity};}else{target={kind:"transport",mode:"coords",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}}else{target={kind:"colonize",galaxy:targetGalaxy,system:targetSystem,position:targetPosition,colonyName:colonyName.trim()||"Colony"};} setLaunching(true); await onLaunch(shipQty,{metal:BigInt(cargoM),crystal:BigInt(cargoC),deuterium:BigInt(cargoD)},missionType,speed,target); onClose(); }catch(e:any){setLocalErr(e?.message||String(e));}finally{setLaunching(false);}};
     return (
       <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
         <div className="modal">
           <div className="modal-title">⊹ LAUNCH FLEET</div>
-          <div className="modal-section"><div className="modal-label">Mission Type</div><select className="modal-select" value={missionType} onChange={e => setMissionType(Number(e.target.value))}><option value={2}>TRANSPORT</option><option value={5}>COLONIZE</option></select></div>
-          {missionType===2&&(<div className="modal-section"><div className="modal-label">Target</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mode</span><select className="modal-select" value={transportMode} onChange={e=>setTransportMode(e.target.value as "owned"|"coords")}><option value="owned">My planets</option><option value="coords">Coordinates</option></select></div>{transportMode==="owned"?(<div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Destination</span><select className="modal-select" value={targetEntity} onChange={e=>setTargetEntity(e.target.value)} disabled={selectableOwned.length===0}>{selectableOwned.length===0?<option value="">No other planets</option>:selectableOwned.map(p=>(<option key={p.entityPda} value={p.entityPda}>{p.planet.name} [{p.planet.galaxy}:{p.planet.system}:{p.planet.position}]</option>))}</select></div>):(<>{(["Galaxy","System","Position"]as const).map((label,li)=>{const vals=[targetGalaxy,targetSystem,targetPosition];const setters=[(v:number)=>setTargetGalaxy(Math.max(1,Math.min(9,v))),(v:number)=>setTargetSystem(Math.max(1,Math.min(499,v))),(v:number)=>setTargetPosition(Math.max(1,Math.min(15,v)))];return(<div key={label} className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>{label}</span><input className="modal-input" type="number" value={vals[li]} onChange={e=>setters[li](parseInt(e.target.value)||1)}/></div>);})}{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatus==="free"?"var(--danger)":coordStatusConfig[coordStatus].color}}>{coordStatus==="free"?"TRANSPORT BLOCKED: EMPTY SLOT":coordStatusConfig[coordStatus].text}</div>}</>)}</div>)}
-          {missionType===5&&(<div className="modal-section"><div className="modal-label">Colony Target</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Galaxy</span><input className="modal-input" type="number" value={targetGalaxy} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"g",Math.max(1,Math.min(9,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>System</span><input className="modal-input" type="number" value={targetSystem} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"s",Math.max(1,Math.min(499,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Position</span><input className="modal-input" type="number" value={targetPosition} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"p",Math.max(1,Math.min(15,parseInt(e.target.value)||1)))}/></div>{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatusConfig[coordStatus].color}}>{coordStatusConfig[coordStatus].text}</div>}<div className="modal-row" style={{marginTop:10}}><span style={{fontSize:11,color:"var(--dim)"}}>Colony Name</span><input className="modal-input" type="text" maxLength={32} value={colonyName} onChange={e=>setColonyName(e.target.value)}/></div></div>)}
-          <div className="modal-section"><div className="modal-label">Ships <span style={{color:"var(--cyan)"}}>{totalSent>0?`${totalSent} selected`:"none"}</span></div><div className="modal-ship-grid">{SHIPS.map(ship=>{const avail=((fleet as any)[ship.key]as number)??0; if(avail===0)return null; const featured=featuredLaunchShips.has(ship.key); return(<div key={ship.key} className="modal-ship-row">{featured&&<div className="modal-ship-art" style={{backgroundImage:getShipArt(ship.key)}} />}<div className="modal-ship-top"><div className="modal-ship-copy"><div className="modal-ship-label">{featured?ship.name:`${ship.icon} ${ship.name}`}</div><div className="modal-ship-avail">Avail: {avail.toLocaleString()}</div></div><input className="modal-input" type="number" min={0} max={avail} value={getQty(ship.key)||""} placeholder="0" onChange={e=>setQty(ship.key,parseInt(e.target.value)||0)}/></div></div>);})}</div></div>
+          <div className="modal-section"><div className="modal-label">Mission Type</div><select className="modal-select" value={missionType} onChange={e => setMissionType(Number(e.target.value))}><option value={1}>ATTACK</option><option value={2}>TRANSPORT</option><option value={5}>COLONIZE</option></select></div>
+          {missionType===1&&(<div className="modal-section"><div className="modal-label">Attack Target</div>{(["Galaxy","System","Position"]as const).map((label,li)=>{const vals=[targetGalaxy,targetSystem,targetPosition];const setters=[(v:number)=>setTargetGalaxy(Math.max(1,Math.min(MAX_GALAXY,v))),(v:number)=>setTargetSystem(Math.max(1,Math.min(MAX_SYSTEM,v))),(v:number)=>setTargetPosition(Math.max(1,Math.min(MAX_POSITION,v)))];const maxValues=[MAX_GALAXY,MAX_SYSTEM,MAX_POSITION];return(<div key={label} className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>{label}</span><input className="modal-input" type="number" min={1} max={maxValues[li]} value={vals[li]} onChange={e=>setters[li](parseInt(e.target.value)||1)}/></div>);})}{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatus==="free"?"var(--danger)":coordStatusConfig[coordStatus].color}}>{coordStatus==="free"?"ATTACK BLOCKED: EMPTY SLOT":coordStatusConfig[coordStatus].text}</div>}</div>)}
+          {missionType===1&&(<div className="modal-section" style={{borderColor:attackBlocked?"rgba(255,0,110,0.25)":"rgba(0,245,212,0.18)"}}><div className="modal-label">Attack Safety Checks</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Combat points</span><span style={{fontSize:11,color:attackPoints>=MIN_ATTACK_COMBAT_POINTS?"var(--success)":"var(--danger)"}}>{attackPoints.toLocaleString()} / {MIN_ATTACK_COMBAT_POINTS.toLocaleString()}</span></div>{attackUnlockLeft>0&&<div className="error-msg" style={{marginTop:8}}>Source attack unlock: {fmtCountdown(attackUnlockLeft)}</div>}{attackLaunchCooldownLeft>0&&<div className="error-msg" style={{marginTop:8}}>Launch cooldown: {fmtCountdown(attackLaunchCooldownLeft)}</div>}{targetProtectionLeft>0&&<div className="error-msg" style={{marginTop:8}}>Target protected: {fmtCountdown(targetProtectionLeft)}</div>}{targetCooldownLeft>0&&<div className="error-msg" style={{marginTop:8}}>Target cooldown: {fmtCountdown(targetCooldownLeft)}</div>}</div>)}
+          {missionType===2&&(<div className="modal-section"><div className="modal-label">Target</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mode</span><select className="modal-select" value={transportMode} onChange={e=>setTransportMode(e.target.value as "owned"|"coords")}><option value="owned">My planets</option><option value="coords">Coordinates</option></select></div>{transportMode==="owned"?(<div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Destination</span><select className="modal-select" value={targetEntity} onChange={e=>setTargetEntity(e.target.value)} disabled={selectableOwned.length===0}>{selectableOwned.length===0?<option value="">No other planets</option>:selectableOwned.map(p=>(<option key={p.entityPda} value={p.entityPda}>{p.planet.name} [{p.planet.galaxy}:{p.planet.system}:{p.planet.position}]</option>))}</select></div>):(<>{(["Galaxy","System","Position"]as const).map((label,li)=>{const vals=[targetGalaxy,targetSystem,targetPosition];const setters=[(v:number)=>setTargetGalaxy(Math.max(1,Math.min(MAX_GALAXY,v))),(v:number)=>setTargetSystem(Math.max(1,Math.min(MAX_SYSTEM,v))),(v:number)=>setTargetPosition(Math.max(1,Math.min(MAX_POSITION,v)))];const maxValues=[MAX_GALAXY,MAX_SYSTEM,MAX_POSITION];return(<div key={label} className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>{label}</span><input className="modal-input" type="number" min={1} max={maxValues[li]} value={vals[li]} onChange={e=>setters[li](parseInt(e.target.value)||1)}/></div>);})}{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatus==="free"?"var(--danger)":coordStatusConfig[coordStatus].color}}>{coordStatus==="free"?"TRANSPORT BLOCKED: EMPTY SLOT":coordStatusConfig[coordStatus].text}</div>}</>)}</div>)}
+          {missionType===5&&(<div className="modal-section"><div className="modal-label">Colony Target</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Galaxy</span><input className="modal-input" type="number" min={1} max={MAX_GALAXY} value={targetGalaxy} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"g",Math.max(1,Math.min(MAX_GALAXY,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>System</span><input className="modal-input" type="number" min={1} max={MAX_SYSTEM} value={targetSystem} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"s",Math.max(1,Math.min(MAX_SYSTEM,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Position</span><input className="modal-input" type="number" min={1} max={MAX_POSITION} value={targetPosition} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"p",Math.max(1,Math.min(MAX_POSITION,parseInt(e.target.value)||1)))}/></div>{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatusConfig[coordStatus].color}}>{coordStatusConfig[coordStatus].text}</div>}<div className="modal-row" style={{marginTop:10}}><span style={{fontSize:11,color:"var(--dim)"}}>Colony Name</span><input className="modal-input" type="text" maxLength={32} value={colonyName} onChange={e=>setColonyName(e.target.value)}/></div></div>)}
+          <div className="modal-section"><div className="modal-label">Ships <span style={{color:"var(--cyan)"}}>{totalSent>0?`${totalSent} selected`:"none"}</span></div><div className="modal-ship-grid">{SHIPS.map(ship=>{const avail=((fleet as any)[ship.key]as number)??0; if(avail===0)return null; return(<div key={ship.key} className="modal-ship-row"><div className="modal-ship-art"><img src={getShipArtUrl(ship.key)} alt={ship.name} loading="lazy" /></div><div className="modal-ship-top"><div className="modal-ship-copy"><div className="modal-ship-label">{ship.name}</div><div className="modal-ship-avail">Avail: {avail.toLocaleString()}</div></div><input className="modal-input" type="number" min={0} max={avail} value={getQty(ship.key)||""} placeholder="0" onChange={e=>setQty(ship.key,parseInt(e.target.value)||0)}/></div></div>);})}</div></div>
           {cargoCap>0&&(<div className="modal-section"><div className="modal-label">Cargo <span style={{color:cargoUsed>cargoCap?"var(--danger)":"var(--dim)"}}>{cargoUsed.toLocaleString()} / {cargoCap.toLocaleString()}</span></div>{[{label:"Metal",color:"var(--metal)",val:cargoM,max:Number(res.metal),set:setCargoM},{label:"Crystal",color:"var(--crystal)",val:cargoC,max:Number(res.crystal),set:setCargoC},{label:"Deuterium",color:"var(--deut)",val:cargoD,max:Number(res.deuterium),set:setCargoD}].map(r=>(<div key={r.label} className="modal-row"><span style={{color:r.color,fontSize:11}}>{r.label} (avail: {fmt(r.max)})</span><input className="modal-input" type="number" min={0} max={r.max} value={r.val||""} placeholder="0" onChange={e=>r.set(Math.max(0,Math.min(r.max,parseInt(e.target.value)||0)))}/></div>))}</div>)}
-          <div className="modal-section"><div className="modal-label">Flight Parameters</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Speed (10–100%)</span><input className="modal-input" type="number" min={10} max={100} step={10} value={speed} onChange={e=>setSpeed(Math.max(10,Math.min(100,parseInt(e.target.value)||100)))}/></div></div>
+          <div className="modal-section"><div className="modal-label">Flight Parameters</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Speed (10–100%)</span><input className="modal-input" type="number" min={10} max={100} step={10} value={speed} onChange={e=>setSpeed(Math.max(10,Math.min(100,parseInt(e.target.value)||100)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mission Slots</span><span style={{fontSize:11,color:hasFreeMissionSlot?"var(--text)":"var(--danger)"}}>{freeMissionSlots} free / {usableMissionSlots} usable ({activeMissionSlots} active)</span></div></div>
+          {!hasFreeMissionSlot&&<div className="error-msg" style={{marginBottom:8}}>No mission slots available. Resolve an existing mission first.</div>}
           {localErr&&<div className="error-msg" style={{marginBottom:8}}>{localErr}</div>}
-          <div className="modal-footer"><button className="modal-btn secondary" onClick={onClose} disabled={launching||txBusy}>CANCEL</button><button className="modal-btn primary" onClick={handleSubmit} disabled={launching||txBusy||totalSent===0||fleet.activeMissions>=4||(missionType===5&&coordStatus==="occupied")||(missionType===2&&transportMode==="coords"&&(coordStatus==="checking"||coordStatus==="free"))}>{launching?"LAUNCHING...":"⊹ LAUNCH"}</button></div>
+          <div className="modal-footer"><button className="modal-btn secondary" onClick={onClose} disabled={launching||txBusy}>CANCEL</button><button className="modal-btn primary" onClick={handleSubmit} disabled={launching||txBusy||totalSent===0||!hasFreeMissionSlot||attackBlocked||(missionType===5&&coordStatus==="occupied")||(missionType===2&&transportMode==="coords"&&(coordStatus==="checking"||coordStatus==="free"))}>{launching?"LAUNCHING...":"⊹ LAUNCH"}</button></div>
         </div>
       </div>
     );
@@ -1460,7 +2498,6 @@ const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Plane
     const now = Math.floor(Date.now() / 1000);
     const isResearching = research.queueItem !== 255;
     const researchSecsLeft = isResearching ? Math.max(0, research.researchFinishTs - now) : 0;
-    const baseCostsArr = [[0,800,400],[400,0,600],[2000,4000,600],[10000,20000,6000],[0,400,600],[4000,2000,1000],[240000,400000,160000]];
     const [reqCheck, setReqCheck] = useState<RequirementCheck | null>(null);
 
     return (
@@ -1485,7 +2522,7 @@ const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Plane
           <div className="grid-3">
             {RESEARCH_TECHS.map(tech => {
               const level = ((research as any)[tech.field] as number) ?? 0;
-              const costs = baseCostsArr[tech.idx];
+              const costs = tech.baseCost;
               const cm = Math.floor(costs[0] * Math.pow(2, level));
               const cc = Math.floor(costs[1] * Math.pow(2, level));
               const cd = Math.floor(costs[2] * Math.pow(2, level));
@@ -1582,20 +2619,23 @@ const NoPlanetView: React.FC<{ planetName:string; onNameChange:(v:string)=>void;
     </div>
   );
 
-const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: Resources; nowTs: number; onSelectPlanet: (pda: string) => void; onFinishBuild: () => void; onFinishResearch: () => void; onFinishShipyard: () => void; onInstantFinishBuild: () => void; onInstantFinishResearch: () => void; onInstantFinishShipyard: () => void; txBusy: boolean; antimatterBalance: bigint; antimatterEnabled: boolean; }> =
-  ({ state, planets, res, nowTs, onSelectPlanet, onFinishBuild, onFinishResearch, onFinishShipyard, onInstantFinishBuild, onInstantFinishResearch, onInstantFinishShipyard, txBusy, antimatterBalance, antimatterEnabled }) => {
+const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: Resources; nowTs: number; onSelectPlanet: (pda: string) => void; onFinishBuild: () => void; onFinishResearch: () => void; onFinishShipyard: () => void; onFinishDefense: () => void; onInstantFinishBuild: () => void; onInstantFinishResearch: () => void; onInstantFinishShipyard: () => void; txBusy: boolean; antimatterBalance: bigint; antimatterEnabled: boolean; }> =
+  ({ state, planets, res, nowTs, onSelectPlanet, onFinishBuild, onFinishResearch, onFinishShipyard, onFinishDefense, onInstantFinishBuild, onInstantFinishResearch, onInstantFinishShipyard, txBusy, antimatterBalance, antimatterEnabled }) => {
     const { planet, research, fleet } = state;
     const buildInProgress = planet.buildFinishTs > 0 && planet.buildQueueItem !== 255;
     const buildSecsLeft = buildInProgress ? Math.max(0, planet.buildFinishTs - nowTs) : 0;
     const buildBuilding = BUILDINGS.find(b => b.idx === planet.buildQueueItem);
     const researchInProgress = research.researchFinishTs > 0 && research.queueItem !== 255;
     const researchSecsLeft = researchInProgress ? Math.max(0, research.researchFinishTs - nowTs) : 0;
-    const techs = [{idx:0,name:"Energy Technology",icon:"⚡"},{idx:1,name:"Combustion Drive",icon:"🔥"},{idx:2,name:"Impulse Drive",icon:"🚀"},{idx:3,name:"Hyperspace Drive",icon:"🌌"},{idx:4,name:"Computer Technology",icon:"💻"},{idx:5,name:"Astrophysics",icon:"🔭"},{idx:6,name:"Intergalactic Research Network",icon:"📡"}] as const;
+    const techs = RESEARCH_TECHS;
     const currentResearch = techs.find(t => t.idx === research.queueItem);
     const shipyardInProgress = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
     const shipyardSecsLeft = shipyardInProgress ? Math.max(0, planet.shipBuildFinishTs - nowTs) : 0;
     const currentShip = SHIPS.find(s => SHIP_TYPE_IDX[s.key] === planet.shipBuildItem);
-    const somethingInProgress = buildInProgress || researchInProgress || shipyardInProgress;
+    const defenseInProgress = planet.defenseBuildFinishTs > 0 && planet.defenseBuildItem !== 255 && planet.defenseBuildQty > 0;
+    const defenseSecsLeft = defenseInProgress ? Math.max(0, planet.defenseBuildFinishTs - nowTs) : 0;
+    const currentDefense = DEFENSE_DEFS.find(defense => defense.idx === planet.defenseBuildItem);
+    const somethingInProgress = buildInProgress || researchInProgress || shipyardInProgress || defenseInProgress;
     const theme = getPlanetTheme(planet);
     const heroStyle = {
       "--hero-gradient": theme.heroGradient,
@@ -1665,6 +2705,12 @@ const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: 
                 <div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button onClick={onFinishShipyard} disabled={txBusy} className="build-btn finish-btn">FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div>
               </div>
             )}
+            {defenseInProgress && currentDefense && (
+              <div className="build-queue-banner">
+                <div><div className="build-queue-label">🛡 DEFENSE</div><div className="build-queue-item-name">{currentDefense.icon} {currentDefense.name} × {planet.defenseBuildQty}</div></div>
+                <div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button onClick={onFinishDefense} disabled={txBusy} className="build-btn finish-btn">FINISH DEFENSE</button>}</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1689,7 +2735,7 @@ const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: 
             <div className="section-title">Strategic Readout</div>
             <div className="stat-row"><span className="stat-key">Research Queue</span><span className="stat-val">{researchInProgress ? currentResearch?.name ?? "Active" : "Idle"}</span></div>
             <div className="stat-row"><span className="stat-key">Shipyard Queue</span><span className="stat-val">{shipyardInProgress ? `${currentShip?.name ?? "Ship"} × ${planet.shipBuildQty}` : "Idle"}</span></div>
-            <div className="stat-row"><span className="stat-key">Active Missions</span><span className="stat-val">{fleet.activeMissions} / 4</span></div>
+            <div className="stat-row"><span className="stat-key">Active Missions</span><span className="stat-val">{getActiveMissionSlotCount(fleet, research.computerTech)} / {getMaxUsableMissionSlots(research.computerTech)}</span></div>
             <div className="stat-row"><span className="stat-key">Colony Capacity</span><span className="stat-val">Astrophysics Lv {research.astrophysics}</span></div>
             <div className="stat-row"><span className="stat-key">Research Lab</span><span className="stat-val">Lv {planet.researchLab}</span></div>
             <div className="stat-row"><span className="stat-key">Shipyard</span><span className="stat-val">Lv {planet.shipyard}</span></div>
@@ -1920,22 +2966,224 @@ const ShipyardTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number
     const currentShip = SHIPS.find(s => SHIP_TYPE_IDX[s.key] === planet.shipBuildItem);
     const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !res || (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
     const visibleShips = SHIPS.filter(s => ["smallCargo","largeCargo","colonyShip"].includes(s.key));
-    return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Timed construction queue</div>{shipyardInProgress&&currentShip&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip.name} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="grid-3">{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,quantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardInProgress||!affordable; return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div>{!reqsMet&&<div style={{fontSize:9,color:"var(--danger)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--danger)",display:"inline-block"}}/> locked{missingCount>0?` · ${missingCount} missing`:""}</div>}{reqsMet&&<div style={{fontSize:9,color:"var(--success)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--success)",display:"inline-block"}}/> unlocked</div>}</div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={reqCheck} onClose={()=>setReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
+    return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Timed construction queue</div>{shipyardInProgress&&currentShip&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip.name} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="grid-3">{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,quantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardInProgress||(!reqsMet?false:!affordable); return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div>{!reqsMet&&<div style={{fontSize:9,color:"var(--danger)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--danger)",display:"inline-block"}}/> locked{missingCount>0?` · ${missingCount} missing`:""}</div>}{reqsMet&&<div style={{fontSize:9,color:"var(--success)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--success)",display:"inline-block"}}/> unlocked</div>}</div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={reqCheck} onClose={()=>setReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
   };
 
-const FleetTab: React.FC<{ fleet:Fleet; res?:Resources; txBusy:boolean; onOpenLaunch:()=>void }> =
-  ({ fleet, txBusy, onOpenLaunch }) => {
+const CommandShipyardTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number; txBusy: boolean; onBuildShip: (shipType: number, qty: number) => void; onBuildDefense: (defenseType: number, qty: number) => void; onFinishShipyard: () => void; onFinishDefense: () => void; onInstantFinishShipyard: () => void; antimatterBalance: bigint; antimatterEnabled: boolean; onGoBuildings: () => void; onGoResearch: () => void; }> =
+  ({ state, res, nowTs, txBusy, onBuildShip, onBuildDefense, onFinishShipyard, onFinishDefense, onInstantFinishShipyard, antimatterBalance, antimatterEnabled, onGoBuildings, onGoResearch }) => {
+    const [shipQuantities, setShipQuantities] = useState<Record<string, number>>({});
+    const [shipReqCheck, setShipReqCheck] = useState<ShipRequirementsCheck | null>(null);
+    const { planet, research } = state;
+    if (planet.shipyard === 0) return (<div><div className="section-title">SHIPYARD</div><div className="notice-box" style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:36,marginBottom:12}}>🚀</div><div style={{fontSize:13,color:"var(--purple)",letterSpacing:2}}>SHIPYARD NOT BUILT</div><div style={{fontSize:11,color:"var(--dim)"}}>Build a Shipyard in the Buildings tab first.</div></div></div>);
+    const shipyardInProgress = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
+    const shipyardSecsLeft = shipyardInProgress ? Math.max(0, planet.shipBuildFinishTs - nowTs) : 0;
+    const currentShip = SHIPS.find(s => SHIP_TYPE_IDX[s.key] === planet.shipBuildItem);
+    const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !res || (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
+    const visibleShips = SHIPS;
+    return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Fleet construction queue.</div>{shipyardInProgress&&currentShip&&(<div className="build-queue-banner" style={{marginBottom:16}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip.name} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="section-title" style={{marginTop:8}}>FLEET CONSTRUCTION</div><div className="grid-3" style={{marginBottom:24}}>{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,shipQuantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardInProgress||(!reqsMet?false:!affordable); return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setShipQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setShipReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={shipReqCheck} onClose={()=>setShipReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
+  };
+
+const DefenseTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number; txBusy: boolean; onBuildDefense: (defenseType: number, qty: number) => void; onFinishDefense: () => void; onGoBuildings: () => void; onGoResearch: () => void; }> =
+  ({ state, res, nowTs, txBusy, onBuildDefense, onFinishDefense, onGoBuildings, onGoResearch }) => {
+    const [defenseQuantities, setDefenseQuantities] = useState<Record<string, number>>({});
+    const [defenseReqCheck, setDefenseReqCheck] = useState<DefenseRequirementsCheck | null>(null);
+    const { planet, research } = state;
+
+    if (planet.shipyard === 0) return (<div><div className="section-title">DEFENSE SYSTEMS</div><div className="notice-box" style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:36,marginBottom:12}}>🛡</div><div style={{fontSize:13,color:"var(--purple)",letterSpacing:2}}>DEFENSE GRID OFFLINE</div><div style={{fontSize:11,color:"var(--dim)"}}>Build a Shipyard in the Buildings tab first.</div></div></div>);
+
+    const defenseInProgress = planet.defenseBuildFinishTs > 0 && planet.defenseBuildItem !== 255 && planet.defenseBuildQty > 0;
+    const defenseSecsLeft = defenseInProgress ? Math.max(0, planet.defenseBuildFinishTs - nowTs) : 0;
+    const currentDefense = DEFENSE_DEFS.find(defense => defense.idx === planet.defenseBuildItem);
+    const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !res || (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
+
+    return (<><div><div className="section-title">DEFENSE SYSTEMS</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Planetary batteries, domes, and missiles.</div>{defenseInProgress&&currentDefense&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🛡 DEFENSE YARD</div><div className="build-queue-item-name">{currentDefense.name} × {planet.defenseBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishDefense}>FINISH DEFENSE</button>}</div></div>)}<div className="grid-3">{DEFENSE_DEFS.map(defense=>{const qty=Math.max(1,defenseQuantities[defense.key]??1); const affordable=canAfford(defense.cost,qty); const current=((planet as any)[defense.key]as number)??0; const check=checkDefenseRequirements(defense.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||defenseInProgress||(!reqsMet?false:!affordable); return(<div key={defense.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getDefenseArt(defense.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{defense.icon} {defense.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{defense.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(defense.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(defense.cost.m*qty)}</div>}{defense.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(defense.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(defense.cost.c*qty)}</div>}{defense.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(defense.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(defense.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setDefenseQuantities(prev=>({...prev,[defense.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||defenseInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setDefenseReqCheck(check);return;}onBuildDefense(defense.idx,qty);}}>{defenseInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div>{defenseReqCheck&&<ShipRequirementsModal check={{shipName:defenseReqCheck.defenseName,shipIcon:defenseReqCheck.defenseIcon,requirements:defenseReqCheck.requirements,allMet:defenseReqCheck.allMet}} onClose={()=>setDefenseReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/>}</>);
+  };
+
+const FleetTab: React.FC<{ fleet:Fleet; computerTech: number; res?:Resources; txBusy:boolean; onOpenLaunch:()=>void }> =
+  ({ fleet, computerTech, txBusy, onOpenLaunch }) => {
     const totalShips=SHIPS.reduce((s,sh)=>s+((fleet as any)[sh.key]??0),0);
-    const utilityShips=SHIPS.filter(s=>["smallCargo","largeCargo","colonyShip"].includes(s.key));
-    return (<div><div className="section-title">FLEET COMMAND</div><div className="grid-4" style={{marginBottom:20}}><div className="card"><div className="card-label">Ships</div><div className="card-value">{totalShips.toLocaleString()}</div></div><div className="card"><div className="card-label">Missions</div><div className="card-value">{fleet.activeMissions}</div></div><div className="card"><div className="card-label">Slots</div><div className="card-value">{4-fleet.activeMissions}/4</div></div><div className="card"><div className="card-label">Cargo</div><div className="card-value" style={{fontSize:12}}>{fmt(fleet.smallCargo*5000+fleet.largeCargo*25000)}</div></div></div><button onClick={onOpenLaunch} disabled={txBusy} style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,letterSpacing:1,padding:"12px 20px",border:"1px solid var(--cyan)",background:"rgba(0,245,212,0.1)",color:"var(--cyan)",cursor:"pointer",borderRadius:2,textTransform:"uppercase",width:"100%",marginBottom:20}}>⊹ LAUNCH FLEET</button><div className="section-title">HANGAR</div><div className="grid-3">{utilityShips.map(s=>{const count=(fleet as any)[s.key]??0; return(<div key={s.key} className="ship-card"><div className="ship-card-art" style={{ backgroundImage: getShipArt(s.key) }} /><div className="ship-name">{s.name}</div><div className={`ship-count${count===0?" zero":""}`}>{count.toLocaleString()}</div></div>);})}</div></div>);
+    const usableMissionSlots = getMaxUsableMissionSlots(computerTech);
+    const activeMissionSlots = getActiveMissionSlotCount(fleet, computerTech);
+    const freeMissionSlots = getFreeMissionSlotCount(fleet, computerTech);
+    return (<div><div className="section-title">FLEET COMMAND</div><div className="grid-4" style={{marginBottom:20}}><div className="card"><div className="card-label">Ships</div><div className="card-value">{totalShips.toLocaleString()}</div></div><div className="card"><div className="card-label">Missions</div><div className="card-value">{activeMissionSlots}</div></div><div className="card"><div className="card-label">Slots</div><div className="card-value">{freeMissionSlots}/{usableMissionSlots}</div></div><div className="card"><div className="card-label">Cargo</div><div className="card-value" style={{fontSize:12}}>{fmt(fleet.smallCargo*5000+fleet.largeCargo*25000)}</div></div></div><button onClick={onOpenLaunch} disabled={txBusy} style={{fontFamily:"'Share Tech Mono',monospace",fontSize:11,letterSpacing:1,padding:"12px 20px",border:"1px solid var(--cyan)",background:"rgba(0,245,212,0.1)",color:"var(--cyan)",cursor:"pointer",borderRadius:2,textTransform:"uppercase",width:"100%",marginBottom:20}}>⊹ LAUNCH FLEET</button><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Computer Tech Lv {computerTech} · {usableMissionSlots} usable mission slot{usableMissionSlots===1?"":"s"}</div><div className="section-title">HANGAR</div><div className="grid-3">{SHIPS.map(s=>{const count=(fleet as any)[s.key]??0; return(<div key={s.key} className="ship-card"><div className="ship-card-art" style={{ backgroundImage: getShipArt(s.key) }} /><div className="ship-name">{s.name}</div><div className={`ship-count${count===0?" zero":""}`}>{count.toLocaleString()}</div></div>);})}</div></div>);
   };
 
-const MissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; onResolveTransport:(mission:Mission,slot:number)=>void; onResolveColonize:(mission:Mission,slot:number)=>void }> =
-  ({ fleet, nowTs, txBusy, onResolveTransport, onResolveColonize }) => {
+const MissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; onResolveTransport:(mission:Mission,slot:number)=>void; onResolveAttack:(mission:Mission,slot:number)=>void; onResolveColonize:(mission:Mission,slot:number)=>void }> =
+  ({ fleet, nowTs, txBusy, onResolveTransport, onResolveAttack, onResolveColonize }) => {
     const active=fleet.missions.map((m,i)=>({m,i})).filter(({m})=>m.missionType!==0);
     if(active.length===0)return(<div><div className="section-title">ACTIVE MISSIONS</div><div style={{textAlign:"center",padding:"60px 20px",color:"var(--dim)",fontSize:12,letterSpacing:1}}><div style={{fontSize:32,marginBottom:12}}>⊹</div><div>No missions in flight</div></div></div>);
-    return (<div><div className="section-title">ACTIVE MISSIONS</div>{active.map(({m,i})=>{const progress=missionProgress(m,nowTs); const returning=m.applied; const etaSecs=returning?Math.max(0,m.returnTs-nowTs):Math.max(0,m.arriveTs-nowTs); const typeLabel=MISSION_LABELS[m.missionType]??"UNKNOWN"; const needsResolution=(m.missionType===2&&((!m.applied&&nowTs>=m.arriveTs)||(m.applied&&m.returnTs>0&&nowTs>=m.returnTs)))||(m.missionType===5&&!m.applied&&nowTs>=m.arriveTs); const ships=[{label:"SC",key:"smallCargo",n:m.sSmallCargo},{label:"LC",key:"largeCargo",n:m.sLargeCargo},{label:"LF",key:"lightFighter",n:m.sLightFighter},{label:"COL",key:"colonyShip",n:m.sColonyShip}].filter(s=>s.n>0); const artShips=ships.filter(s=>["smallCargo","largeCargo","colonyShip"].includes(s.key)); const hasCargo=m.cargoMetal>0n||m.cargoCrystal>0n||m.cargoDeuterium>0n; return(<div key={i} className="mission-card"><div className="mission-header"><div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><span className={`mission-type-badge ${m.missionType===2?"transport":"other"}`}>{typeLabel}</span><span className="tag">SLOT {i}</span>{needsResolution&&<span style={{fontSize:9,color:"var(--success)",letterSpacing:1,padding:"2px 6px",border:"1px solid rgba(6,214,160,0.4)",borderRadius:2}}></span>}</div>{returning&&<span className="mission-returning">↩ RETURN</span>}</div><div className="progress-bar"><div className={`progress-fill ${returning?"returning":"outbound"}`} style={{width:`${progress}%`}}/></div><div className="mission-info"><span>{returning?"Return ETA":"Arrive ETA"}</span><span className="mission-eta">{etaSecs<=0?"ARRIVED":fmtCountdown(etaSecs)}</span></div><div className="mission-ships">{ships.map(s=><span key={s.label} className="mission-ship-badge">{s.label} ×{s.n.toLocaleString()}</span>)}</div>{artShips.length>0&&<div className="mission-ship-media">{artShips.map(s=><div key={s.key} className="mission-ship-card"><div className="mission-ship-card-art" style={{backgroundImage:getShipArt(s.key)}} /><div className="mission-ship-card-copy"><span>{s.label}</span><strong>×{s.n.toLocaleString()}</strong></div></div>)}</div>}{hasCargo&&<div style={{marginTop:8,fontSize:10,color:"var(--dim)",display:"flex",gap:12,flexWrap:"wrap"}}>{m.cargoMetal>0n&&<span style={{color:"var(--metal)"}}>⛏ {fmt(m.cargoMetal)}</span>}{m.cargoCrystal>0n&&<span style={{color:"var(--crystal)"}}>💎 {fmt(m.cargoCrystal)}</span>}{m.cargoDeuterium>0n&&<span style={{color:"var(--deut)"}}>🧪 {fmt(m.cargoDeuterium)}</span>}</div>}{needsResolution&&<button className="apply-btn" disabled={txBusy} onClick={()=>m.missionType===2?onResolveTransport(m,i):onResolveColonize(m,i)}>{m.missionType===2?"RESOLVE TRANSPORT":"RESOLVE COLONIZE"}</button>}</div>);})}</div>);
+    return (<div><div className="section-title">ACTIVE MISSIONS</div>{active.map(({m,i})=>{const progress=missionProgress(m,nowTs); const returning=m.applied; const etaSecs=returning?Math.max(0,m.returnTs-nowTs):Math.max(0,m.arriveTs-nowTs); const typeLabel=MISSION_LABELS[m.missionType]??"UNKNOWN"; const needsResolution=(m.missionType===2&&((!m.applied&&nowTs>=m.arriveTs)||(m.applied&&m.returnTs>0&&nowTs>=m.returnTs)))||(m.missionType===5&&!m.applied&&nowTs>=m.arriveTs); const ships=SHIPS.map(ship=>({label:ship.name,key:ship.key,n:getMissionShipCount(m,ship.key)})).filter(s=>s.n>0); const artShips=ships; const hasCargo=m.cargoMetal>0n||m.cargoCrystal>0n||m.cargoDeuterium>0n; return(<div key={i} className="mission-card"><div className="mission-header"><div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><span className={`mission-type-badge ${m.missionType===2?"transport":"other"}`}>{typeLabel}</span><span className="tag">SLOT {i}</span>{needsResolution&&<span style={{fontSize:9,color:"var(--success)",letterSpacing:1,padding:"2px 6px",border:"1px solid rgba(6,214,160,0.4)",borderRadius:2}}></span>}</div>{returning&&<span className="mission-returning">↩ RETURN</span>}</div><div className="progress-bar"><div className={`progress-fill ${returning?"returning":"outbound"}`} style={{width:`${progress}%`}}/></div><div className="mission-info"><span>{returning?"Return ETA":"Arrive ETA"}</span><span className="mission-eta">{etaSecs<=0?"ARRIVED":fmtCountdown(etaSecs)}</span></div><div className="mission-ships">{ships.map(s=><span key={s.label} className="mission-ship-badge">{s.label} ×{s.n.toLocaleString()}</span>)}</div>{artShips.length>0&&<div className="mission-ship-media">{artShips.map(s=><div key={s.key} className="mission-ship-card"><div className="mission-ship-card-art"><img src={getShipArtUrl(s.key)} alt={s.label} loading="lazy" /></div><div className="mission-ship-card-copy"><span>{s.label}</span><strong>×{s.n.toLocaleString()}</strong></div></div>)}</div>}{hasCargo&&<div style={{marginTop:8,fontSize:10,color:"var(--dim)",display:"flex",gap:12,flexWrap:"wrap"}}>{m.cargoMetal>0n&&<span style={{color:"var(--metal)"}}>⛏ {fmt(m.cargoMetal)}</span>}{m.cargoCrystal>0n&&<span style={{color:"var(--crystal)"}}>💎 {fmt(m.cargoCrystal)}</span>}{m.cargoDeuterium>0n&&<span style={{color:"var(--deut)"}}>🧪 {fmt(m.cargoDeuterium)}</span>}</div>}{needsResolution&&<button className="apply-btn" disabled={txBusy} onClick={()=>m.missionType===2?onResolveTransport(m,i):onResolveColonize(m,i)}>{m.missionType===2?"RESOLVE TRANSPORT":"RESOLVE COLONIZE"}</button>}</div>);})}</div>);
   };
+
+const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; onResolveTransport:(mission:Mission,slot:number)=>void; onResolveAttack:(mission:Mission,slot:number)=>void; onResolveColonize:(mission:Mission,slot:number)=>void }> =
+  ({ fleet, nowTs, txBusy, onResolveTransport, onResolveAttack, onResolveColonize }) => {
+    const active = fleet.missions.map((m, i) => ({ m, i })).filter(({ m }) => m.missionType !== 0);
+
+    if (active.length === 0) {
+      return (
+        <div>
+          <div className="section-title">ACTIVE MISSIONS</div>
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--dim)", fontSize: 12, letterSpacing: 1 }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>+</div>
+            <div>No missions in flight</div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <div className="section-title">ACTIVE MISSIONS</div>
+        {active.map(({ m, i }) => {
+          const progress = missionProgress(m, nowTs);
+          const returning = m.applied;
+          const etaSecs = returning ? Math.max(0, m.returnTs - nowTs) : Math.max(0, m.arriveTs - nowTs);
+          const typeLabel = MISSION_LABELS[m.missionType] ?? "UNKNOWN";
+          const needsResolution =
+            (m.missionType === 1 && ((!m.applied && nowTs >= m.arriveTs) || (m.applied && m.returnTs > 0 && nowTs >= m.returnTs))) ||
+            (m.missionType === 2 && ((!m.applied && nowTs >= m.arriveTs) || (m.applied && m.returnTs > 0 && nowTs >= m.returnTs))) ||
+            (m.missionType === 5 && !m.applied && nowTs >= m.arriveTs);
+          const ships = SHIPS
+            .map(ship => ({ label: ship.name, key: ship.key, n: getMissionShipCount(m, ship.key) }))
+            .filter(s => s.n > 0);
+          const artShips = ships;
+          const hasCargo = m.cargoMetal > 0n || m.cargoCrystal > 0n || m.cargoDeuterium > 0n;
+
+          return (
+            <div key={i} className="mission-card">
+              <div className="mission-header">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span className={`mission-type-badge ${m.missionType === 2 ? "transport" : "other"}`}>{typeLabel}</span>
+                  <span className="tag">SLOT {i}</span>
+                  {needsResolution && (
+                    <span style={{ fontSize: 9, color: "var(--success)", letterSpacing: 1, padding: "2px 6px", border: "1px solid rgba(6,214,160,0.4)", borderRadius: 2 }}>
+                      READY
+                    </span>
+                  )}
+                </div>
+                {returning && <span className="mission-returning">RETURN</span>}
+              </div>
+              <div className="progress-bar">
+                <div className={`progress-fill ${returning ? "returning" : "outbound"}`} style={{ width: `${progress}%` }} />
+              </div>
+              <div className="mission-info">
+                <span>{returning ? "Return ETA" : "Arrive ETA"}</span>
+                <span className="mission-eta">{etaSecs <= 0 ? "ARRIVED" : fmtCountdown(etaSecs)}</span>
+              </div>
+              <div className="mission-ships">
+                {ships.map(s => <span key={s.label} className="mission-ship-badge">{s.label} x{s.n.toLocaleString()}</span>)}
+              </div>
+              {artShips.length > 0 && (
+                <div className="mission-ship-media">
+                  {artShips.map(s => (
+                    <div key={s.key} className="mission-ship-card">
+                      <div className="mission-ship-card-art">
+                        <img src={getShipArtUrl(s.key)} alt={s.label} loading="lazy" />
+                      </div>
+                      <div className="mission-ship-card-copy">
+                        <span>{s.label}</span>
+                        <strong>x{s.n.toLocaleString()}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {hasCargo && (
+                <div style={{ marginTop: 8, fontSize: 10, color: "var(--dim)", display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {m.cargoMetal > 0n && <span style={{ color: "var(--metal)" }}>Metal {fmt(m.cargoMetal)}</span>}
+                  {m.cargoCrystal > 0n && <span style={{ color: "var(--crystal)" }}>Crystal {fmt(m.cargoCrystal)}</span>}
+                  {m.cargoDeuterium > 0n && <span style={{ color: "var(--deut)" }}>Deuterium {fmt(m.cargoDeuterium)}</span>}
+                </div>
+              )}
+              {m.missionType === 1 && m.applied && (
+                <div style={{ marginTop: 8, fontSize: 10, color: m.attackerWon ? "var(--success)" : "var(--danger)", letterSpacing: 0.6 }}>
+                  COMBAT REPORT: {m.attackerWon ? "ATTACKER WON" : "ATTACKER REPULSED"} {m.combatRounds > 0 ? `(${m.combatRounds} rounds)` : ""}
+                </div>
+              )}
+              {needsResolution && (
+                <button
+                  className="apply-btn"
+                  disabled={txBusy}
+                  onClick={() => m.missionType === 1 ? onResolveAttack(m, i) : m.missionType === 2 ? onResolveTransport(m, i) : onResolveColonize(m, i)}
+                >
+                  {m.missionType === 1 ? (m.applied ? "COMPLETE RETURN" : "RESOLVE ATTACK") : m.missionType === 2 ? "RESOLVE TRANSPORT" : "RESOLVE COLONIZE"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+const ActivityTab: React.FC<{ reports: BattleReport[]; onClear: () => void }> = ({ reports, onClear }) => {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14 }}>
+        <div className="section-title" style={{ marginBottom: 0 }}>BATTLE ACTIVITY</div>
+        {reports.length > 0 && (
+          <button className="apply-btn" style={{ width: "auto", marginTop: 0, padding: "8px 12px" }} onClick={onClear}>
+            CLEAR LOCAL LOG
+          </button>
+        )}
+      </div>
+      <div className="notice-box">
+        Attack history
+      </div>
+      {reports.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--dim)", fontSize: 12, letterSpacing: 1 }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>ATTACK</div>
+          <div>No battle reports yet</div>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 14 }}>
+          {reports.map(report => {
+            const lootTotal = BigInt(report.cargoMetal) + BigInt(report.cargoCrystal) + BigInt(report.cargoDeuterium);
+            const debrisTotal = BigInt(report.debrisMetal ?? "0") + BigInt(report.debrisCrystal ?? "0");
+            const survivorEntries = Object.entries(report.survivors);
+            return (
+              <div key={report.id} className="mission-card">
+                <div className="mission-header">
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className={`mission-type-badge other`}>ATTACK REPORT</span>
+                    <span className="tag">{report.status.toUpperCase()}</span>
+                    <span className="tag">SLOT {report.slot}</span>
+                  </div>
+                  <span style={{ fontSize: 10, color: report.attackerWon ? "var(--success)" : "var(--danger)", letterSpacing: 1 }}>
+                    {report.attackerWon ? "ATTACKER WON" : "ATTACKER REPELLED"}
+                  </span>
+                </div>
+                <div className="grid-4" style={{ margin: "12px 0" }}>
+                  <div className="card"><div className="card-label">From</div><div className="card-value" style={{ fontSize: 12 }}>{report.sourceCoords}</div></div>
+                  <div className="card"><div className="card-label">Target</div><div className="card-value" style={{ fontSize: 12 }}>{report.targetCoords}</div></div>
+                  <div className="card"><div className="card-label">Rounds</div><div className="card-value">{report.combatRounds}</div></div>
+                  <div className="card"><div className="card-label">Loot</div><div className="card-value" style={{ fontSize: 12 }}>{fmt(lootTotal)}</div></div>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--dim)", display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+                  <span>Source: {report.sourcePlanet}</span>
+                  <span>Resolved: {new Date(report.resolvedTs * 1000).toLocaleString()}</span>
+                  {report.signature && <span>Tx: {report.signature.slice(0, 8)}...{report.signature.slice(-8)}</span>}
+                </div>
+                <div style={{ fontSize: 10, color: "var(--dim)", display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+                  {BigInt(report.cargoMetal) > 0n && <span style={{ color: "var(--metal)" }}>Metal {fmt(BigInt(report.cargoMetal))}</span>}
+                  {BigInt(report.cargoCrystal) > 0n && <span style={{ color: "var(--crystal)" }}>Crystal {fmt(BigInt(report.cargoCrystal))}</span>}
+                  {BigInt(report.cargoDeuterium) > 0n && <span style={{ color: "var(--deut)" }}>Deuterium {fmt(BigInt(report.cargoDeuterium))}</span>}
+                  {debrisTotal > 0n && <span>Debris {fmt(debrisTotal)}</span>}
+                  {report.defenderSurvived && <span>Defender survived</span>}
+                </div>
+                <div className="mission-ships">
+                  {survivorEntries.length === 0
+                    ? <span className="mission-ship-badge">No surviving ships</span>
+                    : survivorEntries.map(([name, count]) => <span key={name} className="mission-ship-badge">{name} x{count.toLocaleString()}</span>)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const MobileResStrip: React.FC<{ res: Resources; planet: Planet }> = ({ res, planet }) => (
   <div className="mobile-res-strip">
@@ -1990,6 +3238,7 @@ const PRIMARY_TABS: { id: Tab; icon: string; label: string }[] = [
   { id: "buildings", icon: "⬡",  label: "Build"    },
   { id: "research",  icon: "🔬", label: "Research"  },
   { id: "shipyard",  icon: "🚀", label: "Ships"    },
+  { id: "defense",   icon: "🛡", label: "Defense"  },
 ];
 const SECONDARY_TABS: { id: Tab; icon: string; label: string }[] = [
   { id: "fleet",     icon: "◉",  label: "Fleet"    },
@@ -1999,6 +3248,51 @@ const SECONDARY_TABS: { id: Tab; icon: string; label: string }[] = [
 ];
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
+const TAB_META: Record<Tab, { eyebrow: string; title: string; subtitle: string }> = {
+  overview: { eyebrow: "Command", title: "Planet Overview", subtitle: "Read colony health, queues, and next pressure points at a glance." },
+  resources: { eyebrow: "Economy", title: "Resource Grid", subtitle: "Tune production before capacity, energy, or field limits become blockers." },
+  buildings: { eyebrow: "Infrastructure", title: "Planet Build Queue", subtitle: "Upgrade mines, factories, storage, and shipyard support from one surface." },
+  research: { eyebrow: "Research", title: "Technology Lab", subtitle: "Unlock deeper fleet, defense, and expansion options through focused research." },
+  shipyard: { eyebrow: "Industry", title: "Shipyard", subtitle: "Convert stored resources into cargo, combat power, probes, and colony reach." },
+  defense: { eyebrow: "Security", title: "Defense Systems", subtitle: "Harden the colony with batteries, domes, and missiles before hostile scans arrive." },
+  fleet: { eyebrow: "Fleet", title: "Fleet Command", subtitle: "Review hangars, launch missions, and keep transport capacity moving." },
+  missions: { eyebrow: "Operations", title: "Active Missions", subtitle: "Track arrivals, returns, cargo, and missions ready to resolve." },
+  activity: { eyebrow: "Intel", title: "Battle Activity", subtitle: "Inspect recent combat outcomes, debris, loot, and surviving ships." },
+  galaxy: { eyebrow: "Navigation", title: "Galaxy Explorer", subtitle: "Scan systems, find occupied targets, and identify open colony slots." },
+  market: { eyebrow: "Exchange", title: "Resource Market", subtitle: "Trade surplus resources for antimatter and monitor live offers." },
+};
+
+const TabMasthead: React.FC<{
+  tab: Tab;
+  state?: PlayerState | null;
+  activeMissionCount: number;
+  txBusy: boolean;
+  onOpenLaunch: () => void;
+}> = ({ tab, state, activeMissionCount, txBusy, onOpenLaunch }) => {
+  const meta = TAB_META[tab];
+  const planet = state?.planet;
+  const freeSlots = state ? getFreeMissionSlotCount(state.fleet, state.research.computerTech) : 0;
+  return (
+    <div className="tab-masthead">
+      <div className="tab-masthead-copy">
+        <div className="tab-eyebrow">{meta.eyebrow}</div>
+        <div className="tab-title">{meta.title}</div>
+        <div className="tab-subtitle">{meta.subtitle}</div>
+      </div>
+      {state && planet && (
+        <div className="tab-masthead-rail">
+          <span className="status-chip">Planet <strong>{planet.galaxy}:{planet.system}:{planet.position}</strong></span>
+          <span className="status-chip">Missions <strong>{activeMissionCount}</strong></span>
+          <span className="status-chip">Free slots <strong>{freeSlots}</strong></span>
+          <button className="status-chip action" type="button" onClick={onOpenLaunch} disabled={txBusy}>
+            Launch fleet
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const { connection } = useConnection();
   const anchorWallet = useAnchorWallet();
@@ -2041,6 +3335,7 @@ const App: React.FC = () => {
   const [gameConfigMintInput, setGameConfigMintInput] = useState(DEFAULT_ANTIMATTER_MINT);
   const [antimatterBalance, setAntimatterBalance] = useState<bigint>(0n);
   const [antimatterBalanceLoading, setAntimatterBalanceLoading] = useState(false);
+  const [battleReports, setBattleReports] = useState<BattleReport[]>([]);
   const clientRef = useRef<GameClient | null>(null);
   const marketClientRef = useRef<MarketClient | null>(null);
   const selectedPdaRef = useRef<string | null>(null);
@@ -2055,6 +3350,9 @@ const App: React.FC = () => {
   useEffect(() => {
     setActiveWalletKey(walletPublicKey?.toBase58() ?? null);
   }, [walletPublicKey]);
+  useEffect(() => {
+    setBattleReports([]);
+  }, [publicKey]);
   useEffect(() => {
     if (!connected || !wallet?.adapter) return;
     const syncWalletKey = (nextKey: string | null) => {
@@ -2135,6 +3433,8 @@ const App: React.FC = () => {
   };
 
   const requestVaultRecoveryPassphrase = useCallback((request: VaultRecoveryPromptRequest): Promise<string> => {
+    const remembered = readRememberedVaultPassword(request.wallet);
+    if (remembered) return Promise.resolve(remembered);
     setVaultPromptBusy(false); setVaultPromptError(null);
     setVaultPrompt({ mode: request.mode, wallet: request.wallet });
     return new Promise((resolve, reject) => { vaultPromptResolverRef.current = { resolve, reject }; });
@@ -2148,8 +3448,9 @@ const App: React.FC = () => {
     clientRef.current?.clearCachedVaultRecoveryPassphrase();
   }, [vaultPromptBusy]);
 
-  const handleVaultPromptSubmit = useCallback((password: string) => {
+  const handleVaultPromptSubmit = useCallback((password: string, remember: boolean) => {
     if (vaultPrompt?.mode === "create" && password.length < 8) { setVaultPromptError("Recovery password must be at least 8 characters."); return; }
+    if (vaultPrompt && remember) writeRememberedVaultPassword(vaultPrompt.wallet, password);
     setVaultPromptBusy(true);
     vaultPromptResolverRef.current?.resolve(password);
     vaultPromptResolverRef.current = null;
@@ -2164,6 +3465,24 @@ const App: React.FC = () => {
     const next = loaded.find(p => p.planetPda === preferPda) ?? loaded.find(p => p.planetPda === selectedPdaRef.current) ?? loaded[0];
     setSelectedPlanetPda(next.planetPda);
     return loaded;
+  }, []);
+
+  const loadBattleActivityFromChain = useCallback(async (wallet: PublicKey, loadedPlanets: PlayerState[]) => {
+    const walletKey = wallet.toBase58();
+    if (!clientRef.current || loadedPlanets.length === 0) {
+      setBattleReports([]);
+      return;
+    }
+
+    try {
+      const records = await clientRef.current.fetchBattleResolvedEventsForPlanets(
+        loadedPlanets.map(planet => planet.planetPda),
+      );
+      const chainReports = buildBattleReportsFromEventRecords(walletKey, loadedPlanets, records);
+      setBattleReports(chainReports);
+    } catch {
+      setBattleReports([]);
+    }
   }, []);
 
   const loadGameConfig = useCallback(async () => {
@@ -2230,7 +3549,10 @@ const App: React.FC = () => {
     }
     const sessionId = ++walletSessionRef.current;
     const provider = new AnchorProvider(connection, anchorWallet, { commitment: "confirmed" });
-    const gameClient = new GameClient(connection, provider, { requestVaultRecoveryPassphrase });
+    const gameClient = new GameClient(connection, provider, {
+      requestVaultRecoveryPassphrase,
+      onVaultRecoveryPassphraseRejected: clearRememberedVaultPassword,
+    });
     gameClient.setPreferVaultSigning(useVaultSigning);
     const marketClient = new MarketClient(connection, provider, gameClient);
     clientRef.current = gameClient;
@@ -2242,7 +3564,9 @@ const App: React.FC = () => {
       loadGameConfig(),
       gameClient.restoreExistingVault(),
     ])
-      .then(async ([, config]) => {
+      .then(async ([loadedPlanets, config]) => {
+        if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
+        await loadBattleActivityFromChain(publicKey, loadedPlanets);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         await loadAntimatterBalance(config?.antimatterMint ?? DEFAULT_ANTIMATTER_MINT);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
@@ -2264,7 +3588,7 @@ const App: React.FC = () => {
         walletSessionRef.current += 1;
       }
     };
-  }, [connected, anchorWallet, publicKey, connection, loadAllPlanets, loadGameConfig, loadAntimatterBalance, requestVaultRecoveryPassphrase, refreshVaultBalance]);
+  }, [connected, anchorWallet, publicKey, connection, loadAllPlanets, loadGameConfig, loadBattleActivityFromChain, loadAntimatterBalance, requestVaultRecoveryPassphrase, refreshVaultBalance]);
 
   const withTx = async (
     label: string,
@@ -2282,6 +3606,29 @@ const App: React.FC = () => {
       setTxProgress("Processing...");
     }
   };
+
+  const saveBattleReport = useCallback((sourceState: PlayerState, slotIdx: number, mission: Mission, signature?: string, completed = false) => {
+    if (!publicKey || mission.missionType !== 1) return;
+    const report = buildBattleReport(publicKey.toBase58(), sourceState, slotIdx, mission, signature, completed);
+    setBattleReports(prev => mergeBattleReportList(prev, report));
+  }, [publicKey]);
+
+  const saveBattleEventReport = useCallback((sourceState: PlayerState, event: BattleResolvedEvent, signature?: string) => {
+    if (!publicKey) return;
+    const report = buildBattleReportFromEvent(publicKey.toBase58(), sourceState, event, signature);
+    setBattleReports(prev => mergeBattleReportList(prev, report));
+  }, [publicKey]);
+
+  const completeBattleReport = useCallback((sourceState: PlayerState, slotIdx: number, mission: Mission, signature?: string) => {
+    if (!publicKey || mission.missionType !== 1) return;
+    const wallet = publicKey.toBase58();
+    const id = battleReportId(wallet, sourceState.planetPda, slotIdx, mission);
+    const now = Math.floor(Date.now() / 1000);
+    setBattleReports(prev => prev.map(report => report.id === id
+      ? { ...report, status: "completed" as const, completedTs: now, signature: signature ?? report.signature }
+      : report,
+    ).filter(report => report.wallet === wallet));
+  }, [publicKey]);
 
   const handleFinishBuild = useCallback(async () => {
     if (!clientRef.current || !state) return;
@@ -2373,8 +3720,37 @@ const App: React.FC = () => {
 
   const handleLaunch = async (ships: Record<string, number>, cargo: { metal: bigint; crystal: bigint; deuterium: bigint }, missionType: number, speedFactor: number, target: LaunchTargetInput) => {
     if (!clientRef.current || !state) return;
+    const latestState = await refreshSelectedPlanetState();
+    const launchState = latestState ?? state;
+    if (getFreeMissionSlotCount(launchState.fleet, launchState.research.computerTech) <= 0) {
+      throw new Error("No mission slots available. Resolve an existing mission first.");
+    }
+    const now = Math.floor(Date.now() / 1000);
+    if (missionType === 1) {
+      const attackPoints = fleetCombatPoints(ships);
+      const sourceUnlockLeft = Math.max(0, launchState.planet.attackUnlockedAt - now);
+      const launchCooldownLeft = launchState.planet.lastAttackLaunchTs > 0
+        ? Math.max(0, launchState.planet.lastAttackLaunchTs + ATTACK_LAUNCH_COOLDOWN_SECONDS - now)
+        : 0;
+      if (sourceUnlockLeft > 0) throw new Error(`Attack launches unlock in ${fmtCountdown(sourceUnlockLeft)}.`);
+      if (launchCooldownLeft > 0) throw new Error(`Attack launch cooldown: ${fmtCountdown(launchCooldownLeft)} remaining.`);
+      if (attackPoints < MIN_ATTACK_COMBAT_POINTS) throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`);
+    }
     let launchTarget: { galaxy: number; system: number; position: number; colonyName?: string };
-    if (target.kind === "transport") {
+    if (target.kind === "attack") {
+      const free = await clientRef.current.isCoordFree(target.galaxy, target.system, target.position);
+      if (free) throw new Error(`Attack missions can only target occupied planets. [${target.galaxy}:${target.system}:${target.position}] is empty.`);
+      const targetState = await clientRef.current.getPlanetStateByCoordinates(target.galaxy, target.system, target.position);
+      if (targetState) {
+        const targetProtectionLeft = Math.max(0, targetState.planet.protectionUntilTs - now);
+        const targetCooldownLeft = targetState.planet.lastAttackedTs > 0
+          ? Math.max(0, targetState.planet.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - now)
+          : 0;
+        if (targetProtectionLeft > 0) throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`);
+        if (targetCooldownLeft > 0) throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);
+      }
+      launchTarget = { galaxy: target.galaxy, system: target.system, position: target.position };
+    } else if (target.kind === "transport") {
       if (target.mode === "owned") { const dest=planets.find(p=>p.entityPda===target.destinationEntity); if(!dest)throw new Error("Destination planet not found."); launchTarget={galaxy:dest.planet.galaxy,system:dest.planet.system,position:dest.planet.position}; }
       else {
         const free=await clientRef.current.isCoordFree(target.galaxy,target.system,target.position);
@@ -2391,6 +3767,10 @@ const App: React.FC = () => {
 
   const checkCoordAvailability = useCallback(async (galaxy: number, system: number, position: number) => {
     return clientRef.current?.isCoordFree(galaxy, system, position) ?? true;
+  }, []);
+
+  const loadTargetPlanetByCoords = useCallback(async (galaxy: number, system: number, position: number) => {
+    return clientRef.current?.getPlanetStateByCoordinates(galaxy, system, position) ?? null;
   }, []);
 
   const executeResolveColonize = async (mission: Mission, slotIdx: number) => {
@@ -2415,10 +3795,10 @@ const App: React.FC = () => {
   const vaultReady = clientRef.current?.isVaultReady() ?? false;
   const antimatterBalanceLabel = formatTokenAmount(antimatterBalance, DEFAULT_ANTIMATTER_DECIMALS);
   const antimatterEnabled = !!gameConfig;
-  const visibleSecondaryTabs = hasCreatedWorld
+  const visibleSecondaryTabs = (hasCreatedWorld
     ? SECONDARY_TABS
-    : SECONDARY_TABS.filter(t => t.id !== "market");
-  const visibleDesktopTabs: Tab[] = ["overview","resources","buildings","research","shipyard","fleet","missions","galaxy","market"]
+    : SECONDARY_TABS.filter(t => t.id !== "market")).concat([{ id: "activity" as Tab, icon: "ACT", label: "Activity" }]);
+  const visibleDesktopTabs: Tab[] = ["overview","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"]
     .filter(t => hasCreatedWorld || t !== "market") as Tab[];
   const controllerTabs = isMobile
     ? [...PRIMARY_TABS.map(entry => entry.id), ...visibleSecondaryTabs.map(entry => entry.id)]
@@ -2526,17 +3906,21 @@ const App: React.FC = () => {
 
     switch (tab) {
       case "overview":
-        return <OverviewTab state={state} res={liveRes} nowTs={nowTs} planets={planets} onSelectPlanet={setSelectedPlanetPda} onFinishBuild={handleFinishBuild} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onInstantFinishBuild={handleInstantFinishBuild} onInstantFinishResearch={handleInstantFinishResearch} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy}/>;
+        return <OverviewTab state={state} res={liveRes} nowTs={nowTs} planets={planets} onSelectPlanet={setSelectedPlanetPda} onFinishBuild={handleFinishBuild} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishBuild={handleInstantFinishBuild} onInstantFinishResearch={handleInstantFinishResearch} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy}/>;
       case "resources":
         return <ResourcesTab state={state} res={liveRes} nowTs={nowTs} onStartBuild={idx => withTx("Start build", () => clientRef.current!.startBuild(new PublicKey(state.entityPda), idx))} onFinishBuild={handleFinishBuild} onInstantFinishBuild={handleInstantFinishBuild} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "buildings":
         return <BuildingsTab state={state} res={liveRes} nowTs={nowTs} onStartBuild={idx => withTx("Start build", () => clientRef.current!.startBuild(new PublicKey(state.entityPda), idx))} onFinishBuild={handleFinishBuild} onInstantFinishBuild={handleInstantFinishBuild} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "shipyard":
-        return <ShipyardTab state={state} res={liveRes} nowTs={nowTs} txBusy={txBusy} onBuildShip={(shipType, qty) => withTx("Build ship", () => clientRef.current!.buildShip(new PublicKey(state.entityPda), shipType, qty))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
+        return <CommandShipyardTab state={state} res={liveRes} nowTs={nowTs} txBusy={txBusy} onBuildShip={(shipType, qty) => withTx("Build ship", () => clientRef.current!.buildShip(new PublicKey(state.entityPda), shipType, qty))} onBuildDefense={(defenseType, qty) => withTx("Build defense", () => clientRef.current!.buildDefense(new PublicKey(state.entityPda), defenseType, qty))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
+      case "defense":
+        return <DefenseTab state={state} res={liveRes} nowTs={nowTs} txBusy={txBusy} onBuildDefense={(defenseType, qty) => withTx("Build defense", () => clientRef.current!.buildDefense(new PublicKey(state.entityPda), defenseType, qty))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "fleet":
-        return <FleetTab fleet={state.fleet} res={liveRes} txBusy={txBusy} onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}/>;
+        return <FleetTab fleet={state.fleet} computerTech={state.research.computerTech} res={liveRes} txBusy={txBusy} onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}/>;
       case "missions":
-        return <MissionsTab fleet={state.fleet} nowTs={nowTs} txBusy={txBusy} onResolveTransport={(mission, slotIdx) => withTx("Resolve transport", () => clientRef.current!.resolveTransport(new PublicKey(state.entityPda), mission, slotIdx), async () => { if (publicKey) await loadAllPlanets(publicKey, state.planetPda); })} onResolveColonize={(mission, slotIdx) => setConfirmation({ kind: "resolveColonize", mission, slotIdx })}/>;
+        return <CommandMissionsTab fleet={state.fleet} nowTs={nowTs} txBusy={txBusy} onResolveTransport={(mission, slotIdx) => withTx("Resolve transport", () => clientRef.current!.resolveTransport(new PublicKey(state.entityPda), mission, slotIdx), async () => { if (publicKey) await loadAllPlanets(publicKey, state.planetPda); })} onResolveAttack={(mission, slotIdx) => { let signature: string | undefined; let battleEvent: BattleResolvedEvent | null = null; const sourceAtClick = state; return withTx("Resolve attack", async () => { signature = await clientRef.current!.resolveAttack(new PublicKey(sourceAtClick.entityPda), mission, slotIdx); if (signature && !mission.applied) { try { battleEvent = await clientRef.current!.fetchBattleResolvedEvent(signature); } catch (eventErr) { console.warn("Battle event unavailable from transaction logs", eventErr); } } }, async () => { if (!publicKey) return; const loaded = await loadAllPlanets(publicKey, sourceAtClick.planetPda); const refreshedSource = loaded.find(p => p.planetPda === sourceAtClick.planetPda) ?? sourceAtClick; const refreshedMission = refreshedSource.fleet.missions[slotIdx]; if (battleEvent) saveBattleEventReport(refreshedSource, battleEvent, signature); else if (refreshedMission?.missionType === 1 && refreshedMission.applied) saveBattleReport(refreshedSource, slotIdx, refreshedMission, signature, false); else if (mission.applied) completeBattleReport(sourceAtClick, slotIdx, mission, signature); }); }} onResolveColonize={(mission, slotIdx) => setConfirmation({ kind: "resolveColonize", mission, slotIdx })}/>;
+      case "activity":
+        return <ActivityTab reports={battleReports} onClear={() => setBattleReports([])} />;
       case "research":
         return <ResearchTab research={state.research} res={liveRes} planet={state.planet} txBusy={txBusy} onResearch={idx => withTx("Start research", () => clientRef.current!.startResearch(new PublicKey(state.entityPda), idx))} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onInstantFinishResearch={handleInstantFinishResearch} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "galaxy":
@@ -2557,10 +3941,11 @@ const App: React.FC = () => {
 
   const handleMobileTabClick = (t: Tab) => { setTab(t); setShowMoreDrawer(false); };
 
-  const ALL_DESKTOP_TABS: Tab[] = ["overview","resources","buildings","research","shipyard","fleet","missions","galaxy","market"];
+  const ALL_DESKTOP_TABS: Tab[] = ["overview","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"];
   const DESKTOP_TAB_ICONS: Record<Tab, string> = {
+    activity:"ACT",
     overview:"◈", resources:"⛏", buildings:"⬡", research:"🔬",
-    shipyard:"🚀", fleet:"◉", missions:"⊹", galaxy:"🌌", market:"⚖",
+    shipyard:"🚀", defense:"🛡", fleet:"◉", missions:"⊹", galaxy:"🌌", market:"⚖",
   };
 
   // Vault button label: show SOL balance if known
@@ -2579,7 +3964,7 @@ const App: React.FC = () => {
       <Starfield/>
       <LoadingOverlay visible={(txBusy || creating || gameConfigBusy) && !vaultPrompt} message={creating ? createProgress : txProgress}/>
 
-      {!connected && <LandingScreen isMobile={isMobile}/>}
+      {!connected && <ProjectLandingScreen isMobile={isMobile}/>}
       {connected && loading && <ConnectingScreenPanel/>}
 
       {/* ── DESKTOP ── */}
@@ -2590,6 +3975,15 @@ const App: React.FC = () => {
               <div className="header-cluster">
                 <LogoSVG size={28}/>
               </div>
+              {state && (
+                <div className="desktop-planet-chip" style={shellStyle}>
+                  <span className="desktop-planet-orbit" />
+                  <span className="desktop-planet-copy">
+                    <span className="desktop-planet-name">{state.planet.name || `Planet ${state.planet.planetIndex + 1}`}</span>
+                    <span className="desktop-planet-coords">{state.planet.galaxy}:{state.planet.system}:{state.planet.position} / fields {state.planet.usedFields}/{state.planet.maxFields}</span>
+                  </span>
+                </div>
+              )}
             </div>
             <div className="header-right">
               <div className="header-cluster">
@@ -2667,6 +4061,15 @@ const App: React.FC = () => {
               {state && liveRes && <div className="desktop-resource-shell"><DesktopResourceMenu res={liveRes} planet={state.planet} /></div>}
               <GameConfigAdminCard visible={!!isDevConfigAdmin} config={gameConfig} mintInput={gameConfigMintInput} onMintInputChange={setGameConfigMintInput} onSubmit={handleSaveGameConfig} busy={gameConfigBusy || txBusy}/>
               {error && <div className="shell-error">{error}</div>}
+              {state && (
+                <TabMasthead
+                  tab={tab}
+                  state={state}
+                  activeMissionCount={activeMissionCount}
+                  txBusy={txBusy}
+                  onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}
+                />
+              )}
               <div className="desktop-tab-body">
                 {renderTabContent()}
               </div>
@@ -2697,6 +4100,15 @@ const App: React.FC = () => {
           <div className="mobile-main">
             <GameConfigAdminCard visible={!!isDevConfigAdmin} config={gameConfig} mintInput={gameConfigMintInput} onMintInputChange={setGameConfigMintInput} onSubmit={handleSaveGameConfig} busy={gameConfigBusy || txBusy}/>
             {error && <div className="shell-error">{error}</div>}
+            {state && (
+              <TabMasthead
+                tab={tab}
+                state={state}
+                activeMissionCount={activeMissionCount}
+                txBusy={txBusy}
+                onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}
+              />
+            )}
             {renderTabContent()}
           </div>
           {showMoreDrawer && (
@@ -2756,14 +4168,18 @@ const App: React.FC = () => {
       {/* ── SHARED MODALS ── */}
       {showLaunchModal && state && liveRes && (
         <LaunchModal
+          planet={state.planet}
           fleet={state.fleet}
+          computerTech={state.research.computerTech}
           res={liveRes}
           ownedPlanets={planets}
           currentPlanetPda={state.planetPda}
+          nowTs={nowTs}
           onClose={() => { setShowLaunchModal(false); setLaunchPrefill(undefined); }}
           onLaunch={handleLaunch}
           txBusy={txBusy}
           onCheckCoord={checkCoordAvailability}
+          onLoadTargetPlanet={loadTargetPlanetByCoords}
           prefillTarget={launchPrefill}
         />
       )}

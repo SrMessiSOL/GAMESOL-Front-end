@@ -90,6 +90,11 @@ function storeLastConnectedAddress(address: string | null): void {
   } catch { /* ignore */ }
 }
 
+function clearStoredWalletSession(): void {
+  storePreferredWallet(null);
+  storeLastConnectedAddress(null);
+}
+
 function formatWalletError(error: unknown, isMobileRuntime: boolean): WalletStatusState {
   const rawMessage =
     typeof error === "object" && error && "message" in error
@@ -125,7 +130,10 @@ function formatWalletError(error: unknown, isMobileRuntime: boolean): WalletStat
   return { tone: "danger", text: rawMessage };
 }
 
-export const WalletConnectControl: React.FC = () => {
+export const WalletConnectControl: React.FC<{
+  disconnectedLabel?: string;
+  connectingLabel?: string;
+}> = ({ disconnectedLabel, connectingLabel }) => {
   const { wallets, wallet, connected, connecting, publicKey, select, connect, disconnect } = useWallet();
 
   const [open, setOpen] = useState(false);
@@ -186,7 +194,7 @@ export const WalletConnectControl: React.FC = () => {
   // but if there is no cached session we need to kick off the connect() call once
   // the adapter is selected so the MWA intent fires immediately.
   useEffect(() => {
-    if (!nativeAndroid) return;
+    return;
     if (connected || connecting || pendingWalletName) return;
     if (!wallets.length) return;
 
@@ -197,10 +205,10 @@ export const WalletConnectControl: React.FC = () => {
     if (!mwaAdapter) return;
 
     // Only auto-trigger if it's not already selected
-    if (wallet?.adapter.name === mwaAdapter.adapter.name) return;
+    if (wallet?.adapter.name === mwaAdapter!.adapter.name) return;
 
-    select(mwaAdapter.adapter.name);
-    setPendingWalletName(mwaAdapter.adapter.name);
+    select(mwaAdapter!.adapter.name);
+    setPendingWalletName(mwaAdapter!.adapter.name);
   }, [nativeAndroid, connected, connecting, pendingWalletName, wallets, wallet, select]);
 
   const connectToWallet = useCallback(
@@ -221,9 +229,8 @@ export const WalletConnectControl: React.FC = () => {
 
   const handlePrimaryAction = useCallback(async () => {
     if (connected) {
-      setStatus({ tone: "info", text: "Disconnecting wallet session..." });
-      await disconnect();
-      setOpen(false);
+      setStatus(null);
+      setOpen((v) => !v);
       return;
     }
 
@@ -243,15 +250,19 @@ export const WalletConnectControl: React.FC = () => {
     setOpen((v) => !v);
   }, [connected, disconnect, nativeAndroid, wallets, connectToWallet]);
 
+  const handleDisconnectAction = useCallback(async () => {
+    setStatus({ tone: "info", text: "Disconnecting wallet session..." });
+    clearStoredWalletSession();
+    await disconnect();
+    setOpen(false);
+  }, [disconnect]);
+
   // ── Persist connection state ─────────────────────────────────────────────────
   useEffect(() => {
     if (connected && publicKey) {
       storeLastConnectedAddress(publicKey.toBase58());
       if (wallet?.adapter.name) storePreferredWallet(wallet.adapter.name.toString());
-      setStatus(isMobileRuntime ? null : {
-        tone: "info",
-        text: "Wallet linked.",
-      });
+      setStatus(null);
       return;
     }
     storeLastConnectedAddress(null);
@@ -308,10 +319,10 @@ export const WalletConnectControl: React.FC = () => {
     connected && publicKey
       ? shortenAddress(publicKey.toBase58())
       : connecting || pendingWalletName
-        ? "Linking..."
+        ? (connectingLabel ?? "Linking...")
         : isMobileRuntime
-          ? "Connect Wallet"
-          : "Select Wallet";
+          ? (disconnectedLabel ?? "Connect Wallet")
+          : (disconnectedLabel ?? "Select Wallet");
 
   const statusColor =
     status?.tone === "danger"
@@ -348,7 +359,69 @@ export const WalletConnectControl: React.FC = () => {
         </div>
       )}
 
-      {/* Wallet selector dropdown — only shown on non-native-Android */}
+      {/* Wallet selector dropdown / connected menu */}
+      {open && connected && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            right: 0,
+            minWidth: 220,
+            background: "rgba(8,10,22,0.96)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 16,
+            padding: 8,
+            boxShadow: "0 16px 48px rgba(0,0,0,0.35)",
+            zIndex: 1000,
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div
+            style={{
+              padding: "6px 12px 10px",
+              color: "rgba(200,214,229,0.72)",
+              fontSize: 10,
+              letterSpacing: 1.2,
+            }}
+          >
+            CONNECTED WALLET
+          </div>
+          {publicKey && (
+            <div
+              style={{
+                padding: "0 12px 10px",
+                color: "var(--cyan)",
+                fontSize: 11,
+                wordBreak: "break-all",
+                lineHeight: 1.5,
+              }}
+            >
+              {publicKey.toBase58()}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleDisconnectAction()}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              border: "none",
+              borderRadius: 12,
+              background: "transparent",
+              color: "white",
+              padding: "12px",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <span>Disconnect</span>
+            <span style={{ fontSize: 10, color: "var(--danger)" }}>End session</span>
+          </button>
+        </div>
+      )}
+
       {open && !connected && !nativeAndroid && (
         <>
           {useCenteredWalletModal && (

@@ -854,8 +854,8 @@ async initializePlanet(planetName = "Homeworld", reportProgress?: ProgressReport
   );
 
   if (
-    initializedPlanet.galaxy < 1 || initializedPlanet.galaxy > 9 ||
-    initializedPlanet.system < 1 || initializedPlanet.system > 499 ||
+    initializedPlanet.galaxy < 1 || initializedPlanet.galaxy > 999 ||
+    initializedPlanet.system < 1 || initializedPlanet.system > 999 ||
     initializedPlanet.position < 1 || initializedPlanet.position > 15
   ) {
     throw new Error(
@@ -2606,8 +2606,10 @@ export function fmtCountdown(totalSecs: number): string {
 
 export function missionProgress(m: Mission, nowTs: number): number {
   if (m.applied) {
-    const total   = m.returnTs - m.arriveTs;
-    const elapsed = nowTs - m.arriveTs;
+    const outboundDuration = Math.max(1, m.arriveTs - m.departTs);
+    const returnStartTs = m.returnTs - outboundDuration;
+    const total   = m.returnTs - returnStartTs;
+    const elapsed = nowTs - returnStartTs;
     return total <= 0 ? 100 : Math.min(100, Math.floor((elapsed / total) * 100));
   }
   const total   = m.arriveTs - m.departTs;
