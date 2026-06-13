@@ -1863,7 +1863,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
                   Funding, audits, and mainnet are the next milestones.
                 </div>
                 <div style={{ fontSize: isMobile ? 14 : 16, lineHeight: 1.9, color: "rgba(214,223,232,0.84)", maxWidth: 760 }}>
-                  We are preparing for foundation support, audits, and a stronger public rollout while planning attack and defense systems, guilds, wars, and deeper competitive play.
+                  We are preparing for foundation support, audits, and a stronger public rollout while expanding the live attack and defense systems toward guilds, wars, and deeper competitive play.
                 </div>
               </div>
 
@@ -1905,7 +1905,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
                     Development status
                   </div>
                   <div style={{ fontSize: 13, lineHeight: 1.8, color: "rgba(200,214,229,0.88)" }}>
-                    The main gameplay loop is already complete. We still need to add attack and defense systems, guilds, wars, and more advanced competitive features.
+                    The main gameplay loop now includes resources, construction, fleets, attack resolution, defense queues, and battle activity. Guilds, wars, and more advanced competitive features are next.
                   </div>
                 </div>
               </div>
