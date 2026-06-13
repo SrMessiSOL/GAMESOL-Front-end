@@ -1668,8 +1668,11 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
       style={{
         position: "absolute",
         top: isMobile ? 16 : 24,
+        left: isMobile ? 16 : "auto",
         right: isMobile ? 16 : 28,
         zIndex: 5,
+        display: "flex",
+        justifyContent: "flex-end",
       }}
     >
       <WalletConnectControl disconnectedLabel="Launch App (devnet)" connectingLabel="Launching..." />
@@ -1757,7 +1760,19 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
           </div>
 
           <div style={{ display: "grid", gap: 10, justifyItems: "center" }}>
-            <div className="landing-title" style={{ marginBottom: 0, letterSpacing: isMobile ? "4px" : "8px", fontSize: isMobile ? "clamp(34px, 12vw, 56px)" : "clamp(60px, 8vw, 94px)", lineHeight: 0.95 }}>GAMESOL</div>
+            <div
+              className="landing-title"
+              style={{
+                marginBottom: 0,
+                letterSpacing: isMobile ? "2px" : "8px",
+                fontSize: isMobile ? "clamp(30px, 10vw, 42px)" : "clamp(60px, 8vw, 94px)",
+                lineHeight: 0.95,
+                maxWidth: "100%",
+                overflowWrap: "anywhere",
+              }}
+            >
+              GAMESOL
+            </div>
             <div
               style={{
                 display: "inline-flex",
@@ -1775,7 +1790,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
             >
               Devnet live now
             </div>
-            <div className="landing-sub" style={{ maxWidth: 820, margin: "0 auto", fontSize: isMobile ? 13 : 15, letterSpacing: isMobile ? 1.6 : 2.6, lineHeight: 1.8 }}>
+            <div className="landing-sub" style={{ maxWidth: "min(100%, 820px)", margin: "0 auto", fontSize: isMobile ? 13 : 15, letterSpacing: isMobile ? 1 : 2.6, lineHeight: 1.8 }}>
               An on-chain space strategy project on Solana where players build planets,
               expand production, research technologies, and launch fleets across a persistent galaxy.
             </div>
