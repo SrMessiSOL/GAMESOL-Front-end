@@ -1177,6 +1177,185 @@ function describeTxError(err: unknown): string {
 
 function mapSendTransactionError(message: string, logs: string[]): string {
   const details = [message, ...logs].join("\n");
+  if (
+    details.includes("Error Code: QueueBusy") ||
+    details.includes("Build queue is busy") ||
+    details.includes("custom program error: 0x1773")
+  ) {
+    return "Build queue is already busy. Finish the current construction before starting another one.";
+  }
+  if (
+    details.includes("NoFields") ||
+    details.includes("No free building fields") ||
+    details.includes("custom program error: 0x1774")
+  ) {
+    return "No free building fields are available on this planet.";
+  }
+  if (
+    details.includes("InsufficientMetal") ||
+    details.includes("custom program error: 0x1775")
+  ) {
+    return "Not enough metal for this action.";
+  }
+  if (
+    details.includes("InsufficientCrystal") ||
+    details.includes("custom program error: 0x1776")
+  ) {
+    return "Not enough crystal for this action.";
+  }
+  if (
+    details.includes("InsufficientDeuterium") ||
+    details.includes("custom program error: 0x1777")
+  ) {
+    return "Not enough deuterium for this action.";
+  }
+  if (
+    details.includes("NoBuild") ||
+    details.includes("No build is currently queued") ||
+    details.includes("custom program error: 0x1778")
+  ) {
+    return "No building is queued right now.";
+  }
+  if (
+    details.includes("Error Code: BuildNotFinished") ||
+    details.includes("queued build has not finished") ||
+    details.includes("custom program error: 0x1779")
+  ) {
+    return "Building construction is still in progress. Wait for the timer or use ANTIMATTER to finish it instantly.";
+  }
+  if (
+    details.includes("InvalidTech") ||
+    details.includes("Invalid research technology") ||
+    details.includes("custom program error: 0x177a")
+  ) {
+    return "That research technology is not supported. Refresh the game and try again.";
+  }
+  if (
+    details.includes("LabTooLow") ||
+    details.includes("Research lab level is too low") ||
+    details.includes("custom program error: 0x177b")
+  ) {
+    return "Research Lab level is too low for that technology. Open Buildings and upgrade Research Lab first.";
+  }
+  if (
+    details.includes("ResearchQueueBusy") ||
+    details.includes("research queue is busy") ||
+    details.includes("custom program error: 0x177c")
+  ) {
+    return "Research queue is already busy. Finish the current research before starting another technology.";
+  }
+  if (
+    details.includes("NoResearch") ||
+    details.includes("No research is currently queued") ||
+    details.includes("custom program error: 0x177d")
+  ) {
+    return "No research is queued right now.";
+  }
+  if (
+    details.includes("ResearchNotFinished") ||
+    details.includes("research has not finished") ||
+    details.includes("custom program error: 0x177e")
+  ) {
+    return "Research is still in progress. Wait for the timer or use ANTIMATTER to finish it instantly.";
+  }
+  if (
+    details.includes("InvalidShipType") ||
+    details.includes("Invalid ship type") ||
+    details.includes("custom program error: 0x1781")
+  ) {
+    return "That ship type is not supported. Refresh the game and try again.";
+  }
+  if (
+    details.includes("InvalidDefenseType") ||
+    details.includes("Invalid defense type") ||
+    details.includes("custom program error: 0x1782")
+  ) {
+    return "That defense type is not supported. Refresh the game and try again.";
+  }
+  if (
+    details.includes("TechLocked") ||
+    details.includes("locked by research requirements") ||
+    details.includes("custom program error: 0x1783")
+  ) {
+    return "Requirements are missing for this unit. Open its Requirements panel and upgrade the listed buildings or research first.";
+  }
+  if (
+    details.includes("ShipyardTooLow") ||
+    details.includes("Shipyard level is too low") ||
+    details.includes("custom program error: 0x1784")
+  ) {
+    return "Shipyard level is too low. Upgrade Shipyard first.";
+  }
+  if (
+    details.includes("ShipyardQueueBusy") ||
+    details.includes("Shipyard queue is busy") ||
+    details.includes("custom program error: 0x1785")
+  ) {
+    return "Shipyard queue is already busy. Finish the current ship or defense build first.";
+  }
+  if (
+    details.includes("NoShipBuild") ||
+    details.includes("No ship build is currently queued") ||
+    details.includes("custom program error: 0x1786")
+  ) {
+    return "No ship build is queued right now.";
+  }
+  if (
+    details.includes("NoDefenseBuild") ||
+    details.includes("No defense build is currently queued") ||
+    details.includes("custom program error: 0x1787")
+  ) {
+    return "No defense build is queued right now.";
+  }
+  if (
+    details.includes("ShipBuildNotFinished") ||
+    details.includes("queued ship build has not finished") ||
+    details.includes("custom program error: 0x1788")
+  ) {
+    return "Ship construction is still in progress. Wait for the timer or use ANTIMATTER to finish it instantly.";
+  }
+  if (
+    details.includes("DefenseBuildNotFinished") ||
+    details.includes("queued defense build has not finished") ||
+    details.includes("custom program error: 0x1789")
+  ) {
+    return "Defense construction is still in progress. Wait for the timer or use ANTIMATTER to finish it instantly.";
+  }
+  if (
+    details.includes("EmptyFleet") ||
+    details.includes("selected fleet is empty") ||
+    details.includes("custom program error: 0x178a")
+  ) {
+    return "Select at least one ship before launching a mission.";
+  }
+  if (
+    details.includes("NoMissionSlot") ||
+    details.includes("No free mission slot is available") ||
+    details.includes("custom program error: 0x178b")
+  ) {
+    return "No mission slots available. Resolve or wait for an existing mission first.";
+  }
+  if (
+    details.includes("InsufficientShips") ||
+    details.includes("Insufficient ships are available") ||
+    details.includes("custom program error: 0x178c")
+  ) {
+    return "Not enough ships are available for this fleet.";
+  }
+  if (
+    details.includes("ExceedsCargo") ||
+    details.includes("Cargo exceeds the selected fleet capacity") ||
+    details.includes("custom program error: 0x178d")
+  ) {
+    return "Selected cargo exceeds this fleet's capacity.";
+  }
+  if (
+    details.includes("InsufficientResources") ||
+    details.includes("Insufficient resources are available") ||
+    details.includes("custom program error: 0x178e")
+  ) {
+    return "Not enough resources are available for this action.";
+  }
   if (details.includes("NewPlayerProtected") || details.includes("new-player protection") || details.includes("custom program error: 0x17a3")) {
     return "Target planet is still under new-player protection.";
   }
@@ -1201,13 +1380,6 @@ function mapSendTransactionError(message: string, logs: string[]): string {
     details.includes("custom program error: 0x1795")
   ) {
     return "Vault authorization mismatch. Please retry; if it persists, restore the vault with the saved password.";
-  }
-  if (
-    details.includes("NoMissionSlot") ||
-    details.includes("No free mission slot is available") ||
-    details.includes("custom program error: 0x1788")
-  ) {
-    return "No mission slots available. Resolve an existing mission first.";
   }
   return message;
 }
