@@ -2529,7 +2529,9 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
   };
 
 // ─── Tab components ───────────────────────────────────────────────────────────
-const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Planet; txBusy: boolean; antimatterBalance: bigint; antimatterEnabled: boolean; onResearch: (idx: number) => void; onFinishResearch: () => void; onInstantFinishResearch: () => void; onGoBuildings: () => void; onGoResearch: () => void; }> =
+type ShowRequirementModal = (check: RequirementCheck) => void;
+
+const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Planet; txBusy: boolean; antimatterBalance: bigint; antimatterEnabled: boolean; onResearch: (idx: number, showRequirements: ShowRequirementModal) => void; onFinishResearch: () => void; onInstantFinishResearch: () => void; onGoBuildings: () => void; onGoResearch: () => void; }> =
   ({ research, res, planet, txBusy, antimatterBalance, antimatterEnabled, onResearch, onFinishResearch, onInstantFinishResearch, onGoBuildings, onGoResearch }) => {
     const now = Math.floor(Date.now() / 1000);
     const isResearching = research.queueItem !== 255;
@@ -2610,7 +2612,7 @@ const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Plane
                         setReqCheck(requirementCheck);
                         return;
                       }
-                      onResearch(tech.idx);
+                      onResearch(tech.idx, setReqCheck);
                     }}
                   >
                     {btnText}
@@ -3741,6 +3743,44 @@ const App: React.FC = () => {
     finally { setGameConfigBusy(false); setTxProgress("Processing..."); }
   };
 
+  const handleStartResearch = async (idx: number, showRequirements: ShowRequirementModal) => {
+    if (!clientRef.current || !state) return;
+    const tech = RESEARCH_TECHS.find(entry => entry.idx === idx);
+    if (!tech) {
+      setError("Unsupported research technology.");
+      return;
+    }
+
+    const latestState = await refreshSelectedPlanetState();
+    const researchState = latestState ?? state;
+    const requirementCheck = checkResearchRequirements(tech, researchState.planet, researchState.research);
+    if (!requirementCheck.allMet) {
+      showRequirements(requirementCheck);
+      return;
+    }
+
+    if (researchState.research.queueItem !== 255) {
+      setError("Research queue is already busy. Finish the current research before starting another technology.");
+      return;
+    }
+
+    const level = ((researchState.research as any)[tech.field] as number) ?? 0;
+    const [baseMetal, baseCrystal, baseDeuterium] = tech.baseCost;
+    const metalCost = BigInt(Math.floor(baseMetal * Math.pow(2, level)));
+    const crystalCost = BigInt(Math.floor(baseCrystal * Math.pow(2, level)));
+    const deuteriumCost = BigInt(Math.floor(baseDeuterium * Math.pow(2, level)));
+    const resources = researchState.resources;
+    if (resources.metal < metalCost || resources.crystal < crystalCost || resources.deuterium < deuteriumCost) {
+      setError("Insufficient resources for this research.");
+      return;
+    }
+
+    await withTx(
+      "Start research",
+      () => clientRef.current!.startResearch(new PublicKey(researchState.entityPda), idx),
+    );
+  };
+
   const handleInstantFinishBuild = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish build", () => clientRef.current!.accelerateBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
   const handleInstantFinishResearch = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish research", () => clientRef.current!.accelerateResearchWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
   const handleInstantFinishShipyard = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish shipyard", () => clientRef.current!.accelerateShipBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
@@ -4004,7 +4044,7 @@ const App: React.FC = () => {
       case "activity":
         return <ActivityTab reports={battleReports} onClear={() => setBattleReports([])} />;
       case "research":
-        return <ResearchTab research={state.research} res={liveRes} planet={state.planet} txBusy={txBusy} onResearch={idx => withTx("Start research", () => clientRef.current!.startResearch(new PublicKey(state.entityPda), idx))} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onInstantFinishResearch={handleInstantFinishResearch} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
+        return <ResearchTab research={state.research} res={liveRes} planet={state.planet} txBusy={txBusy} onResearch={handleStartResearch} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onInstantFinishResearch={handleInstantFinishResearch} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "galaxy":
         return (
           <GalaxyTab
