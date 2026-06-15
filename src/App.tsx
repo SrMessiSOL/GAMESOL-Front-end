@@ -2411,6 +2411,23 @@ function fleetCombatPoints(ships: Record<string, number>): number {
   return Object.entries(ships).reduce((sum, [key, qty]) => sum + (SHIP_COMBAT_POINTS[key] ?? 0) * Math.max(0, qty), 0);
 }
 
+function launchFuelCost(ships: Record<string, number>, speedFactor: number): number {
+  const fuel =
+    (ships.smallCargo ?? 0) * 10 +
+    (ships.largeCargo ?? 0) * 50 +
+    (ships.lightFighter ?? 0) * 20 +
+    (ships.heavyFighter ?? 0) * 75 +
+    (ships.cruiser ?? 0) * 300 +
+    (ships.battleship ?? 0) * 500 +
+    (ships.battlecruiser ?? 0) * 250 +
+    (ships.bomber ?? 0) * 1000 +
+    (ships.destroyer ?? 0) * 1000 +
+    (ships.recycler ?? 0) * 300 +
+    (ships.espionageProbe ?? 0) +
+    (ships.colonyShip ?? 0) * 1000;
+  return Math.floor((fuel * Math.max(10, Math.min(100, speedFactor)) ** 2) / 10_000);
+}
+
 function getMissionShipCount(mission: Mission, shipKey: string): number {
   const fieldByShip: Record<string, keyof Mission> = {
     smallCargo: "sSmallCargo",
@@ -2457,6 +2474,9 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
     const totalSent = Object.values(shipQty).reduce((a, b) => a + b, 0);
     const cargoCap = getQty("smallCargo")*5000+getQty("largeCargo")*25000+getQty("recycler")*20000+getQty("cruiser")*800+getQty("battleship")*1500;
     const cargoUsed = cargoM + cargoC + cargoD;
+    const launchFuel = launchFuelCost(shipQty, speed);
+    const deuteriumNeeded = cargoD + launchFuel;
+    const hasLaunchDeuterium = BigInt(deuteriumNeeded) <= res.deuterium;
     const attackPoints = fleetCombatPoints(shipQty);
     const attackUnlockLeft = missionType === 1 ? Math.max(0, planet.attackUnlockedAt - nowTs) : 0;
     const attackLaunchCooldownLeft = missionType === 1 && planet.lastAttackLaunchTs > 0 ? Math.max(0, planet.lastAttackLaunchTs + ATTACK_LAUNCH_COOLDOWN_SECONDS - nowTs) : 0;
@@ -2486,7 +2506,7 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
     }, [missionType, transportMode, targetGalaxy, targetSystem, targetPosition, scheduleCoordCheck]);
     const handleColonyCoordChange = (galaxy: number, system: number, position: number, setterG: (v: number) => void, setterS: (v: number) => void, setterP: (v: number) => void, changedField: "g" | "s" | "p", value: number) => { const ng=changedField==="g"?value:galaxy; const ns=changedField==="s"?value:system; const np=changedField==="p"?value:position; if(changedField==="g")setterG(ng); if(changedField==="s")setterS(ns); if(changedField==="p")setterP(np); };
     const coordStatusConfig: Record<CoordStatus, { color: string; text: string }> = { idle:{color:"var(--dim)",text:""}, checking:{color:"var(--warn)",text:"CHECKING..."}, free:{color:"var(--success)",text:"✓ SLOT FREE"}, occupied:{color:"var(--danger)",text:"✗ ALREADY OCCUPIED"} };
-    const handleSubmit = async () => { try { setLocalErr(null); if(totalSent<=0)throw new Error("Select at least one ship."); if(cargoUsed>cargoCap)throw new Error("Cargo exceeds fleet capacity."); if(!hasFreeMissionSlot)throw new Error("No mission slots available. Resolve an existing mission first."); if(missionType===1){if(attackUnlockLeft>0)throw new Error(`Attack launches unlock in ${fmtCountdown(attackUnlockLeft)}.`); if(attackLaunchCooldownLeft>0)throw new Error(`Attack launch cooldown: ${fmtCountdown(attackLaunchCooldownLeft)} remaining.`); if(attackPoints<MIN_ATTACK_COMBAT_POINTS)throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`); if(targetProtectionLeft>0)throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`); if(targetCooldownLeft>0)throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);} if(missionType===5&&getQty("colonyShip")<=0)throw new Error("Colonize requires at least 1 colony ship."); if(missionType===5&&coordStatus==="occupied")throw new Error("That coordinate slot is already occupied."); if((missionType===1||(missionType===2&&transportMode==="coords"))&&coordStatus==="free")throw new Error(missionType===1?"Attack missions can only target occupied planets.":"Transport missions can only target occupied planets."); let target: LaunchTargetInput; if(missionType===1){target={kind:"attack",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}else if(missionType===2){if(transportMode==="owned"){if(!targetEntity)throw new Error("Select a destination planet."); target={kind:"transport",mode:"owned",destinationEntity:targetEntity};}else{target={kind:"transport",mode:"coords",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}}else{target={kind:"colonize",galaxy:targetGalaxy,system:targetSystem,position:targetPosition,colonyName:colonyName.trim()||"Colony"};} setLaunching(true); await onLaunch(shipQty,{metal:BigInt(cargoM),crystal:BigInt(cargoC),deuterium:BigInt(cargoD)},missionType,speed,target); onClose(); }catch(e:any){setLocalErr(e?.message||String(e));}finally{setLaunching(false);}};
+    const handleSubmit = async () => { try { setLocalErr(null); if(totalSent<=0)throw new Error("Select at least one ship."); if(cargoUsed>cargoCap)throw new Error("Cargo exceeds fleet capacity."); if(!hasLaunchDeuterium)throw new Error(`Not enough deuterium. Need ${fmt(deuteriumNeeded)} including ${fmt(launchFuel)} launch fuel.`); if(!hasFreeMissionSlot)throw new Error("No mission slots available. Resolve an existing mission first."); if(missionType===1){if(attackUnlockLeft>0)throw new Error(`Attack launches unlock in ${fmtCountdown(attackUnlockLeft)}.`); if(attackLaunchCooldownLeft>0)throw new Error(`Attack launch cooldown: ${fmtCountdown(attackLaunchCooldownLeft)} remaining.`); if(attackPoints<MIN_ATTACK_COMBAT_POINTS)throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`); if(targetProtectionLeft>0)throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`); if(targetCooldownLeft>0)throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);} if(missionType===5&&getQty("colonyShip")<=0)throw new Error("Colonize requires at least 1 colony ship."); if(missionType===5&&coordStatus==="occupied")throw new Error("That coordinate slot is already occupied."); if((missionType===1||(missionType===2&&transportMode==="coords"))&&coordStatus==="free")throw new Error(missionType===1?"Attack missions can only target occupied planets.":"Transport missions can only target occupied planets."); let target: LaunchTargetInput; if(missionType===1){target={kind:"attack",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}else if(missionType===2){if(transportMode==="owned"){if(!targetEntity)throw new Error("Select a destination planet."); target={kind:"transport",mode:"owned",destinationEntity:targetEntity};}else{target={kind:"transport",mode:"coords",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}}else{target={kind:"colonize",galaxy:targetGalaxy,system:targetSystem,position:targetPosition,colonyName:colonyName.trim()||"Colony"};} setLaunching(true); await onLaunch(shipQty,{metal:BigInt(cargoM),crystal:BigInt(cargoC),deuterium:BigInt(cargoD)},missionType,speed,target); onClose(); }catch(e:any){setLocalErr(e?.message||String(e));}finally{setLaunching(false);}};
     return (
       <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
         <div className="modal">
@@ -2498,10 +2518,11 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
           {missionType===5&&(<div className="modal-section"><div className="modal-label">Colony Target</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Galaxy</span><input className="modal-input" type="number" min={1} max={MAX_GALAXY} value={targetGalaxy} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"g",Math.max(1,Math.min(MAX_GALAXY,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>System</span><input className="modal-input" type="number" min={1} max={MAX_SYSTEM} value={targetSystem} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"s",Math.max(1,Math.min(MAX_SYSTEM,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Position</span><input className="modal-input" type="number" min={1} max={MAX_POSITION} value={targetPosition} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"p",Math.max(1,Math.min(MAX_POSITION,parseInt(e.target.value)||1)))}/></div>{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatusConfig[coordStatus].color}}>{coordStatusConfig[coordStatus].text}</div>}<div className="modal-row" style={{marginTop:10}}><span style={{fontSize:11,color:"var(--dim)"}}>Colony Name</span><input className="modal-input" type="text" maxLength={32} value={colonyName} onChange={e=>setColonyName(e.target.value)}/></div></div>)}
           <div className="modal-section"><div className="modal-label">Ships <span style={{color:"var(--cyan)"}}>{totalSent>0?`${totalSent} selected`:"none"}</span></div><div className="modal-ship-grid">{SHIPS.map(ship=>{const avail=((fleet as any)[ship.key]as number)??0; if(avail===0)return null; return(<div key={ship.key} className="modal-ship-row"><div className="modal-ship-art"><img src={getShipArtUrl(ship.key)} alt={ship.name} loading="lazy" /></div><div className="modal-ship-top"><div className="modal-ship-copy"><div className="modal-ship-label">{ship.name}</div><div className="modal-ship-avail">Avail: {avail.toLocaleString()}</div></div><input className="modal-input" type="number" min={0} max={avail} value={getQty(ship.key)||""} placeholder="0" onChange={e=>setQty(ship.key,parseInt(e.target.value)||0)}/></div></div>);})}</div></div>
           {cargoCap>0&&(<div className="modal-section"><div className="modal-label">Cargo <span style={{color:cargoUsed>cargoCap?"var(--danger)":"var(--dim)"}}>{cargoUsed.toLocaleString()} / {cargoCap.toLocaleString()}</span></div>{[{label:"Metal",color:"var(--metal)",val:cargoM,max:Number(res.metal),set:setCargoM},{label:"Crystal",color:"var(--crystal)",val:cargoC,max:Number(res.crystal),set:setCargoC},{label:"Deuterium",color:"var(--deut)",val:cargoD,max:Number(res.deuterium),set:setCargoD}].map(r=>(<div key={r.label} className="modal-row"><span style={{color:r.color,fontSize:11}}>{r.label} (avail: {fmt(r.max)})</span><input className="modal-input" type="number" min={0} max={r.max} value={r.val||""} placeholder="0" onChange={e=>r.set(Math.max(0,Math.min(r.max,parseInt(e.target.value)||0)))}/></div>))}</div>)}
-          <div className="modal-section"><div className="modal-label">Flight Parameters</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Speed (10–100%)</span><input className="modal-input" type="number" min={10} max={100} step={10} value={speed} onChange={e=>setSpeed(Math.max(10,Math.min(100,parseInt(e.target.value)||100)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mission Slots</span><span style={{fontSize:11,color:hasFreeMissionSlot?"var(--text)":"var(--danger)"}}>{freeMissionSlots} free / {usableMissionSlots} usable ({activeMissionSlots} active)</span></div></div>
+          <div className="modal-section"><div className="modal-label">Flight Parameters</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Speed (10–100%)</span><input className="modal-input" type="number" min={10} max={100} step={10} value={speed} onChange={e=>setSpeed(Math.max(10,Math.min(100,parseInt(e.target.value)||100)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Launch fuel</span><span style={{fontSize:11,color:hasLaunchDeuterium?"var(--text)":"var(--danger)"}}>{fmt(launchFuel)} deuterium</span></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mission Slots</span><span style={{fontSize:11,color:hasFreeMissionSlot?"var(--text)":"var(--danger)"}}>{freeMissionSlots} free / {usableMissionSlots} usable ({activeMissionSlots} active)</span></div></div>
           {!hasFreeMissionSlot&&<div className="error-msg" style={{marginBottom:8}}>No mission slots available. Resolve an existing mission first.</div>}
+          {!hasLaunchDeuterium&&<div className="error-msg" style={{marginBottom:8}}>Not enough deuterium for cargo plus launch fuel.</div>}
           {localErr&&<div className="error-msg" style={{marginBottom:8}}>{localErr}</div>}
-          <div className="modal-footer"><button className="modal-btn secondary" onClick={onClose} disabled={launching||txBusy}>CANCEL</button><button className="modal-btn primary" onClick={handleSubmit} disabled={launching||txBusy||totalSent===0||!hasFreeMissionSlot||attackBlocked||(missionType===5&&coordStatus==="occupied")||(missionType===2&&transportMode==="coords"&&(coordStatus==="checking"||coordStatus==="free"))}>{launching?"LAUNCHING...":"⊹ LAUNCH"}</button></div>
+          <div className="modal-footer"><button className="modal-btn secondary" onClick={onClose} disabled={launching||txBusy}>CANCEL</button><button className="modal-btn primary" onClick={handleSubmit} disabled={launching||txBusy||totalSent===0||!hasFreeMissionSlot||!hasLaunchDeuterium||cargoUsed>cargoCap||attackBlocked||(missionType===5&&coordStatus==="occupied")||(missionType===2&&transportMode==="coords"&&(coordStatus==="checking"||coordStatus==="free"))}>{launching?"LAUNCHING...":"⊹ LAUNCH"}</button></div>
         </div>
       </div>
     );
@@ -2541,7 +2562,7 @@ const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Plane
               const cm = Math.floor(costs[0] * Math.pow(2, level));
               const cc = Math.floor(costs[1] * Math.pow(2, level));
               const cd = Math.floor(costs[2] * Math.pow(2, level));
-              const canAfford = !res || (res.metal >= BigInt(cm) && res.crystal >= BigInt(cc) && res.deuterium >= BigInt(cd));
+              const canAfford = !!res && (res.metal >= BigInt(cm) && res.crystal >= BigInt(cc) && res.deuterium >= BigInt(cd));
               const requirementCheck = checkResearchRequirements(tech, planet, research);
               const requirementsMet = requirementCheck.allMet;
               const isThis = isResearching && research.queueItem === tech.idx;
@@ -2790,10 +2811,11 @@ const ResourcesTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
               const nextLevel = level + 1;
               const [cm, cc, cd] = upgradeCost(building.idx, level);
               const secs = buildTimeSecs(building.idx, nextLevel, planet.roboticsFactory);
-              const hasMetal = !res || res.metal >= BigInt(cm);
-              const hasCrystal = !res || res.crystal >= BigInt(cc);
-              const hasDeut = !res || res.deuterium >= BigInt(cd);
+              const hasMetal = !!res && res.metal >= BigInt(cm);
+              const hasCrystal = !!res && res.crystal >= BigInt(cc);
+              const hasDeut = !!res && res.deuterium >= BigInt(cd);
               const canAfford = hasMetal && hasCrystal && hasDeut;
+              const hasFreeField = planet.usedFields < planet.maxFields;
               const requirementCheck = checkBuildingRequirements(building.key, planet, research);
               const requirementsMet = requirementCheck?.allMet ?? true;
               const missingCount = requirementCheck?.requirements.filter(requirement => !requirement.met).length ?? 0;
@@ -2808,6 +2830,9 @@ const ResourcesTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
               } else if (isQueued) {
                 btnClass = "build-btn building-now";
                 btnText = fmtCountdown(buildSecsLeft);
+              } else if (!buildInProgress && !hasFreeField) {
+                btnClass = "build-btn no-funds";
+                btnText = "NO FIELDS";
               } else if (!buildInProgress && !requirementsMet) {
                 btnClass = "build-btn locked-btn";
                 btnText = `REQUIREMENTS (${missingCount})`;
@@ -2839,7 +2864,7 @@ const ResourcesTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
                   </div>
                   <button
                     className={btnClass}
-                    disabled={(isQueued && !isReady) || txBusy || (!isReady && !isQueued && !requirementsMet ? false : !isReady && !isQueued && !canAfford)}
+                    disabled={(isQueued && !isReady) || txBusy || (!isReady && !isQueued && !hasFreeField) || (!isReady && !isQueued && !requirementsMet ? false : !isReady && !isQueued && !canAfford)}
                     onClick={() => {
                       if (isReady) {
                         onFinishBuild();
@@ -2895,10 +2920,11 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
               const nextLevel = level + 1;
               const [cm, cc, cd] = upgradeCost(building.idx, level);
               const secs = buildTimeSecs(building.idx, nextLevel, planet.roboticsFactory);
-              const hasMetal = !res || res.metal >= BigInt(cm);
-              const hasCrystal = !res || res.crystal >= BigInt(cc);
-              const hasDeut = !res || res.deuterium >= BigInt(cd);
+              const hasMetal = !!res && res.metal >= BigInt(cm);
+              const hasCrystal = !!res && res.crystal >= BigInt(cc);
+              const hasDeut = !!res && res.deuterium >= BigInt(cd);
               const canAfford = hasMetal && hasCrystal && hasDeut;
+              const hasFreeField = planet.usedFields < planet.maxFields;
               const requirementCheck = checkBuildingRequirements(building.key, planet, research);
               const requirementsMet = requirementCheck?.allMet ?? true;
               const missingCount = requirementCheck?.requirements.filter(requirement => !requirement.met).length ?? 0;
@@ -2913,6 +2939,9 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
               } else if (isQueued) {
                 btnClass = "build-btn building-now";
                 btnText = fmtCountdown(buildSecsLeft);
+              } else if (!buildInProgress && !hasFreeField) {
+                btnClass = "build-btn no-funds";
+                btnText = "NO FIELDS";
               } else if (!buildInProgress && !requirementsMet) {
                 btnClass = "build-btn locked-btn";
                 btnText = `REQUIREMENTS (${missingCount})`;
@@ -2945,7 +2974,7 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
                   </div>
                   <button
                     className={btnClass}
-                    disabled={(isQueued && !isReady) || txBusy || (!isReady && !isQueued && !requirementsMet ? false : !isReady && !isQueued && !canAfford)}
+                    disabled={(isQueued && !isReady) || txBusy || (!isReady && !isQueued && !hasFreeField) || (!isReady && !isQueued && !requirementsMet ? false : !isReady && !isQueued && !canAfford)}
                     onClick={() => {
                       if (isReady) {
                         onFinishBuild();
@@ -2979,7 +3008,7 @@ const ShipyardTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number
     const shipyardInProgress = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
     const shipyardSecsLeft = shipyardInProgress ? Math.max(0, planet.shipBuildFinishTs - nowTs) : 0;
     const currentShip = SHIPS.find(s => SHIP_TYPE_IDX[s.key] === planet.shipBuildItem);
-    const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !res || (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
+    const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !!res && (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
     const visibleShips = SHIPS.filter(s => ["smallCargo","largeCargo","colonyShip"].includes(s.key));
     return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Timed construction queue</div>{shipyardInProgress&&currentShip&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip.name} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="grid-3">{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,quantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardInProgress||(!reqsMet?false:!affordable); return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div>{!reqsMet&&<div style={{fontSize:9,color:"var(--danger)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--danger)",display:"inline-block"}}/> locked{missingCount>0?` · ${missingCount} missing`:""}</div>}{reqsMet&&<div style={{fontSize:9,color:"var(--success)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--success)",display:"inline-block"}}/> unlocked</div>}</div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={reqCheck} onClose={()=>setReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
   };
@@ -2993,7 +3022,7 @@ const CommandShipyardTab: React.FC<{ state: PlayerState; res?: Resources; nowTs:
     const shipyardInProgress = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
     const shipyardSecsLeft = shipyardInProgress ? Math.max(0, planet.shipBuildFinishTs - nowTs) : 0;
     const currentShip = SHIPS.find(s => SHIP_TYPE_IDX[s.key] === planet.shipBuildItem);
-    const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !res || (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
+    const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !!res && (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
     const visibleShips = SHIPS;
     return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Fleet construction queue.</div>{shipyardInProgress&&currentShip&&(<div className="build-queue-banner" style={{marginBottom:16}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip.name} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="section-title" style={{marginTop:8}}>FLEET CONSTRUCTION</div><div className="grid-3" style={{marginBottom:24}}>{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,shipQuantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardInProgress||(!reqsMet?false:!affordable); return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setShipQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setShipReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={shipReqCheck} onClose={()=>setShipReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
   };
@@ -3009,7 +3038,7 @@ const DefenseTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number;
     const defenseInProgress = planet.defenseBuildFinishTs > 0 && planet.defenseBuildItem !== 255 && planet.defenseBuildQty > 0;
     const defenseSecsLeft = defenseInProgress ? Math.max(0, planet.defenseBuildFinishTs - nowTs) : 0;
     const currentDefense = DEFENSE_DEFS.find(defense => defense.idx === planet.defenseBuildItem);
-    const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !res || (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
+    const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !!res && (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
 
     return (<><div><div className="section-title">DEFENSE SYSTEMS</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Planetary batteries, domes, and missiles.</div>{defenseInProgress&&currentDefense&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🛡 DEFENSE YARD</div><div className="build-queue-item-name">{currentDefense.name} × {planet.defenseBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishDefense}>FINISH DEFENSE</button>}</div></div>)}<div className="grid-3">{DEFENSE_DEFS.map(defense=>{const qty=Math.max(1,defenseQuantities[defense.key]??1); const affordable=canAfford(defense.cost,qty); const current=((planet as any)[defense.key]as number)??0; const check=checkDefenseRequirements(defense.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||defenseInProgress||(!reqsMet?false:!affordable); return(<div key={defense.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getDefenseArt(defense.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{defense.icon} {defense.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{defense.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(defense.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(defense.cost.m*qty)}</div>}{defense.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(defense.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(defense.cost.c*qty)}</div>}{defense.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(defense.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(defense.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setDefenseQuantities(prev=>({...prev,[defense.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||defenseInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setDefenseReqCheck(check);return;}onBuildDefense(defense.idx,qty);}}>{defenseInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div>{defenseReqCheck&&<ShipRequirementsModal check={{shipName:defenseReqCheck.defenseName,shipIcon:defenseReqCheck.defenseIcon,requirements:defenseReqCheck.requirements,allMet:defenseReqCheck.allMet}} onClose={()=>setDefenseReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/>}</>);
   };
@@ -3739,6 +3768,44 @@ const App: React.FC = () => {
     const launchState = latestState ?? state;
     if (getFreeMissionSlotCount(launchState.fleet, launchState.research.computerTech) <= 0) {
       throw new Error("No mission slots available. Resolve an existing mission first.");
+    }
+    const selectedShips: Array<[string, number]> = [
+      ["lightFighter", ships.lightFighter ?? 0],
+      ["heavyFighter", ships.heavyFighter ?? 0],
+      ["cruiser", ships.cruiser ?? 0],
+      ["battleship", ships.battleship ?? 0],
+      ["battlecruiser", ships.battlecruiser ?? 0],
+      ["bomber", ships.bomber ?? 0],
+      ["destroyer", ships.destroyer ?? 0],
+      ["deathstar", ships.deathstar ?? 0],
+      ["smallCargo", ships.smallCargo ?? 0],
+      ["largeCargo", ships.largeCargo ?? 0],
+      ["recycler", ships.recycler ?? 0],
+      ["espionageProbe", ships.espionageProbe ?? 0],
+      ["colonyShip", ships.colonyShip ?? 0],
+    ];
+    if (selectedShips.reduce((sum, [, qty]) => sum + qty, 0) <= 0) {
+      throw new Error("Select at least one ship.");
+    }
+    const missingShip = selectedShips.find(([key, qty]) => ((launchState.fleet as any)[key] ?? 0) < qty);
+    if (missingShip) {
+      throw new Error(`Not enough ${missingShip[0].replace(/([a-z0-9])([A-Z])/g, "$1 $2")} ships are available.`);
+    }
+    const cargoCap =
+      (ships.smallCargo ?? 0) * 5000 +
+      (ships.largeCargo ?? 0) * 25000 +
+      (ships.recycler ?? 0) * 20000 +
+      (ships.cruiser ?? 0) * 800 +
+      (ships.battleship ?? 0) * 1500;
+    if (cargo.metal + cargo.crystal + cargo.deuterium > BigInt(cargoCap)) {
+      throw new Error("Cargo exceeds fleet capacity.");
+    }
+    if (launchState.resources.metal < cargo.metal || launchState.resources.crystal < cargo.crystal) {
+      throw new Error("Not enough resources are available for this mission cargo.");
+    }
+    const launchFuel = BigInt(launchFuelCost(ships, speedFactor));
+    if (launchState.resources.deuterium < cargo.deuterium + launchFuel) {
+      throw new Error(`Not enough deuterium. Need ${fmt(cargo.deuterium + launchFuel)} including ${fmt(launchFuel)} launch fuel.`);
     }
     const now = Math.floor(Date.now() / 1000);
     if (missionType === 1) {
