@@ -314,7 +314,7 @@ interface RequirementCheck { title: string; icon: string; categoryLabel: string;
 const RESEARCH_TECHS = [
   { idx: 0, name: "Energy Technology", icon: "⚡", field: "energyTech", labReq: 1, baseCost: [0, 800, 400] },
   { idx: 1, name: "Combustion Drive", icon: "🔥", field: "combustionDrive", labReq: 1, baseCost: [400, 0, 600] },
-  { idx: 2, name: "Impulse Drive", icon: "🚀", field: "impulseDrive", labReq: 2, baseCost: [2000, 4000, 600] },
+  { idx: 2, name: "Impulse Drive", icon: "🚀", field: "impulseDrive", labReq: 5, baseCost: [2000, 4000, 600] },
   { idx: 3, name: "Hyperspace Drive", icon: "🌌", field: "hyperspaceDrive", labReq: 7, baseCost: [10000, 20000, 6000] },
   { idx: 4, name: "Computer Technology", icon: "💻", field: "computerTech", labReq: 1, baseCost: [0, 400, 600] },
   { idx: 5, name: "Astrophysics", icon: "🔭", field: "astrophysics", labReq: 3, baseCost: [4000, 2000, 1000] },
