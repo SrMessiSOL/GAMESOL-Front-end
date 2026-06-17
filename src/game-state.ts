@@ -12,7 +12,7 @@ import { AnchorProvider, setProvider } from "@coral-xyz/anchor";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const GAME_STATE_PROGRAM_ID = new PublicKey("7yKyjQ7m8tSqvqYnV65aVV9Jwdee7KqyELeDXf6Fxkt4");
-export const RPC_ENDPOINT = "https://api.devnet.solana.com";
+export const RPC_ENDPOINT = import.meta.env.VITE_SOLANA_RPC_ENDPOINT?.trim() || "https://api.devnet.solana.com";
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 
 const VAULT_MIN_BALANCE_LAMPORTS = 5_000_000;

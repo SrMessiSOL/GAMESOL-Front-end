@@ -39,7 +39,7 @@ export const PROGRAM_IDS = {
 } as const;
 
 export const SHARED_WORLD_PDA = new PublicKey("5KY9KS6iKAwSDq3LbErP7LEPLdTPhqBLJ5VLG1555X8N");
-export const RPC_ENDPOINT     = "https://api.devnet.solana.com";
+export const RPC_ENDPOINT     = import.meta.env.VITE_SOLANA_RPC_ENDPOINT?.trim() || "https://api.devnet.solana.com";
 export const ER_RPC           = "https://devnet-router.magicblock.app";
 
 export const REGISTRY_PROGRAM_ID = new PublicKey("BV6JwMdA9gLfG5ut2VBzbmQoJTXUu5umXErBqv4V3PJq");
