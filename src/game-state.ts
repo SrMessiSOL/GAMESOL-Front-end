@@ -32,6 +32,7 @@ const PLANET_COORDS_DISCRIMINATOR  = Buffer.from([227, 189, 46, 7, 82, 27, 239, 
 const AUTHORIZED_VAULT_DISCRIMINATOR = Buffer.from([224, 162, 234, 3, 170, 103, 243, 244]);
 const VAULT_BACKUP_DISCRIMINATOR     = Buffer.from([167, 172, 2, 221, 196, 20, 199, 27]);
 const GAME_CONFIG_DISCRIMINATOR      = Buffer.from([45, 146, 146, 33, 170, 69, 96, 133]);
+const QUEST_STATE_DISCRIMINATOR      = Buffer.from([91, 149, 47, 55, 121, 144, 93, 66]);
 const BATTLE_RESOLVED_EVENT_DISCRIMINATOR = Buffer.from([205, 161, 192, 151, 125, 116, 201, 210]);
 
 // ─── Instruction Discriminators ───────────────────────────────────────────────
@@ -44,6 +45,11 @@ const IX = {
   extendVault:            Buffer.from([176, 167, 130, 249, 196, 63, 158, 200]),
   initializeHomeworld:    Buffer.from([124, 7, 81, 167, 80, 191, 227, 173]),
   initializeColony:       Buffer.from([91, 184, 105, 243, 90, 175, 137, 217]),
+  initializeQuestState:   Buffer.from([228, 241, 34, 120, 153, 28, 158, 130]),
+  dailyCheckIn:           Buffer.from([98, 111, 198, 206, 70, 84, 67, 98]),
+  dailyCheckInVault:      Buffer.from([19, 45, 28, 31, 198, 108, 54, 148]),
+  claimQuest:             Buffer.from([38, 197, 33, 123, 0, 108, 206, 161]),
+  claimQuestVault:        Buffer.from([107, 32, 162, 80, 40, 247, 200, 122]),
 
   produce:                Buffer.from([240, 243, 185, 55, 195, 151, 136, 205]),
   produceVault:           Buffer.from([228, 109, 51, 38, 151, 15, 255, 118]),
@@ -334,6 +340,22 @@ interface GameClientOptions {
 interface PlayerProfileAccount {
   authority: PublicKey;
   planetCount: number;
+}
+
+export interface QuestStateAccount {
+  authority: PublicKey;
+  tutorialClaimedMask: bigint;
+  dailyEpoch: number;
+  weeklyEpoch: number;
+  monthlyEpoch: number;
+  dailyClaimedMask: bigint;
+  weeklyClaimedMask: bigint;
+  monthlyClaimedMask: bigint;
+  dailyCheckinDay: number;
+  dailyCheckinStreak: number;
+  totalCheckins: number;
+  lastUpdatedTs: number;
+  bump: number;
 }
 
 interface PlanetStateAccount {
@@ -728,6 +750,13 @@ export function derivePlanetStatePda(walletPubkey: PublicKey, index: number): Pu
   )[0];
 }
 
+export function deriveQuestStatePda(walletPubkey: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("quest_state"), walletPubkey.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
 /**
  * Derives the coordinate occupancy lock PDA for a given galaxy/system/position.
  * Seeds match the Rust program: ["planet_coords", galaxy_le16, system_le16, position_u8]
@@ -814,6 +843,41 @@ function deserializePlayerProfile(data: Buffer): PlayerProfileAccount {
   const authority = readPubkeyRaw(data, o); o += 32;
   const planetCount = readU32(data, o);
   return { authority, planetCount };
+}
+
+function deserializeQuestState(data: Buffer): QuestStateAccount {
+  if (!data.slice(0, 8).equals(QUEST_STATE_DISCRIMINATOR)) {
+    throw new Error("Invalid quest state discriminator.");
+  }
+  let o = 8;
+  const authority = readPubkeyRaw(data, o); o += 32;
+  const tutorialClaimedMask = readU64(data, o); o += 8;
+  const dailyEpoch = readI64(data, o); o += 8;
+  const weeklyEpoch = readI64(data, o); o += 8;
+  const monthlyEpoch = readI64(data, o); o += 8;
+  const dailyClaimedMask = readU64(data, o); o += 8;
+  const weeklyClaimedMask = readU64(data, o); o += 8;
+  const monthlyClaimedMask = readU64(data, o); o += 8;
+  const dailyCheckinDay = readI64(data, o); o += 8;
+  const dailyCheckinStreak = readU16(data, o); o += 2;
+  const totalCheckins = readU32(data, o); o += 4;
+  const lastUpdatedTs = readI64(data, o); o += 8;
+  const bump = readU8(data, o);
+  return {
+    authority,
+    tutorialClaimedMask,
+    dailyEpoch,
+    weeklyEpoch,
+    monthlyEpoch,
+    dailyClaimedMask,
+    weeklyClaimedMask,
+    monthlyClaimedMask,
+    dailyCheckinDay,
+    dailyCheckinStreak,
+    totalCheckins,
+    lastUpdatedTs,
+    bump,
+  };
 }
 
 function deserializeMission(data: Buffer, offset: number): { mission: Mission; bytesRead: number } {
@@ -2072,6 +2136,38 @@ export class GameClient {
     catch { return null; }
   }
 
+  async getQuestState(authority: PublicKey = this.provider.wallet.publicKey): Promise<QuestStateAccount | null> {
+    const questPda = deriveQuestStatePda(authority);
+    const account = await this.connection.getAccountInfo(questPda, "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeQuestState(Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
+  async initializeQuestState(): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const existing = await this.getQuestState(authority);
+    if (existing) return "";
+
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
+        { pubkey: deriveQuestStatePda(authority), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.initializeQuestState),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  private async ensureQuestState(): Promise<void> {
+    if (!(await this.getQuestState())) {
+      await this.initializeQuestState();
+    }
+  }
+
   /**
    * Builds and sends an `initialize_homeworld` or `initialize_colony` tx
    * for explicit coordinates. Does NOT retry — caller decides on collision.
@@ -2330,6 +2426,40 @@ export class GameClient {
     });
   }
 
+  private buildQuestInstruction(
+    vaultDiscriminator: Buffer,
+    walletDiscriminator: Buffer,
+    planetPda: PublicKey,
+    authority: PublicKey,
+    args?: Buffer,
+  ): TransactionInstruction {
+    const questPda = deriveQuestStatePda(authority);
+    if (this.preferVaultSigning && this.vaultKeypair) {
+      const authorizedVaultPda = deriveAuthorizedVaultPda(authority);
+      return new TransactionInstruction({
+        programId: GAME_STATE_PROGRAM_ID,
+        keys: [
+          { pubkey: this.vaultKeypair.publicKey, isSigner: true,  isWritable: true  },
+          { pubkey: authority,                   isSigner: false, isWritable: false },
+          { pubkey: authorizedVaultPda,           isSigner: false, isWritable: false },
+          { pubkey: questPda,                     isSigner: false, isWritable: true  },
+          { pubkey: planetPda,                    isSigner: false, isWritable: true  },
+        ],
+        data: encodeInstruction(vaultDiscriminator, args),
+      });
+    }
+
+    return new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority,  isSigner: true,  isWritable: true  },
+        { pubkey: questPda,   isSigner: false, isWritable: true  },
+        { pubkey: planetPda,  isSigner: false, isWritable: true  },
+      ],
+      data: encodeInstruction(walletDiscriminator, args),
+    });
+  }
+
   private buildVaultTransportInstruction(
     sourcePlanetPda: PublicKey,
     destinationPlanetPda: PublicKey,
@@ -2397,6 +2527,31 @@ export class GameClient {
 
 
   // ── Gameplay actions ─────────────────────────────────────────────────────────
+  async dailyCheckIn(entityPda: PublicKey): Promise<string> {
+    await this.ensureVault();
+    await this.ensureQuestState();
+    const state = await this.loadPlanetStateByPda(entityPda);
+    const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    return this.sendInstruction(
+      [this.buildQuestInstruction(IX.dailyCheckInVault, IX.dailyCheckIn, entityPda, authority)],
+      this.vaultSigners(),
+    );
+  }
+
+  async claimQuest(entityPda: PublicKey, period: number, questId: number): Promise<string> {
+    await this.ensureVault();
+    await this.ensureQuestState();
+    const state = await this.loadPlanetStateByPda(entityPda);
+    const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    const writer = new BorshWriter();
+    writer.writeU8(period);
+    writer.writeU8(questId);
+    return this.sendInstruction(
+      [this.buildQuestInstruction(IX.claimQuestVault, IX.claimQuest, entityPda, authority, writer.toBuffer())],
+      this.vaultSigners(),
+    );
+  }
+
   async startBuild(entityPda: PublicKey, buildingIdx: number): Promise<string> {
     await this.ensureVault();
     const writer = new BorshWriter();

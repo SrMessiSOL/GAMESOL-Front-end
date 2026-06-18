@@ -6,6 +6,7 @@ import { PublicKey } from "@solana/web3.js";
 import {
   GameClient,
   type GameConfigState,
+  type QuestStateAccount,
   type BattleResolvedEvent,
   type BattleResolvedEventRecord,
   type VaultRecoveryPromptRequest,
@@ -27,7 +28,7 @@ import { PUBLIC_APP_URL } from "./mobileWalletAdapter";
 import gamesolLogo from "./assets/ui/logobg.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Tab = "overview" | "resources" | "buildings" | "research" | "shipyard" | "defense" | "fleet" | "missions" | "activity" | "galaxy" | "market";
+type Tab = "overview" | "quests" | "resources" | "buildings" | "research" | "shipyard" | "defense" | "fleet" | "missions" | "activity" | "galaxy" | "market";
 
 type LaunchTargetInput =
   | { kind: "attack"; galaxy: number; system: number; position: number }
@@ -310,6 +311,17 @@ interface ShipRequirementsCheck { shipName: string; shipIcon: string; requiremen
 interface DefenseRequirementsCheck { defenseName: string; defenseIcon: string; requirements: ShipRequirement[]; allMet: boolean; }
 interface RequirementStatus { label: string; met: boolean; current: number; required: number; type: "building" | "research"; }
 interface RequirementCheck { title: string; icon: string; categoryLabel: string; subtitle: string; hint: string; requirements: RequirementStatus[]; allMet: boolean; }
+type QuestPeriod = 0 | 1 | 2 | 3;
+type QuestRequirement = { label: string; current: (state: PlayerState) => number; required: number };
+type QuestDefinition = {
+  period: QuestPeriod;
+  id: number;
+  title: string;
+  group: "Tutorial" | "Daily" | "Weekly" | "Monthly";
+  reward: { metal: number; crystal: number; deuterium: number };
+  requirements: QuestRequirement[];
+  checkIn?: boolean;
+};
 
 const RESEARCH_TECHS = [
   { idx: 0, name: "Energy Technology", icon: "⚡", field: "energyTech", labReq: 1, baseCost: [0, 800, 400] },
@@ -323,6 +335,44 @@ const RESEARCH_TECHS = [
   { idx: 8, name: "Shielding Technology", icon: "🛡", field: "shieldingTechnology", labReq: 6, baseCost: [200, 600, 0] },
   { idx: 9, name: "Armor Technology", icon: "🧱", field: "armorTechnology", labReq: 2, baseCost: [1000, 0, 0] },
 ] as const;
+
+const questReq = (label: string, required: number, current: (state: PlayerState) => number): QuestRequirement => ({
+  label,
+  required,
+  current,
+});
+
+const totalQuestShips = (state: PlayerState) => SHIPS.reduce((sum, ship) => sum + (((state.fleet as any)[ship.key] as number) ?? 0), 0);
+const totalQuestDefenses = (state: PlayerState) => (
+  state.planet.rocketLauncher + state.planet.lightLaser + state.planet.heavyLaser +
+  state.planet.gaussCannon + state.planet.ionCannon + state.planet.plasmaTurret +
+  state.planet.smallShieldDome + state.planet.largeShieldDome +
+  state.planet.antiBallisticMissile + state.planet.interplanetaryMissile
+);
+
+const QUEST_DEFINITIONS: QuestDefinition[] = [
+  { period: 0, id: 0, group: "Tutorial", title: "Establish command", reward: { metal: 25000, crystal: 20000, deuterium: 5000 }, requirements: [] },
+  { period: 0, id: 1, group: "Tutorial", title: "Upgrade Metal Mine to Lv 2", reward: { metal: 30000, crystal: 12000, deuterium: 4000 }, requirements: [questReq("Metal Mine", 2, s => s.planet.metalMine)] },
+  { period: 0, id: 2, group: "Tutorial", title: "Upgrade Crystal Mine to Lv 2", reward: { metal: 20000, crystal: 25000, deuterium: 5000 }, requirements: [questReq("Crystal Mine", 2, s => s.planet.crystalMine)] },
+  { period: 0, id: 3, group: "Tutorial", title: "Upgrade Solar Plant to Lv 2", reward: { metal: 18000, crystal: 18000, deuterium: 6000 }, requirements: [questReq("Solar Plant", 2, s => s.planet.solarPlant)] },
+  { period: 0, id: 4, group: "Tutorial", title: "Build Robotics Factory Lv 1", reward: { metal: 35000, crystal: 25000, deuterium: 8000 }, requirements: [questReq("Robotics Factory", 1, s => s.planet.roboticsFactory)] },
+  { period: 0, id: 5, group: "Tutorial", title: "Build Shipyard Lv 1", reward: { metal: 50000, crystal: 35000, deuterium: 12000 }, requirements: [questReq("Shipyard", 1, s => s.planet.shipyard)] },
+  { period: 0, id: 6, group: "Tutorial", title: "Build Research Lab Lv 1", reward: { metal: 35000, crystal: 45000, deuterium: 15000 }, requirements: [questReq("Research Lab", 1, s => s.planet.researchLab)] },
+  { period: 0, id: 7, group: "Tutorial", title: "Research Energy Technology Lv 1", reward: { metal: 40000, crystal: 35000, deuterium: 20000 }, requirements: [questReq("Energy Technology", 1, s => s.research.energyTech)] },
+  { period: 0, id: 8, group: "Tutorial", title: "Build your first ship", reward: { metal: 60000, crystal: 45000, deuterium: 20000 }, requirements: [questReq("Fleet ships", 1, totalQuestShips)] },
+  { period: 1, id: 0, group: "Daily", title: "Daily check-in", reward: { metal: 10000, crystal: 7500, deuterium: 2500 }, requirements: [], checkIn: true },
+  { period: 1, id: 1, group: "Daily", title: "Metal Mine Lv 3", reward: { metal: 20000, crystal: 12000, deuterium: 4000 }, requirements: [questReq("Metal Mine", 3, s => s.planet.metalMine)] },
+  { period: 1, id: 2, group: "Daily", title: "Crystal Mine Lv 3", reward: { metal: 12000, crystal: 20000, deuterium: 4000 }, requirements: [questReq("Crystal Mine", 3, s => s.planet.crystalMine)] },
+  { period: 1, id: 3, group: "Daily", title: "Solar Plant Lv 4", reward: { metal: 18000, crystal: 18000, deuterium: 6000 }, requirements: [questReq("Solar Plant", 4, s => s.planet.solarPlant)] },
+  { period: 2, id: 0, group: "Weekly", title: "Research Lab Lv 2", reward: { metal: 120000, crystal: 150000, deuterium: 50000 }, requirements: [questReq("Research Lab", 2, s => s.planet.researchLab)] },
+  { period: 2, id: 1, group: "Weekly", title: "Shipyard Lv 2", reward: { metal: 150000, crystal: 100000, deuterium: 45000 }, requirements: [questReq("Shipyard", 2, s => s.planet.shipyard)] },
+  { period: 2, id: 2, group: "Weekly", title: "Own 5 ships", reward: { metal: 175000, crystal: 125000, deuterium: 60000 }, requirements: [questReq("Fleet ships", 5, totalQuestShips)] },
+  { period: 2, id: 3, group: "Weekly", title: "Own 5 defenses", reward: { metal: 150000, crystal: 150000, deuterium: 40000 }, requirements: [questReq("Defense units", 5, totalQuestDefenses)] },
+  { period: 3, id: 0, group: "Monthly", title: "Impulse Drive Lv 1", reward: { metal: 500000, crystal: 350000, deuterium: 200000 }, requirements: [questReq("Impulse Drive", 1, s => s.research.impulseDrive)] },
+  { period: 3, id: 1, group: "Monthly", title: "Astrophysics Lv 1", reward: { metal: 400000, crystal: 500000, deuterium: 250000 }, requirements: [questReq("Astrophysics", 1, s => s.research.astrophysics)] },
+  { period: 3, id: 2, group: "Monthly", title: "Own 25 ships", reward: { metal: 650000, crystal: 450000, deuterium: 250000 }, requirements: [questReq("Fleet ships", 25, totalQuestShips)] },
+  { period: 3, id: 3, group: "Monthly", title: "Own 25 defenses", reward: { metal: 500000, crystal: 500000, deuterium: 180000 }, requirements: [questReq("Defense units", 25, totalQuestDefenses)] },
+];
 
 const DEFENSE_DEFS = [
   { idx: 0, key: "rocketLauncher", name: "Rocket Launcher", icon: "🚀", cost: { m: 2000, c: 0, d: 0 } },
@@ -3045,6 +3095,121 @@ const DefenseTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number;
     return (<><div><div className="section-title">DEFENSE SYSTEMS</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Planetary batteries, domes, and missiles.</div>{defenseInProgress&&currentDefense&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🛡 DEFENSE YARD</div><div className="build-queue-item-name">{currentDefense.name} × {planet.defenseBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishDefense}>FINISH DEFENSE</button>}</div></div>)}<div className="grid-3">{DEFENSE_DEFS.map(defense=>{const qty=Math.max(1,defenseQuantities[defense.key]??1); const affordable=canAfford(defense.cost,qty); const current=((planet as any)[defense.key]as number)??0; const check=checkDefenseRequirements(defense.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||defenseInProgress||(!reqsMet?false:!affordable); return(<div key={defense.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getDefenseArt(defense.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{defense.icon} {defense.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{defense.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(defense.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(defense.cost.m*qty)}</div>}{defense.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(defense.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(defense.cost.c*qty)}</div>}{defense.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(defense.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(defense.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setDefenseQuantities(prev=>({...prev,[defense.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||defenseInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setDefenseReqCheck(check);return;}onBuildDefense(defense.idx,qty);}}>{defenseInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div>{defenseReqCheck&&<ShipRequirementsModal check={{shipName:defenseReqCheck.defenseName,shipIcon:defenseReqCheck.defenseIcon,requirements:defenseReqCheck.requirements,allMet:defenseReqCheck.allMet}} onClose={()=>setDefenseReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/>}</>);
   };
 
+const hasQuestBit = (mask: bigint, id: number) => ((mask >> BigInt(id)) & 1n) === 1n;
+
+function questClaimedMask(period: QuestPeriod, questState: QuestStateAccount | null, nowTs: number): bigint {
+  if (!questState) return 0n;
+  if (period === 0) return questState.tutorialClaimedMask;
+  if (period === 1) return questState.dailyEpoch === Math.floor(nowTs / 86400) ? questState.dailyClaimedMask : 0n;
+  if (period === 2) return questState.weeklyEpoch === Math.floor(nowTs / 604800) ? questState.weeklyClaimedMask : 0n;
+  return questState.monthlyEpoch === Math.floor(nowTs / 2592000) ? questState.monthlyClaimedMask : 0n;
+}
+
+const QuestRequirementModal: React.FC<{ quest: QuestDefinition | null; state: PlayerState; onClose: () => void; }> = ({ quest, state, onClose }) => {
+  if (!quest) return null;
+  const rows = quest.requirements.map(req => ({ ...req, value: req.current(state), met: req.current(state) >= req.required }));
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="requirements-modal" onClick={e => e.stopPropagation()}>
+        <div className="requirements-title">{quest.title}</div>
+        <div className="requirements-subtitle">Quest requirements are missing</div>
+        <div className="requirements-list">
+          {rows.map(row => (
+            <div key={row.label} className={`requirements-row${row.met ? " met" : ""}`}>
+              <span>{row.label}</span>
+              <strong>{row.value}/{row.required}</strong>
+            </div>
+          ))}
+        </div>
+        <button className="requirements-close" type="button" onClick={onClose}>CLOSE</button>
+      </div>
+    </div>
+  );
+};
+
+const QuestsTab: React.FC<{
+  state: PlayerState;
+  questState: QuestStateAccount | null;
+  nowTs: number;
+  txBusy: boolean;
+  onDailyCheckIn: () => void;
+  onClaimQuest: (period: QuestPeriod, questId: number) => void;
+}> = ({ state, questState, nowTs, txBusy, onDailyCheckIn, onClaimQuest }) => {
+  const [lockedQuest, setLockedQuest] = useState<QuestDefinition | null>(null);
+  const groups: Array<QuestDefinition["group"]> = ["Tutorial", "Daily", "Weekly", "Monthly"];
+  const currentDay = Math.floor(nowTs / 86400);
+  const checkInClaimed = questState?.dailyCheckinDay === currentDay || hasQuestBit(questClaimedMask(1, questState, nowTs), 0);
+
+  return (
+    <>
+      <div>
+        <div className="section-title">QUEST COMMAND</div>
+        <div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>
+          Daily streak {questState?.dailyCheckinStreak ?? 0} · Total check-ins {questState?.totalCheckins ?? 0}
+        </div>
+        {groups.map(group => (
+          <div key={group} style={{marginBottom:24}}>
+            <div className="section-title" style={{marginBottom:12}}>{group}</div>
+            <div className="grid-3">
+              {QUEST_DEFINITIONS.filter(q => q.group === group).map(quest => {
+                const mask = questClaimedMask(quest.period, questState, nowTs);
+                const claimed = quest.checkIn ? checkInClaimed : hasQuestBit(mask, quest.id);
+                const statuses = quest.requirements.map(req => {
+                  const current = req.current(state);
+                  return { label: req.label, current, required: req.required, met: current >= req.required };
+                });
+                const missing = statuses.filter(req => !req.met);
+                const canClaim = missing.length === 0 && !claimed;
+                const reward = quest.checkIn && questState
+                  ? {
+                      metal: quest.reward.metal + Math.min(questState.dailyCheckinStreak + 1, 30) * 1000,
+                      crystal: quest.reward.crystal + Math.floor(Math.min(questState.dailyCheckinStreak + 1, 30) * 500),
+                      deuterium: quest.reward.deuterium + Math.floor(Math.min(questState.dailyCheckinStreak + 1, 30) * 250),
+                    }
+                  : quest.reward;
+                return (
+                  <div key={`${quest.period}:${quest.id}`} className={`ship-build-card${!canClaim && !claimed ? " locked" : ""}`}>
+                    <div className="ship-build-header">
+                      <div>
+                        <div className="ship-build-name">{quest.title}</div>
+                        <div style={{fontSize:9,color:claimed?"var(--success)":missing.length?"var(--danger)":"var(--cyan)",letterSpacing:0.5,marginTop:2}}>
+                          {claimed ? "claimed" : missing.length ? `locked · ${missing.length} missing` : "ready to claim"}
+                        </div>
+                      </div>
+                      <div className={`ship-build-count${claimed ? "" : " zero"}`}>{claimed ? "OK" : group.slice(0, 1)}</div>
+                    </div>
+                    <div style={{fontSize:10,color:"var(--dim)",margin:"10px 0",display:"grid",gap:3}}>
+                      <div style={{color:"var(--metal)"}}>Metal: {fmt(reward.metal)}</div>
+                      <div style={{color:"var(--crystal)"}}>Crystal: {fmt(reward.crystal)}</div>
+                      <div style={{color:"var(--deut)"}}>Deuterium: {fmt(reward.deuterium)}</div>
+                    </div>
+                    {statuses.length > 0 && (
+                      <div style={{fontSize:10,color:"var(--dim)",display:"grid",gap:4,marginBottom:10}}>
+                        {statuses.map(req => <div key={req.label} style={{display:"flex",justifyContent:"space-between",color:req.met?"var(--success)":"var(--danger)"}}><span>{req.label}</span><span>{req.current}/{req.required}</span></div>)}
+                      </div>
+                    )}
+                    <button
+                      className={`ship-build-btn${missing.length ? " locked-btn" : ""}`}
+                      disabled={txBusy || claimed}
+                      onClick={() => {
+                        if (missing.length) { setLockedQuest(quest); return; }
+                        quest.checkIn ? onDailyCheckIn() : onClaimQuest(quest.period, quest.id);
+                      }}
+                    >
+                      {claimed ? "CLAIMED" : missing.length ? `REQUIREMENTS (${missing.length})` : "CLAIM"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <QuestRequirementModal quest={lockedQuest} state={state} onClose={() => setLockedQuest(null)} />
+    </>
+  );
+};
+
 const FleetTab: React.FC<{ fleet:Fleet; computerTech: number; res?:Resources; txBusy:boolean; onOpenLaunch:()=>void }> =
   ({ fleet, computerTech, txBusy, onOpenLaunch }) => {
     const totalShips=SHIPS.reduce((s,sh)=>s+((fleet as any)[sh.key]??0),0);
@@ -3280,6 +3445,7 @@ const DesktopResourceMenu: React.FC<{ res: Resources; planet: Planet }> = ({ res
 
 const PRIMARY_TABS: { id: Tab; icon: string; label: string }[] = [
   { id: "overview",  icon: "◈",  label: "Home"     },
+  { id: "quests",    icon: "Q",  label: "Quests"   },
   { id: "resources", icon: "⛏",  label: "Resources" },
   { id: "buildings", icon: "⬡",  label: "Build"    },
   { id: "research",  icon: "🔬", label: "Research"  },
@@ -3296,6 +3462,7 @@ const SECONDARY_TABS: { id: Tab; icon: string; label: string }[] = [
 // ─── Main App ─────────────────────────────────────────────────────────────────
 const TAB_META: Record<Tab, { eyebrow: string; title: string; subtitle: string }> = {
   overview: { eyebrow: "Command", title: "Planet Overview", subtitle: "Read colony health, queues, and next pressure points at a glance." },
+  quests: { eyebrow: "Objectives", title: "Quest Command", subtitle: "Claim tutorial, daily, weekly, and monthly rewards verified by the on-chain program." },
   resources: { eyebrow: "Economy", title: "Resource Grid", subtitle: "Tune production before capacity, energy, or field limits become blockers." },
   buildings: { eyebrow: "Infrastructure", title: "Planet Build Queue", subtitle: "Upgrade mines, factories, storage, and shipyard support from one surface." },
   research: { eyebrow: "Research", title: "Technology Lab", subtitle: "Unlock deeper fleet, defense, and expansion options through focused research." },
@@ -3379,6 +3546,7 @@ const App: React.FC = () => {
   const [gameConfig, setGameConfig] = useState<GameConfigState | null>(null);
   const [gameConfigBusy, setGameConfigBusy] = useState(false);
   const [gameConfigMintInput, setGameConfigMintInput] = useState(DEFAULT_ANTIMATTER_MINT);
+  const [questState, setQuestState] = useState<QuestStateAccount | null>(null);
   const [antimatterBalance, setAntimatterBalance] = useState<bigint>(0n);
   const [antimatterBalanceLoading, setAntimatterBalanceLoading] = useState(false);
   const [battleReports, setBattleReports] = useState<BattleReport[]>([]);
@@ -3581,6 +3749,16 @@ const App: React.FC = () => {
     return refreshPlanetState(selectedPdaRef.current);
   }, [refreshPlanetState]);
 
+  const refreshQuestState = useCallback(async () => {
+    if (!clientRef.current || !publicKey) {
+      setQuestState(null);
+      return null;
+    }
+    const next = await clientRef.current.getQuestState(publicKey);
+    setQuestState(next);
+    return next;
+  }, [publicKey]);
+
   // ── Main wallet connection effect ──────────────────────────────────────────
   useEffect(() => {
     if (!connected || !anchorWallet || !publicKey) {
@@ -3588,7 +3766,7 @@ const App: React.FC = () => {
       clientRef.current = null;
       marketClientRef.current = null;
       setPlanets([]); setSelectedPlanetPda(null); setLoading(false);
-      setVaultStatus("loading"); setGameConfig(null);
+      setVaultStatus("loading"); setGameConfig(null); setQuestState(null);
       setGameConfigMintInput(DEFAULT_ANTIMATTER_MINT); setAntimatterBalance(0n);
       setVaultBalance(0n);
       return;
@@ -3615,6 +3793,8 @@ const App: React.FC = () => {
         await loadBattleActivityFromChain(publicKey, loadedPlanets);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         await loadAntimatterBalance(config?.antimatterMint ?? DEFAULT_ANTIMATTER_MINT);
+        if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
+        setQuestState(await gameClient.getQuestState(publicKey));
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         const status = await gameClient.getVaultStatus();
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
@@ -4029,6 +4209,8 @@ const App: React.FC = () => {
     switch (tab) {
       case "overview":
         return <OverviewTab state={state} res={liveRes} nowTs={nowTs} planets={planets} onSelectPlanet={setSelectedPlanetPda} onFinishBuild={handleFinishBuild} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishBuild={handleInstantFinishBuild} onInstantFinishResearch={handleInstantFinishResearch} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy}/>;
+      case "quests":
+        return <QuestsTab state={state} questState={questState} nowTs={nowTs} txBusy={txBusy} onDailyCheckIn={() => withTx("Daily check-in", () => clientRef.current!.dailyCheckIn(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); })} onClaimQuest={(period, questId) => withTx("Claim quest", () => clientRef.current!.claimQuest(new PublicKey(state.entityPda), period, questId), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); })} />;
       case "resources":
         return <ResourcesTab state={state} res={liveRes} nowTs={nowTs} onStartBuild={idx => withTx("Start build", () => clientRef.current!.startBuild(new PublicKey(state.entityPda), idx))} onFinishBuild={handleFinishBuild} onInstantFinishBuild={handleInstantFinishBuild} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "buildings":
@@ -4063,9 +4245,9 @@ const App: React.FC = () => {
 
   const handleMobileTabClick = (t: Tab) => { setTab(t); setShowMoreDrawer(false); };
 
-  const ALL_DESKTOP_TABS: Tab[] = ["overview","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"];
+  const ALL_DESKTOP_TABS: Tab[] = ["overview","quests","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"];
   const DESKTOP_TAB_ICONS: Record<Tab, string> = {
-    activity:"ACT",
+    activity:"ACT", quests:"Q",
     overview:"◈", resources:"⛏", buildings:"⬡", research:"🔬",
     shipyard:"🚀", defense:"🛡", fleet:"◉", missions:"⊹", galaxy:"🌌", market:"⚖",
   };
