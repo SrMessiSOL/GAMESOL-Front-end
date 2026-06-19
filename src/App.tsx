@@ -4100,7 +4100,7 @@ const App: React.FC = () => {
   const visibleSecondaryTabs = (hasCreatedWorld
     ? SECONDARY_TABS
     : SECONDARY_TABS.filter(t => t.id !== "market")).concat([{ id: "activity" as Tab, icon: "ACT", label: "Activity" }]);
-  const visibleDesktopTabs: Tab[] = ["overview","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"]
+  const visibleDesktopTabs: Tab[] = ["overview","quests","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"]
     .filter(t => hasCreatedWorld || t !== "market") as Tab[];
   const controllerTabs = isMobile
     ? [...PRIMARY_TABS.map(entry => entry.id), ...visibleSecondaryTabs.map(entry => entry.id)]
