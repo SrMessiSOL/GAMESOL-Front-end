@@ -318,6 +318,7 @@ type QuestDefinition = {
   id: number;
   title: string;
   group: "Tutorial" | "Daily" | "Weekly" | "Monthly";
+  hint: string;
   reward: { metal: number; crystal: number; deuterium: number };
   requirements: QuestRequirement[];
   checkIn?: boolean;
@@ -351,27 +352,60 @@ const totalQuestDefenses = (state: PlayerState) => (
 );
 
 const QUEST_DEFINITIONS: QuestDefinition[] = [
-  { period: 0, id: 0, group: "Tutorial", title: "Establish command", reward: { metal: 25000, crystal: 20000, deuterium: 5000 }, requirements: [] },
-  { period: 0, id: 1, group: "Tutorial", title: "Upgrade Metal Mine to Lv 2", reward: { metal: 30000, crystal: 12000, deuterium: 4000 }, requirements: [questReq("Metal Mine", 2, s => s.planet.metalMine)] },
-  { period: 0, id: 2, group: "Tutorial", title: "Upgrade Crystal Mine to Lv 2", reward: { metal: 20000, crystal: 25000, deuterium: 5000 }, requirements: [questReq("Crystal Mine", 2, s => s.planet.crystalMine)] },
-  { period: 0, id: 3, group: "Tutorial", title: "Upgrade Solar Plant to Lv 2", reward: { metal: 18000, crystal: 18000, deuterium: 6000 }, requirements: [questReq("Solar Plant", 2, s => s.planet.solarPlant)] },
-  { period: 0, id: 4, group: "Tutorial", title: "Build Robotics Factory Lv 1", reward: { metal: 35000, crystal: 25000, deuterium: 8000 }, requirements: [questReq("Robotics Factory", 1, s => s.planet.roboticsFactory)] },
-  { period: 0, id: 5, group: "Tutorial", title: "Build Shipyard Lv 1", reward: { metal: 50000, crystal: 35000, deuterium: 12000 }, requirements: [questReq("Shipyard", 1, s => s.planet.shipyard)] },
-  { period: 0, id: 6, group: "Tutorial", title: "Build Research Lab Lv 1", reward: { metal: 35000, crystal: 45000, deuterium: 15000 }, requirements: [questReq("Research Lab", 1, s => s.planet.researchLab)] },
-  { period: 0, id: 7, group: "Tutorial", title: "Research Energy Technology Lv 1", reward: { metal: 40000, crystal: 35000, deuterium: 20000 }, requirements: [questReq("Energy Technology", 1, s => s.research.energyTech)] },
-  { period: 0, id: 8, group: "Tutorial", title: "Build your first ship", reward: { metal: 60000, crystal: 45000, deuterium: 20000 }, requirements: [questReq("Fleet ships", 1, totalQuestShips)] },
-  { period: 1, id: 0, group: "Daily", title: "Daily check-in", reward: { metal: 10000, crystal: 7500, deuterium: 2500 }, requirements: [], checkIn: true },
-  { period: 1, id: 1, group: "Daily", title: "Metal Mine Lv 3", reward: { metal: 20000, crystal: 12000, deuterium: 4000 }, requirements: [questReq("Metal Mine", 3, s => s.planet.metalMine)] },
-  { period: 1, id: 2, group: "Daily", title: "Crystal Mine Lv 3", reward: { metal: 12000, crystal: 20000, deuterium: 4000 }, requirements: [questReq("Crystal Mine", 3, s => s.planet.crystalMine)] },
-  { period: 1, id: 3, group: "Daily", title: "Solar Plant Lv 4", reward: { metal: 18000, crystal: 18000, deuterium: 6000 }, requirements: [questReq("Solar Plant", 4, s => s.planet.solarPlant)] },
-  { period: 2, id: 0, group: "Weekly", title: "Research Lab Lv 2", reward: { metal: 120000, crystal: 150000, deuterium: 50000 }, requirements: [questReq("Research Lab", 2, s => s.planet.researchLab)] },
-  { period: 2, id: 1, group: "Weekly", title: "Shipyard Lv 2", reward: { metal: 150000, crystal: 100000, deuterium: 45000 }, requirements: [questReq("Shipyard", 2, s => s.planet.shipyard)] },
-  { period: 2, id: 2, group: "Weekly", title: "Own 5 ships", reward: { metal: 175000, crystal: 125000, deuterium: 60000 }, requirements: [questReq("Fleet ships", 5, totalQuestShips)] },
-  { period: 2, id: 3, group: "Weekly", title: "Own 5 defenses", reward: { metal: 150000, crystal: 150000, deuterium: 40000 }, requirements: [questReq("Defense units", 5, totalQuestDefenses)] },
-  { period: 3, id: 0, group: "Monthly", title: "Impulse Drive Lv 1", reward: { metal: 500000, crystal: 350000, deuterium: 200000 }, requirements: [questReq("Impulse Drive", 1, s => s.research.impulseDrive)] },
-  { period: 3, id: 1, group: "Monthly", title: "Astrophysics Lv 1", reward: { metal: 400000, crystal: 500000, deuterium: 250000 }, requirements: [questReq("Astrophysics", 1, s => s.research.astrophysics)] },
-  { period: 3, id: 2, group: "Monthly", title: "Own 25 ships", reward: { metal: 650000, crystal: 450000, deuterium: 250000 }, requirements: [questReq("Fleet ships", 25, totalQuestShips)] },
-  { period: 3, id: 3, group: "Monthly", title: "Own 25 defenses", reward: { metal: 500000, crystal: 500000, deuterium: 180000 }, requirements: [questReq("Defense units", 25, totalQuestDefenses)] },
+  { period: 0, id: 0, group: "Tutorial", title: "Establish command", hint: "Create your first planet and open the command surface.", reward: { metal: 500, crystal: 300, deuterium: 0 }, requirements: [] },
+  { period: 0, id: 1, group: "Tutorial", title: "Upgrade Metal Mine Lv 2", hint: "Metal is the backbone of early construction.", reward: { metal: 700, crystal: 200, deuterium: 0 }, requirements: [questReq("Metal Mine", 2, s => s.planet.metalMine)] },
+  { period: 0, id: 2, group: "Tutorial", title: "Upgrade Crystal Mine Lv 2", hint: "Crystal unlocks research and higher infrastructure.", reward: { metal: 400, crystal: 600, deuterium: 0 }, requirements: [questReq("Crystal Mine", 2, s => s.planet.crystalMine)] },
+  { period: 0, id: 3, group: "Tutorial", title: "Upgrade Solar Plant Lv 2", hint: "Power shortages slow the whole colony.", reward: { metal: 350, crystal: 300, deuterium: 0 }, requirements: [questReq("Solar Plant", 2, s => s.planet.solarPlant)] },
+  { period: 0, id: 4, group: "Tutorial", title: "Start deuterium production", hint: "Deuterium fuels fleets and advanced tech.", reward: { metal: 400, crystal: 250, deuterium: 150 }, requirements: [questReq("Deuterium Synthesizer", 1, s => s.planet.deuteriumSynthesizer)] },
+  { period: 0, id: 5, group: "Tutorial", title: "Increase metal capacity", hint: "Storage protects production from hitting the cap.", reward: { metal: 300, crystal: 300, deuterium: 0 }, requirements: [questReq("Metal Storage", 1, s => s.planet.metalStorage)] },
+  { period: 0, id: 6, group: "Tutorial", title: "Build Robotics Factory Lv 1", hint: "Robotics shortens build times.", reward: { metal: 800, crystal: 400, deuterium: 0 }, requirements: [questReq("Robotics Factory", 1, s => s.planet.roboticsFactory)] },
+  { period: 0, id: 7, group: "Tutorial", title: "Build Shipyard Lv 1", hint: "The shipyard opens fleet and defense construction.", reward: { metal: 1000, crystal: 700, deuterium: 100 }, requirements: [questReq("Shipyard", 1, s => s.planet.shipyard)] },
+  { period: 0, id: 8, group: "Tutorial", title: "Build Research Lab Lv 1", hint: "Research unlocks engines, colonies, and combat tech.", reward: { metal: 800, crystal: 900, deuterium: 200 }, requirements: [questReq("Research Lab", 1, s => s.planet.researchLab)] },
+  { period: 0, id: 9, group: "Tutorial", title: "Research Energy Technology", hint: "Energy tech supports deeper industry and shields.", reward: { metal: 600, crystal: 600, deuterium: 200 }, requirements: [questReq("Energy Technology", 1, s => s.research.energyTech)] },
+  { period: 0, id: 10, group: "Tutorial", title: "Research Combustion Drive", hint: "Combustion drive prepares early cargo movement.", reward: { metal: 600, crystal: 300, deuterium: 300 }, requirements: [questReq("Combustion Drive", 1, s => s.research.combustionDrive)] },
+  { period: 0, id: 11, group: "Tutorial", title: "Build your first ship", hint: "Ships turn resources into movement and reach.", reward: { metal: 900, crystal: 600, deuterium: 150 }, requirements: [questReq("Fleet ships", 1, totalQuestShips)] },
+  { period: 0, id: 12, group: "Tutorial", title: "Build a Small Cargo", hint: "Cargo ships let you move resources between planets.", reward: { metal: 1000, crystal: 700, deuterium: 150 }, requirements: [questReq("Small Cargo", 1, s => s.fleet.smallCargo)] },
+  { period: 0, id: 13, group: "Tutorial", title: "Build a Rocket Launcher", hint: "Basic defenses make planets harder to raid.", reward: { metal: 800, crystal: 200, deuterium: 0 }, requirements: [questReq("Rocket Launcher", 1, s => s.planet.rocketLauncher)] },
+  { period: 0, id: 14, group: "Tutorial", title: "Research Computer Technology", hint: "Computer tech expands usable mission slots over time.", reward: { metal: 700, crystal: 700, deuterium: 250 }, requirements: [questReq("Computer Technology", 1, s => s.research.computerTech)] },
+  { period: 0, id: 15, group: "Tutorial", title: "Build an Espionage Probe", hint: "Probes prepare scouting and information play.", reward: { metal: 600, crystal: 500, deuterium: 250 }, requirements: [questReq("Espionage Probe", 1, s => s.fleet.espionageProbe)] },
+  { period: 0, id: 16, group: "Tutorial", title: "Build a Light Laser", hint: "Layer defenses instead of relying on one unit.", reward: { metal: 800, crystal: 500, deuterium: 0 }, requirements: [questReq("Light Laser", 1, s => s.planet.lightLaser)] },
+  { period: 0, id: 17, group: "Tutorial", title: "Research Impulse Drive", hint: "Impulse drive unlocks stronger movement options.", reward: { metal: 1500, crystal: 1500, deuterium: 600 }, requirements: [questReq("Impulse Drive", 1, s => s.research.impulseDrive)] },
+  { period: 0, id: 18, group: "Tutorial", title: "Research Astrophysics", hint: "Astrophysics is the road to expansion.", reward: { metal: 1500, crystal: 1800, deuterium: 700 }, requirements: [questReq("Astrophysics", 1, s => s.research.astrophysics)] },
+  { period: 0, id: 19, group: "Tutorial", title: "Hold five defenses", hint: "A small defense grid is better than an empty planet.", reward: { metal: 1200, crystal: 900, deuterium: 200 }, requirements: [questReq("Defense units", 5, totalQuestDefenses)] },
+  { period: 0, id: 20, group: "Tutorial", title: "Build a Colony Ship", hint: "Colony ships turn research progress into new worlds.", reward: { metal: 2000, crystal: 2000, deuterium: 800 }, requirements: [questReq("Colony Ship", 1, s => s.fleet.colonyShip)] },
+  { period: 1, id: 0, group: "Daily", title: "Daily check-in", hint: "Claim once every 24 hours. Streak bonus is small and capped.", reward: { metal: 500, crystal: 300, deuterium: 100 }, requirements: [], checkIn: true },
+  { period: 1, id: 1, group: "Daily", title: "Metal Mine Lv 3", hint: "Keep basic metal production moving.", reward: { metal: 1000, crystal: 500, deuterium: 100 }, requirements: [questReq("Metal Mine", 3, s => s.planet.metalMine)] },
+  { period: 1, id: 2, group: "Daily", title: "Crystal Mine Lv 3", hint: "Keep crystal production balanced.", reward: { metal: 500, crystal: 1000, deuterium: 100 }, requirements: [questReq("Crystal Mine", 3, s => s.planet.crystalMine)] },
+  { period: 1, id: 3, group: "Daily", title: "Solar Plant Lv 4", hint: "A powered colony is a productive colony.", reward: { metal: 700, crystal: 700, deuterium: 150 }, requirements: [questReq("Solar Plant", 4, s => s.planet.solarPlant)] },
+  { period: 1, id: 4, group: "Daily", title: "Deuterium Synthesizer Lv 2", hint: "Fuel growth without overpaying the player.", reward: { metal: 600, crystal: 500, deuterium: 300 }, requirements: [questReq("Deuterium Synthesizer", 2, s => s.planet.deuteriumSynthesizer)] },
+  { period: 1, id: 5, group: "Daily", title: "Shipyard Lv 2", hint: "Keep fleet construction options open.", reward: { metal: 1200, crystal: 900, deuterium: 250 }, requirements: [questReq("Shipyard", 2, s => s.planet.shipyard)] },
+  { period: 1, id: 6, group: "Daily", title: "Own 3 ships", hint: "Maintain a small operational fleet.", reward: { metal: 1500, crystal: 1000, deuterium: 250 }, requirements: [questReq("Fleet ships", 3, totalQuestShips)] },
+  { period: 1, id: 7, group: "Daily", title: "Own 3 defenses", hint: "Do not leave the planet naked.", reward: { metal: 1200, crystal: 800, deuterium: 150 }, requirements: [questReq("Defense units", 3, totalQuestDefenses)] },
+  { period: 1, id: 8, group: "Daily", title: "Energy Technology Lv 1", hint: "Review your research base each day.", reward: { metal: 800, crystal: 800, deuterium: 250 }, requirements: [questReq("Energy Technology", 1, s => s.research.energyTech)] },
+  { period: 1, id: 9, group: "Daily", title: "Computer Technology Lv 1", hint: "Mission control starts with computer tech.", reward: { metal: 800, crystal: 1000, deuterium: 300 }, requirements: [questReq("Computer Technology", 1, s => s.research.computerTech)] },
+  { period: 2, id: 0, group: "Weekly", title: "Research Lab Lv 2", hint: "Build toward a stronger tech floor.", reward: { metal: 6000, crystal: 7000, deuterium: 2000 }, requirements: [questReq("Research Lab", 2, s => s.planet.researchLab)] },
+  { period: 2, id: 1, group: "Weekly", title: "Shipyard Lv 2", hint: "Keep construction capacity ready.", reward: { metal: 8000, crystal: 5000, deuterium: 1500 }, requirements: [questReq("Shipyard", 2, s => s.planet.shipyard)] },
+  { period: 2, id: 2, group: "Weekly", title: "Own 5 ships", hint: "A small fleet enables transport and response.", reward: { metal: 9000, crystal: 6000, deuterium: 2500 }, requirements: [questReq("Fleet ships", 5, totalQuestShips)] },
+  { period: 2, id: 3, group: "Weekly", title: "Own 5 defenses", hint: "Build a basic defensive shell.", reward: { metal: 8000, crystal: 7000, deuterium: 1500 }, requirements: [questReq("Defense units", 5, totalQuestDefenses)] },
+  { period: 2, id: 4, group: "Weekly", title: "Metal Mine Lv 5", hint: "Upgrade core production over time.", reward: { metal: 10000, crystal: 3000, deuterium: 500 }, requirements: [questReq("Metal Mine", 5, s => s.planet.metalMine)] },
+  { period: 2, id: 5, group: "Weekly", title: "Crystal Mine Lv 5", hint: "Balance metal with crystal growth.", reward: { metal: 4000, crystal: 10000, deuterium: 500 }, requirements: [questReq("Crystal Mine", 5, s => s.planet.crystalMine)] },
+  { period: 2, id: 6, group: "Weekly", title: "Deuterium Synthesizer Lv 4", hint: "Prepare fuel for higher activity.", reward: { metal: 5000, crystal: 4000, deuterium: 3000 }, requirements: [questReq("Deuterium Synthesizer", 4, s => s.planet.deuteriumSynthesizer)] },
+  { period: 2, id: 7, group: "Weekly", title: "Combustion Drive Lv 2", hint: "Improve early fleet movement.", reward: { metal: 5000, crystal: 3000, deuterium: 3000 }, requirements: [questReq("Combustion Drive", 2, s => s.research.combustionDrive)] },
+  { period: 2, id: 8, group: "Weekly", title: "Computer Technology Lv 2", hint: "Make mission management part of progress.", reward: { metal: 4000, crystal: 5000, deuterium: 3000 }, requirements: [questReq("Computer Technology", 2, s => s.research.computerTech)] },
+  { period: 2, id: 9, group: "Weekly", title: "Own 5 Small Cargo", hint: "Cargo capacity supports trading and relocation.", reward: { metal: 9000, crystal: 7000, deuterium: 1500 }, requirements: [questReq("Small Cargo", 5, s => s.fleet.smallCargo)] },
+  { period: 2, id: 10, group: "Weekly", title: "Own 10 Rocket Launchers", hint: "A starter defense wall discourages easy raids.", reward: { metal: 12000, crystal: 3000, deuterium: 500 }, requirements: [questReq("Rocket Launcher", 10, s => s.planet.rocketLauncher)] },
+  { period: 3, id: 0, group: "Monthly", title: "Impulse Drive Lv 1", hint: "Start the midgame engine path.", reward: { metal: 30000, crystal: 25000, deuterium: 12000 }, requirements: [questReq("Impulse Drive", 1, s => s.research.impulseDrive)] },
+  { period: 3, id: 1, group: "Monthly", title: "Astrophysics Lv 1", hint: "Prepare for expansion and colony strategy.", reward: { metal: 25000, crystal: 35000, deuterium: 15000 }, requirements: [questReq("Astrophysics", 1, s => s.research.astrophysics)] },
+  { period: 3, id: 2, group: "Monthly", title: "Own 25 ships", hint: "Hold a meaningful active fleet.", reward: { metal: 45000, crystal: 30000, deuterium: 15000 }, requirements: [questReq("Fleet ships", 25, totalQuestShips)] },
+  { period: 3, id: 3, group: "Monthly", title: "Own 25 defenses", hint: "Build lasting planetary protection.", reward: { metal: 40000, crystal: 35000, deuterium: 12000 }, requirements: [questReq("Defense units", 25, totalQuestDefenses)] },
+  { period: 3, id: 4, group: "Monthly", title: "Metal Mine Lv 10", hint: "Reach a real production milestone.", reward: { metal: 50000, crystal: 15000, deuterium: 3000 }, requirements: [questReq("Metal Mine", 10, s => s.planet.metalMine)] },
+  { period: 3, id: 5, group: "Monthly", title: "Crystal Mine Lv 10", hint: "Sustain research and higher construction.", reward: { metal: 20000, crystal: 50000, deuterium: 3000 }, requirements: [questReq("Crystal Mine", 10, s => s.planet.crystalMine)] },
+  { period: 3, id: 6, group: "Monthly", title: "Solar Plant Lv 12", hint: "Power the late early-game economy.", reward: { metal: 25000, crystal: 25000, deuterium: 5000 }, requirements: [questReq("Solar Plant", 12, s => s.planet.solarPlant)] },
+  { period: 3, id: 7, group: "Monthly", title: "Research Lab Lv 5", hint: "Unlock deeper research trees.", reward: { metal: 30000, crystal: 40000, deuterium: 15000 }, requirements: [questReq("Research Lab", 5, s => s.planet.researchLab)] },
+  { period: 3, id: 8, group: "Monthly", title: "Shipyard Lv 5", hint: "Prepare heavier fleet production.", reward: { metal: 45000, crystal: 35000, deuterium: 10000 }, requirements: [questReq("Shipyard", 5, s => s.planet.shipyard)] },
+  { period: 3, id: 9, group: "Monthly", title: "Computer Technology Lv 5", hint: "Improve command capacity.", reward: { metal: 30000, crystal: 35000, deuterium: 20000 }, requirements: [questReq("Computer Technology", 5, s => s.research.computerTech)] },
+  { period: 3, id: 10, group: "Monthly", title: "Own a Colony Ship", hint: "Expansion should come from real preparation.", reward: { metal: 60000, crystal: 50000, deuterium: 20000 }, requirements: [questReq("Colony Ship", 1, s => s.fleet.colonyShip)] },
+  { period: 3, id: 11, group: "Monthly", title: "Own a Battleship", hint: "A heavy fleet milestone for committed players.", reward: { metal: 70000, crystal: 50000, deuterium: 25000 }, requirements: [questReq("Battleship", 1, s => s.fleet.battleship)] },
 ];
 
 const DEFENSE_DEFS = [
@@ -1215,6 +1249,46 @@ const CSS = `
   .ship-build-btn:disabled { border-color: var(--border); color: var(--dim); cursor: not-allowed; background: transparent; }
   .ship-build-btn.locked-btn { border-color: rgba(255,0,110,0.5); color: var(--danger); background: rgba(255,0,110,0.06); cursor: pointer; }
   .ship-build-btn.locked-btn:hover { background: rgba(255,0,110,0.15); }
+  .quest-card { position:relative; overflow:hidden; background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(8,10,22,0.97)); border:1px solid rgba(255,255,255,0.08); border-radius: 8px; padding:14px; display:flex; flex-direction:column; gap:12px; min-height:218px; box-shadow:var(--shell-shadow); }
+  .quest-card.ready { border-color: rgba(6,214,160,0.38); box-shadow: 0 0 22px rgba(6,214,160,0.06); }
+  .quest-card.locked { border-color: rgba(255,0,110,0.28); }
+  .quest-card.claimed { border-color: rgba(0,245,212,0.24); opacity:0.76; }
+  .quest-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .quest-title { font-size:12px; color:var(--text); line-height:1.35; }
+  .quest-hint { font-size:10px; color:var(--dim); line-height:1.5; margin-top:5px; }
+  .quest-badge { flex:0 0 auto; font-family:'Orbitron',sans-serif; font-size:10px; color:var(--cyan); border:1px solid rgba(0,245,212,0.25); background:rgba(0,245,212,0.06); border-radius:999px; padding:5px 8px; }
+  .quest-badge.locked { color:var(--danger); border-color:rgba(255,0,110,0.32); background:rgba(255,0,110,0.06); }
+  .quest-badge.claimed { color:var(--success); border-color:rgba(6,214,160,0.32); background:rgba(6,214,160,0.06); }
+  .quest-status-line { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:9px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; }
+  .quest-progress { height:4px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; }
+  .quest-progress-fill { height:100%; background:linear-gradient(90deg,var(--purple),var(--cyan)); border-radius:999px; }
+  .quest-progress-fill.ready { background:linear-gradient(90deg,var(--success),var(--cyan)); }
+  .quest-progress-fill.locked { background:linear-gradient(90deg,var(--danger),var(--warn)); }
+  .quest-rewards { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .quest-reward { border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.035); border-radius:8px; padding:7px 6px; min-width:0; }
+  .quest-reward span { display:block; font-size:8px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; }
+  .quest-reward strong { display:block; font-size:11px; margin-top:3px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .quest-req-list { display:grid; gap:6px; }
+  .quest-req-row { display:flex; justify-content:space-between; gap:10px; align-items:center; font-size:10px; color:var(--dim); border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:5px; min-height:22px; }
+  .quest-req-row:last-child { border-bottom:none; padding-bottom:0; }
+  .quest-req-row.met { color:var(--success); }
+  .quest-req-row.missing { color:var(--danger); }
+  .quest-actions { margin-top:auto; }
+  .quest-btn { width:100%; font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:1px; border-radius:8px; padding:10px 12px; text-transform:uppercase; cursor:pointer; transition:all .15s; border:1px solid var(--cyan); background:rgba(0,245,212,0.08); color:var(--cyan); }
+  .quest-btn:hover:not(:disabled) { background:var(--cyan); color:var(--void); box-shadow:var(--glow-c); }
+  .quest-btn.locked { border-color:rgba(255,0,110,0.5); background:rgba(255,0,110,0.06); color:var(--danger); }
+  .quest-btn.claimed, .quest-btn:disabled { border-color:var(--border); color:var(--dim); background:transparent; cursor:not-allowed; box-shadow:none; }
+  .requirements-modal { width:100%; max-width:520px; max-height:86vh; overflow-y:auto; background:linear-gradient(180deg, rgba(255,255,255,0.055), rgba(8,10,22,0.98)); border:1px solid rgba(255,0,110,0.34); border-radius:8px 8px 0 0; padding:22px; box-shadow:var(--shell-shadow); }
+  @media (min-width:600px) { .requirements-modal { border-radius:8px; } }
+  .requirements-title { font-family:'Orbitron',sans-serif; font-size:14px; letter-spacing:2px; color:var(--text); margin-bottom:8px; }
+  .requirements-subtitle { font-size:10px; color:var(--dim); line-height:1.6; margin-bottom:16px; }
+  .requirements-list { display:grid; gap:8px; margin-bottom:18px; }
+  .requirements-row { display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:10px 12px; background:rgba(0,0,0,0.22); }
+  .requirements-row span { font-size:11px; color:var(--text); }
+  .requirements-row strong { font-family:'Orbitron',sans-serif; font-size:12px; color:var(--danger); }
+  .requirements-row.met strong { color:var(--success); }
+  .requirements-close { width:100%; font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:1px; border-radius:8px; padding:11px 12px; border:1px solid var(--border); background:transparent; color:var(--dim); cursor:pointer; }
+  .requirements-close:hover { color:var(--text); border-color:var(--dim); }
   .ship-card { position:relative; overflow:hidden; background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(8,10,22,0.95)); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px;
     padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: var(--shell-shadow); }
   .fleet-ship-card { align-items: stretch; gap: 12px; }
@@ -3112,7 +3186,7 @@ const QuestRequirementModal: React.FC<{ quest: QuestDefinition | null; state: Pl
     <div className="modal-backdrop" onClick={onClose}>
       <div className="requirements-modal" onClick={e => e.stopPropagation()}>
         <div className="requirements-title">{quest.title}</div>
-        <div className="requirements-subtitle">Quest requirements are missing</div>
+        <div className="requirements-subtitle">{quest.hint}</div>
         <div className="requirements-list">
           {rows.map(row => (
             <div key={row.label} className={`requirements-row${row.met ? " met" : ""}`}>
@@ -3139,13 +3213,14 @@ const QuestsTab: React.FC<{
   const groups: Array<QuestDefinition["group"]> = ["Tutorial", "Daily", "Weekly", "Monthly"];
   const currentDay = Math.floor(nowTs / 86400);
   const checkInClaimed = questState?.dailyCheckinDay === currentDay || hasQuestBit(questClaimedMask(1, questState, nowTs), 0);
+  const nextStreak = Math.min((questState?.dailyCheckinStreak ?? 0) + 1, 30);
 
   return (
     <>
       <div>
         <div className="section-title">QUEST COMMAND</div>
         <div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>
-          Daily streak {questState?.dailyCheckinStreak ?? 0} · Total check-ins {questState?.totalCheckins ?? 0}
+          Daily streak {questState?.dailyCheckinStreak ?? 0} / 30 · Total check-ins {questState?.totalCheckins ?? 0}
         </div>
         {groups.map(group => (
           <div key={group} style={{marginBottom:24}}>
@@ -3159,45 +3234,66 @@ const QuestsTab: React.FC<{
                   return { label: req.label, current, required: req.required, met: current >= req.required };
                 });
                 const missing = statuses.filter(req => !req.met);
+                const metCount = statuses.length - missing.length;
+                const progress = statuses.length === 0 ? 100 : Math.round((metCount / statuses.length) * 100);
                 const canClaim = missing.length === 0 && !claimed;
-                const reward = quest.checkIn && questState
+                const reward = quest.checkIn
                   ? {
-                      metal: quest.reward.metal + Math.min(questState.dailyCheckinStreak + 1, 30) * 1000,
-                      crystal: quest.reward.crystal + Math.floor(Math.min(questState.dailyCheckinStreak + 1, 30) * 500),
-                      deuterium: quest.reward.deuterium + Math.floor(Math.min(questState.dailyCheckinStreak + 1, 30) * 250),
+                      metal: quest.reward.metal + nextStreak * 50,
+                      crystal: quest.reward.crystal + Math.floor(nextStreak * 25),
+                      deuterium: quest.reward.deuterium + Math.floor(nextStreak * 10),
                     }
                   : quest.reward;
+
                 return (
-                  <div key={`${quest.period}:${quest.id}`} className={`ship-build-card${!canClaim && !claimed ? " locked" : ""}`}>
-                    <div className="ship-build-header">
+                  <div key={`${quest.period}:${quest.id}`} className={`quest-card ${claimed ? "claimed" : canClaim ? "ready" : "locked"}`}>
+                    <div className="quest-top">
                       <div>
-                        <div className="ship-build-name">{quest.title}</div>
-                        <div style={{fontSize:9,color:claimed?"var(--success)":missing.length?"var(--danger)":"var(--cyan)",letterSpacing:0.5,marginTop:2}}>
-                          {claimed ? "claimed" : missing.length ? `locked · ${missing.length} missing` : "ready to claim"}
+                        <div className="quest-title">{quest.title}</div>
+                        <div className="quest-hint">{quest.hint}</div>
+                      </div>
+                      <div className={`quest-badge ${claimed ? "claimed" : missing.length ? "locked" : ""}`}>{claimed ? "OK" : group.slice(0, 1)}</div>
+                    </div>
+
+                    <div>
+                      <div className="quest-status-line">
+                        <span>{claimed ? "claimed" : missing.length ? `${missing.length} missing` : "ready"}</span>
+                        <span>{metCount}/{statuses.length || 0}</span>
+                      </div>
+                      <div className="quest-progress" style={{marginTop:7}}>
+                        <div className={`quest-progress-fill ${canClaim ? "ready" : missing.length ? "locked" : ""}`} style={{width:`${progress}%`}} />
+                      </div>
+                    </div>
+
+                    <div className="quest-rewards">
+                      <div className="quest-reward"><span>Metal</span><strong>{fmt(reward.metal)}</strong></div>
+                      <div className="quest-reward"><span>Crystal</span><strong>{fmt(reward.crystal)}</strong></div>
+                      <div className="quest-reward"><span>Deut</span><strong>{fmt(reward.deuterium)}</strong></div>
+                    </div>
+
+                    <div className="quest-req-list">
+                      {statuses.length === 0 ? (
+                        <div className="quest-req-row met"><span>Available</span><strong>now</strong></div>
+                      ) : statuses.slice(0, 3).map(req => (
+                        <div key={req.label} className={`quest-req-row ${req.met ? "met" : "missing"}`}>
+                          <span>{req.label}</span><strong>{req.current}/{req.required}</strong>
                         </div>
-                      </div>
-                      <div className={`ship-build-count${claimed ? "" : " zero"}`}>{claimed ? "OK" : group.slice(0, 1)}</div>
+                      ))}
                     </div>
-                    <div style={{fontSize:10,color:"var(--dim)",margin:"10px 0",display:"grid",gap:3}}>
-                      <div style={{color:"var(--metal)"}}>Metal: {fmt(reward.metal)}</div>
-                      <div style={{color:"var(--crystal)"}}>Crystal: {fmt(reward.crystal)}</div>
-                      <div style={{color:"var(--deut)"}}>Deuterium: {fmt(reward.deuterium)}</div>
+                    {statuses.length > 3 && <div style={{fontSize:9,color:"var(--dim)",letterSpacing:1}}>+{statuses.length - 3} more requirement{statuses.length - 3 === 1 ? "" : "s"}</div>}
+
+                    <div className="quest-actions">
+                      <button
+                        className={`quest-btn${claimed ? " claimed" : missing.length ? " locked" : ""}`}
+                        disabled={txBusy || claimed}
+                        onClick={() => {
+                          if (missing.length) { setLockedQuest(quest); return; }
+                          quest.checkIn ? onDailyCheckIn() : onClaimQuest(quest.period, quest.id);
+                        }}
+                      >
+                        {claimed ? "CLAIMED" : missing.length ? `REQUIREMENTS (${missing.length})` : "CLAIM"}
+                      </button>
                     </div>
-                    {statuses.length > 0 && (
-                      <div style={{fontSize:10,color:"var(--dim)",display:"grid",gap:4,marginBottom:10}}>
-                        {statuses.map(req => <div key={req.label} style={{display:"flex",justifyContent:"space-between",color:req.met?"var(--success)":"var(--danger)"}}><span>{req.label}</span><span>{req.current}/{req.required}</span></div>)}
-                      </div>
-                    )}
-                    <button
-                      className={`ship-build-btn${missing.length ? " locked-btn" : ""}`}
-                      disabled={txBusy || claimed}
-                      onClick={() => {
-                        if (missing.length) { setLockedQuest(quest); return; }
-                        quest.checkIn ? onDailyCheckIn() : onClaimQuest(quest.period, quest.id);
-                      }}
-                    >
-                      {claimed ? "CLAIMED" : missing.length ? `REQUIREMENTS (${missing.length})` : "CLAIM"}
-                    </button>
                   </div>
                 );
               })}
