@@ -652,8 +652,9 @@ const MarketTab: React.FC<MarketTabProps> = ({
   // Determine if connected wallet is the market admin
   const walletAddress = state?.planet.owner ?? "";
   const isAdmin = !!marketConfig && marketConfig.admin === walletAddress;
-  // Also show admin card if market is not yet initialized (anyone can bootstrap on devnet)
-  const showAdminCard = !marketConfig;
+  const marketLoading = marketConfig === undefined;  // undefined = still fetching
+  // Also show admin card if market is confirmed not initialized (anyone can bootstrap on devnet)
+  const showAdminCard = marketConfig === null;
 
   // ── Market admin handler ──────────────────────────────────────────────────
   const handleInitializeMarket = useCallback(async () => {
@@ -855,7 +856,6 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   // ── Not initialized yet banner (loading state) ────────────────────────────
   const marketUninitialized = marketConfig === null; // null = loaded but not on-chain
-  const marketLoading = marketConfig === undefined;  // undefined = still fetching
 
   return (
     <div>
@@ -865,7 +865,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
       {/* ── Market Admin Card — shown when not initialized OR to admin ── */}
       <MarketAdminCard
         client={client}
-        visible={showAdminCard || isAdmin}
+        visible={!marketLoading && (showAdminCard || isAdmin)}
         config={marketConfig ?? null}
         escrowInitialized={escrowInitialized}
         mintInput={marketMintInput}

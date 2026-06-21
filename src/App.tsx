@@ -1231,7 +1231,7 @@ const CSS = `
   .ship-build-card:hover { border-color: rgba(0,245,212,0.3); transform: translateY(-1px); }
   .ship-build-card.locked { border-color: rgba(255,0,110,0.2); }
   .ship-build-card.locked:hover { border-color: rgba(255,0,110,0.4); }
-  .ship-card-art { position: relative; width: 100%; height: 132px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background-color: rgba(9,12,24,0.92); background-size: contain; background-repeat: no-repeat; background-position: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); overflow: hidden; }
+  .ship-card-art { position: relative; width: 100%; aspect-ratio: 3 / 2; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background-color: rgba(9,12,24,0.92); background-size: cover; background-repeat: no-repeat; background-position: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); overflow: hidden; }
   .ship-card-art::after { content:""; position:absolute; inset:0; background: radial-gradient(circle at 50% 48%, rgba(125,216,255,0.14), transparent 42%), linear-gradient(180deg, rgba(255,255,255,0.05), transparent 32%, rgba(5,8,16,0.2)); pointer-events:none; }
   .ship-build-header { display: flex; align-items: center; justify-content: space-between; }
   .ship-build-icon-name { display: flex; align-items: center; gap: 8px; }
@@ -1292,7 +1292,7 @@ const CSS = `
   .ship-card { position:relative; overflow:hidden; background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(8,10,22,0.95)); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px;
     padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: var(--shell-shadow); }
   .fleet-ship-card { align-items: stretch; gap: 12px; }
-  .fleet-ship-card-art { position: relative; height: 132px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background-color: rgba(9,12,24,0.92); background-size: contain; background-repeat: no-repeat; background-position: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); overflow: hidden; }
+  .fleet-ship-card-art { position: relative; width: 100%; aspect-ratio: 3 / 2; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background-color: rgba(9,12,24,0.92); background-size: cover; background-repeat: no-repeat; background-position: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); overflow: hidden; }
   .fleet-ship-card-art::before { content:""; position:absolute; inset:0; background: radial-gradient(circle at 50% 48%, rgba(125,216,255,0.14), transparent 42%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(5,8,16,0.12)); pointer-events:none; }
   .fleet-ship-card-copy { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; width:100%; }
   .fleet-ship-card-name { font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
