@@ -1202,7 +1202,7 @@ const CSS = `
     padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: all 0.2s; box-shadow: var(--shell-shadow); }
   .building-card::before { content:""; position:absolute; inset:0; background: radial-gradient(circle at 84% 16%, rgba(155,93,229,0.08), transparent 18%), linear-gradient(145deg, rgba(255,255,255,0.04), transparent 40%); pointer-events:none; }
   .building-card:hover { border-color: rgba(155,93,229,0.4); transform: translateY(-1px); }
-  .building-card-art { position: relative; height: 144px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background-color: rgba(9,12,24,0.92); background-size: contain; background-repeat: no-repeat; background-position: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); overflow: hidden; }
+  .building-card-art { position: relative; width: 100%; aspect-ratio: 3 / 2; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background-color: rgba(9,12,24,0.92); background-size: cover; background-repeat: no-repeat; background-position: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); overflow: hidden; }
   .building-card-art::after { content:""; position:absolute; inset:0; background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent 32%, rgba(5,8,16,0.2)); pointer-events:none; }
   .building-header { display: flex; align-items: center; justify-content: space-between; }
   .building-icon-name { display: flex; align-items: center; gap: 8px; }
