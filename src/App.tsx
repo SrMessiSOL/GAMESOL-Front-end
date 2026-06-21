@@ -81,7 +81,7 @@ const ATTACK_LAUNCH_COOLDOWN_SECONDS = 60;
 const TARGET_ATTACK_COOLDOWN_SECONDS = 120;
 const MIN_ATTACK_COMBAT_POINTS = 1_000;
 const VAULT_PASSWORD_STORAGE_PREFIX = "gamesol:vault-password";
-const APK_DOWNLOAD_URL = import.meta.env.VITE_APK_DOWNLOAD_URL?.trim() || "https://we.tl/t-Qwpa1XZbhuBcgaXc";
+const APK_DOWNLOAD_URL = import.meta.env.VITE_APK_DOWNLOAD_URL?.trim() || "https://we.tl/t-4k38OiGWCzoEn7jU";
 const IS_NATIVE_ANDROID_APP = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
 
 function vaultPasswordStorageKey(wallet: string): string {
