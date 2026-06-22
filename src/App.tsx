@@ -7,6 +7,8 @@ import {
   GameClient,
   type GameConfigState,
   type QuestStateAccount,
+  type StoreConfigState,
+  type StorePurchaseStateAccount,
   type BattleResolvedEvent,
   type BattleResolvedEventRecord,
   type VaultRecoveryPromptRequest,
@@ -28,7 +30,7 @@ import { PUBLIC_APP_URL } from "./mobileWalletAdapter";
 import gamesolLogo from "./assets/ui/logobg.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Tab = "overview" | "quests" | "resources" | "buildings" | "research" | "shipyard" | "defense" | "fleet" | "missions" | "activity" | "galaxy" | "market";
+type Tab = "overview" | "quests" | "resources" | "buildings" | "research" | "shipyard" | "defense" | "fleet" | "missions" | "activity" | "galaxy" | "market" | "store";
 
 type LaunchTargetInput =
   | { kind: "attack"; galaxy: number; system: number; position: number }
@@ -39,6 +41,12 @@ type LaunchTargetInput =
 type ConfirmationState =
   | null
   | { kind: "resolveColonize"; mission: Mission; slotIdx: number };
+
+type ResourceDelta = {
+  metal?: bigint | number;
+  crystal?: bigint | number;
+  deuterium?: bigint | number;
+};
 
 type BattleReport = {
   id: string;
@@ -133,6 +141,29 @@ function formatTokenAmount(raw: bigint, decimals: number): string {
   if (fraction === 0n) return whole.toString();
   const fractionText = fraction.toString().padStart(decimals, "0").replace(/0+$/, "");
   return `${whole.toString()}.${fractionText}`;
+}
+
+function toResourceAmount(value: bigint | number | undefined): bigint {
+  if (typeof value === "bigint") return value;
+  return BigInt(Math.max(0, Math.floor(value ?? 0)));
+}
+
+function resourceCapWarningMessage(action: string, res: Resources | undefined, delta: ResourceDelta): string | null {
+  if (!res) return null;
+  const rows = [
+    { label: "Metal", current: res.metal, cap: res.metalCap, add: toResourceAmount(delta.metal) },
+    { label: "Crystal", current: res.crystal, cap: res.crystalCap, add: toResourceAmount(delta.crystal) },
+    { label: "Deuterium", current: res.deuterium, cap: res.deuteriumCap, add: toResourceAmount(delta.deuterium) },
+  ].filter(row => row.add > 0n && row.current + row.add > row.cap);
+  if (!rows.length) return null;
+  const details = rows
+    .map(row => {
+      const accepted = row.cap > row.current ? row.cap - row.current : 0n;
+      const wasted = row.add - accepted;
+      return `${row.label}: +${fmt(row.add)} but only ${fmt(accepted)} fits. ${fmt(wasted)} will be lost.`;
+    })
+    .join("\n");
+  return `${action} will exceed this planet's current storage cap.\n\n${details}\n\nContinue anyway?`;
 }
 
 function formatSolBalance(lamports: bigint): string {
@@ -408,6 +439,138 @@ const QUEST_DEFINITIONS: QuestDefinition[] = [
   { period: 3, id: 11, group: "Monthly", title: "Own a Battleship", hint: "A heavy fleet milestone for committed players.", reward: { metal: 70000, crystal: 50000, deuterium: 25000 }, requirements: [questReq("Battleship", 1, s => s.fleet.battleship)] },
 ];
 
+
+type QuestCatalogUiEntry = {
+  title: string;
+  hint: string;
+  label: string;
+  required: number;
+  current: (state: PlayerState) => number;
+  reward: { metal: number; crystal: number; deuterium: number };
+};
+
+const qCatalog = (
+  title: string,
+  hint: string,
+  label: string,
+  required: number,
+  current: (state: PlayerState) => number,
+  reward: { metal: number; crystal: number; deuterium: number },
+): QuestCatalogUiEntry => ({ title, hint, label, required, current, reward });
+
+const DAILY_ROTATING_QUESTS_UI: QuestCatalogUiEntry[] = [
+  qCatalog("Metal Mine Lv 3", "Keep basic metal production moving.", "Metal Mine", 3, s => s.planet.metalMine, { metal: 1000, crystal: 500, deuterium: 100 }),
+  qCatalog("Crystal Mine Lv 3", "Keep crystal production balanced.", "Crystal Mine", 3, s => s.planet.crystalMine, { metal: 500, crystal: 1000, deuterium: 100 }),
+  qCatalog("Solar Plant Lv 4", "A powered colony is a productive colony.", "Solar Plant", 4, s => s.planet.solarPlant, { metal: 700, crystal: 700, deuterium: 150 }),
+  qCatalog("Deuterium Synthesizer Lv 2", "Fuel growth without overpaying the player.", "Deuterium Synthesizer", 2, s => s.planet.deuteriumSynthesizer, { metal: 600, crystal: 500, deuterium: 300 }),
+  qCatalog("Robotics Factory Lv 1", "Keep construction efficiency online.", "Robotics Factory", 1, s => s.planet.roboticsFactory, { metal: 800, crystal: 650, deuterium: 150 }),
+  qCatalog("Shipyard Lv 2", "Keep fleet construction options open.", "Shipyard", 2, s => s.planet.shipyard, { metal: 1200, crystal: 900, deuterium: 250 }),
+  qCatalog("Research Lab Lv 1", "Keep the lab ready for unlocks.", "Research Lab", 1, s => s.planet.researchLab, { metal: 900, crystal: 900, deuterium: 250 }),
+  qCatalog("Energy Technology Lv 1", "Review your research base each day.", "Energy Technology", 1, s => s.research.energyTech, { metal: 800, crystal: 800, deuterium: 250 }),
+  qCatalog("Computer Technology Lv 1", "Mission control starts with computer tech.", "Computer Technology", 1, s => s.research.computerTech, { metal: 800, crystal: 1000, deuterium: 300 }),
+  qCatalog("Own 3 Ships", "Maintain a small operational fleet.", "Fleet ships", 3, totalQuestShips, { metal: 1500, crystal: 1000, deuterium: 250 }),
+  qCatalog("Own 3 Defenses", "Do not leave the planet naked.", "Defense units", 3, totalQuestDefenses, { metal: 1200, crystal: 800, deuterium: 150 }),
+  qCatalog("Own 2 Small Cargo", "Cargo capacity keeps logistics flexible.", "Small Cargo", 2, s => s.fleet.smallCargo, { metal: 1000, crystal: 700, deuterium: 200 }),
+  qCatalog("Own 2 Light Fighters", "Keep a starter combat screen.", "Light Fighter", 2, s => s.fleet.lightFighter, { metal: 1100, crystal: 700, deuterium: 200 }),
+  qCatalog("Own 3 Rocket Launchers", "Maintain a basic defense line.", "Rocket Launcher", 3, s => s.planet.rocketLauncher, { metal: 900, crystal: 500, deuterium: 100 }),
+  qCatalog("Own a Light Laser", "Layer defenses instead of relying on one unit.", "Light Laser", 1, s => s.planet.lightLaser, { metal: 1000, crystal: 700, deuterium: 100 }),
+  qCatalog("Own an Espionage Probe", "Information starts with probes.", "Espionage Probe", 1, s => s.fleet.espionageProbe, { metal: 700, crystal: 700, deuterium: 250 }),
+  qCatalog("Combustion Drive Lv 1", "Prepare early fleet movement.", "Combustion Drive", 1, s => s.research.combustionDrive, { metal: 900, crystal: 600, deuterium: 300 }),
+  qCatalog("Metal Storage Lv 1", "Protect production from caps.", "Metal Storage", 1, s => s.planet.metalStorage, { metal: 700, crystal: 500, deuterium: 100 }),
+  qCatalog("Crystal Storage Lv 1", "Protect crystal from caps.", "Crystal Storage", 1, s => s.planet.crystalStorage, { metal: 500, crystal: 700, deuterium: 100 }),
+  qCatalog("Deuterium Tank Lv 1", "Protect fuel from caps.", "Deuterium Tank", 1, s => s.planet.deuteriumTank, { metal: 600, crystal: 500, deuterium: 250 }),
+  qCatalog("Own a Heavy Fighter", "Begin heavier combat production.", "Heavy Fighter", 1, s => s.fleet.heavyFighter, { metal: 1400, crystal: 1000, deuterium: 350 }),
+  qCatalog("Shielding Technology Lv 1", "Start defensive research.", "Shielding Technology", 1, s => s.research.shieldingTechnology, { metal: 900, crystal: 1100, deuterium: 250 }),
+  qCatalog("Armor Technology Lv 1", "Improve fleet durability.", "Armor Technology", 1, s => s.research.armorTechnology, { metal: 1100, crystal: 800, deuterium: 250 }),
+];
+
+const WEEKLY_ROTATING_QUESTS_UI: QuestCatalogUiEntry[] = [
+  qCatalog("Research Lab Lv 2", "Build toward a stronger tech floor.", "Research Lab", 2, s => s.planet.researchLab, { metal: 6000, crystal: 7000, deuterium: 2000 }),
+  qCatalog("Shipyard Lv 2", "Keep construction capacity ready.", "Shipyard", 2, s => s.planet.shipyard, { metal: 8000, crystal: 5000, deuterium: 1500 }),
+  qCatalog("Own 5 Ships", "A small fleet enables transport and response.", "Fleet ships", 5, totalQuestShips, { metal: 9000, crystal: 6000, deuterium: 2500 }),
+  qCatalog("Own 5 Defenses", "Build a basic defensive shell.", "Defense units", 5, totalQuestDefenses, { metal: 8000, crystal: 7000, deuterium: 1500 }),
+  qCatalog("Metal Mine Lv 5", "Upgrade core production over time.", "Metal Mine", 5, s => s.planet.metalMine, { metal: 10000, crystal: 3000, deuterium: 500 }),
+  qCatalog("Crystal Mine Lv 5", "Balance metal with crystal growth.", "Crystal Mine", 5, s => s.planet.crystalMine, { metal: 4000, crystal: 10000, deuterium: 500 }),
+  qCatalog("Deuterium Synthesizer Lv 4", "Prepare fuel for higher activity.", "Deuterium Synthesizer", 4, s => s.planet.deuteriumSynthesizer, { metal: 5000, crystal: 4000, deuterium: 3000 }),
+  qCatalog("Combustion Drive Lv 2", "Improve early fleet movement.", "Combustion Drive", 2, s => s.research.combustionDrive, { metal: 5000, crystal: 3000, deuterium: 3000 }),
+  qCatalog("Computer Technology Lv 2", "Make mission management part of progress.", "Computer Technology", 2, s => s.research.computerTech, { metal: 4000, crystal: 5000, deuterium: 3000 }),
+  qCatalog("Own 5 Small Cargo", "Cargo capacity supports trading and relocation.", "Small Cargo", 5, s => s.fleet.smallCargo, { metal: 9000, crystal: 7000, deuterium: 1500 }),
+  qCatalog("Own 10 Rocket Launchers", "A starter defense wall discourages easy raids.", "Rocket Launcher", 10, s => s.planet.rocketLauncher, { metal: 12000, crystal: 3000, deuterium: 500 }),
+  qCatalog("Own a Large Cargo", "Move larger payloads between planets.", "Large Cargo", 1, s => s.fleet.largeCargo, { metal: 8000, crystal: 8000, deuterium: 2000 }),
+  qCatalog("Own 5 Light Fighters", "Maintain a basic response wing.", "Light Fighter", 5, s => s.fleet.lightFighter, { metal: 8000, crystal: 5000, deuterium: 1500 }),
+  qCatalog("Own 2 Heavy Fighters", "Add stronger ships to the roster.", "Heavy Fighter", 2, s => s.fleet.heavyFighter, { metal: 9000, crystal: 8000, deuterium: 3000 }),
+  qCatalog("Own a Recycler", "Prepare debris recovery.", "Recycler", 1, s => s.fleet.recycler, { metal: 8000, crystal: 7000, deuterium: 2500 }),
+  qCatalog("Own 5 Probes", "Keep scouting capacity available.", "Espionage Probe", 5, s => s.fleet.espionageProbe, { metal: 5000, crystal: 6000, deuterium: 2000 }),
+  qCatalog("Solar Plant Lv 8", "Support higher production.", "Solar Plant", 8, s => s.planet.solarPlant, { metal: 8000, crystal: 5000, deuterium: 1000 }),
+  qCatalog("Robotics Factory Lv 3", "Improve build cadence.", "Robotics Factory", 3, s => s.planet.roboticsFactory, { metal: 8000, crystal: 6000, deuterium: 1500 }),
+  qCatalog("Energy Technology Lv 2", "Push energy science forward.", "Energy Technology", 2, s => s.research.energyTech, { metal: 6000, crystal: 7000, deuterium: 2500 }),
+  qCatalog("Weapons Technology Lv 1", "Start combat research.", "Weapons Technology", 1, s => s.research.weaponsTechnology, { metal: 8000, crystal: 5000, deuterium: 2000 }),
+  qCatalog("Shielding Technology Lv 1", "Improve defensive strength.", "Shielding Technology", 1, s => s.research.shieldingTechnology, { metal: 7000, crystal: 8000, deuterium: 2000 }),
+  qCatalog("Armor Technology Lv 1", "Improve ship durability.", "Armor Technology", 1, s => s.research.armorTechnology, { metal: 8000, crystal: 7000, deuterium: 2000 }),
+  qCatalog("Own 5 Light Lasers", "Layer early defenses.", "Light Laser", 5, s => s.planet.lightLaser, { metal: 7000, crystal: 5000, deuterium: 1000 }),
+];
+
+const MONTHLY_ROTATING_QUESTS_UI: QuestCatalogUiEntry[] = [
+  qCatalog("Impulse Drive Lv 1", "Start the midgame engine path.", "Impulse Drive", 1, s => s.research.impulseDrive, { metal: 30000, crystal: 25000, deuterium: 12000 }),
+  qCatalog("Astrophysics Lv 1", "Prepare for expansion and colony strategy.", "Astrophysics", 1, s => s.research.astrophysics, { metal: 25000, crystal: 35000, deuterium: 15000 }),
+  qCatalog("Own 25 Ships", "Hold a meaningful active fleet.", "Fleet ships", 25, totalQuestShips, { metal: 45000, crystal: 30000, deuterium: 15000 }),
+  qCatalog("Own 25 Defenses", "Build lasting planetary protection.", "Defense units", 25, totalQuestDefenses, { metal: 40000, crystal: 35000, deuterium: 12000 }),
+  qCatalog("Metal Mine Lv 10", "Reach a real production milestone.", "Metal Mine", 10, s => s.planet.metalMine, { metal: 50000, crystal: 15000, deuterium: 3000 }),
+  qCatalog("Crystal Mine Lv 10", "Sustain research and higher construction.", "Crystal Mine", 10, s => s.planet.crystalMine, { metal: 20000, crystal: 50000, deuterium: 3000 }),
+  qCatalog("Solar Plant Lv 12", "Power the late early-game economy.", "Solar Plant", 12, s => s.planet.solarPlant, { metal: 25000, crystal: 25000, deuterium: 5000 }),
+  qCatalog("Research Lab Lv 5", "Unlock deeper research trees.", "Research Lab", 5, s => s.planet.researchLab, { metal: 30000, crystal: 40000, deuterium: 15000 }),
+  qCatalog("Shipyard Lv 5", "Prepare heavier fleet production.", "Shipyard", 5, s => s.planet.shipyard, { metal: 45000, crystal: 35000, deuterium: 10000 }),
+  qCatalog("Computer Technology Lv 5", "Improve command capacity.", "Computer Technology", 5, s => s.research.computerTech, { metal: 30000, crystal: 35000, deuterium: 20000 }),
+  qCatalog("Own a Colony Ship", "Expansion should come from real preparation.", "Colony Ship", 1, s => s.fleet.colonyShip, { metal: 60000, crystal: 50000, deuterium: 20000 }),
+  qCatalog("Own a Battleship", "A heavy fleet milestone for committed players.", "Battleship", 1, s => s.fleet.battleship, { metal: 70000, crystal: 50000, deuterium: 25000 }),
+  qCatalog("Own 3 Cruisers", "Build a mid-tier strike group.", "Cruiser", 3, s => s.fleet.cruiser, { metal: 55000, crystal: 45000, deuterium: 18000 }),
+  qCatalog("Own 5 Recyclers", "Prepare serious debris recovery.", "Recycler", 5, s => s.fleet.recycler, { metal: 45000, crystal: 35000, deuterium: 18000 }),
+  qCatalog("Own 10 Heavy Lasers", "Strengthen defensive depth.", "Heavy Laser", 10, s => s.planet.heavyLaser, { metal: 35000, crystal: 30000, deuterium: 8000 }),
+  qCatalog("Own 3 Gauss Cannons", "Add armor-piercing defense.", "Gauss Cannon", 3, s => s.planet.gaussCannon, { metal: 45000, crystal: 35000, deuterium: 10000 }),
+  qCatalog("Own 3 Ion Cannons", "Add shield-focused defense.", "Ion Cannon", 3, s => s.planet.ionCannon, { metal: 35000, crystal: 45000, deuterium: 12000 }),
+  qCatalog("Own a Plasma Turret", "Reach a high-end defense milestone.", "Plasma Turret", 1, s => s.planet.plasmaTurret, { metal: 60000, crystal: 45000, deuterium: 18000 }),
+  qCatalog("Fusion Reactor Lv 3", "Stabilize deeper energy needs.", "Fusion Reactor", 3, s => s.planet.fusionReactor, { metal: 35000, crystal: 35000, deuterium: 16000 }),
+  qCatalog("Nanite Factory Lv 1", "Unlock serious industrial acceleration.", "Nanite Factory", 1, s => s.planet.naniteFactory, { metal: 80000, crystal: 60000, deuterium: 20000 }),
+  qCatalog("Hyperspace Drive Lv 1", "Start the advanced engine path.", "Hyperspace Drive", 1, s => s.research.hyperspaceDrive, { metal: 50000, crystal: 55000, deuterium: 25000 }),
+  qCatalog("IGR Network Lv 1", "Connect research capacity.", "Intergalactic Research Network", 1, s => s.research.igrNetwork, { metal: 45000, crystal: 60000, deuterium: 20000 }),
+  qCatalog("Weapons Technology Lv 3", "Build a stronger combat foundation.", "Weapons Technology", 3, s => s.research.weaponsTechnology, { metal: 55000, crystal: 45000, deuterium: 20000 }),
+];
+
+function rotatingQuestIndex(period: 1 | 2 | 3, slot: number, epoch: number, catalogLength: number): number {
+  const len = BigInt(catalogLength);
+  const seed = BigInt.asUintN(
+    64,
+    BigInt(epoch) * 0x9E3779B97F4A7C15n + BigInt(period) * 0xBF58476D1CE4E5B9n,
+  );
+  const offset = seed % len;
+  const step = ((seed >> 32n) % (len - 1n)) + 1n;
+  return Number((offset + BigInt(slot) * step) % len);
+}
+
+function buildRotatingQuest(period: 1 | 2 | 3, id: number, group: "Daily" | "Weekly" | "Monthly", epoch: number, catalog: QuestCatalogUiEntry[]): QuestDefinition {
+  const slot = period === 1 ? id - 1 : id;
+  const entry = catalog[rotatingQuestIndex(period, slot, epoch, catalog.length)];
+  return {
+    period,
+    id,
+    group,
+    title: entry.title,
+    hint: entry.hint,
+    reward: entry.reward,
+    requirements: [questReq(entry.label, entry.required, entry.current)],
+  };
+}
+
+function activeQuestDefinitions(nowTs: number): QuestDefinition[] {
+  const tutorialAndCheckIn = QUEST_DEFINITIONS.filter(q => q.period === 0 || (q.period === 1 && q.id === 0));
+  const dailyEpoch = Math.floor(nowTs / 86400);
+  const weeklyEpoch = Math.floor(nowTs / 604800);
+  const monthlyEpoch = Math.floor(nowTs / 2592000);
+  const daily = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(1, slot + 1, "Daily", dailyEpoch, DAILY_ROTATING_QUESTS_UI));
+  const weekly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(2, slot, "Weekly", weeklyEpoch, WEEKLY_ROTATING_QUESTS_UI));
+  const monthly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(3, slot, "Monthly", monthlyEpoch, MONTHLY_ROTATING_QUESTS_UI));
+  return [...tutorialAndCheckIn, ...daily, ...weekly, ...monthly];
+}
 const DEFENSE_DEFS = [
   { idx: 0, key: "rocketLauncher", name: "Rocket Launcher", icon: "🚀", cost: { m: 2000, c: 0, d: 0 } },
   { idx: 1, key: "lightLaser", name: "Light Laser", icon: "🔴", cost: { m: 1500, c: 500, d: 0 } },
@@ -3179,6 +3342,33 @@ function questClaimedMask(period: QuestPeriod, questState: QuestStateAccount | n
   return questState.monthlyEpoch === Math.floor(nowTs / 2592000) ? questState.monthlyClaimedMask : 0n;
 }
 
+
+type StorePeriod = 1 | 2 | 3;
+type StorePack = {
+  period: StorePeriod;
+  id: number;
+  group: "Daily" | "Weekly" | "Monthly";
+  title: string;
+  hint: string;
+  priceUsdc: bigint;
+  reward: { metal: number; crystal: number; deuterium: number };
+};
+
+const STORE_PACKS: StorePack[] = [
+  { period: 1, id: 0, group: "Daily", title: "Daily Supply Drop", hint: "Small refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 3000, crystal: 2000, deuterium: 750 } },
+  { period: 1, id: 1, group: "Daily", title: "Daily Logistics Crate", hint: "A modest boost without skipping progression.", priceUsdc: 2_500_000n, reward: { metal: 8000, crystal: 5000, deuterium: 2000 } },
+  { period: 2, id: 0, group: "Weekly", title: "Weekly Foundry Pack", hint: "Enough material to keep queues moving.", priceUsdc: 7_500_000n, reward: { metal: 35000, crystal: 24000, deuterium: 10000 } },
+  { period: 2, id: 1, group: "Weekly", title: "Weekly Expansion Pack", hint: "Supports fleet and building momentum.", priceUsdc: 15_000_000n, reward: { metal: 80000, crystal: 55000, deuterium: 25000 } },
+  { period: 3, id: 0, group: "Monthly", title: "Monthly Sector Pack", hint: "A larger but capped monthly resource bundle.", priceUsdc: 30_000_000n, reward: { metal: 180000, crystal: 125000, deuterium: 60000 } },
+  { period: 3, id: 1, group: "Monthly", title: "Monthly Command Pack", hint: "Top monthly support for established planets.", priceUsdc: 60_000_000n, reward: { metal: 400000, crystal: 275000, deuterium: 140000 } },
+];
+
+function storePurchasedMask(period: StorePeriod, purchaseState: StorePurchaseStateAccount | null, nowTs: number): bigint {
+  if (!purchaseState) return 0n;
+  if (period === 1) return purchaseState.dailyEpoch === Math.floor(nowTs / 86400) ? purchaseState.dailyPurchasedMask : 0n;
+  if (period === 2) return purchaseState.weeklyEpoch === Math.floor(nowTs / 604800) ? purchaseState.weeklyPurchasedMask : 0n;
+  return purchaseState.monthlyEpoch === Math.floor(nowTs / 2592000) ? purchaseState.monthlyPurchasedMask : 0n;
+}
 const QuestRequirementModal: React.FC<{ quest: QuestDefinition | null; state: PlayerState; onClose: () => void; }> = ({ quest, state, onClose }) => {
   if (!quest) return null;
   const rows = quest.requirements.map(req => ({ ...req, value: req.current(state), met: req.current(state) >= req.required }));
@@ -3211,6 +3401,7 @@ const QuestsTab: React.FC<{
 }> = ({ state, questState, nowTs, txBusy, onDailyCheckIn, onClaimQuest }) => {
   const [lockedQuest, setLockedQuest] = useState<QuestDefinition | null>(null);
   const groups: Array<QuestDefinition["group"]> = ["Tutorial", "Daily", "Weekly", "Monthly"];
+  const visibleQuests = activeQuestDefinitions(nowTs);
   const currentDay = Math.floor(nowTs / 86400);
   const checkInClaimed = questState?.dailyCheckinDay === currentDay || hasQuestBit(questClaimedMask(1, questState, nowTs), 0);
   const nextStreak = Math.min((questState?.dailyCheckinStreak ?? 0) + 1, 30);
@@ -3226,7 +3417,7 @@ const QuestsTab: React.FC<{
           <div key={group} style={{marginBottom:24}}>
             <div className="section-title" style={{marginBottom:12}}>{group}</div>
             <div className="grid-3">
-              {QUEST_DEFINITIONS.filter(q => q.group === group).map(quest => {
+              {visibleQuests.filter(q => q.group === group).map(quest => {
                 const mask = questClaimedMask(quest.period, questState, nowTs);
                 const claimed = quest.checkIn ? checkInClaimed : hasQuestBit(mask, quest.id);
                 const statuses = quest.requirements.map(req => {
@@ -3306,6 +3497,87 @@ const QuestsTab: React.FC<{
   );
 };
 
+
+const StoreTab: React.FC<{
+  state: PlayerState;
+  storeConfig: StoreConfigState | null;
+  storePurchaseState: StorePurchaseStateAccount | null;
+  usdcBalance: bigint;
+  nowTs: number;
+  txBusy: boolean;
+  onPurchase: (period: StorePeriod, packId: number) => void;
+}> = ({ state, storeConfig, storePurchaseState, usdcBalance, nowTs, txBusy, onPurchase }) => {
+  const groups: StorePack["group"][] = ["Daily", "Weekly", "Monthly"];
+  const storeReady = !!storeConfig?.enabled;
+
+  return (
+    <div>
+      <div className="section-title">USDC STORE</div>
+      <div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>
+        Wallet USDC {formatTokenAmount(usdcBalance, 6)} · Rewards respect on-chain storage caps.
+      </div>
+      {!storeConfig && (
+        <div className="notice-box" style={{marginBottom:18}}>
+          Store config is not initialized on-chain yet.
+        </div>
+      )}
+      {storeConfig && !storeConfig.enabled && (
+        <div className="notice-box" style={{marginBottom:18}}>
+          Store is currently disabled on-chain.
+        </div>
+      )}
+      {groups.map(group => (
+        <div key={group} style={{marginBottom:24}}>
+          <div className="section-title" style={{marginBottom:12}}>{group}</div>
+          <div className="grid-3">
+            {STORE_PACKS.filter(pack => pack.group === group).map(pack => {
+              const mask = storePurchasedMask(pack.period, storePurchaseState, nowTs);
+              const purchased = ((mask >> BigInt(pack.id)) & 1n) === 1n;
+              const canAfford = usdcBalance >= pack.priceUsdc;
+              const canBuy = storeReady && !purchased && canAfford;
+              const status = purchased ? "purchased" : !storeReady ? "unavailable" : !canAfford ? "need USDC" : "ready";
+
+              return (
+                <div key={`${pack.period}:${pack.id}`} className={`quest-card ${purchased ? "claimed" : canBuy ? "ready" : "locked"}`}>
+                  <div className="quest-top">
+                    <div>
+                      <div className="quest-title">{pack.title}</div>
+                      <div className="quest-hint">{pack.hint}</div>
+                    </div>
+                    <div className={`quest-badge ${purchased ? "claimed" : canBuy ? "" : "locked"}`}>${formatTokenAmount(pack.priceUsdc, 6)}</div>
+                  </div>
+
+                  <div className="quest-rewards">
+                    <div className="quest-reward"><span>Metal</span><strong>{fmt(pack.reward.metal)}</strong></div>
+                    <div className="quest-reward"><span>Crystal</span><strong>{fmt(pack.reward.crystal)}</strong></div>
+                    <div className="quest-reward"><span>Deut</span><strong>{fmt(pack.reward.deuterium)}</strong></div>
+                  </div>
+
+                  <div className="quest-req-list">
+                    <div className={`quest-req-row ${storeReady ? "met" : "missing"}`}><span>Store enabled</span><strong>{storeReady ? "yes" : "no"}</strong></div>
+                    <div className={`quest-req-row ${!purchased ? "met" : "missing"}`}><span>Period limit</span><strong>{purchased ? "used" : "open"}</strong></div>
+                    <div className={`quest-req-row ${canAfford ? "met" : "missing"}`}><span>USDC</span><strong>{formatTokenAmount(usdcBalance, 6)}/{formatTokenAmount(pack.priceUsdc, 6)}</strong></div>
+                  </div>
+
+                  <div className="quest-actions">
+                    <button
+                      className={`quest-btn${purchased ? " claimed" : canBuy ? "" : " locked"}`}
+                      disabled={txBusy || !canBuy}
+                      title={!storeReady ? "Store is not enabled on-chain." : purchased ? "This pack was already purchased for the current period." : !canAfford ? "Not enough USDC." : undefined}
+                      onClick={() => onPurchase(pack.period, pack.id)}
+                    >
+                      {purchased ? "PURCHASED" : canBuy ? "BUY" : status.toUpperCase()}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 const FleetTab: React.FC<{ fleet:Fleet; computerTech: number; res?:Resources; txBusy:boolean; onOpenLaunch:()=>void }> =
   ({ fleet, computerTech, txBusy, onOpenLaunch }) => {
     const totalShips=SHIPS.reduce((s,sh)=>s+((fleet as any)[sh.key]??0),0);
@@ -3322,8 +3594,8 @@ const MissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; onResol
     return (<div><div className="section-title">ACTIVE MISSIONS</div>{active.map(({m,i})=>{const progress=missionProgress(m,nowTs); const returning=m.applied; const etaSecs=returning?Math.max(0,m.returnTs-nowTs):Math.max(0,m.arriveTs-nowTs); const typeLabel=MISSION_LABELS[m.missionType]??"UNKNOWN"; const needsResolution=(m.missionType===2&&((!m.applied&&nowTs>=m.arriveTs)||(m.applied&&m.returnTs>0&&nowTs>=m.returnTs)))||(m.missionType===5&&!m.applied&&nowTs>=m.arriveTs); const ships=SHIPS.map(ship=>({label:ship.name,key:ship.key,n:getMissionShipCount(m,ship.key)})).filter(s=>s.n>0); const artShips=ships; const hasCargo=m.cargoMetal>0n||m.cargoCrystal>0n||m.cargoDeuterium>0n; return(<div key={i} className="mission-card"><div className="mission-header"><div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><span className={`mission-type-badge ${m.missionType===2?"transport":"other"}`}>{typeLabel}</span><span className="tag">SLOT {i}</span>{needsResolution&&<span style={{fontSize:9,color:"var(--success)",letterSpacing:1,padding:"2px 6px",border:"1px solid rgba(6,214,160,0.4)",borderRadius:2}}></span>}</div>{returning&&<span className="mission-returning">↩ RETURN</span>}</div><div className="progress-bar"><div className={`progress-fill ${returning?"returning":"outbound"}`} style={{width:`${progress}%`}}/></div><div className="mission-info"><span>{returning?"Return ETA":"Arrive ETA"}</span><span className="mission-eta">{etaSecs<=0?"ARRIVED":fmtCountdown(etaSecs)}</span></div><div className="mission-ships">{ships.map(s=><span key={s.label} className="mission-ship-badge">{s.label} ×{s.n.toLocaleString()}</span>)}</div>{artShips.length>0&&<div className="mission-ship-media">{artShips.map(s=><div key={s.key} className="mission-ship-card"><div className="mission-ship-card-art"><img src={getShipArtUrl(s.key)} alt={s.label} loading="lazy" /></div><div className="mission-ship-card-copy"><span>{s.label}</span><strong>×{s.n.toLocaleString()}</strong></div></div>)}</div>}{hasCargo&&<div style={{marginTop:8,fontSize:10,color:"var(--dim)",display:"flex",gap:12,flexWrap:"wrap"}}>{m.cargoMetal>0n&&<span style={{color:"var(--metal)"}}>⛏ {fmt(m.cargoMetal)}</span>}{m.cargoCrystal>0n&&<span style={{color:"var(--crystal)"}}>💎 {fmt(m.cargoCrystal)}</span>}{m.cargoDeuterium>0n&&<span style={{color:"var(--deut)"}}>🧪 {fmt(m.cargoDeuterium)}</span>}</div>}{needsResolution&&<button className="apply-btn" disabled={txBusy} onClick={()=>m.missionType===2?onResolveTransport(m,i):onResolveColonize(m,i)}>{m.missionType===2?"RESOLVE TRANSPORT":"RESOLVE COLONIZE"}</button>}</div>);})}</div>);
   };
 
-const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; onResolveTransport:(mission:Mission,slot:number)=>void; onResolveAttack:(mission:Mission,slot:number)=>void; onResolveColonize:(mission:Mission,slot:number)=>void }> =
-  ({ fleet, nowTs, txBusy, onResolveTransport, onResolveAttack, onResolveColonize }) => {
+const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; antimatterBalance: bigint; antimatterEnabled: boolean; onResolveTransport:(mission:Mission,slot:number)=>void; onResolveAttack:(mission:Mission,slot:number)=>void; onResolveColonize:(mission:Mission,slot:number)=>void; onAccelerateMission:(mission:Mission,slot:number,leg:0|1)=>void }> =
+  ({ fleet, nowTs, txBusy, antimatterBalance, antimatterEnabled, onResolveTransport, onResolveAttack, onResolveColonize, onAccelerateMission }) => {
     const active = fleet.missions.map((m, i) => ({ m, i })).filter(({ m }) => m.missionType !== 0);
 
     if (active.length === 0) {
@@ -3355,6 +3627,10 @@ const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; 
             .filter(s => s.n > 0);
           const artShips = ships;
           const hasCargo = m.cargoMetal > 0n || m.cargoCrystal > 0n || m.cargoDeuterium > 0n;
+          const accelerationLeg: 0 | 1 = returning ? 1 : 0;
+          const accelerationCost = BigInt(Math.max(0, etaSecs)) * 1_000_000n;
+          const canAccelerate = antimatterEnabled && etaSecs > 0 && antimatterBalance >= accelerationCost;
+          const accelerationLabel = returning ? "INSTANT RETURN" : "INSTANT ARRIVAL";
 
           return (
             <div key={i} className="mission-card">
@@ -3559,6 +3835,7 @@ const SECONDARY_TABS: { id: Tab; icon: string; label: string }[] = [
 const TAB_META: Record<Tab, { eyebrow: string; title: string; subtitle: string }> = {
   overview: { eyebrow: "Command", title: "Planet Overview", subtitle: "Read colony health, queues, and next pressure points at a glance." },
   quests: { eyebrow: "Objectives", title: "Quest Command", subtitle: "Claim tutorial, daily, weekly, and monthly rewards verified by the on-chain program." },
+  store: { eyebrow: "Supply", title: "USDC Store", subtitle: "Buy capped daily, weekly, and monthly resource packs." },
   resources: { eyebrow: "Economy", title: "Resource Grid", subtitle: "Tune production before capacity, energy, or field limits become blockers." },
   buildings: { eyebrow: "Infrastructure", title: "Planet Build Queue", subtitle: "Upgrade mines, factories, storage, and shipyard support from one surface." },
   research: { eyebrow: "Research", title: "Technology Lab", subtitle: "Unlock deeper fleet, defense, and expansion options through focused research." },
@@ -3643,6 +3920,9 @@ const App: React.FC = () => {
   const [gameConfigBusy, setGameConfigBusy] = useState(false);
   const [gameConfigMintInput, setGameConfigMintInput] = useState(DEFAULT_ANTIMATTER_MINT);
   const [questState, setQuestState] = useState<QuestStateAccount | null>(null);
+  const [storeConfig, setStoreConfig] = useState<StoreConfigState | null>(null);
+  const [storePurchaseState, setStorePurchaseState] = useState<StorePurchaseStateAccount | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
   const [antimatterBalance, setAntimatterBalance] = useState<bigint>(0n);
   const [antimatterBalanceLoading, setAntimatterBalanceLoading] = useState(false);
   const [battleReports, setBattleReports] = useState<BattleReport[]>([]);
@@ -3654,8 +3934,13 @@ const App: React.FC = () => {
   const txLockRef = useRef(false);
 
   const state = planets.find(p => p.planetPda === selectedPlanetPda) ?? planets[0] ?? null;
+  const liveRes = useInterpolatedResources(state?.resources, nowTs);
   const hasCreatedWorld = planets.length > 0;
   const isDevConfigAdmin = publicKey?.toBase58() === DEV_CONFIG_ADMIN_WALLET;
+  const confirmResourceCapWarning = useCallback((action: string, delta: ResourceDelta, res: Resources | undefined = liveRes): boolean => {
+    const message = resourceCapWarningMessage(action, res, delta);
+    return !message || window.confirm(message);
+  }, [liveRes]);
   useEffect(() => { const id = setInterval(() => setNowTs(Math.floor(Date.now() / 1000)), 1000); return () => clearInterval(id); }, []);
   useEffect(() => {
     setActiveWalletKey(walletPublicKey?.toBase58() ?? null);
@@ -3707,7 +3992,7 @@ const App: React.FC = () => {
     marketClientRef.current?.setActivePlanet(state ? new PublicKey(state.planetPda) : null);
   }, [state]);
   useEffect(() => {
-    if (!hasCreatedWorld && tab === "market") setTab("overview");
+    if (!hasCreatedWorld && (tab === "market" || tab === "store")) setTab("overview");
   }, [hasCreatedWorld, tab]);
   useEffect(() => {
     clientRef.current?.setPreferVaultSigning(useVaultSigning);
@@ -3821,6 +4106,34 @@ const App: React.FC = () => {
     } finally { setAntimatterBalanceLoading(false); }
   }, [connection, gameConfig?.antimatterMint, publicKey]);
 
+  const refreshStoreState = useCallback(async () => {
+    if (!clientRef.current || !publicKey) {
+      setStoreConfig(null);
+      setStorePurchaseState(null);
+      setUsdcBalance(0n);
+      return null;
+    }
+    const config = await clientRef.current.getStoreConfig();
+    setStoreConfig(config);
+    const purchaseState = await clientRef.current.getStorePurchaseState(publicKey);
+    setStorePurchaseState(purchaseState);
+    if (!config?.usdcMint) {
+      setUsdcBalance(0n);
+      return config;
+    }
+    try {
+      const mint = new PublicKey(config.usdcMint);
+      const response = await connection.getParsedTokenAccountsByOwner(publicKey, { mint, programId: SPL_TOKEN_PROGRAM_ID }, "confirmed");
+      const total = response.value.reduce((sum, account) => {
+        const parsed = account.account.data.parsed as { info?: { tokenAmount?: { amount?: string } } };
+        return sum + BigInt(parsed?.info?.tokenAmount?.amount ?? "0");
+      }, 0n);
+      setUsdcBalance(total);
+    } catch {
+      setUsdcBalance(0n);
+    }
+    return config;
+  }, [connection, publicKey]);
   const replacePlanetState = useCallback((nextState: PlayerState) => {
     setPlanets(prev => {
       const idx = prev.findIndex(p => p.planetPda === nextState.planetPda);
@@ -3862,8 +4175,8 @@ const App: React.FC = () => {
       clientRef.current = null;
       marketClientRef.current = null;
       setPlanets([]); setSelectedPlanetPda(null); setLoading(false);
-      setVaultStatus("loading"); setGameConfig(null); setQuestState(null);
-      setGameConfigMintInput(DEFAULT_ANTIMATTER_MINT); setAntimatterBalance(0n);
+      setVaultStatus("loading"); setGameConfig(null); setQuestState(null); setStoreConfig(null); setStorePurchaseState(null);
+      setGameConfigMintInput(DEFAULT_ANTIMATTER_MINT); setAntimatterBalance(0n); setUsdcBalance(0n);
       setVaultBalance(0n);
       return;
     }
@@ -4057,11 +4370,44 @@ const App: React.FC = () => {
     );
   };
 
+  const getDailyCheckInRewardDelta = (): ResourceDelta => {
+    const currentDay = Math.floor(nowTs / 86_400);
+    const previousDay = questState?.dailyCheckinDay ?? -1;
+    const nextStreak = previousDay === currentDay - 1
+      ? Math.min((questState?.dailyCheckinStreak ?? 0) + 1, 30)
+      : 1;
+    return {
+      metal: 500 + nextStreak * 50,
+      crystal: 300 + Math.floor((nextStreak * 50) / 2),
+      deuterium: 100 + Math.floor((nextStreak * 50) / 5),
+    };
+  };
+
+  const handleDailyCheckIn = async () => {
+    if (!clientRef.current || !state) return;
+    if (!confirmResourceCapWarning("Daily check-in", getDailyCheckInRewardDelta())) return;
+    await withTx("Daily check-in", () => clientRef.current!.dailyCheckIn(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); });
+  };
+
+  const handleClaimQuest = async (period: QuestPeriod, questId: number) => {
+    if (!clientRef.current || !state) return;
+    const quest = activeQuestDefinitions(nowTs).find(entry => entry.period === period && entry.id === questId);
+    if (quest && !confirmResourceCapWarning(`Claim ${quest.title}`, quest.reward)) return;
+    await withTx("Claim quest", () => clientRef.current!.claimQuest(new PublicKey(state.entityPda), period, questId), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); });
+  };
+
   const handleInstantFinishBuild = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish build", () => clientRef.current!.accelerateBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
   const handleInstantFinishResearch = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish research", () => clientRef.current!.accelerateResearchWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
   const handleInstantFinishShipyard = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish shipyard", () => clientRef.current!.accelerateShipBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
+  const handleAccelerateMission = async (_mission: Mission, slot: number, leg: 0 | 1) => { if (!clientRef.current || !state) return; await withTx(leg === 1 ? "Instant mission return" : "Instant mission arrival", () => clientRef.current!.accelerateMissionWithAntimatter(new PublicKey(state.entityPda), slot, leg), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
+  const handlePurchaseStorePack = async (period: StorePeriod, packId: number) => {
+    if (!clientRef.current || !state) return;
+    const pack = STORE_PACKS.find(entry => entry.period === period && entry.id === packId);
+    if (pack && !confirmResourceCapWarning(`Buy ${pack.title}`, pack.reward)) return;
+    await withTx("Purchase store pack", () => clientRef.current!.purchaseStorePack(new PublicKey(state.entityPda), period, packId), async () => { await refreshSelectedPlanetState(); await refreshStoreState(); });
+  };
 
-  useEffect(() => { if (!publicKey) return; void loadAntimatterBalance().catch(() => setAntimatterBalance(0n)); }, [publicKey, gameConfig?.antimatterMint, loadAntimatterBalance]);
+  useEffect(() => { if (!publicKey) return; void loadAntimatterBalance().catch(() => setAntimatterBalance(0n)); void refreshStoreState().catch(() => {}); }, [publicKey, gameConfig?.antimatterMint, loadAntimatterBalance, refreshStoreState]);
 
   const createPlanet = async () => {
     if (!clientRef.current) return;
@@ -4188,16 +4534,15 @@ const App: React.FC = () => {
     finally { setTxBusy(false); setTxProgress("Processing..."); }
   };
 
-  const liveRes = useInterpolatedResources(state?.resources, nowTs);
   const activeMissionCount = state?.fleet.missions.filter(m => m.missionType !== 0).length ?? 0;
   const vaultReady = clientRef.current?.isVaultReady() ?? false;
   const antimatterBalanceLabel = formatTokenAmount(antimatterBalance, DEFAULT_ANTIMATTER_DECIMALS);
   const antimatterEnabled = !!gameConfig;
   const visibleSecondaryTabs = (hasCreatedWorld
     ? SECONDARY_TABS
-    : SECONDARY_TABS.filter(t => t.id !== "market")).concat([{ id: "activity" as Tab, icon: "ACT", label: "Activity" }]);
-  const visibleDesktopTabs: Tab[] = ["overview","quests","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"]
-    .filter(t => hasCreatedWorld || t !== "market") as Tab[];
+    : SECONDARY_TABS.filter(t => t.id !== "market" && t.id !== "store")).concat([{ id: "activity" as Tab, icon: "ACT", label: "Activity" }]);
+  const visibleDesktopTabs: Tab[] = ["overview","quests","store","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"]
+    .filter(t => hasCreatedWorld || (t !== "market" && t !== "store")) as Tab[];
   const controllerTabs = isMobile
     ? [...PRIMARY_TABS.map(entry => entry.id), ...visibleSecondaryTabs.map(entry => entry.id)]
     : visibleDesktopTabs;
@@ -4295,6 +4640,7 @@ const App: React.FC = () => {
           antimatterBalance={antimatterBalance}
           onTxStart={handleMarketTxStart}
           onTxEnd={handleMarketTxEnd}
+          onResourceCreditWarning={confirmResourceCapWarning}
           txBusy={txBusy}
         />
       );
@@ -4306,7 +4652,9 @@ const App: React.FC = () => {
       case "overview":
         return <OverviewTab state={state} res={liveRes} nowTs={nowTs} planets={planets} onSelectPlanet={setSelectedPlanetPda} onFinishBuild={handleFinishBuild} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishBuild={handleInstantFinishBuild} onInstantFinishResearch={handleInstantFinishResearch} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy}/>;
       case "quests":
-        return <QuestsTab state={state} questState={questState} nowTs={nowTs} txBusy={txBusy} onDailyCheckIn={() => withTx("Daily check-in", () => clientRef.current!.dailyCheckIn(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); })} onClaimQuest={(period, questId) => withTx("Claim quest", () => clientRef.current!.claimQuest(new PublicKey(state.entityPda), period, questId), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); })} />;
+        return <QuestsTab state={state} questState={questState} nowTs={nowTs} txBusy={txBusy} onDailyCheckIn={handleDailyCheckIn} onClaimQuest={handleClaimQuest} />;
+      case "store":
+        return <StoreTab state={state} storeConfig={storeConfig} storePurchaseState={storePurchaseState} usdcBalance={usdcBalance} nowTs={nowTs} txBusy={txBusy} onPurchase={handlePurchaseStorePack} />;
       case "resources":
         return <ResourcesTab state={state} res={liveRes} nowTs={nowTs} onStartBuild={idx => withTx("Start build", () => clientRef.current!.startBuild(new PublicKey(state.entityPda), idx))} onFinishBuild={handleFinishBuild} onInstantFinishBuild={handleInstantFinishBuild} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "buildings":
@@ -4318,7 +4666,7 @@ const App: React.FC = () => {
       case "fleet":
         return <FleetTab fleet={state.fleet} computerTech={state.research.computerTech} res={liveRes} txBusy={txBusy} onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}/>;
       case "missions":
-        return <CommandMissionsTab fleet={state.fleet} nowTs={nowTs} txBusy={txBusy} onResolveTransport={(mission, slotIdx) => withTx("Resolve transport", () => clientRef.current!.resolveTransport(new PublicKey(state.entityPda), mission, slotIdx), async () => { if (publicKey) await loadAllPlanets(publicKey, state.planetPda); })} onResolveAttack={(mission, slotIdx) => { let signature: string | undefined; let battleEvent: BattleResolvedEvent | null = null; const sourceAtClick = state; return withTx("Resolve attack", async () => { signature = await clientRef.current!.resolveAttack(new PublicKey(sourceAtClick.entityPda), mission, slotIdx); if (signature && !mission.applied) { try { battleEvent = await clientRef.current!.fetchBattleResolvedEvent(signature); } catch (eventErr) { console.warn("Battle event unavailable from transaction logs", eventErr); } } }, async () => { if (!publicKey) return; const loaded = await loadAllPlanets(publicKey, sourceAtClick.planetPda); const refreshedSource = loaded.find(p => p.planetPda === sourceAtClick.planetPda) ?? sourceAtClick; const refreshedMission = refreshedSource.fleet.missions[slotIdx]; if (battleEvent) saveBattleEventReport(refreshedSource, battleEvent, signature); else if (refreshedMission?.missionType === 1 && refreshedMission.applied) saveBattleReport(refreshedSource, slotIdx, refreshedMission, signature, false); else if (mission.applied) completeBattleReport(sourceAtClick, slotIdx, mission, signature); }); }} onResolveColonize={(mission, slotIdx) => setConfirmation({ kind: "resolveColonize", mission, slotIdx })}/>;
+        return <CommandMissionsTab fleet={state.fleet} nowTs={nowTs} txBusy={txBusy} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onAccelerateMission={handleAccelerateMission} onResolveTransport={(mission, slotIdx) => { if (!confirmResourceCapWarning("Resolve transport cargo", { metal: mission.cargoMetal, crystal: mission.cargoCrystal, deuterium: mission.cargoDeuterium })) return; return withTx("Resolve transport", () => clientRef.current!.resolveTransport(new PublicKey(state.entityPda), mission, slotIdx), async () => { if (publicKey) await loadAllPlanets(publicKey, state.planetPda); }); }} onResolveAttack={(mission, slotIdx) => { if (mission.applied && !confirmResourceCapWarning("Resolve returning attack cargo", { metal: mission.cargoMetal, crystal: mission.cargoCrystal, deuterium: mission.cargoDeuterium })) return; let signature: string | undefined; let battleEvent: BattleResolvedEvent | null = null; const sourceAtClick = state; return withTx("Resolve attack", async () => { signature = await clientRef.current!.resolveAttack(new PublicKey(sourceAtClick.entityPda), mission, slotIdx); if (signature && !mission.applied) { try { battleEvent = await clientRef.current!.fetchBattleResolvedEvent(signature); } catch (eventErr) { console.warn("Battle event unavailable from transaction logs", eventErr); } } }, async () => { if (!publicKey) return; const loaded = await loadAllPlanets(publicKey, sourceAtClick.planetPda); const refreshedSource = loaded.find(p => p.planetPda === sourceAtClick.planetPda) ?? sourceAtClick; const refreshedMission = refreshedSource.fleet.missions[slotIdx]; if (battleEvent) saveBattleEventReport(refreshedSource, battleEvent, signature); else if (refreshedMission?.missionType === 1 && refreshedMission.applied) saveBattleReport(refreshedSource, slotIdx, refreshedMission, signature, false); else if (mission.applied) completeBattleReport(sourceAtClick, slotIdx, mission, signature); }); }} onResolveColonize={(mission, slotIdx) => setConfirmation({ kind: "resolveColonize", mission, slotIdx })}/>;
       case "activity":
         return <ActivityTab reports={battleReports} onClear={() => setBattleReports([])} />;
       case "research":
@@ -4341,10 +4689,10 @@ const App: React.FC = () => {
 
   const handleMobileTabClick = (t: Tab) => { setTab(t); setShowMoreDrawer(false); };
 
-  const ALL_DESKTOP_TABS: Tab[] = ["overview","quests","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"];
+  const ALL_DESKTOP_TABS: Tab[] = ["overview","quests","store","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"];
   const DESKTOP_TAB_ICONS: Record<Tab, string> = {
     activity:"ACT", quests:"Q",
-    overview:"◈", resources:"⛏", buildings:"⬡", research:"🔬",
+    overview:"◈", store:"$", resources:"⛏", buildings:"⬡", research:"🔬",
     shipyard:"🚀", defense:"🛡", fleet:"◉", missions:"⊹", galaxy:"🌌", market:"⚖",
   };
 

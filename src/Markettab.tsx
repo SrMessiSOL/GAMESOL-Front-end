@@ -36,6 +36,7 @@ import { fmtCountdown, type PlayerState, type Resources } from "./game-state";
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type MarketView = "buy" | "sell" | "myoffers";
+type ResourceCreditDelta = { metal?: bigint; crystal?: bigint; deuterium?: bigint };
 
 interface MarketTabProps {
   /** Initialised MarketClient. Null if market program not yet deployed. */
@@ -50,6 +51,7 @@ interface MarketTabProps {
   onTxStart: (label: string) => void;
   /** Called after each tx (success or fail). */
   onTxEnd: (error?: string) => void;
+  onResourceCreditWarning?: (action: string, delta: ResourceCreditDelta) => boolean;
   /** Global tx busy flag — disables all buttons when true. */
   txBusy: boolean;
 }
@@ -629,6 +631,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   antimatterBalance,
   onTxStart,
   onTxEnd,
+  onResourceCreditWarning,
   txBusy,
 }) => {
   const [view, setView] = useState<MarketView>("buy");
@@ -673,7 +676,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
       } else {
         // Initialize market config
         await client.initializeMarket(mint);
-        
+
         // Also initialize escrow after market
         onTxStart("Initializing escrow...");
         await client.initializeEscrow();
@@ -754,6 +757,12 @@ const MarketTab: React.FC<MarketTabProps> = ({
     return offers.filter(o => o.seller !== walletAddress);
   }, [offers, view, walletAddress]);
 
+  const resourceCreditDeltaForOffer = (offer: MarketOffer): ResourceCreditDelta => {
+    if (offer.resourceType === ResourceType.Metal) return { metal: offer.resourceAmount };
+    if (offer.resourceType === ResourceType.Crystal) return { crystal: offer.resourceAmount };
+    return { deuterium: offer.resourceAmount };
+  };
+
   // ── Transaction handlers ─────────────────────────────────────────────────────
 
   const handleCreateOffer = async (params: CreateOfferParams) => {
@@ -779,6 +788,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   const handleCancelOffer = async (offer: MarketOffer) => {
     if (!client) return;
+    if (onResourceCreditWarning && !onResourceCreditWarning("Cancel market offer", resourceCreditDeltaForOffer(offer))) return;
     onTxStart("Cancelling offer...");
     try {
       await client.cancelOffer(offer);
@@ -795,6 +805,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
       onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
       return;
     }
+    if (onResourceCreditWarning && !onResourceCreditWarning("Buy market resources", resourceCreditDeltaForOffer(offer))) return;
     onTxStart("Purchasing...");
     try {
       await client.acceptOffer(offer);

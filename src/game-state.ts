@@ -33,6 +33,8 @@ const AUTHORIZED_VAULT_DISCRIMINATOR = Buffer.from([224, 162, 234, 3, 170, 103, 
 const VAULT_BACKUP_DISCRIMINATOR     = Buffer.from([167, 172, 2, 221, 196, 20, 199, 27]);
 const GAME_CONFIG_DISCRIMINATOR      = Buffer.from([45, 146, 146, 33, 170, 69, 96, 133]);
 const QUEST_STATE_DISCRIMINATOR      = Buffer.from([91, 149, 47, 55, 121, 144, 93, 66]);
+const STORE_CONFIG_DISCRIMINATOR     = Buffer.from([108, 23, 66, 65, 67, 124, 167, 135]);
+const STORE_PURCHASE_STATE_DISCRIMINATOR = Buffer.from([98, 26, 131, 62, 86, 147, 141, 175]);
 const BATTLE_RESOLVED_EVENT_DISCRIMINATOR = Buffer.from([205, 161, 192, 151, 125, 116, 201, 210]);
 
 // ─── Instruction Discriminators ───────────────────────────────────────────────
@@ -98,6 +100,10 @@ const IX = {
   accelerateBuildWithAntimatter: Buffer.from([214, 108, 93, 196, 157, 250, 5, 38]),
   accelerateResearchWithAntimatter: Buffer.from([3, 138, 193, 93, 109, 41, 36, 73]),
   accelerateShipBuildWithAntimatter: Buffer.from([144, 20, 132, 188, 15, 71, 35, 74]),
+  accelerateMissionWithAntimatter: Buffer.from([35, 144, 155, 162, 180, 188, 237, 220]),
+  initializeStoreConfig: Buffer.from([231, 234, 72, 35, 116, 218, 119, 251]),
+  updateStoreConfig: Buffer.from([207, 88, 146, 207, 46, 108, 147, 209]),
+  purchaseStorePack: Buffer.from([112, 75, 157, 242, 238, 109, 2, 252]),
 } as const;
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
@@ -354,6 +360,25 @@ export interface QuestStateAccount {
   dailyCheckinDay: number;
   dailyCheckinStreak: number;
   totalCheckins: number;
+  lastUpdatedTs: number;
+  bump: number;
+}
+
+export interface StoreConfigState {
+  admin: string;
+  usdcMint: string;
+  treasuryUsdcAccount: string;
+  enabled: boolean;
+}
+
+export interface StorePurchaseStateAccount {
+  authority: string;
+  dailyEpoch: number;
+  weeklyEpoch: number;
+  monthlyEpoch: number;
+  dailyPurchasedMask: bigint;
+  weeklyPurchasedMask: bigint;
+  monthlyPurchasedMask: bigint;
   lastUpdatedTs: number;
   bump: number;
 }
@@ -756,6 +781,19 @@ export function deriveQuestStatePda(walletPubkey: PublicKey): PublicKey {
     GAME_STATE_PROGRAM_ID,
   )[0];
 }
+export function deriveStoreConfigPda(): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("store_config")],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
+export function deriveStorePurchaseStatePda(walletPubkey: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("store_purchase_state"), walletPubkey.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
 
 /**
  * Derives the coordinate occupancy lock PDA for a given galaxy/system/position.
@@ -878,6 +916,40 @@ function deserializeQuestState(data: Buffer): QuestStateAccount {
     lastUpdatedTs,
     bump,
   };
+}
+function deserializeStoreConfig(data: Buffer): StoreConfigState {
+  if (!data.slice(0, 8).equals(STORE_CONFIG_DISCRIMINATOR)) {
+    throw new Error("Invalid store config discriminator.");
+  }
+  let o = 8;
+  const admin = readPubkeyRaw(data, o); o += 32;
+  const usdcMint = readPubkeyRaw(data, o); o += 32;
+  const treasuryUsdcAccount = readPubkeyRaw(data, o); o += 32;
+  const enabled = readU8(data, o) !== 0; o += 1;
+  readU8(data, o);
+  return {
+    admin: admin.toBase58(),
+    usdcMint: usdcMint.toBase58(),
+    treasuryUsdcAccount: treasuryUsdcAccount.toBase58(),
+    enabled,
+  };
+}
+
+function deserializeStorePurchaseState(data: Buffer): StorePurchaseStateAccount {
+  if (!data.slice(0, 8).equals(STORE_PURCHASE_STATE_DISCRIMINATOR)) {
+    throw new Error("Invalid store purchase state discriminator.");
+  }
+  let o = 8;
+  const authority = readPubkeyRaw(data, o); o += 32;
+  const dailyEpoch = readI64(data, o); o += 8;
+  const weeklyEpoch = readI64(data, o); o += 8;
+  const monthlyEpoch = readI64(data, o); o += 8;
+  const dailyPurchasedMask = readU64(data, o); o += 8;
+  const weeklyPurchasedMask = readU64(data, o); o += 8;
+  const monthlyPurchasedMask = readU64(data, o); o += 8;
+  const lastUpdatedTs = readI64(data, o); o += 8;
+  const bump = readU8(data, o);
+  return { authority: authority.toBase58(), dailyEpoch, weeklyEpoch, monthlyEpoch, dailyPurchasedMask, weeklyPurchasedMask, monthlyPurchasedMask, lastUpdatedTs, bump };
 }
 
 function deserializeMission(data: Buffer, offset: number): { mission: Mission; bytesRead: number } {
@@ -1745,6 +1817,21 @@ export class GameClient {
       return null;
     }
   }
+  async getStoreConfig(): Promise<StoreConfigState | null> {
+    const storeConfigPda = deriveStoreConfigPda();
+    const account = await this.connection.getAccountInfo(storeConfigPda, "confirmed");
+    if (!account?.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeStoreConfig(Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
+  async getStorePurchaseState(authority: PublicKey = this.provider.wallet.publicKey): Promise<StorePurchaseStateAccount | null> {
+    const purchasePda = deriveStorePurchaseStatePda(authority);
+    const account = await this.connection.getAccountInfo(purchasePda, "confirmed");
+    if (!account?.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeStorePurchaseState(Buffer.from(account.data)); }
+    catch { return null; }
+  }
 
 
   private async findUserTokenAccountForMint(owner: PublicKey, mint: PublicKey): Promise<PublicKey> {
@@ -2065,6 +2152,59 @@ export class GameClient {
 
   async accelerateShipBuildWithAntimatter(entityPda: PublicKey): Promise<string> {
     return this.accelerateWithAntimatter(entityPda, IX.accelerateShipBuildWithAntimatter);
+  }
+
+  async accelerateMissionWithAntimatter(entityPda: PublicKey, slot: number, leg: number): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const gameConfigPda = deriveGameConfigPda();
+    const config = await this.getGameConfig();
+    if (!config) throw new Error("Game config is not initialized.");
+    const antimatterMint = new PublicKey(config.antimatterMint);
+    const userAntimatterAccount = await this.findUserTokenAccountForMint(authority, antimatterMint);
+    const writer = new BorshWriter();
+    writer.writeU8(slot);
+    writer.writeU8(leg);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: gameConfigPda, isSigner: false, isWritable: false },
+        { pubkey: entityPda, isSigner: false, isWritable: true },
+        { pubkey: antimatterMint, isSigner: false, isWritable: true },
+        { pubkey: userAntimatterAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.accelerateMissionWithAntimatter, writer.toBuffer()),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async purchaseStorePack(entityPda: PublicKey, period: number, packId: number): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const config = await this.getStoreConfig();
+    if (!config) throw new Error("Store is not initialized yet.");
+    if (!config.enabled) throw new Error("Store is currently disabled.");
+    const usdcMint = new PublicKey(config.usdcMint);
+    const userUsdcAccount = await this.findUserTokenAccountForMint(authority, usdcMint);
+    const writer = new BorshWriter();
+    writer.writeU8(period);
+    writer.writeU8(packId);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: deriveStoreConfigPda(), isSigner: false, isWritable: false },
+        { pubkey: deriveStorePurchaseStatePda(authority), isSigner: false, isWritable: true },
+        { pubkey: entityPda, isSigner: false, isWritable: true },
+        { pubkey: usdcMint, isSigner: false, isWritable: false },
+        { pubkey: userUsdcAccount, isSigner: false, isWritable: true },
+        { pubkey: new PublicKey(config.treasuryUsdcAccount), isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.purchaseStorePack, writer.toBuffer()),
+    });
+    return this.sendInstruction([ix]);
   }
 
   async forceRotateVault(reportProgress?: ProgressReporter): Promise<void> {
