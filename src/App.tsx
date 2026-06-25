@@ -9,11 +9,18 @@ import {
   type QuestStateAccount,
   type StoreConfigState,
   type StorePurchaseStateAccount,
+  type AllianceStateAccount,
+  type AllianceMembershipAccount,
+  type AllianceJoinRequestAccount,
   type BattleResolvedEvent,
   type BattleResolvedEventRecord,
+  type EspionageReportEvent,
+  type EspionageReportEventRecord,
   type VaultRecoveryPromptRequest,
   Planet, Resources, Fleet, Mission, PlayerState, Research,
   BUILDINGS, SHIPS, SHIP_TYPE_IDX, MISSION_LABELS,
+  ALLIANCE_CREATE_USDC_COST, ALLIANCE_CREATE_ANTIMATTER_COST,
+  ALLIANCE_CREATE_ANTIMATTER_BURN, ALLIANCE_CREATE_ANTIMATTER_TREASURY,
   upgradeCost, buildTimeSecs,
   fmt, fmtCountdown, missionProgress, energyEfficiency,
 } from "./game-state";
@@ -30,10 +37,11 @@ import { PUBLIC_APP_URL } from "./mobileWalletAdapter";
 import gamesolLogo from "./assets/ui/logobg.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Tab = "overview" | "quests" | "resources" | "buildings" | "research" | "shipyard" | "defense" | "fleet" | "missions" | "activity" | "galaxy" | "market" | "store";
+type Tab = "overview" | "quests" | "alliance" | "resources" | "buildings" | "research" | "shipyard" | "defense" | "fleet" | "missions" | "activity" | "galaxy" | "market" | "store";
 
 type LaunchTargetInput =
   | { kind: "attack"; galaxy: number; system: number; position: number }
+  | { kind: "espionage"; galaxy: number; system: number; position: number }
   | { kind: "transport"; mode: "owned"; destinationEntity: string }
   | { kind: "transport"; mode: "coords"; galaxy: number; system: number; position: number }
   | { kind: "colonize"; galaxy: number; system: number; position: number; colonyName: string };
@@ -77,6 +85,36 @@ type BattleReport = {
   signature?: string;
 };
 
+type SpyReport = {
+  id: string;
+  wallet: string;
+  sourcePlanet: string;
+  sourceCoords: string;
+  targetCoords: string;
+  slot: number;
+  resolvedTs: number;
+  revealLevel: number;
+  probesSent: number;
+  probesSurvived: number;
+  probesLost: number;
+  sensorScore: string;
+  counterScore: string;
+  reportedMetal: string;
+  reportedCrystal: string;
+  reportedDeuterium: string;
+  reportedBuildingScore: string;
+  reportedFleetPoints: string;
+  reportedDefensePoints: string;
+  reportedWeaponsTechnology: number;
+  reportedShieldingTechnology: number;
+  reportedArmorTechnology: number;
+  attacker: string;
+  defender: string;
+  destinationPlanet: string;
+  role: "attacker" | "defender" | "observer";
+  signature?: string;
+};
+
 const DEV_CONFIG_ADMIN_WALLET = "HAHnFdgoASDzzma7fP9nfKo5nByU1uStYR964QhWnL2X";
 const DEFAULT_ANTIMATTER_MINT = "FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh";
 const DEFAULT_ANTIMATTER_DECIMALS = 6;
@@ -86,7 +124,8 @@ const MAX_SYSTEM = 999;
 const MAX_POSITION = 15;
 const MAX_RESOURCE_SETTLEMENT_SECONDS = 86_400;
 const ATTACK_LAUNCH_COOLDOWN_SECONDS = 60;
-const TARGET_ATTACK_COOLDOWN_SECONDS = 120;
+const TARGET_ATTACK_COOLDOWN_SECONDS = 30 * 60;
+const NEW_PLAYER_PROTECTION_SECONDS = 7 * 24 * 60 * 60;
 const MIN_ATTACK_COMBAT_POINTS = 1_000;
 const VAULT_PASSWORD_STORAGE_PREFIX = "gamesol:vault-password";
 const APK_DOWNLOAD_URL = import.meta.env.VITE_APK_DOWNLOAD_URL?.trim() || "https://we.tl/t-4k38OiGWCzoEn7jU";
@@ -227,6 +266,18 @@ function battleEventReportId(wallet: string, event: BattleResolvedEvent): string
   ].join(":");
 }
 
+function spyEventReportId(wallet: string, event: EspionageReportEvent): string {
+  return [
+    wallet,
+    event.sourcePlanet,
+    event.missionSlot,
+    event.targetGalaxy,
+    event.targetSystem,
+    event.targetPosition,
+    event.resolvedAt,
+  ].join(":");
+}
+
 function buildBattleReport(wallet: string, source: PlayerState, slot: number, mission: Mission, signature?: string, completed = false): BattleReport {
   const survivors = Object.fromEntries(
     BATTLE_SHIP_FIELDS
@@ -306,7 +357,60 @@ function buildBattleReportsFromEventRecords(wallet: string, planets: PlayerState
   ));
 }
 
+function buildSpyReportFromEvent(wallet: string, source: PlayerState | undefined, event: EspionageReportEvent, signature?: string): SpyReport {
+  const role = event.attacker === wallet ? "attacker" : event.defender === wallet ? "defender" : "observer";
+  return {
+    id: spyEventReportId(wallet, event),
+    wallet,
+    sourcePlanet: source?.planet.name || shortAddress(event.sourcePlanet),
+    sourceCoords: `${event.sourceGalaxy}:${event.sourceSystem}:${event.sourcePosition}`,
+    targetCoords: `${event.targetGalaxy}:${event.targetSystem}:${event.targetPosition}`,
+    slot: event.missionSlot,
+    resolvedTs: event.resolvedAt,
+    revealLevel: event.revealLevel,
+    probesSent: event.probesSent,
+    probesSurvived: event.probesSurvived,
+    probesLost: event.probesLost,
+    sensorScore: event.sensorScore.toString(),
+    counterScore: event.counterScore.toString(),
+    reportedMetal: event.reportedMetal.toString(),
+    reportedCrystal: event.reportedCrystal.toString(),
+    reportedDeuterium: event.reportedDeuterium.toString(),
+    reportedBuildingScore: event.reportedBuildingScore.toString(),
+    reportedFleetPoints: event.reportedFleetPoints.toString(),
+    reportedDefensePoints: event.reportedDefensePoints.toString(),
+    reportedWeaponsTechnology: event.reportedWeaponsTechnology,
+    reportedShieldingTechnology: event.reportedShieldingTechnology,
+    reportedArmorTechnology: event.reportedArmorTechnology,
+    attacker: event.attacker,
+    defender: event.defender,
+    destinationPlanet: event.destinationPlanet,
+    role,
+    signature,
+  };
+}
+
+function buildSpyReportsFromEventRecords(wallet: string, planets: PlayerState[], records: EspionageReportEventRecord[]): SpyReport[] {
+  const sourceByPda = new Map(planets.map(planet => [planet.planetPda, planet]));
+  return records.map(record => buildSpyReportFromEvent(
+    wallet,
+    sourceByPda.get(record.event.sourcePlanet),
+    record.event,
+    record.signature,
+  ));
+}
+
 function mergeBattleReportList(reports: BattleReport[], nextReport: BattleReport): BattleReport[] {
+  const existingIndex = reports.findIndex(report => report.id === nextReport.id);
+  const mergedReport = existingIndex >= 0
+    ? { ...reports[existingIndex], ...nextReport, signature: nextReport.signature ?? reports[existingIndex].signature }
+    : nextReport;
+  return (existingIndex >= 0
+    ? reports.map((report, index) => index === existingIndex ? mergedReport : report)
+    : [mergedReport, ...reports]).slice(0, 80);
+}
+
+function mergeSpyReportList(reports: SpyReport[], nextReport: SpyReport): SpyReport[] {
   const existingIndex = reports.findIndex(report => report.id === nextReport.id);
   const mergedReport = existingIndex >= 0
     ? { ...reports[existingIndex], ...nextReport, signature: nextReport.signature ?? reports[existingIndex].signature }
@@ -561,6 +665,58 @@ function buildRotatingQuest(period: 1 | 2 | 3, id: number, group: "Daily" | "Wee
   };
 }
 
+type AllianceMissionDefinition = {
+  period: 1 | 2 | 3;
+  id: number;
+  group: "Daily" | "Weekly" | "Monthly";
+  title: string;
+  xp: number;
+  requirements: QuestRequirement[];
+};
+
+const ALLIANCE_MISSION_DEFINITIONS: AllianceMissionDefinition[] = [
+  { period: 1, id: 0, group: "Daily", title: "Metal Mine Lv 3", xp: 80, requirements: [questReq("Metal Mine", 3, s => s.planet.metalMine)] },
+  { period: 1, id: 1, group: "Daily", title: "Crystal Mine Lv 3", xp: 80, requirements: [questReq("Crystal Mine", 3, s => s.planet.crystalMine)] },
+  { period: 1, id: 2, group: "Daily", title: "Deuterium Synth Lv 2", xp: 90, requirements: [questReq("Deuterium Synth", 2, s => s.planet.deuteriumSynthesizer)] },
+  { period: 1, id: 3, group: "Daily", title: "Solar Plant Lv 4", xp: 80, requirements: [questReq("Solar Plant", 4, s => s.planet.solarPlant)] },
+  { period: 1, id: 4, group: "Daily", title: "Robotics Factory Lv 1", xp: 90, requirements: [questReq("Robotics Factory", 1, s => s.planet.roboticsFactory)] },
+  { period: 1, id: 5, group: "Daily", title: "Shipyard Lv 2", xp: 110, requirements: [questReq("Shipyard", 2, s => s.planet.shipyard)] },
+  { period: 1, id: 6, group: "Daily", title: "Research Lab Lv 1", xp: 100, requirements: [questReq("Research Lab", 1, s => s.planet.researchLab)] },
+  { period: 1, id: 7, group: "Daily", title: "Own 3 Ships", xp: 120, requirements: [questReq("Fleet ships", 3, totalQuestShips)] },
+  { period: 1, id: 8, group: "Daily", title: "Own 3 Defenses", xp: 110, requirements: [questReq("Defense units", 3, totalQuestDefenses)] },
+  { period: 1, id: 9, group: "Daily", title: "Small Cargo", xp: 110, requirements: [questReq("Small Cargo", 1, s => s.fleet.smallCargo)] },
+  { period: 1, id: 10, group: "Daily", title: "Energy Tech Lv 1", xp: 100, requirements: [questReq("Energy Tech", 1, s => s.research.energyTech)] },
+  { period: 1, id: 11, group: "Daily", title: "Computer Tech Lv 1", xp: 120, requirements: [questReq("Computer Tech", 1, s => s.research.computerTech)] },
+  { period: 2, id: 0, group: "Weekly", title: "Metal Mine Lv 6", xp: 350, requirements: [questReq("Metal Mine", 6, s => s.planet.metalMine)] },
+  { period: 2, id: 1, group: "Weekly", title: "Crystal Mine Lv 6", xp: 350, requirements: [questReq("Crystal Mine", 6, s => s.planet.crystalMine)] },
+  { period: 2, id: 2, group: "Weekly", title: "Deuterium Synth Lv 5", xp: 380, requirements: [questReq("Deuterium Synth", 5, s => s.planet.deuteriumSynthesizer)] },
+  { period: 2, id: 3, group: "Weekly", title: "Metal Storage Lv 2", xp: 320, requirements: [questReq("Metal Storage", 2, s => s.planet.metalStorage)] },
+  { period: 2, id: 4, group: "Weekly", title: "Crystal Storage Lv 2", xp: 320, requirements: [questReq("Crystal Storage", 2, s => s.planet.crystalStorage)] },
+  { period: 2, id: 5, group: "Weekly", title: "Deuterium Tank Lv 2", xp: 340, requirements: [questReq("Deuterium Tank", 2, s => s.planet.deuteriumTank)] },
+  { period: 2, id: 6, group: "Weekly", title: "Combustion Drive Lv 2", xp: 380, requirements: [questReq("Combustion Drive", 2, s => s.research.combustionDrive)] },
+  { period: 2, id: 7, group: "Weekly", title: "Impulse Drive Lv 1", xp: 450, requirements: [questReq("Impulse Drive", 1, s => s.research.impulseDrive)] },
+  { period: 2, id: 8, group: "Weekly", title: "Own 10 Ships", xp: 430, requirements: [questReq("Fleet ships", 10, totalQuestShips)] },
+  { period: 2, id: 9, group: "Weekly", title: "Own 10 Defenses", xp: 420, requirements: [questReq("Defense units", 10, totalQuestDefenses)] },
+  { period: 2, id: 10, group: "Weekly", title: "Espionage Probes", xp: 360, requirements: [questReq("Espionage Probe", 3, s => s.fleet.espionageProbe)] },
+  { period: 2, id: 11, group: "Weekly", title: "Build Recycler", xp: 420, requirements: [questReq("Recycler", 1, s => s.fleet.recycler)] },
+  { period: 3, id: 0, group: "Monthly", title: "Metal Mine Lv 12", xp: 1200, requirements: [questReq("Metal Mine", 12, s => s.planet.metalMine)] },
+  { period: 3, id: 1, group: "Monthly", title: "Crystal Mine Lv 12", xp: 1200, requirements: [questReq("Crystal Mine", 12, s => s.planet.crystalMine)] },
+  { period: 3, id: 2, group: "Monthly", title: "Deuterium Synth Lv 10", xp: 1300, requirements: [questReq("Deuterium Synth", 10, s => s.planet.deuteriumSynthesizer)] },
+  { period: 3, id: 3, group: "Monthly", title: "Solar Plant Lv 14", xp: 1100, requirements: [questReq("Solar Plant", 14, s => s.planet.solarPlant)] },
+  { period: 3, id: 4, group: "Monthly", title: "Research Lab Lv 5", xp: 1400, requirements: [questReq("Research Lab", 5, s => s.planet.researchLab)] },
+  { period: 3, id: 5, group: "Monthly", title: "Shipyard Lv 5", xp: 1350, requirements: [questReq("Shipyard", 5, s => s.planet.shipyard)] },
+  { period: 3, id: 6, group: "Monthly", title: "Computer Tech Lv 5", xp: 1500, requirements: [questReq("Computer Tech", 5, s => s.research.computerTech)] },
+  { period: 3, id: 7, group: "Monthly", title: "Astrophysics Lv 1", xp: 1500, requirements: [questReq("Astrophysics", 1, s => s.research.astrophysics)] },
+  { period: 3, id: 8, group: "Monthly", title: "Colony Ship", xp: 1600, requirements: [questReq("Colony Ship", 1, s => s.fleet.colonyShip)] },
+  { period: 3, id: 9, group: "Monthly", title: "Battleship", xp: 1700, requirements: [questReq("Battleship", 1, s => s.fleet.battleship)] },
+  { period: 3, id: 10, group: "Monthly", title: "Own 50 Ships", xp: 1650, requirements: [questReq("Fleet ships", 50, totalQuestShips)] },
+  { period: 3, id: 11, group: "Monthly", title: "Own 50 Defenses", xp: 1550, requirements: [questReq("Defense units", 50, totalQuestDefenses)] },
+];
+
+function allianceThreshold(level: number): bigint {
+  const prev = BigInt(Math.max(0, level - 1));
+  return (prev * BigInt(level) * 1000n) / 2n;
+}
 function activeQuestDefinitions(nowTs: number): QuestDefinition[] {
   const tutorialAndCheckIn = QUEST_DEFINITIONS.filter(q => q.period === 0 || (q.period === 1 && q.id === 0));
   const dailyEpoch = Math.floor(nowTs / 86400);
@@ -2767,7 +2923,7 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
     const attackPoints = fleetCombatPoints(shipQty);
     const attackUnlockLeft = missionType === 1 ? Math.max(0, planet.attackUnlockedAt - nowTs) : 0;
     const attackLaunchCooldownLeft = missionType === 1 && planet.lastAttackLaunchTs > 0 ? Math.max(0, planet.lastAttackLaunchTs + ATTACK_LAUNCH_COOLDOWN_SECONDS - nowTs) : 0;
-    const targetProtectionLeft = missionType === 1 && targetPlanetState ? Math.max(0, targetPlanetState.planet.protectionUntilTs - nowTs) : 0;
+    const targetProtectionLeft = missionType === 1 && targetPlanetState ? Math.max(0, effectiveAttackProtectionUntil(targetPlanetState.planet) - nowTs) : 0;
     const targetCooldownLeft = missionType === 1 && targetPlanetState && targetPlanetState.planet.lastAttackedTs > 0 ? Math.max(0, targetPlanetState.planet.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - nowTs) : 0;
     const attackBlocked = missionType === 1 && (attackUnlockLeft > 0 || attackLaunchCooldownLeft > 0 || targetProtectionLeft > 0 || targetCooldownLeft > 0 || attackPoints < MIN_ATTACK_COMBAT_POINTS || coordStatus === "checking" || coordStatus === "free");
     const scheduleCoordCheck = useCallback((g: number, s: number, p: number) => { setCoordStatus("checking"); setTargetPlanetState(null); if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current); coordCheckTimer.current = setTimeout(async () => { try { const free = await onCheckCoord(g, s, p); setCoordStatus(free ? "free" : "occupied"); if (!free) setTargetPlanetState(await onLoadTargetPlanet(g, s, p)); } catch { setCoordStatus("idle"); setTargetPlanetState(null); } }, 400); }, [onCheckCoord, onLoadTargetPlanet]);
@@ -2780,7 +2936,7 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-      if (missionType === 1 || missionType === 5 || (missionType === 2 && transportMode === "coords")) {
+      if (missionType === 1 || missionType === 5 || missionType === 6 || (missionType === 2 && transportMode === "coords")) {
         scheduleCoordCheck(targetGalaxy, targetSystem, targetPosition);
       } else {
         setCoordStatus("idle");
@@ -2793,13 +2949,14 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
     }, [missionType, transportMode, targetGalaxy, targetSystem, targetPosition, scheduleCoordCheck]);
     const handleColonyCoordChange = (galaxy: number, system: number, position: number, setterG: (v: number) => void, setterS: (v: number) => void, setterP: (v: number) => void, changedField: "g" | "s" | "p", value: number) => { const ng=changedField==="g"?value:galaxy; const ns=changedField==="s"?value:system; const np=changedField==="p"?value:position; if(changedField==="g")setterG(ng); if(changedField==="s")setterS(ns); if(changedField==="p")setterP(np); };
     const coordStatusConfig: Record<CoordStatus, { color: string; text: string }> = { idle:{color:"var(--dim)",text:""}, checking:{color:"var(--warn)",text:"CHECKING..."}, free:{color:"var(--success)",text:"✓ SLOT FREE"}, occupied:{color:"var(--danger)",text:"✗ ALREADY OCCUPIED"} };
-    const handleSubmit = async () => { try { setLocalErr(null); if(totalSent<=0)throw new Error("Select at least one ship."); if(cargoUsed>cargoCap)throw new Error("Cargo exceeds fleet capacity."); if(!hasLaunchDeuterium)throw new Error(`Not enough deuterium. Need ${fmt(deuteriumNeeded)} including ${fmt(launchFuel)} launch fuel.`); if(!hasFreeMissionSlot)throw new Error("No mission slots available. Resolve an existing mission first."); if(missionType===1){if(attackUnlockLeft>0)throw new Error(`Attack launches unlock in ${fmtCountdown(attackUnlockLeft)}.`); if(attackLaunchCooldownLeft>0)throw new Error(`Attack launch cooldown: ${fmtCountdown(attackLaunchCooldownLeft)} remaining.`); if(attackPoints<MIN_ATTACK_COMBAT_POINTS)throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`); if(targetProtectionLeft>0)throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`); if(targetCooldownLeft>0)throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);} if(missionType===5&&getQty("colonyShip")<=0)throw new Error("Colonize requires at least 1 colony ship."); if(missionType===5&&coordStatus==="occupied")throw new Error("That coordinate slot is already occupied."); if((missionType===1||(missionType===2&&transportMode==="coords"))&&coordStatus==="free")throw new Error(missionType===1?"Attack missions can only target occupied planets.":"Transport missions can only target occupied planets."); let target: LaunchTargetInput; if(missionType===1){target={kind:"attack",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}else if(missionType===2){if(transportMode==="owned"){if(!targetEntity)throw new Error("Select a destination planet."); target={kind:"transport",mode:"owned",destinationEntity:targetEntity};}else{target={kind:"transport",mode:"coords",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}}else{target={kind:"colonize",galaxy:targetGalaxy,system:targetSystem,position:targetPosition,colonyName:colonyName.trim()||"Colony"};} setLaunching(true); await onLaunch(shipQty,{metal:BigInt(cargoM),crystal:BigInt(cargoC),deuterium:BigInt(cargoD)},missionType,speed,target); onClose(); }catch(e:any){setLocalErr(e?.message||String(e));}finally{setLaunching(false);}};
+    const handleSubmit = async () => { try { setLocalErr(null); if(totalSent<=0)throw new Error("Select at least one ship."); if(cargoUsed>cargoCap)throw new Error("Cargo exceeds fleet capacity."); if(!hasLaunchDeuterium)throw new Error(`Not enough deuterium. Need ${fmt(deuteriumNeeded)} including ${fmt(launchFuel)} launch fuel.`); if(!hasFreeMissionSlot)throw new Error("No mission slots available. Resolve an existing mission first."); if(missionType===1){if(attackUnlockLeft>0)throw new Error(`Attack launches unlock in ${fmtCountdown(attackUnlockLeft)}.`); if(attackLaunchCooldownLeft>0)throw new Error(`Attack launch cooldown: ${fmtCountdown(attackLaunchCooldownLeft)} remaining.`); if(attackPoints<MIN_ATTACK_COMBAT_POINTS)throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`); if(targetProtectionLeft>0)throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`); if(targetCooldownLeft>0)throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);} if(missionType===6){if(getQty("espionageProbe")<=0)throw new Error("Espionage requires at least 1 espionage probe."); if(totalSent!==getQty("espionageProbe"))throw new Error("Espionage missions can only send espionage probes."); if(cargoUsed>0)throw new Error("Espionage missions cannot carry cargo."); if(coordStatus==="free")throw new Error("Espionage missions can only target occupied planets.");} if(missionType===5&&getQty("colonyShip")<=0)throw new Error("Colonize requires at least 1 colony ship."); if(missionType===5&&coordStatus==="occupied")throw new Error("That coordinate slot is already occupied."); if((missionType===1||(missionType===2&&transportMode==="coords"))&&coordStatus==="free")throw new Error(missionType===1?"Attack missions can only target occupied planets.":"Transport missions can only target occupied planets."); let target: LaunchTargetInput; if(missionType===1){target={kind:"attack",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}else if(missionType===6){target={kind:"espionage",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}else if(missionType===2){if(transportMode==="owned"){if(!targetEntity)throw new Error("Select a destination planet."); target={kind:"transport",mode:"owned",destinationEntity:targetEntity};}else{target={kind:"transport",mode:"coords",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}}else{target={kind:"colonize",galaxy:targetGalaxy,system:targetSystem,position:targetPosition,colonyName:colonyName.trim()||"Colony"};} setLaunching(true); await onLaunch(shipQty,{metal:BigInt(cargoM),crystal:BigInt(cargoC),deuterium:BigInt(cargoD)},missionType,speed,target); onClose(); }catch(e:any){setLocalErr(e?.message||String(e));}finally{setLaunching(false);}};
     return (
       <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
         <div className="modal">
           <div className="modal-title">⊹ LAUNCH FLEET</div>
-          <div className="modal-section"><div className="modal-label">Mission Type</div><select className="modal-select" value={missionType} onChange={e => setMissionType(Number(e.target.value))}><option value={1}>ATTACK</option><option value={2}>TRANSPORT</option><option value={5}>COLONIZE</option></select></div>
-          {missionType===1&&(<div className="modal-section"><div className="modal-label">Attack Target</div>{(["Galaxy","System","Position"]as const).map((label,li)=>{const vals=[targetGalaxy,targetSystem,targetPosition];const setters=[(v:number)=>setTargetGalaxy(Math.max(1,Math.min(MAX_GALAXY,v))),(v:number)=>setTargetSystem(Math.max(1,Math.min(MAX_SYSTEM,v))),(v:number)=>setTargetPosition(Math.max(1,Math.min(MAX_POSITION,v)))];const maxValues=[MAX_GALAXY,MAX_SYSTEM,MAX_POSITION];return(<div key={label} className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>{label}</span><input className="modal-input" type="number" min={1} max={maxValues[li]} value={vals[li]} onChange={e=>setters[li](parseInt(e.target.value)||1)}/></div>);})}{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatus==="free"?"var(--danger)":coordStatusConfig[coordStatus].color}}>{coordStatus==="free"?"ATTACK BLOCKED: EMPTY SLOT":coordStatusConfig[coordStatus].text}</div>}</div>)}
+          <div className="modal-section"><div className="modal-label">Mission Type</div><select className="modal-select" value={missionType} onChange={e => setMissionType(Number(e.target.value))}><option value={1}>ATTACK</option><option value={2}>TRANSPORT</option><option value={5}>COLONIZE</option><option value={6}>ESPIONAGE</option></select></div>
+          {(missionType===1||missionType===6)&&(<div className="modal-section"><div className="modal-label">{missionType===6?"Espionage Target":"Attack Target"}</div>{(["Galaxy","System","Position"]as const).map((label,li)=>{const vals=[targetGalaxy,targetSystem,targetPosition];const setters=[(v:number)=>setTargetGalaxy(Math.max(1,Math.min(MAX_GALAXY,v))),(v:number)=>setTargetSystem(Math.max(1,Math.min(MAX_SYSTEM,v))),(v:number)=>setTargetPosition(Math.max(1,Math.min(MAX_POSITION,v)))];const maxValues=[MAX_GALAXY,MAX_SYSTEM,MAX_POSITION];return(<div key={label} className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>{label}</span><input className="modal-input" type="number" min={1} max={maxValues[li]} value={vals[li]} onChange={e=>setters[li](parseInt(e.target.value)||1)}/></div>);})}{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatus==="free"?"var(--danger)":coordStatusConfig[coordStatus].color}}>{coordStatus==="free"?(missionType===6?"ESPIONAGE BLOCKED: EMPTY SLOT":"ATTACK BLOCKED: EMPTY SLOT"):coordStatusConfig[coordStatus].text}</div>}</div>)}
+          {missionType===6&&(<div className="modal-section"><div className="modal-label">Espionage Checks</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Probe-only fleet</span><span style={{fontSize:11,color:totalSent>0&&totalSent===getQty("espionageProbe")?"var(--success)":"var(--danger)"}}>{getQty("espionageProbe").toLocaleString()} / {totalSent.toLocaleString()}</span></div>{cargoUsed>0&&<div className="error-msg" style={{marginTop:8}}>Espionage missions cannot carry cargo.</div>}</div>)}
           {missionType===1&&(<div className="modal-section" style={{borderColor:attackBlocked?"rgba(255,0,110,0.25)":"rgba(0,245,212,0.18)"}}><div className="modal-label">Attack Safety Checks</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Combat points</span><span style={{fontSize:11,color:attackPoints>=MIN_ATTACK_COMBAT_POINTS?"var(--success)":"var(--danger)"}}>{attackPoints.toLocaleString()} / {MIN_ATTACK_COMBAT_POINTS.toLocaleString()}</span></div>{attackUnlockLeft>0&&<div className="error-msg" style={{marginTop:8}}>Source attack unlock: {fmtCountdown(attackUnlockLeft)}</div>}{attackLaunchCooldownLeft>0&&<div className="error-msg" style={{marginTop:8}}>Launch cooldown: {fmtCountdown(attackLaunchCooldownLeft)}</div>}{targetProtectionLeft>0&&<div className="error-msg" style={{marginTop:8}}>Target protected: {fmtCountdown(targetProtectionLeft)}</div>}{targetCooldownLeft>0&&<div className="error-msg" style={{marginTop:8}}>Target cooldown: {fmtCountdown(targetCooldownLeft)}</div>}</div>)}
           {missionType===2&&(<div className="modal-section"><div className="modal-label">Target</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mode</span><select className="modal-select" value={transportMode} onChange={e=>setTransportMode(e.target.value as "owned"|"coords")}><option value="owned">My planets</option><option value="coords">Coordinates</option></select></div>{transportMode==="owned"?(<div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Destination</span><select className="modal-select" value={targetEntity} onChange={e=>setTargetEntity(e.target.value)} disabled={selectableOwned.length===0}>{selectableOwned.length===0?<option value="">No other planets</option>:selectableOwned.map(p=>(<option key={p.entityPda} value={p.entityPda}>{p.planet.name} [{p.planet.galaxy}:{p.planet.system}:{p.planet.position}]</option>))}</select></div>):(<>{(["Galaxy","System","Position"]as const).map((label,li)=>{const vals=[targetGalaxy,targetSystem,targetPosition];const setters=[(v:number)=>setTargetGalaxy(Math.max(1,Math.min(MAX_GALAXY,v))),(v:number)=>setTargetSystem(Math.max(1,Math.min(MAX_SYSTEM,v))),(v:number)=>setTargetPosition(Math.max(1,Math.min(MAX_POSITION,v)))];const maxValues=[MAX_GALAXY,MAX_SYSTEM,MAX_POSITION];return(<div key={label} className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>{label}</span><input className="modal-input" type="number" min={1} max={maxValues[li]} value={vals[li]} onChange={e=>setters[li](parseInt(e.target.value)||1)}/></div>);})}{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatus==="free"?"var(--danger)":coordStatusConfig[coordStatus].color}}>{coordStatus==="free"?"TRANSPORT BLOCKED: EMPTY SLOT":coordStatusConfig[coordStatus].text}</div>}</>)}</div>)}
           {missionType===5&&(<div className="modal-section"><div className="modal-label">Colony Target</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Galaxy</span><input className="modal-input" type="number" min={1} max={MAX_GALAXY} value={targetGalaxy} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"g",Math.max(1,Math.min(MAX_GALAXY,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>System</span><input className="modal-input" type="number" min={1} max={MAX_SYSTEM} value={targetSystem} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"s",Math.max(1,Math.min(MAX_SYSTEM,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Position</span><input className="modal-input" type="number" min={1} max={MAX_POSITION} value={targetPosition} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"p",Math.max(1,Math.min(MAX_POSITION,parseInt(e.target.value)||1)))}/></div>{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatusConfig[coordStatus].color}}>{coordStatusConfig[coordStatus].text}</div>}<div className="modal-row" style={{marginTop:10}}><span style={{fontSize:11,color:"var(--dim)"}}>Colony Name</span><input className="modal-input" type="text" maxLength={32} value={colonyName} onChange={e=>setColonyName(e.target.value)}/></div></div>)}
@@ -2809,7 +2966,7 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
           {!hasFreeMissionSlot&&<div className="error-msg" style={{marginBottom:8}}>No mission slots available. Resolve an existing mission first.</div>}
           {!hasLaunchDeuterium&&<div className="error-msg" style={{marginBottom:8}}>Not enough deuterium for cargo plus launch fuel.</div>}
           {localErr&&<div className="error-msg" style={{marginBottom:8}}>{localErr}</div>}
-          <div className="modal-footer"><button className="modal-btn secondary" onClick={onClose} disabled={launching||txBusy}>CANCEL</button><button className="modal-btn primary" onClick={handleSubmit} disabled={launching||txBusy||totalSent===0||!hasFreeMissionSlot||!hasLaunchDeuterium||cargoUsed>cargoCap||attackBlocked||(missionType===5&&coordStatus==="occupied")||(missionType===2&&transportMode==="coords"&&(coordStatus==="checking"||coordStatus==="free"))}>{launching?"LAUNCHING...":"⊹ LAUNCH"}</button></div>
+          <div className="modal-footer"><button className="modal-btn secondary" onClick={onClose} disabled={launching||txBusy}>CANCEL</button><button className="modal-btn primary" onClick={handleSubmit} disabled={launching||txBusy||totalSent===0||!hasFreeMissionSlot||!hasLaunchDeuterium||cargoUsed>cargoCap||attackBlocked||(missionType===6&&(totalSent!==getQty("espionageProbe")||cargoUsed>0||coordStatus==="checking"||coordStatus==="free"))||(missionType===5&&coordStatus==="occupied")||(missionType===2&&transportMode==="coords"&&(coordStatus==="checking"||coordStatus==="free"))}>{launching?"LAUNCHING...":"⊹ LAUNCH"}</button></div>
         </div>
       </div>
     );
@@ -2930,7 +3087,7 @@ const NoPlanetView: React.FC<{ planetName:string; onNameChange:(v:string)=>void;
         </div>
         <div className="command-empty-step">
           <div className="command-empty-step-num">02</div>
-          <div className="command-empty-step-copy">The setup creates your first world and prepares the vault signing flow.</div>
+          <div className="command-empty-step-copy">Create a vault recovery password. Save it; it unlocks your encrypted on-chain vault backup.</div>
         </div>
         <div className="command-empty-step">
           <div className="command-empty-step-num">03</div>
@@ -2938,9 +3095,9 @@ const NoPlanetView: React.FC<{ planetName:string; onNameChange:(v:string)=>void;
         </div>
       </div>
       <input className="planet-name-input" type="text" placeholder="Planet name (optional)" value={planetName} onChange={e=>onNameChange(e.target.value)} maxLength={19}/>
-      <button className="create-btn" onClick={onCreate} disabled={creating}>{creating?"INITIALIZING...":"⊹ INITIALIZE HOMEWORLD"}</button>
+      <button className="create-btn" onClick={onCreate} disabled={creating}>{creating?"INITIALIZING...":"CREATE PASSWORD + HOMEWORLD"}</button>
       {error&&<div className="error-msg">{error}</div>}
-      <div style={{fontSize:10,color:"rgba(200,214,229,0.6)",letterSpacing:1,marginTop:14}}>Requires 1 wallet signature · Vault handles the rest of gameplay after setup</div>
+      <div style={{fontSize:10,color:"rgba(200,214,229,0.6)",letterSpacing:1,marginTop:14}}>Next: password modal, then 1 wallet signature. Vault handles gameplay after setup.</div>
     </div>
   );
 
@@ -3352,16 +3509,25 @@ type StorePack = {
   hint: string;
   priceUsdc: bigint;
   reward: { metal: number; crystal: number; deuterium: number };
+  shieldSeconds?: number;
 };
 
 const STORE_PACKS: StorePack[] = [
   { period: 1, id: 0, group: "Daily", title: "Daily Supply Drop", hint: "Small refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 3000, crystal: 2000, deuterium: 750 } },
   { period: 1, id: 1, group: "Daily", title: "Daily Logistics Crate", hint: "A modest boost without skipping progression.", priceUsdc: 2_500_000n, reward: { metal: 8000, crystal: 5000, deuterium: 2000 } },
+  { period: 1, id: 16, group: "Daily", title: "Daily Defense Shield", hint: "Adds 6 hours of attack protection, capped on-chain.", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 6 * 60 * 60 },
   { period: 2, id: 0, group: "Weekly", title: "Weekly Foundry Pack", hint: "Enough material to keep queues moving.", priceUsdc: 7_500_000n, reward: { metal: 35000, crystal: 24000, deuterium: 10000 } },
   { period: 2, id: 1, group: "Weekly", title: "Weekly Expansion Pack", hint: "Supports fleet and building momentum.", priceUsdc: 15_000_000n, reward: { metal: 80000, crystal: 55000, deuterium: 25000 } },
+  { period: 2, id: 16, group: "Weekly", title: "Weekly Defense Shield", hint: "Adds 24 hours of attack protection, capped on-chain.", priceUsdc: 5_000_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 24 * 60 * 60 },
   { period: 3, id: 0, group: "Monthly", title: "Monthly Sector Pack", hint: "A larger but capped monthly resource bundle.", priceUsdc: 30_000_000n, reward: { metal: 180000, crystal: 125000, deuterium: 60000 } },
   { period: 3, id: 1, group: "Monthly", title: "Monthly Command Pack", hint: "Top monthly support for established planets.", priceUsdc: 60_000_000n, reward: { metal: 400000, crystal: 275000, deuterium: 140000 } },
+  { period: 3, id: 16, group: "Monthly", title: "Monthly Defense Shield", hint: "Adds 3 days of attack protection, capped on-chain.", priceUsdc: 12_500_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 3 * 24 * 60 * 60 },
 ];
+
+function effectiveAttackProtectionUntil(planet: Planet): number {
+  const beginnerUntil = planet.createdAt > 0 ? planet.createdAt + NEW_PLAYER_PROTECTION_SECONDS : 0;
+  return Math.max(planet.protectionUntilTs, beginnerUntil);
+}
 
 function storePurchasedMask(period: StorePeriod, purchaseState: StorePurchaseStateAccount | null, nowTs: number): bigint {
   if (!purchaseState) return 0n;
@@ -3498,6 +3664,161 @@ const QuestsTab: React.FC<{
 };
 
 
+const AllianceTab: React.FC<{
+  state: PlayerState;
+  alliance: AllianceStateAccount | null;
+  membership: AllianceMembershipAccount | null;
+  alliances: AllianceStateAccount[];
+  joinRequests: AllianceJoinRequestAccount[];
+  members: AllianceMembershipAccount[];
+  storeConfig: StoreConfigState | null;
+  usdcBalance: bigint;
+  antimatterBalance: bigint;
+  txBusy: boolean;
+  onCreate: (name: string) => void;
+  onRequestJoin: (alliancePda: string) => void;
+  onApproveRequest: (applicant: string) => void;
+  onRejectRequest: (applicant: string) => void;
+  onExpelMember: (member: string) => void;
+  onTransferLeadership: (member: string) => void;
+  onLeave: () => void;
+  onClaimMission: (period: number, missionId: number) => void;
+}> = ({ state, alliance, membership, alliances, joinRequests, members, storeConfig, usdcBalance, antimatterBalance, txBusy, onCreate, onRequestJoin, onApproveRequest, onRejectRequest, onExpelMember, onTransferLeadership, onLeave, onClaimMission }) => {
+  const [name, setName] = useState("");
+  const [search, setSearch] = useState("");
+  const storeReady = !!storeConfig?.enabled;
+  const hasUsdc = usdcBalance >= ALLIANCE_CREATE_USDC_COST;
+  const hasAntimatter = antimatterBalance >= ALLIANCE_CREATE_ANTIMATTER_COST;
+  const canCreateAlliance = storeReady && hasUsdc && hasAntimatter && name.trim().length >= 2;
+  const filteredAlliances = alliances.filter(item => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return item.name.toLowerCase().includes(q);
+  });
+  const nextThreshold = alliance ? allianceThreshold(alliance.level + 1) : 0n;
+  const currentThreshold = alliance ? allianceThreshold(alliance.level) : 0n;
+  const xpSpan = nextThreshold > currentThreshold ? nextThreshold - currentThreshold : 1n;
+  const xpIntoLevel = alliance ? alliance.xp - currentThreshold : 0n;
+  const progress = alliance ? Number((xpIntoLevel * 100n) / xpSpan) : 0;
+  const claimedMaskFor = (period: number): bigint => {
+    if (!membership) return 0n;
+    if (period === 1) return membership.dailyClaimedMask;
+    if (period === 2) return membership.weeklyClaimedMask;
+    return membership.monthlyClaimedMask;
+  };
+
+  if (!alliance || !membership) {
+    return (
+      <div className="tab-grid">
+        <div className="panel">
+          <div className="section-title">CREATE ALLIANCE</div>
+          <div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,lineHeight:1.8,marginBottom:12}}>
+            Cost: {formatTokenAmount(ALLIANCE_CREATE_USDC_COST, 6)} USDC + {formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)} ANTIMATTER.
+            Burns {formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_BURN, 6)} ANTIMATTER and sends {formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_TREASURY, 6)} ANTIMATTER plus all USDC to the DAO treasury.
+          </div>
+          <div className="quest-req-list" style={{marginBottom:12}}>
+            <div className={`quest-req-row ${storeReady ? "met" : "missing"}`}><span>DAO store config</span><strong>{storeReady ? "ready" : "disabled"}</strong></div>
+            <div className={`quest-req-row ${hasUsdc ? "met" : "missing"}`}><span>USDC</span><strong>{formatTokenAmount(usdcBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_USDC_COST, 6)}</strong></div>
+            <div className={`quest-req-row ${hasAntimatter ? "met" : "missing"}`}><span>ANTIMATTER</span><strong>{formatTokenAmount(antimatterBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)}</strong></div>
+          </div>
+          <input className="modal-input" value={name} onChange={e => setName(e.target.value)} placeholder="Alliance name" maxLength={32}/>
+          <button className="modal-btn primary" disabled={txBusy || !canCreateAlliance} onClick={() => onCreate(name)}>CREATE</button>
+        </div>
+        <div className="panel">
+          <div className="section-title">FIND ALLIANCE</div>
+          <input className="modal-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by alliance name"/>
+          <div className="quest-grid" style={{marginTop:12}}>
+            {filteredAlliances.map(item => {
+              const full = item.memberCount >= item.maxMembers;
+              return (
+                <div key={item.publicKey} className={`quest-card ${full ? "locked" : "ready"}`}>
+                  <div className="quest-head">
+                    <div><div className="quest-group">LV {item.level}</div><div className="quest-title">{item.name || "Alliance"}</div></div>
+                    <div className="quest-reward">{item.memberCount}/{item.maxMembers}</div>
+                  </div>
+                  <div className="quest-req-list">
+                    <div className="quest-req-row met"><span>Founder</span><strong>{shortAddress(item.founder)}</strong></div>
+                    <div className={`quest-req-row ${full ? "missing" : "met"}`}><span>Capacity</span><strong>{full ? "full" : "open"}</strong></div>
+                  </div>
+                  <button className="modal-btn primary" disabled={txBusy || full} onClick={() => onRequestJoin(item.publicKey)}>{full ? "FULL" : "REQUEST JOIN"}</button>
+                </div>
+              );
+            })}
+            {filteredAlliances.length === 0 && <div className="notice-box">No alliances found.</div>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tab-stack">
+      <div className="panel">
+        <div className="section-title">{alliance.name || "Alliance"}</div>
+        <div className="resource-row"><span>Level</span><strong>{alliance.level}</strong></div>
+        <div className="resource-row"><span>Members</span><strong>{alliance.memberCount}/{alliance.maxMembers}</strong></div>
+        <div className="resource-row"><span>Total Missions</span><strong>{alliance.totalMissionsCompleted.toString()}</strong></div>
+        <div className="desktop-resource-cap"><div className="desktop-resource-cap-fill" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} /></div>
+        <div className="modal-info-row"><span>XP</span><span className="modal-info-val">{alliance.xp.toString()} / {nextThreshold.toString()}</span></div>
+        {membership.role !== 2 && <button className="modal-btn" disabled={txBusy} onClick={onLeave}>LEAVE</button>}
+      </div>
+      {membership.role === 2 && (
+        <div className="panel">
+          <div className="section-title">LEADER CONTROLS</div>
+          <div className="section-title" style={{fontSize:11,marginTop:10}}>JOIN REQUESTS</div>
+          <div className="quest-req-list" style={{marginBottom:14}}>
+            {joinRequests.map(request => (
+              <div key={request.publicKey} className="quest-req-row met">
+                <span>{shortAddress(request.applicant)}</span>
+                <strong style={{display:"flex",gap:8}}>
+                  <button className="modal-btn primary" style={{fontSize:9,padding:"5px 8px"}} disabled={txBusy} onClick={() => onApproveRequest(request.applicant)}>APPROVE</button>
+                  <button className="modal-btn" style={{fontSize:9,padding:"5px 8px"}} disabled={txBusy} onClick={() => onRejectRequest(request.applicant)}>REJECT</button>
+                </strong>
+              </div>
+            ))}
+            {joinRequests.length === 0 && <div className="notice-box">No pending requests.</div>}
+          </div>
+          <div className="section-title" style={{fontSize:11,marginTop:10}}>MEMBERS</div>
+          <div className="quest-req-list">
+            {members.map(member => {
+              const isLeader = member.role === 2;
+              const isSelf = member.authority === membership.authority;
+              return (
+                <div key={member.authority} className={`quest-req-row ${isLeader ? "met" : ""}`}>
+                  <span>{shortAddress(member.authority)}{isLeader ? " · leader" : ""}</span>
+                  <strong style={{display:"flex",gap:8}}>
+                    {!isLeader && <button className="modal-btn primary" style={{fontSize:9,padding:"5px 8px"}} disabled={txBusy} onClick={() => onTransferLeadership(member.authority)}>MAKE LEADER</button>}
+                    {!isLeader && !isSelf && <button className="modal-btn" style={{fontSize:9,padding:"5px 8px"}} disabled={txBusy} onClick={() => onExpelMember(member.authority)}>EXPEL</button>}
+                  </strong>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <div className="quest-grid">
+        {ALLIANCE_MISSION_DEFINITIONS.map(mission => {
+          const bit = 1n << BigInt(mission.id);
+          const claimed = (claimedMaskFor(mission.period) & bit) !== 0n;
+          const met = mission.requirements.every(req => req.current(state) >= req.required);
+          return (
+            <div key={`${mission.period}:${mission.id}`} className={`quest-card ${met && !claimed ? "ready" : claimed ? "claimed" : "locked"}`}>
+              <div className="quest-head"><div><div className="quest-group">{mission.group}</div><div className="quest-title">{mission.title}</div></div><div className="quest-reward">+{mission.xp} XP</div></div>
+              <div className="quest-req-list">
+                {mission.requirements.map(req => {
+                  const current = req.current(state);
+                  const ok = current >= req.required;
+                  return <div key={req.label} className={`quest-req-row ${ok ? "met" : "missing"}`}><span>{req.label}</span><strong>{current}/{req.required}</strong></div>;
+                })}
+              </div>
+              <button className="modal-btn primary" disabled={txBusy || claimed || !met} onClick={() => onClaimMission(mission.period, mission.id)}>{claimed ? "CLAIMED" : met ? "CLAIM" : "LOCKED"}</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 const StoreTab: React.FC<{
   state: PlayerState;
   storeConfig: StoreConfigState | null;
@@ -3548,15 +3869,22 @@ const StoreTab: React.FC<{
                   </div>
 
                   <div className="quest-rewards">
-                    <div className="quest-reward"><span>Metal</span><strong>{fmt(pack.reward.metal)}</strong></div>
-                    <div className="quest-reward"><span>Crystal</span><strong>{fmt(pack.reward.crystal)}</strong></div>
-                    <div className="quest-reward"><span>Deut</span><strong>{fmt(pack.reward.deuterium)}</strong></div>
+                    {pack.shieldSeconds ? (
+                      <div className="quest-reward"><span>Shield</span><strong>{fmtCountdown(pack.shieldSeconds)}</strong></div>
+                    ) : (
+                      <>
+                        <div className="quest-reward"><span>Metal</span><strong>{fmt(pack.reward.metal)}</strong></div>
+                        <div className="quest-reward"><span>Crystal</span><strong>{fmt(pack.reward.crystal)}</strong></div>
+                        <div className="quest-reward"><span>Deut</span><strong>{fmt(pack.reward.deuterium)}</strong></div>
+                      </>
+                    )}
                   </div>
 
                   <div className="quest-req-list">
                     <div className={`quest-req-row ${storeReady ? "met" : "missing"}`}><span>Store enabled</span><strong>{storeReady ? "yes" : "no"}</strong></div>
                     <div className={`quest-req-row ${!purchased ? "met" : "missing"}`}><span>Period limit</span><strong>{purchased ? "used" : "open"}</strong></div>
                     <div className={`quest-req-row ${canAfford ? "met" : "missing"}`}><span>USDC</span><strong>{formatTokenAmount(usdcBalance, 6)}/{formatTokenAmount(pack.priceUsdc, 6)}</strong></div>
+                    {pack.shieldSeconds && <div className="quest-req-row met"><span>Current shield</span><strong>{Math.max(0, effectiveAttackProtectionUntil(state.planet) - nowTs) > 0 ? fmtCountdown(Math.max(0, effectiveAttackProtectionUntil(state.planet) - nowTs)) : "none"}</strong></div>}
                   </div>
 
                   <div className="quest-actions">
@@ -3594,8 +3922,8 @@ const MissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; onResol
     return (<div><div className="section-title">ACTIVE MISSIONS</div>{active.map(({m,i})=>{const progress=missionProgress(m,nowTs); const returning=m.applied; const etaSecs=returning?Math.max(0,m.returnTs-nowTs):Math.max(0,m.arriveTs-nowTs); const typeLabel=MISSION_LABELS[m.missionType]??"UNKNOWN"; const needsResolution=(m.missionType===2&&((!m.applied&&nowTs>=m.arriveTs)||(m.applied&&m.returnTs>0&&nowTs>=m.returnTs)))||(m.missionType===5&&!m.applied&&nowTs>=m.arriveTs); const ships=SHIPS.map(ship=>({label:ship.name,key:ship.key,n:getMissionShipCount(m,ship.key)})).filter(s=>s.n>0); const artShips=ships; const hasCargo=m.cargoMetal>0n||m.cargoCrystal>0n||m.cargoDeuterium>0n; return(<div key={i} className="mission-card"><div className="mission-header"><div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><span className={`mission-type-badge ${m.missionType===2?"transport":"other"}`}>{typeLabel}</span><span className="tag">SLOT {i}</span>{needsResolution&&<span style={{fontSize:9,color:"var(--success)",letterSpacing:1,padding:"2px 6px",border:"1px solid rgba(6,214,160,0.4)",borderRadius:2}}></span>}</div>{returning&&<span className="mission-returning">↩ RETURN</span>}</div><div className="progress-bar"><div className={`progress-fill ${returning?"returning":"outbound"}`} style={{width:`${progress}%`}}/></div><div className="mission-info"><span>{returning?"Return ETA":"Arrive ETA"}</span><span className="mission-eta">{etaSecs<=0?"ARRIVED":fmtCountdown(etaSecs)}</span></div><div className="mission-ships">{ships.map(s=><span key={s.label} className="mission-ship-badge">{s.label} ×{s.n.toLocaleString()}</span>)}</div>{artShips.length>0&&<div className="mission-ship-media">{artShips.map(s=><div key={s.key} className="mission-ship-card"><div className="mission-ship-card-art"><img src={getShipArtUrl(s.key)} alt={s.label} loading="lazy" /></div><div className="mission-ship-card-copy"><span>{s.label}</span><strong>×{s.n.toLocaleString()}</strong></div></div>)}</div>}{hasCargo&&<div style={{marginTop:8,fontSize:10,color:"var(--dim)",display:"flex",gap:12,flexWrap:"wrap"}}>{m.cargoMetal>0n&&<span style={{color:"var(--metal)"}}>⛏ {fmt(m.cargoMetal)}</span>}{m.cargoCrystal>0n&&<span style={{color:"var(--crystal)"}}>💎 {fmt(m.cargoCrystal)}</span>}{m.cargoDeuterium>0n&&<span style={{color:"var(--deut)"}}>🧪 {fmt(m.cargoDeuterium)}</span>}</div>}{needsResolution&&<button className="apply-btn" disabled={txBusy} onClick={()=>m.missionType===2?onResolveTransport(m,i):onResolveColonize(m,i)}>{m.missionType===2?"RESOLVE TRANSPORT":"RESOLVE COLONIZE"}</button>}</div>);})}</div>);
   };
 
-const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; antimatterBalance: bigint; antimatterEnabled: boolean; onResolveTransport:(mission:Mission,slot:number)=>void; onResolveAttack:(mission:Mission,slot:number)=>void; onResolveColonize:(mission:Mission,slot:number)=>void; onAccelerateMission:(mission:Mission,slot:number,leg:0|1)=>void }> =
-  ({ fleet, nowTs, txBusy, antimatterBalance, antimatterEnabled, onResolveTransport, onResolveAttack, onResolveColonize, onAccelerateMission }) => {
+const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; antimatterBalance: bigint; antimatterEnabled: boolean; onResolveTransport:(mission:Mission,slot:number)=>void; onResolveAttack:(mission:Mission,slot:number)=>void; onResolveEspionage:(mission:Mission,slot:number)=>void; onResolveColonize:(mission:Mission,slot:number)=>void; onAccelerateMission:(mission:Mission,slot:number,leg:0|1)=>void }> =
+  ({ fleet, nowTs, txBusy, antimatterBalance, antimatterEnabled, onResolveTransport, onResolveAttack, onResolveEspionage, onResolveColonize, onAccelerateMission }) => {
     const active = fleet.missions.map((m, i) => ({ m, i })).filter(({ m }) => m.missionType !== 0);
 
     if (active.length === 0) {
@@ -3620,6 +3948,7 @@ const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; 
           const typeLabel = MISSION_LABELS[m.missionType] ?? "UNKNOWN";
           const needsResolution =
             (m.missionType === 1 && ((!m.applied && nowTs >= m.arriveTs) || (m.applied && m.returnTs > 0 && nowTs >= m.returnTs))) ||
+            (m.missionType === 6 && ((!m.applied && nowTs >= m.arriveTs) || (m.applied && m.returnTs > 0 && nowTs >= m.returnTs))) ||
             (m.missionType === 2 && ((!m.applied && nowTs >= m.arriveTs) || (m.applied && m.returnTs > 0 && nowTs >= m.returnTs))) ||
             (m.missionType === 5 && !m.applied && nowTs >= m.arriveTs);
           const ships = SHIPS
@@ -3683,13 +4012,18 @@ const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; 
                   COMBAT REPORT: {m.attackerWon ? "ATTACKER WON" : "ATTACKER REPULSED"} {m.combatRounds > 0 ? `(${m.combatRounds} rounds)` : ""}
                 </div>
               )}
+              {m.missionType === 6 && m.applied && (
+                <div style={{ marginTop: 8, fontSize: 10, color: "var(--cyan)", letterSpacing: 0.6 }}>
+                  SPY REPORT: PROBES RETURNING
+                </div>
+              )}
               {needsResolution && (
                 <button
                   className="apply-btn"
                   disabled={txBusy}
-                  onClick={() => m.missionType === 1 ? onResolveAttack(m, i) : m.missionType === 2 ? onResolveTransport(m, i) : onResolveColonize(m, i)}
+                  onClick={() => m.missionType === 1 ? onResolveAttack(m, i) : m.missionType === 6 ? onResolveEspionage(m, i) : m.missionType === 2 ? onResolveTransport(m, i) : onResolveColonize(m, i)}
                 >
-                  {m.missionType === 1 ? (m.applied ? "COMPLETE RETURN" : "RESOLVE ATTACK") : m.missionType === 2 ? "RESOLVE TRANSPORT" : "RESOLVE COLONIZE"}
+                  {m.missionType === 1 ? (m.applied ? "COMPLETE RETURN" : "RESOLVE ATTACK") : m.missionType === 6 ? (m.applied ? "COMPLETE RETURN" : "RESOLVE SPY REPORT") : m.missionType === 2 ? "RESOLVE TRANSPORT" : "RESOLVE COLONIZE"}
                 </button>
               )}
             </div>
@@ -3699,27 +4033,65 @@ const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; 
     );
   };
 
-const ActivityTab: React.FC<{ reports: BattleReport[]; onClear: () => void }> = ({ reports, onClear }) => {
+const ActivityTab: React.FC<{ reports: BattleReport[]; spyReports: SpyReport[]; onClear: () => void }> = ({ reports, spyReports, onClear }) => {
+  const hasActivity = reports.length > 0 || spyReports.length > 0;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14 }}>
-        <div className="section-title" style={{ marginBottom: 0 }}>BATTLE ACTIVITY</div>
-        {reports.length > 0 && (
+        <div className="section-title" style={{ marginBottom: 0 }}>ACTIVITY</div>
+        {hasActivity && (
           <button className="apply-btn" style={{ width: "auto", marginTop: 0, padding: "8px 12px" }} onClick={onClear}>
             CLEAR LOCAL LOG
           </button>
         )}
       </div>
       <div className="notice-box">
-        Attack history
+        Battle and espionage history. Spy reports only show what the on-chain reveal level unlocked.
       </div>
-      {reports.length === 0 ? (
+      {!hasActivity ? (
         <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--dim)", fontSize: 12, letterSpacing: 1 }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>ATTACK</div>
-          <div>No battle reports yet</div>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>SCAN</div>
+          <div>No reports yet</div>
         </div>
       ) : (
         <div style={{ display: "grid", gap: 14 }}>
+          {spyReports.map(report => {
+            const canSeeResources = report.revealLevel >= 1;
+            const canSeeBuildings = report.revealLevel >= 2;
+            const canSeeMilitary = report.revealLevel >= 3;
+            const canSeeTech = report.revealLevel >= 4;
+            return (
+              <div key={report.id} className="mission-card">
+                <div className="mission-header">
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className="mission-type-badge other">SPY REPORT</span>
+                    <span className="tag">LV {report.revealLevel}</span>
+                    <span className="tag">SLOT {report.slot}</span>
+                  </div>
+                  <span style={{ fontSize: 10, color: report.probesSurvived > 0 ? "var(--success)" : "var(--danger)", letterSpacing: 1 }}>
+                    {report.probesSurvived > 0 ? "PROBES RETURNING" : "PROBES LOST"}
+                  </span>
+                </div>
+                <div className="grid-4" style={{ margin: "12px 0" }}>
+                  <div className="card"><div className="card-label">From</div><div className="card-value" style={{ fontSize: 12 }}>{report.sourceCoords}</div></div>
+                  <div className="card"><div className="card-label">Target</div><div className="card-value" style={{ fontSize: 12 }}>{report.targetCoords}</div></div>
+                  <div className="card"><div className="card-label">Signal</div><div className="card-value" style={{ fontSize: 12 }}>{fmt(BigInt(report.sensorScore))}</div></div>
+                  <div className="card"><div className="card-label">Counter</div><div className="card-value" style={{ fontSize: 12 }}>{fmt(BigInt(report.counterScore))}</div></div>
+                </div>
+                <div className="quest-req-list" style={{ marginBottom: 10 }}>
+                  <div className={`quest-req-row ${canSeeResources ? "met" : "missing"}`}><span>Resources</span><strong>{canSeeResources ? `${fmt(BigInt(report.reportedMetal))} / ${fmt(BigInt(report.reportedCrystal))} / ${fmt(BigInt(report.reportedDeuterium))}` : "hidden"}</strong></div>
+                  <div className={`quest-req-row ${canSeeBuildings ? "met" : "missing"}`}><span>Building score</span><strong>{canSeeBuildings ? fmt(BigInt(report.reportedBuildingScore)) : "hidden"}</strong></div>
+                  <div className={`quest-req-row ${canSeeMilitary ? "met" : "missing"}`}><span>Fleet / defense</span><strong>{canSeeMilitary ? `${fmt(BigInt(report.reportedFleetPoints))} / ${fmt(BigInt(report.reportedDefensePoints))}` : "hidden"}</strong></div>
+                  <div className={`quest-req-row ${canSeeTech ? "met" : "missing"}`}><span>Combat tech</span><strong>{canSeeTech ? `W${report.reportedWeaponsTechnology} S${report.reportedShieldingTechnology} A${report.reportedArmorTechnology}` : "hidden"}</strong></div>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--dim)", display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <span>Probes {report.probesSurvived}/{report.probesSent} survived</span>
+                  <span>Resolved: {new Date(report.resolvedTs * 1000).toLocaleString()}</span>
+                  {report.signature && <span>Tx: {report.signature.slice(0, 8)}...{report.signature.slice(-8)}</span>}
+                </div>
+              </div>
+            );
+          })}
           {reports.map(report => {
             const lootTotal = BigInt(report.cargoMetal) + BigInt(report.cargoCrystal) + BigInt(report.cargoDeuterium);
             const debrisTotal = BigInt(report.debrisMetal ?? "0") + BigInt(report.debrisCrystal ?? "0");
@@ -3818,6 +4190,7 @@ const DesktopResourceMenu: React.FC<{ res: Resources; planet: Planet }> = ({ res
 const PRIMARY_TABS: { id: Tab; icon: string; label: string }[] = [
   { id: "overview",  icon: "◈",  label: "Home"     },
   { id: "quests",    icon: "Q",  label: "Quests"   },
+  { id: "alliance",  icon: "A",  label: "Alliance" },
   { id: "resources", icon: "⛏",  label: "Resources" },
   { id: "buildings", icon: "⬡",  label: "Build"    },
   { id: "research",  icon: "🔬", label: "Research"  },
@@ -3835,6 +4208,7 @@ const SECONDARY_TABS: { id: Tab; icon: string; label: string }[] = [
 const TAB_META: Record<Tab, { eyebrow: string; title: string; subtitle: string }> = {
   overview: { eyebrow: "Command", title: "Planet Overview", subtitle: "Read colony health, queues, and next pressure points at a glance." },
   quests: { eyebrow: "Objectives", title: "Quest Command", subtitle: "Claim tutorial, daily, weekly, and monthly rewards verified by the on-chain program." },
+  alliance: { eyebrow: "Alliance", title: "Alliance Command", subtitle: "Create, join, and level alliances through shared on-chain missions." },
   store: { eyebrow: "Supply", title: "USDC Store", subtitle: "Buy capped daily, weekly, and monthly resource packs." },
   resources: { eyebrow: "Economy", title: "Resource Grid", subtitle: "Tune production before capacity, energy, or field limits become blockers." },
   buildings: { eyebrow: "Infrastructure", title: "Planet Build Queue", subtitle: "Upgrade mines, factories, storage, and shipyard support from one surface." },
@@ -3922,10 +4296,16 @@ const App: React.FC = () => {
   const [questState, setQuestState] = useState<QuestStateAccount | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfigState | null>(null);
   const [storePurchaseState, setStorePurchaseState] = useState<StorePurchaseStateAccount | null>(null);
+  const [allianceState, setAllianceState] = useState<AllianceStateAccount | null>(null);
+  const [allianceMembership, setAllianceMembership] = useState<AllianceMembershipAccount | null>(null);
+  const [allianceDirectory, setAllianceDirectory] = useState<AllianceStateAccount[]>([]);
+  const [allianceJoinRequests, setAllianceJoinRequests] = useState<AllianceJoinRequestAccount[]>([]);
+  const [allianceMembers, setAllianceMembers] = useState<AllianceMembershipAccount[]>([]);
   const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
   const [antimatterBalance, setAntimatterBalance] = useState<bigint>(0n);
   const [antimatterBalanceLoading, setAntimatterBalanceLoading] = useState(false);
   const [battleReports, setBattleReports] = useState<BattleReport[]>([]);
+  const [spyReports, setSpyReports] = useState<SpyReport[]>([]);
   const clientRef = useRef<GameClient | null>(null);
   const marketClientRef = useRef<MarketClient | null>(null);
   const selectedPdaRef = useRef<string | null>(null);
@@ -3947,6 +4327,7 @@ const App: React.FC = () => {
   }, [walletPublicKey]);
   useEffect(() => {
     setBattleReports([]);
+    setSpyReports([]);
   }, [publicKey]);
   useEffect(() => {
     if (!connected || !wallet?.adapter) return;
@@ -4028,7 +4409,7 @@ const App: React.FC = () => {
   };
 
   const requestVaultRecoveryPassphrase = useCallback((request: VaultRecoveryPromptRequest): Promise<string> => {
-    const remembered = readRememberedVaultPassword(request.wallet);
+    const remembered = request.mode === "unlock" ? readRememberedVaultPassword(request.wallet) : null;
     if (remembered) return Promise.resolve(remembered);
     setVaultPromptBusy(false); setVaultPromptError(null);
     setVaultPrompt({ mode: request.mode, wallet: request.wallet });
@@ -4062,21 +4443,27 @@ const App: React.FC = () => {
     return loaded;
   }, []);
 
-  const loadBattleActivityFromChain = useCallback(async (wallet: PublicKey, loadedPlanets: PlayerState[]) => {
+  const loadActivityFromChain = useCallback(async (wallet: PublicKey, loadedPlanets: PlayerState[]) => {
     const walletKey = wallet.toBase58();
     if (!clientRef.current || loadedPlanets.length === 0) {
       setBattleReports([]);
+      setSpyReports([]);
       return;
     }
 
     try {
-      const records = await clientRef.current.fetchBattleResolvedEventsForPlanets(
-        loadedPlanets.map(planet => planet.planetPda),
-      );
-      const chainReports = buildBattleReportsFromEventRecords(walletKey, loadedPlanets, records);
+      const planetPdas = loadedPlanets.map(planet => planet.planetPda);
+      const [battleRecords, spyRecords] = await Promise.all([
+        clientRef.current.fetchBattleResolvedEventsForPlanets(planetPdas),
+        clientRef.current.fetchEspionageReportEventsForPlanets(planetPdas),
+      ]);
+      const chainReports = buildBattleReportsFromEventRecords(walletKey, loadedPlanets, battleRecords);
+      const chainSpyReports = buildSpyReportsFromEventRecords(walletKey, loadedPlanets, spyRecords);
       setBattleReports(chainReports);
+      setSpyReports(chainSpyReports);
     } catch {
       setBattleReports([]);
+      setSpyReports([]);
     }
   }, []);
 
@@ -4134,6 +4521,36 @@ const App: React.FC = () => {
     }
     return config;
   }, [connection, publicKey]);
+  const refreshAllianceState = useCallback(async () => {
+    if (!clientRef.current || !publicKey) {
+      setAllianceState(null);
+      setAllianceMembership(null);
+      setAllianceDirectory([]);
+      setAllianceJoinRequests([]);
+      setAllianceMembers([]);
+      return null;
+    }
+    const [joined, directory] = await Promise.all([
+      clientRef.current.getMyAlliance(),
+      clientRef.current.fetchAlliances(),
+    ]);
+    setAllianceState(joined?.alliance ?? null);
+    setAllianceMembership(joined?.membership ?? null);
+    setAllianceDirectory(directory);
+    if (joined?.alliance) {
+      const alliancePda = new PublicKey(joined.alliance.publicKey);
+      const [requests, members] = await Promise.all([
+        joined.membership.role === 2 ? clientRef.current.fetchAllianceJoinRequests(alliancePda) : Promise.resolve([]),
+        clientRef.current.fetchAllianceMembers(alliancePda),
+      ]);
+      setAllianceJoinRequests(requests);
+      setAllianceMembers(members);
+    } else {
+      setAllianceJoinRequests([]);
+      setAllianceMembers([]);
+    }
+    return joined;
+  }, [publicKey]);
   const replacePlanetState = useCallback((nextState: PlayerState) => {
     setPlanets(prev => {
       const idx = prev.findIndex(p => p.planetPda === nextState.planetPda);
@@ -4175,7 +4592,7 @@ const App: React.FC = () => {
       clientRef.current = null;
       marketClientRef.current = null;
       setPlanets([]); setSelectedPlanetPda(null); setLoading(false);
-      setVaultStatus("loading"); setGameConfig(null); setQuestState(null); setStoreConfig(null); setStorePurchaseState(null);
+      setVaultStatus("loading"); setGameConfig(null); setQuestState(null); setStoreConfig(null); setStorePurchaseState(null); setAllianceState(null); setAllianceMembership(null); setAllianceDirectory([]); setAllianceJoinRequests([]); setAllianceMembers([]);
       setGameConfigMintInput(DEFAULT_ANTIMATTER_MINT); setAntimatterBalance(0n); setUsdcBalance(0n);
       setVaultBalance(0n);
       return;
@@ -4199,11 +4616,14 @@ const App: React.FC = () => {
     ])
       .then(async ([loadedPlanets, config]) => {
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
-        await loadBattleActivityFromChain(publicKey, loadedPlanets);
+        await loadActivityFromChain(publicKey, loadedPlanets);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         await loadAntimatterBalance(config?.antimatterMint ?? DEFAULT_ANTIMATTER_MINT);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         setQuestState(await gameClient.getQuestState(publicKey));
+        const joinedAlliance = await gameClient.getMyAlliance();
+        setAllianceState(joinedAlliance?.alliance ?? null);
+        setAllianceMembership(joinedAlliance?.membership ?? null);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         const status = await gameClient.getVaultStatus();
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
@@ -4223,7 +4643,7 @@ const App: React.FC = () => {
         walletSessionRef.current += 1;
       }
     };
-  }, [connected, anchorWallet, publicKey, connection, loadAllPlanets, loadGameConfig, loadBattleActivityFromChain, loadAntimatterBalance, requestVaultRecoveryPassphrase, refreshVaultBalance]);
+  }, [connected, anchorWallet, publicKey, connection, loadAllPlanets, loadGameConfig, loadActivityFromChain, loadAntimatterBalance, requestVaultRecoveryPassphrase, refreshVaultBalance, refreshAllianceState]);
 
   const withTx = async (
     label: string,
@@ -4252,6 +4672,12 @@ const App: React.FC = () => {
     if (!publicKey) return;
     const report = buildBattleReportFromEvent(publicKey.toBase58(), sourceState, event, signature);
     setBattleReports(prev => mergeBattleReportList(prev, report));
+  }, [publicKey]);
+
+  const saveSpyEventReport = useCallback((sourceState: PlayerState, event: EspionageReportEvent, signature?: string) => {
+    if (!publicKey) return;
+    const report = buildSpyReportFromEvent(publicKey.toBase58(), sourceState, event, signature);
+    setSpyReports(prev => mergeSpyReportList(prev, report));
   }, [publicKey]);
 
   const completeBattleReport = useCallback((sourceState: PlayerState, slotIdx: number, mission: Mission, signature?: string) => {
@@ -4400,6 +4826,45 @@ const App: React.FC = () => {
   const handleInstantFinishResearch = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish research", () => clientRef.current!.accelerateResearchWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
   const handleInstantFinishShipyard = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish shipyard", () => clientRef.current!.accelerateShipBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
   const handleAccelerateMission = async (_mission: Mission, slot: number, leg: 0 | 1) => { if (!clientRef.current || !state) return; await withTx(leg === 1 ? "Instant mission return" : "Instant mission arrival", () => clientRef.current!.accelerateMissionWithAntimatter(new PublicKey(state.entityPda), slot, leg), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
+  const handleCreateAlliance = async (name: string) => {
+    if (!clientRef.current) return;
+    await withTx("Create alliance", () => clientRef.current!.createAlliance(name), async () => { await refreshAllianceState(); });
+  };
+
+  const handleRequestJoinAlliance = async (alliancePda: string) => {
+    if (!clientRef.current) return;
+    await withTx("Request alliance join", () => clientRef.current!.requestJoinAlliance(new PublicKey(alliancePda)), async () => { await refreshAllianceState(); });
+  };
+
+  const handleApproveJoinRequest = async (applicant: string) => {
+    if (!clientRef.current) return;
+    await withTx("Approve alliance request", () => clientRef.current!.approveJoinRequest(new PublicKey(applicant)), async () => { await refreshAllianceState(); });
+  };
+
+  const handleRejectJoinRequest = async (applicant: string) => {
+    if (!clientRef.current) return;
+    await withTx("Reject alliance request", () => clientRef.current!.rejectJoinRequest(new PublicKey(applicant)), async () => { await refreshAllianceState(); });
+  };
+
+  const handleExpelAllianceMember = async (member: string) => {
+    if (!clientRef.current) return;
+    await withTx("Expel alliance member", () => clientRef.current!.expelAllianceMember(new PublicKey(member)), async () => { await refreshAllianceState(); });
+  };
+
+  const handleTransferAllianceLeadership = async (member: string) => {
+    if (!clientRef.current) return;
+    await withTx("Transfer alliance leadership", () => clientRef.current!.transferAllianceLeadership(new PublicKey(member)), async () => { await refreshAllianceState(); });
+  };
+
+  const handleLeaveAlliance = async () => {
+    if (!clientRef.current) return;
+    await withTx("Leave alliance", () => clientRef.current!.leaveAlliance(), async () => { await refreshAllianceState(); });
+  };
+
+  const handleClaimAllianceMission = async (period: number, missionId: number) => {
+    if (!clientRef.current || !state) return;
+    await withTx("Claim alliance mission", () => clientRef.current!.claimAllianceMission(new PublicKey(state.entityPda), period, missionId), async () => { await refreshAllianceState(); });
+  };
   const handlePurchaseStorePack = async (period: StorePeriod, packId: number) => {
     if (!clientRef.current || !state) return;
     const pack = STORE_PACKS.find(entry => entry.period === period && entry.id === packId);
@@ -4407,7 +4872,7 @@ const App: React.FC = () => {
     await withTx("Purchase store pack", () => clientRef.current!.purchaseStorePack(new PublicKey(state.entityPda), period, packId), async () => { await refreshSelectedPlanetState(); await refreshStoreState(); });
   };
 
-  useEffect(() => { if (!publicKey) return; void loadAntimatterBalance().catch(() => setAntimatterBalance(0n)); void refreshStoreState().catch(() => {}); }, [publicKey, gameConfig?.antimatterMint, loadAntimatterBalance, refreshStoreState]);
+  useEffect(() => { if (!publicKey) return; void loadAntimatterBalance().catch(() => setAntimatterBalance(0n)); void refreshStoreState().catch(() => {}); void refreshAllianceState().catch(() => {}); }, [publicKey, gameConfig?.antimatterMint, loadAntimatterBalance, refreshStoreState, refreshAllianceState]);
 
   const createPlanet = async () => {
     if (!clientRef.current) return;
@@ -4480,19 +4945,30 @@ const App: React.FC = () => {
       if (launchCooldownLeft > 0) throw new Error(`Attack launch cooldown: ${fmtCountdown(launchCooldownLeft)} remaining.`);
       if (attackPoints < MIN_ATTACK_COMBAT_POINTS) throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`);
     }
+    if (missionType === 6) {
+      const probeCount = ships.espionageProbe ?? 0;
+      const totalShips = selectedShips.reduce((sum, [, qty]) => sum + qty, 0);
+      if (probeCount <= 0) throw new Error("Espionage requires at least 1 espionage probe.");
+      if (totalShips !== probeCount) throw new Error("Espionage missions can only send espionage probes.");
+      if (cargo.metal > 0n || cargo.crystal > 0n || cargo.deuterium > 0n) throw new Error("Espionage missions cannot carry cargo.");
+    }
     let launchTarget: { galaxy: number; system: number; position: number; colonyName?: string };
     if (target.kind === "attack") {
       const free = await clientRef.current.isCoordFree(target.galaxy, target.system, target.position);
       if (free) throw new Error(`Attack missions can only target occupied planets. [${target.galaxy}:${target.system}:${target.position}] is empty.`);
       const targetState = await clientRef.current.getPlanetStateByCoordinates(target.galaxy, target.system, target.position);
       if (targetState) {
-        const targetProtectionLeft = Math.max(0, targetState.planet.protectionUntilTs - now);
+        const targetProtectionLeft = Math.max(0, effectiveAttackProtectionUntil(targetState.planet) - now);
         const targetCooldownLeft = targetState.planet.lastAttackedTs > 0
           ? Math.max(0, targetState.planet.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - now)
           : 0;
         if (targetProtectionLeft > 0) throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`);
         if (targetCooldownLeft > 0) throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);
       }
+      launchTarget = { galaxy: target.galaxy, system: target.system, position: target.position };
+    } else if (target.kind === "espionage") {
+      const free = await clientRef.current.isCoordFree(target.galaxy, target.system, target.position);
+      if (free) throw new Error(`Espionage missions can only target occupied planets. [${target.galaxy}:${target.system}:${target.position}] is empty.`);
       launchTarget = { galaxy: target.galaxy, system: target.system, position: target.position };
     } else if (target.kind === "transport") {
       if (target.mode === "owned") { const dest=planets.find(p=>p.entityPda===target.destinationEntity); if(!dest)throw new Error("Destination planet not found."); launchTarget={galaxy:dest.planet.galaxy,system:dest.planet.system,position:dest.planet.position}; }
@@ -4541,7 +5017,7 @@ const App: React.FC = () => {
   const visibleSecondaryTabs = (hasCreatedWorld
     ? SECONDARY_TABS
     : SECONDARY_TABS.filter(t => t.id !== "market" && t.id !== "store")).concat([{ id: "activity" as Tab, icon: "ACT", label: "Activity" }]);
-  const visibleDesktopTabs: Tab[] = ["overview","quests","store","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"]
+  const visibleDesktopTabs: Tab[] = ["overview","quests","alliance","store","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"]
     .filter(t => hasCreatedWorld || (t !== "market" && t !== "store")) as Tab[];
   const controllerTabs = isMobile
     ? [...PRIMARY_TABS.map(entry => entry.id), ...visibleSecondaryTabs.map(entry => entry.id)]
@@ -4653,6 +5129,8 @@ const App: React.FC = () => {
         return <OverviewTab state={state} res={liveRes} nowTs={nowTs} planets={planets} onSelectPlanet={setSelectedPlanetPda} onFinishBuild={handleFinishBuild} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishBuild={handleInstantFinishBuild} onInstantFinishResearch={handleInstantFinishResearch} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy}/>;
       case "quests":
         return <QuestsTab state={state} questState={questState} nowTs={nowTs} txBusy={txBusy} onDailyCheckIn={handleDailyCheckIn} onClaimQuest={handleClaimQuest} />;
+      case "alliance":
+        return <AllianceTab state={state} alliance={allianceState} membership={allianceMembership} alliances={allianceDirectory} joinRequests={allianceJoinRequests} members={allianceMembers} storeConfig={storeConfig} usdcBalance={usdcBalance} antimatterBalance={antimatterBalance} txBusy={txBusy} onCreate={handleCreateAlliance} onRequestJoin={handleRequestJoinAlliance} onApproveRequest={handleApproveJoinRequest} onRejectRequest={handleRejectJoinRequest} onExpelMember={handleExpelAllianceMember} onTransferLeadership={handleTransferAllianceLeadership} onLeave={handleLeaveAlliance} onClaimMission={handleClaimAllianceMission} />;
       case "store":
         return <StoreTab state={state} storeConfig={storeConfig} storePurchaseState={storePurchaseState} usdcBalance={usdcBalance} nowTs={nowTs} txBusy={txBusy} onPurchase={handlePurchaseStorePack} />;
       case "resources":
@@ -4666,9 +5144,9 @@ const App: React.FC = () => {
       case "fleet":
         return <FleetTab fleet={state.fleet} computerTech={state.research.computerTech} res={liveRes} txBusy={txBusy} onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}/>;
       case "missions":
-        return <CommandMissionsTab fleet={state.fleet} nowTs={nowTs} txBusy={txBusy} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onAccelerateMission={handleAccelerateMission} onResolveTransport={(mission, slotIdx) => { if (!confirmResourceCapWarning("Resolve transport cargo", { metal: mission.cargoMetal, crystal: mission.cargoCrystal, deuterium: mission.cargoDeuterium })) return; return withTx("Resolve transport", () => clientRef.current!.resolveTransport(new PublicKey(state.entityPda), mission, slotIdx), async () => { if (publicKey) await loadAllPlanets(publicKey, state.planetPda); }); }} onResolveAttack={(mission, slotIdx) => { if (mission.applied && !confirmResourceCapWarning("Resolve returning attack cargo", { metal: mission.cargoMetal, crystal: mission.cargoCrystal, deuterium: mission.cargoDeuterium })) return; let signature: string | undefined; let battleEvent: BattleResolvedEvent | null = null; const sourceAtClick = state; return withTx("Resolve attack", async () => { signature = await clientRef.current!.resolveAttack(new PublicKey(sourceAtClick.entityPda), mission, slotIdx); if (signature && !mission.applied) { try { battleEvent = await clientRef.current!.fetchBattleResolvedEvent(signature); } catch (eventErr) { console.warn("Battle event unavailable from transaction logs", eventErr); } } }, async () => { if (!publicKey) return; const loaded = await loadAllPlanets(publicKey, sourceAtClick.planetPda); const refreshedSource = loaded.find(p => p.planetPda === sourceAtClick.planetPda) ?? sourceAtClick; const refreshedMission = refreshedSource.fleet.missions[slotIdx]; if (battleEvent) saveBattleEventReport(refreshedSource, battleEvent, signature); else if (refreshedMission?.missionType === 1 && refreshedMission.applied) saveBattleReport(refreshedSource, slotIdx, refreshedMission, signature, false); else if (mission.applied) completeBattleReport(sourceAtClick, slotIdx, mission, signature); }); }} onResolveColonize={(mission, slotIdx) => setConfirmation({ kind: "resolveColonize", mission, slotIdx })}/>;
+        return <CommandMissionsTab fleet={state.fleet} nowTs={nowTs} txBusy={txBusy} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onAccelerateMission={handleAccelerateMission} onResolveTransport={(mission, slotIdx) => { if (!confirmResourceCapWarning("Resolve transport cargo", { metal: mission.cargoMetal, crystal: mission.cargoCrystal, deuterium: mission.cargoDeuterium })) return; return withTx("Resolve transport", () => clientRef.current!.resolveTransport(new PublicKey(state.entityPda), mission, slotIdx), async () => { if (publicKey) await loadAllPlanets(publicKey, state.planetPda); }); }} onResolveAttack={(mission, slotIdx) => { if (mission.applied && !confirmResourceCapWarning("Resolve returning attack cargo", { metal: mission.cargoMetal, crystal: mission.cargoCrystal, deuterium: mission.cargoDeuterium })) return; let signature: string | undefined; let battleEvent: BattleResolvedEvent | null = null; const sourceAtClick = state; return withTx("Resolve attack", async () => { signature = await clientRef.current!.resolveAttack(new PublicKey(sourceAtClick.entityPda), mission, slotIdx); if (signature && !mission.applied) { try { battleEvent = await clientRef.current!.fetchBattleResolvedEvent(signature); } catch (eventErr) { console.warn("Battle event unavailable from transaction logs", eventErr); } } }, async () => { if (!publicKey) return; const loaded = await loadAllPlanets(publicKey, sourceAtClick.planetPda); const refreshedSource = loaded.find(p => p.planetPda === sourceAtClick.planetPda) ?? sourceAtClick; const refreshedMission = refreshedSource.fleet.missions[slotIdx]; if (battleEvent) saveBattleEventReport(refreshedSource, battleEvent, signature); else if (refreshedMission?.missionType === 1 && refreshedMission.applied) saveBattleReport(refreshedSource, slotIdx, refreshedMission, signature, false); else if (mission.applied) completeBattleReport(sourceAtClick, slotIdx, mission, signature); }); }} onResolveEspionage={(mission, slotIdx) => { let signature: string | undefined; let spyEvent: EspionageReportEvent | null = null; const sourceAtClick = state; return withTx("Resolve espionage", async () => { signature = await clientRef.current!.resolveEspionage(new PublicKey(sourceAtClick.entityPda), mission, slotIdx); if (signature && !mission.applied) { try { spyEvent = await clientRef.current!.fetchEspionageReportEvent(signature); } catch (eventErr) { console.warn("Espionage event unavailable from transaction logs", eventErr); } } }, async () => { if (!publicKey) return; const loaded = await loadAllPlanets(publicKey, sourceAtClick.planetPda); const refreshedSource = loaded.find(p => p.planetPda === sourceAtClick.planetPda) ?? sourceAtClick; if (spyEvent) saveSpyEventReport(refreshedSource, spyEvent, signature); }); }} onResolveColonize={(mission, slotIdx) => setConfirmation({ kind: "resolveColonize", mission, slotIdx })}/>;
       case "activity":
-        return <ActivityTab reports={battleReports} onClear={() => setBattleReports([])} />;
+        return <ActivityTab reports={battleReports} spyReports={spyReports} onClear={() => { setBattleReports([]); setSpyReports([]); }} />;
       case "research":
         return <ResearchTab research={state.research} res={liveRes} planet={state.planet} txBusy={txBusy} onResearch={handleStartResearch} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onInstantFinishResearch={handleInstantFinishResearch} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "galaxy":
@@ -4689,9 +5167,9 @@ const App: React.FC = () => {
 
   const handleMobileTabClick = (t: Tab) => { setTab(t); setShowMoreDrawer(false); };
 
-  const ALL_DESKTOP_TABS: Tab[] = ["overview","quests","store","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"];
+  const ALL_DESKTOP_TABS: Tab[] = ["overview","quests","alliance","store","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"];
   const DESKTOP_TAB_ICONS: Record<Tab, string> = {
-    activity:"ACT", quests:"Q",
+    activity:"ACT", quests:"Q", alliance:"A",
     overview:"◈", store:"$", resources:"⛏", buildings:"⬡", research:"🔬",
     shipyard:"🚀", defense:"🛡", fleet:"◉", missions:"⊹", galaxy:"🌌", market:"⚖",
   };

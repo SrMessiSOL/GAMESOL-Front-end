@@ -1739,7 +1739,7 @@ async initializePlanet(planetName = "Homeworld", reportProgress?: ProgressReport
 
 private buildCommitInstruction(primaryPlanetPda: PublicKey): TransactionInstruction {
   const payer = this.getSessionAuthority();
-  const GAME_STATE_PROGRAM_ID = new PublicKey("7yKyjQ7m8tSqvqYnV65aVV9Jwdee7KqyELeDXf6Fxkt4");
+  const GAME_STATE_PROGRAM_ID = new PublicKey("HheELu8GJ7EAw7afAxinmJLEnzQK7gAMBWYqDUXtec2S");
   const discriminator = Buffer.from([230, 31, 100, 83, 140, 6, 40, 154]);
 
   const keys: AccountMeta[] = [

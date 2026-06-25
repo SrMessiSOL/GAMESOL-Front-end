@@ -9,6 +9,7 @@ import {
   Keypair,
   PublicKey,
   SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
   ComputeBudgetProgram,
@@ -20,11 +21,11 @@ import type { GameClient,} from "./game-state";
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 export const MARKET_PROGRAM_ID = new PublicKey(
-  "E6ubJUSv2eqJE93HHma7WAiMrikkUxkBmEkqELvVb8j3",
+  "ESjW56VLfUfvjgWmAMtQnhgyEpo8esQZQh2meRVNg1gA",
 );
 
 export const GAME_STATE_PROGRAM_ID = new PublicKey(
-  "7yKyjQ7m8tSqvqYnV65aVV9Jwdee7KqyELeDXf6Fxkt4",
+  "HheELu8GJ7EAw7afAxinmJLEnzQK7gAMBWYqDUXtec2S",
 );
 export const ANTIMATTER_SCALE = 1_000_000n;
 export const MIN_RESOURCE_AMOUNT = 1_000n;
@@ -374,6 +375,7 @@ export class MarketClient {
         { pubkey: marketEscrow,             isSigner: false, isWritable: true },   // token account to init
         { pubkey: marketEscrowAuthority,    isSigner: false, isWritable: false },  // PDA authority
         { pubkey: TOKEN_PROGRAM_ID,         isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_RENT_PUBKEY,       isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId,  isSigner: false, isWritable: false },
       ],
       data: IX.initializeEscrow,   // ← now using the updated IX constant

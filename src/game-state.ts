@@ -11,9 +11,14 @@ import {
 import { AnchorProvider, setProvider } from "@coral-xyz/anchor";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-export const GAME_STATE_PROGRAM_ID = new PublicKey("7yKyjQ7m8tSqvqYnV65aVV9Jwdee7KqyELeDXf6Fxkt4");
+export const GAME_STATE_PROGRAM_ID = new PublicKey("HheELu8GJ7EAw7afAxinmJLEnzQK7gAMBWYqDUXtec2S");
 export const RPC_ENDPOINT = import.meta.env.VITE_SOLANA_RPC_ENDPOINT?.trim() || "https://api.devnet.solana.com";
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+export const ALLIANCE_CREATE_USDC_COST = 1_000_000n;
+export const ALLIANCE_CREATE_ANTIMATTER_COST = 10_000_000_000n;
+export const ALLIANCE_CREATE_ANTIMATTER_BURN = 5_000_000_000n;
+export const ALLIANCE_CREATE_ANTIMATTER_TREASURY = 5_000_000_000n;
 
 const VAULT_MIN_BALANCE_LAMPORTS = 5_000_000;
 const VAULT_TARGET_BALANCE_LAMPORTS = 20_000_000;
@@ -35,7 +40,11 @@ const GAME_CONFIG_DISCRIMINATOR      = Buffer.from([45, 146, 146, 33, 170, 69, 9
 const QUEST_STATE_DISCRIMINATOR      = Buffer.from([91, 149, 47, 55, 121, 144, 93, 66]);
 const STORE_CONFIG_DISCRIMINATOR     = Buffer.from([108, 23, 66, 65, 67, 124, 167, 135]);
 const STORE_PURCHASE_STATE_DISCRIMINATOR = Buffer.from([98, 26, 131, 62, 86, 147, 141, 175]);
+const ALLIANCE_STATE_DISCRIMINATOR = Buffer.from([177, 12, 51, 254, 131, 106, 170, 219]);
+const ALLIANCE_MEMBERSHIP_DISCRIMINATOR = Buffer.from([126, 58, 186, 213, 41, 116, 92, 8]);
+const ALLIANCE_JOIN_REQUEST_DISCRIMINATOR = Buffer.from([63, 14, 157, 153, 45, 39, 160, 253]);
 const BATTLE_RESOLVED_EVENT_DISCRIMINATOR = Buffer.from([205, 161, 192, 151, 125, 116, 201, 210]);
+const ESPIONAGE_REPORT_EVENT_DISCRIMINATOR = Buffer.from([232, 103, 204, 173, 23, 198, 156, 251]);
 
 // ─── Instruction Discriminators ───────────────────────────────────────────────
 // NOTE: These must be updated after `anchor build` generates the new IDL.
@@ -52,6 +61,15 @@ const IX = {
   dailyCheckInVault:      Buffer.from([19, 45, 28, 31, 198, 108, 54, 148]),
   claimQuest:             Buffer.from([38, 197, 33, 123, 0, 108, 206, 161]),
   claimQuestVault:        Buffer.from([107, 32, 162, 80, 40, 247, 200, 122]),
+  createAlliance:         Buffer.from([201, 92, 183, 64, 131, 82, 174, 203]),
+  joinAlliance:           Buffer.from([237, 35, 212, 158, 181, 98, 153, 166]),
+  requestJoinAlliance:    Buffer.from([120, 1, 199, 157, 103, 240, 194, 241]),
+  approveJoinRequest:     Buffer.from([155, 51, 199, 71, 35, 84, 237, 59]),
+  rejectJoinRequest:      Buffer.from([82, 16, 45, 213, 231, 147, 56, 127]),
+  expelAllianceMember:    Buffer.from([169, 245, 62, 100, 232, 190, 127, 220]),
+  transferAllianceLeadership: Buffer.from([189, 125, 244, 81, 135, 19, 204, 2]),
+  leaveAlliance:          Buffer.from([224, 61, 93, 128, 148, 155, 98, 231]),
+  claimAllianceMission:   Buffer.from([175, 98, 163, 189, 178, 161, 219, 60]),
 
   produce:                Buffer.from([240, 243, 185, 55, 195, 151, 136, 205]),
   produceVault:           Buffer.from([228, 109, 51, 38, 151, 15, 255, 118]),
@@ -89,6 +107,8 @@ const IX = {
 
   resolveAttack:          Buffer.from([77, 153, 65, 199, 69, 106, 169, 209]),
   resolveAttackVault:     Buffer.from([98, 245, 31, 242, 130, 131, 221, 205]),
+  resolveEspionage:       Buffer.from([116, 130, 201, 146, 84, 49, 161, 144]),
+  resolveEspionageVault:  Buffer.from([175, 197, 212, 44, 75, 2, 44, 66]),
 
   resolveColonize:        Buffer.from([229, 191, 212, 205, 242, 178, 50, 79]),
   resolveColonizeVault:   Buffer.from([144, 28, 197, 235, 65, 250, 241, 88]),
@@ -110,6 +130,7 @@ const IX = {
 const MAX_MISSIONS = 4;
 const MAX_PLANET_NAME_LEN = 32;
 const MAX_MISSION_COLONY_NAME_LEN = 32;
+const MAX_ALLIANCE_NAME_LEN = 32;
 
 // ─── Public interfaces ────────────────────────────────────────────────────────
 export interface Mission {
@@ -186,6 +207,43 @@ export interface BattleResolvedEventRecord {
   slot: number;
   blockTime: number | null;
   event: BattleResolvedEvent;
+}
+
+export interface EspionageReportEvent {
+  sourcePlanet: string;
+  destinationPlanet: string;
+  attacker: string;
+  defender: string;
+  sourceGalaxy: number;
+  sourceSystem: number;
+  sourcePosition: number;
+  targetGalaxy: number;
+  targetSystem: number;
+  targetPosition: number;
+  resolvedAt: number;
+  missionSlot: number;
+  revealLevel: number;
+  probesSent: number;
+  probesSurvived: number;
+  probesLost: number;
+  sensorScore: bigint;
+  counterScore: bigint;
+  reportedMetal: bigint;
+  reportedCrystal: bigint;
+  reportedDeuterium: bigint;
+  reportedBuildingScore: bigint;
+  reportedFleetPoints: bigint;
+  reportedDefensePoints: bigint;
+  reportedWeaponsTechnology: number;
+  reportedShieldingTechnology: number;
+  reportedArmorTechnology: number;
+}
+
+export interface EspionageReportEventRecord {
+  signature: string;
+  slot: number;
+  blockTime: number | null;
+  event: EspionageReportEvent;
 }
 
 export interface Planet {
@@ -380,6 +438,41 @@ export interface StorePurchaseStateAccount {
   weeklyPurchasedMask: bigint;
   monthlyPurchasedMask: bigint;
   lastUpdatedTs: number;
+  bump: number;
+}
+
+export interface AllianceStateAccount {
+  publicKey: string;
+  founder: string;
+  name: string;
+  level: number;
+  xp: bigint;
+  memberCount: number;
+  maxMembers: number;
+  totalMissionsCompleted: bigint;
+  createdAt: number;
+  bump: number;
+}
+
+export interface AllianceMembershipAccount {
+  authority: string;
+  alliance: string;
+  role: number;
+  joinedAt: number;
+  dailyEpoch: number;
+  weeklyEpoch: number;
+  monthlyEpoch: number;
+  dailyClaimedMask: bigint;
+  weeklyClaimedMask: bigint;
+  monthlyClaimedMask: bigint;
+  bump: number;
+}
+
+export interface AllianceJoinRequestAccount {
+  publicKey: string;
+  applicant: string;
+  alliance: string;
+  createdAt: number;
   bump: number;
 }
 
@@ -599,12 +692,88 @@ function decodeBattleResolvedEvent(data: Buffer): BattleResolvedEvent | null {
   };
 }
 
+function decodeEspionageReportEvent(data: Buffer): EspionageReportEvent | null {
+  if (data.length < 235 || !data.slice(0, 8).equals(ESPIONAGE_REPORT_EVENT_DISCRIMINATOR)) {
+    return null;
+  }
+
+  let o = 8;
+  const sourcePlanet = readPubkeyRaw(data, o).toBase58(); o += 32;
+  const destinationPlanet = readPubkeyRaw(data, o).toBase58(); o += 32;
+  const attacker = readPubkeyRaw(data, o).toBase58(); o += 32;
+  const defender = readPubkeyRaw(data, o).toBase58(); o += 32;
+  const sourceGalaxy = readU16(data, o); o += 2;
+  const sourceSystem = readU16(data, o); o += 2;
+  const sourcePosition = readU8(data, o); o += 1;
+  const targetGalaxy = readU16(data, o); o += 2;
+  const targetSystem = readU16(data, o); o += 2;
+  const targetPosition = readU8(data, o); o += 1;
+  const resolvedAt = readI64(data, o); o += 8;
+  const missionSlot = readU8(data, o); o += 1;
+  const revealLevel = readU8(data, o); o += 1;
+  const probesSent = readU32(data, o); o += 4;
+  const probesSurvived = readU32(data, o); o += 4;
+  const probesLost = readU32(data, o); o += 4;
+  const sensorScore = readU64(data, o); o += 8;
+  const counterScore = readU64(data, o); o += 8;
+  const reportedMetal = readU64(data, o); o += 8;
+  const reportedCrystal = readU64(data, o); o += 8;
+  const reportedDeuterium = readU64(data, o); o += 8;
+  const reportedBuildingScore = readU64(data, o); o += 8;
+  const reportedFleetPoints = readU64(data, o); o += 8;
+  const reportedDefensePoints = readU64(data, o); o += 8;
+
+  return {
+    sourcePlanet,
+    destinationPlanet,
+    attacker,
+    defender,
+    sourceGalaxy,
+    sourceSystem,
+    sourcePosition,
+    targetGalaxy,
+    targetSystem,
+    targetPosition,
+    resolvedAt,
+    missionSlot,
+    revealLevel,
+    probesSent,
+    probesSurvived,
+    probesLost,
+    sensorScore,
+    counterScore,
+    reportedMetal,
+    reportedCrystal,
+    reportedDeuterium,
+    reportedBuildingScore,
+    reportedFleetPoints,
+    reportedDefensePoints,
+    reportedWeaponsTechnology: readU8(data, o),
+    reportedShieldingTechnology: readU8(data, o + 1),
+    reportedArmorTechnology: readU8(data, o + 2),
+  };
+}
+
 function parseBattleResolvedEventFromLogs(logs: string[] | null | undefined): BattleResolvedEvent | null {
   for (const log of logs ?? []) {
     const payload = log.startsWith("Program data: ") ? log.slice("Program data: ".length).trim() : "";
     if (!payload) continue;
     try {
       const event = decodeBattleResolvedEvent(Buffer.from(payload, "base64"));
+      if (event) return event;
+    } catch {
+      // Ignore unrelated program data logs.
+    }
+  }
+  return null;
+}
+
+function parseEspionageReportEventFromLogs(logs: string[] | null | undefined): EspionageReportEvent | null {
+  for (const log of logs ?? []) {
+    const payload = log.startsWith("Program data: ") ? log.slice("Program data: ".length).trim() : "";
+    if (!payload) continue;
+    try {
+      const event = decodeEspionageReportEvent(Buffer.from(payload, "base64"));
       if (event) return event;
     } catch {
       // Ignore unrelated program data logs.
@@ -781,6 +950,35 @@ export function deriveQuestStatePda(walletPubkey: PublicKey): PublicKey {
     GAME_STATE_PROGRAM_ID,
   )[0];
 }
+
+export function deriveAlliancePda(founderPubkey: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("alliance"), founderPubkey.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
+export function deriveAllianceMembershipPda(walletPubkey: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("alliance_membership"), walletPubkey.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
+export function deriveAllianceJoinRequestPda(alliancePda: PublicKey, applicant: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("alliance_join_request"), alliancePda.toBuffer(), applicant.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
+export function deriveAssociatedTokenAccount(owner: PublicKey, mint: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  )[0];
+}
+
 export function deriveStoreConfigPda(): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("store_config")],
@@ -950,6 +1148,83 @@ function deserializeStorePurchaseState(data: Buffer): StorePurchaseStateAccount 
   const lastUpdatedTs = readI64(data, o); o += 8;
   const bump = readU8(data, o);
   return { authority: authority.toBase58(), dailyEpoch, weeklyEpoch, monthlyEpoch, dailyPurchasedMask, weeklyPurchasedMask, monthlyPurchasedMask, lastUpdatedTs, bump };
+}
+
+function deserializeAllianceState(publicKey: PublicKey, data: Buffer): AllianceStateAccount {
+  if (!data.slice(0, 8).equals(ALLIANCE_STATE_DISCRIMINATOR)) {
+    throw new Error("Invalid alliance state discriminator.");
+  }
+  let o = 8;
+  const founder = readPubkeyRaw(data, o); o += 32;
+  const name = readFixedString(data, o, MAX_ALLIANCE_NAME_LEN); o += MAX_ALLIANCE_NAME_LEN;
+  const level = readU16(data, o); o += 2;
+  const xp = readU64(data, o); o += 8;
+  const memberCount = readU16(data, o); o += 2;
+  const maxMembers = readU16(data, o); o += 2;
+  const totalMissionsCompleted = readU64(data, o); o += 8;
+  const createdAt = readI64(data, o); o += 8;
+  const bump = readU8(data, o);
+  return {
+    publicKey: publicKey.toBase58(),
+    founder: founder.toBase58(),
+    name,
+    level,
+    xp,
+    memberCount,
+    maxMembers,
+    totalMissionsCompleted,
+    createdAt,
+    bump,
+  };
+}
+
+function deserializeAllianceMembership(data: Buffer): AllianceMembershipAccount {
+  if (!data.slice(0, 8).equals(ALLIANCE_MEMBERSHIP_DISCRIMINATOR)) {
+    throw new Error("Invalid alliance membership discriminator.");
+  }
+  let o = 8;
+  const authority = readPubkeyRaw(data, o); o += 32;
+  const alliance = readPubkeyRaw(data, o); o += 32;
+  const role = readU8(data, o); o += 1;
+  const joinedAt = readI64(data, o); o += 8;
+  const dailyEpoch = readI64(data, o); o += 8;
+  const weeklyEpoch = readI64(data, o); o += 8;
+  const monthlyEpoch = readI64(data, o); o += 8;
+  const dailyClaimedMask = readU64(data, o); o += 8;
+  const weeklyClaimedMask = readU64(data, o); o += 8;
+  const monthlyClaimedMask = readU64(data, o); o += 8;
+  const bump = readU8(data, o);
+  return {
+    authority: authority.toBase58(),
+    alliance: alliance.toBase58(),
+    role,
+    joinedAt,
+    dailyEpoch,
+    weeklyEpoch,
+    monthlyEpoch,
+    dailyClaimedMask,
+    weeklyClaimedMask,
+    monthlyClaimedMask,
+    bump,
+  };
+}
+
+function deserializeAllianceJoinRequest(publicKey: PublicKey, data: Buffer): AllianceJoinRequestAccount {
+  if (!data.slice(0, 8).equals(ALLIANCE_JOIN_REQUEST_DISCRIMINATOR)) {
+    throw new Error("Invalid alliance join request discriminator.");
+  }
+  let o = 8;
+  const applicant = readPubkeyRaw(data, o); o += 32;
+  const alliance = readPubkeyRaw(data, o); o += 32;
+  const createdAt = readI64(data, o); o += 8;
+  const bump = readU8(data, o);
+  return {
+    publicKey: publicKey.toBase58(),
+    applicant: applicant.toBase58(),
+    alliance: alliance.toBase58(),
+    createdAt,
+    bump,
+  };
 }
 
 function deserializeMission(data: Buffer, offset: number): { mission: Mission; bytesRead: number } {
@@ -1492,8 +1767,25 @@ function mapSendTransactionError(message: string, logs: string[]): string {
   ) {
     return "Not enough resources are available for this action.";
   }
+  if (details.includes("AllianceFull") || details.includes("custom program error: 0x17b3")) {
+    return "This alliance is full. The alliance must level up before more players can join.";
+  }
+  if (details.includes("NotInAlliance") || details.includes("custom program error: 0x17b5")) {
+    return "Join or create an alliance before using alliance missions.";
+  }
+  if (details.includes("AllianceFounderCannotLeave") || details.includes("custom program error: 0x17b6")) {
+    return "Alliance founders cannot leave their own alliance in this version.";
+  }
+  if (details.includes("AllianceMissionAlreadyClaimed") || details.includes("custom program error: 0x17b8")) {
+    return "This alliance mission was already claimed for the current period.";
+  }
+  if (details.includes("AllianceMissionRequirementsNotMet") || details.includes("custom program error: 0x17b9")) {
+    return "Alliance mission requirements are not completed yet.";
+  }  if (details.includes("ResourceCapExceeded") || details.includes("storage cap") || details.includes("custom program error: 0x17b2")) {
+    return "This reward or transfer would exceed your planet storage cap. Spend resources or upgrade storage first.";
+  }
   if (details.includes("NewPlayerProtected") || details.includes("new-player protection") || details.includes("custom program error: 0x17a3")) {
-    return "Target planet is still under new-player protection.";
+    return "Target planet is protected by beginner protection or an active defense shield.";
   }
   if (details.includes("GameplayLocked") || details.includes("gameplay action") || details.includes("custom program error: 0x17a4")) {
     return "This action is still locked for this planet. Wait for the unlock timer.";
@@ -1569,6 +1861,14 @@ export class GameClient {
     return parseBattleResolvedEventFromLogs(tx?.meta?.logMessages);
   }
 
+  async fetchEspionageReportEvent(signature: string): Promise<EspionageReportEvent | null> {
+    const tx = await this.connection.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+    return parseEspionageReportEventFromLogs(tx?.meta?.logMessages);
+  }
+
   async fetchBattleResolvedEventsForPlanets(
     planetPdas: Array<PublicKey | string>,
     limitPerPlanet = 40,
@@ -1598,6 +1898,56 @@ export class GameClient {
           maxSupportedTransactionVersion: 0,
         });
         const event = parseBattleResolvedEventFromLogs(tx?.meta?.logMessages);
+        if (!event || (!planetSet.has(event.sourcePlanet) && !planetSet.has(event.destinationPlanet))) {
+          continue;
+        }
+        records.push({
+          signature,
+          slot: tx?.slot ?? meta.slot,
+          blockTime: tx?.blockTime ?? meta.blockTime,
+          event,
+        });
+      } catch {
+        // Historical transaction lookup is best-effort and depends on the RPC node.
+      }
+    }
+
+    return records.sort((a, b) => {
+      const bTime = b.event.resolvedAt || b.blockTime || 0;
+      const aTime = a.event.resolvedAt || a.blockTime || 0;
+      return bTime - aTime;
+    });
+  }
+
+  async fetchEspionageReportEventsForPlanets(
+    planetPdas: Array<PublicKey | string>,
+    limitPerPlanet = 40,
+  ): Promise<EspionageReportEventRecord[]> {
+    const planetKeys = planetPdas.map(planet => planet instanceof PublicKey ? planet.toBase58() : planet);
+    const planetSet = new Set(planetKeys);
+    const signatures = new Map<string, { slot: number; blockTime: number | null }>();
+
+    for (const planetKey of planetKeys) {
+      const entries = await this.connection.getSignaturesForAddress(
+        new PublicKey(planetKey),
+        { limit: limitPerPlanet },
+        "confirmed",
+      );
+      for (const entry of entries) {
+        if (!signatures.has(entry.signature)) {
+          signatures.set(entry.signature, { slot: entry.slot, blockTime: entry.blockTime ?? null });
+        }
+      }
+    }
+
+    const records: EspionageReportEventRecord[] = [];
+    for (const [signature, meta] of signatures) {
+      try {
+        const tx = await this.connection.getTransaction(signature, {
+          commitment: "confirmed",
+          maxSupportedTransactionVersion: 0,
+        });
+        const event = parseEspionageReportEventFromLogs(tx?.meta?.logMessages);
         if (!event || (!planetSet.has(event.sourcePlanet) && !planetSet.has(event.destinationPlanet))) {
           continue;
         }
@@ -1655,7 +2005,7 @@ export class GameClient {
 
   // ── Crypto helpers ──────────────────────────────────────────────────────────
   private async promptVaultRecoveryPassphrase(createIfMissing: boolean): Promise<string> {
-    if (this.vaultRecoveryPassphrase) return this.vaultRecoveryPassphrase;
+    if (this.vaultRecoveryPassphrase && !createIfMissing) return this.vaultRecoveryPassphrase;
 
     if (this.options.requestVaultRecoveryPassphrase) {
       const value = await this.options.requestVaultRecoveryPassphrase({
@@ -2284,6 +2634,287 @@ export class GameClient {
     catch { return null; }
   }
 
+  async getAllianceMembership(authority: PublicKey = this.provider.wallet.publicKey): Promise<AllianceMembershipAccount | null> {
+    const membershipPda = deriveAllianceMembershipPda(authority);
+    const account = await this.connection.getAccountInfo(membershipPda, "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeAllianceMembership(Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
+  async getAlliance(alliancePda: PublicKey): Promise<AllianceStateAccount | null> {
+    const account = await this.connection.getAccountInfo(alliancePda, "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeAllianceState(alliancePda, Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
+  async getAllianceByFounder(founder: PublicKey): Promise<AllianceStateAccount | null> {
+    return this.getAlliance(deriveAlliancePda(founder));
+  }
+
+  async getMyAlliance(): Promise<{ alliance: AllianceStateAccount; membership: AllianceMembershipAccount } | null> {
+    const membership = await this.getAllianceMembership();
+    if (!membership) return null;
+    const alliance = await this.getAlliance(new PublicKey(membership.alliance));
+    if (!alliance) return null;
+    return { alliance, membership };
+  }
+
+  async fetchAlliances(): Promise<AllianceStateAccount[]> {
+    const accounts = await this.connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, {
+      commitment: "confirmed",
+      filters: [{ dataSize: 103 }],
+    });
+    const alliances: AllianceStateAccount[] = [];
+    for (const { pubkey, account } of accounts) {
+      try {
+        alliances.push(deserializeAllianceState(pubkey, Buffer.from(account.data)));
+      } catch {
+        /* skip non-alliance accounts */
+      }
+    }
+    return alliances.sort((a, b) => {
+      if (b.level !== a.level) return b.level - a.level;
+      if (b.memberCount !== a.memberCount) return b.memberCount - a.memberCount;
+      return a.createdAt - b.createdAt;
+    });
+  }
+
+  async fetchAllianceMembers(alliancePda: PublicKey): Promise<AllianceMembershipAccount[]> {
+    const allianceKey = alliancePda.toBase58();
+    const accounts = await this.connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, {
+      commitment: "confirmed",
+      filters: [{ dataSize: 130 }],
+    });
+    const members: AllianceMembershipAccount[] = [];
+    for (const { account } of accounts) {
+      try {
+        const member = deserializeAllianceMembership(Buffer.from(account.data));
+        if (member.alliance === allianceKey) members.push(member);
+      } catch {
+        /* skip non-membership accounts */
+      }
+    }
+    return members.sort((a, b) => a.joinedAt - b.joinedAt);
+  }
+
+  async fetchAllianceJoinRequests(alliancePda: PublicKey): Promise<AllianceJoinRequestAccount[]> {
+    const allianceKey = alliancePda.toBase58();
+    const accounts = await this.connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, {
+      commitment: "confirmed",
+      filters: [{ dataSize: 81 }],
+    });
+    const requests: AllianceJoinRequestAccount[] = [];
+    for (const { pubkey, account } of accounts) {
+      try {
+        const request = deserializeAllianceJoinRequest(pubkey, Buffer.from(account.data));
+        if (request.alliance === allianceKey) requests.push(request);
+      } catch {
+        /* skip non-request accounts */
+      }
+    }
+    return requests.sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  async getAllianceJoinRequest(alliancePda: PublicKey, applicant: PublicKey = this.provider.wallet.publicKey): Promise<AllianceJoinRequestAccount | null> {
+    const requestPda = deriveAllianceJoinRequestPda(alliancePda, applicant);
+    const account = await this.connection.getAccountInfo(requestPda, "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeAllianceJoinRequest(requestPda, Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
+  async createAlliance(name: string): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const gameConfig = await this.getGameConfig();
+    if (!gameConfig) throw new Error("Game config is not initialized yet.");
+    const storeConfig = await this.getStoreConfig();
+    if (!storeConfig) throw new Error("Store config is not initialized yet.");
+    if (!storeConfig.enabled) throw new Error("Store is currently disabled on-chain.");
+    const antimatterMint = new PublicKey(gameConfig.antimatterMint);
+    const usdcMint = new PublicKey(storeConfig.usdcMint);
+    const userAntimatterAccount = await this.findUserTokenAccountForMint(authority, antimatterMint);
+    const userUsdcAccount = await this.findUserTokenAccountForMint(authority, usdcMint);
+    const treasuryAntimatterAccount = deriveAssociatedTokenAccount(new PublicKey(storeConfig.admin), antimatterMint);
+    const treasuryAntimatterInfo = await this.connection.getAccountInfo(treasuryAntimatterAccount, "confirmed");
+    if (!treasuryAntimatterInfo) {
+      throw new Error("DAO ANTIMATTER treasury token account is not initialized yet.");
+    }
+    const writer = new BorshWriter();
+    writer.writeString(name.trim());
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
+        { pubkey: deriveAlliancePda(authority), isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
+        { pubkey: deriveGameConfigPda(), isSigner: false, isWritable: false },
+        { pubkey: deriveStoreConfigPda(), isSigner: false, isWritable: false },
+        { pubkey: antimatterMint, isSigner: false, isWritable: true },
+        { pubkey: userAntimatterAccount, isSigner: false, isWritable: true },
+        { pubkey: treasuryAntimatterAccount, isSigner: false, isWritable: true },
+        { pubkey: usdcMint, isSigner: false, isWritable: false },
+        { pubkey: userUsdcAccount, isSigner: false, isWritable: true },
+        { pubkey: new PublicKey(storeConfig.treasuryUsdcAccount), isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.createAlliance, writer.toBuffer()),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async joinAlliance(founder: PublicKey): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
+        { pubkey: deriveAlliancePda(founder), isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.joinAlliance),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async requestJoinAlliance(alliancePda: PublicKey): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
+        { pubkey: alliancePda, isSigner: false, isWritable: false },
+        { pubkey: deriveAllianceJoinRequestPda(alliancePda, authority), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.requestJoinAlliance),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async approveJoinRequest(applicant: PublicKey): Promise<string> {
+    const leader = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(leader);
+    if (!membership) throw new Error("Join or create an alliance first.");
+    if (membership.role !== 2) throw new Error("Only the alliance leader can approve join requests.");
+    const alliancePda = new PublicKey(membership.alliance);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: leader, isSigner: true, isWritable: true },
+        { pubkey: alliancePda, isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(leader), isSigner: false, isWritable: false },
+        { pubkey: applicant, isSigner: false, isWritable: false },
+        { pubkey: deriveAllianceJoinRequestPda(alliancePda, applicant), isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(applicant), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.approveJoinRequest),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async rejectJoinRequest(applicant: PublicKey): Promise<string> {
+    const leader = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(leader);
+    if (!membership) throw new Error("Join or create an alliance first.");
+    if (membership.role !== 2) throw new Error("Only the alliance leader can reject join requests.");
+    const alliancePda = new PublicKey(membership.alliance);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: leader, isSigner: true, isWritable: true },
+        { pubkey: alliancePda, isSigner: false, isWritable: false },
+        { pubkey: deriveAllianceMembershipPda(leader), isSigner: false, isWritable: false },
+        { pubkey: applicant, isSigner: false, isWritable: false },
+        { pubkey: deriveAllianceJoinRequestPda(alliancePda, applicant), isSigner: false, isWritable: true },
+      ],
+      data: encodeInstruction(IX.rejectJoinRequest),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async expelAllianceMember(target: PublicKey): Promise<string> {
+    const leader = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(leader);
+    if (!membership) throw new Error("Join or create an alliance first.");
+    if (membership.role !== 2) throw new Error("Only the alliance leader can expel members.");
+    const alliancePda = new PublicKey(membership.alliance);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: leader, isSigner: true, isWritable: true },
+        { pubkey: alliancePda, isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(leader), isSigner: false, isWritable: false },
+        { pubkey: target, isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(target), isSigner: false, isWritable: true },
+      ],
+      data: encodeInstruction(IX.expelAllianceMember),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async transferAllianceLeadership(newLeader: PublicKey): Promise<string> {
+    const leader = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(leader);
+    if (!membership) throw new Error("Join or create an alliance first.");
+    if (membership.role !== 2) throw new Error("Only the alliance leader can transfer leadership.");
+    const alliancePda = new PublicKey(membership.alliance);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: leader, isSigner: true, isWritable: true },
+        { pubkey: alliancePda, isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(leader), isSigner: false, isWritable: true },
+        { pubkey: newLeader, isSigner: false, isWritable: false },
+        { pubkey: deriveAllianceMembershipPda(newLeader), isSigner: false, isWritable: true },
+      ],
+      data: encodeInstruction(IX.transferAllianceLeadership),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async leaveAlliance(): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(authority);
+    if (!membership) throw new Error("You are not in an alliance.");
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: new PublicKey(membership.alliance), isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
+      ],
+      data: encodeInstruction(IX.leaveAlliance),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async claimAllianceMission(entityPda: PublicKey, period: number, missionId: number): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(authority);
+    if (!membership) throw new Error("Join or create an alliance first.");
+    const writer = new BorshWriter();
+    writer.writeU8(period);
+    writer.writeU8(missionId);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: new PublicKey(membership.alliance), isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
+        { pubkey: entityPda, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.claimAllianceMission, writer.toBuffer()),
+    });
+    return this.sendInstruction([ix]);
+  }
   async initializeQuestState(): Promise<string> {
     const authority = this.provider.wallet.publicKey;
     const existing = await this.getQuestState(authority);
@@ -2667,6 +3298,40 @@ export class GameClient {
 
 
   // ── Gameplay actions ─────────────────────────────────────────────────────────
+  private buildVaultEspionageInstruction(
+    sourcePlanetPda: PublicKey,
+    destinationPlanetPda: PublicKey,
+    destinationCoordsPda: PublicKey,
+    planetAuthority: PublicKey,
+    args: Buffer,
+  ): TransactionInstruction {
+    if (this.preferVaultSigning && this.vaultKeypair) {
+      const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
+      return new TransactionInstruction({
+        programId: GAME_STATE_PROGRAM_ID,
+        keys: [
+          { pubkey: this.vaultKeypair.publicKey, isSigner: true,  isWritable: true  },
+          { pubkey: authorizedVaultPda,           isSigner: false, isWritable: false },
+          { pubkey: sourcePlanetPda,              isSigner: false, isWritable: true  },
+          { pubkey: destinationPlanetPda,         isSigner: false, isWritable: true  },
+          { pubkey: destinationCoordsPda,         isSigner: false, isWritable: true  },
+        ],
+        data: encodeInstruction(IX.resolveEspionageVault, args),
+      });
+    }
+
+    return new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: this.provider.wallet.publicKey, isSigner: true,  isWritable: true  },
+        { pubkey: sourcePlanetPda,                isSigner: false, isWritable: true  },
+        { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
+        { pubkey: destinationCoordsPda,           isSigner: false, isWritable: true  },
+      ],
+      data: encodeInstruction(IX.resolveEspionage, args),
+    });
+  }
+
   async dailyCheckIn(entityPda: PublicKey): Promise<string> {
     await this.ensureVault();
     await this.ensureQuestState();
@@ -2929,6 +3594,38 @@ export class GameClient {
     );
   }
 
+  async resolveEspionage(sourceEntityPda: PublicKey, mission: Mission, slot: number): Promise<string> {
+    await this.ensureVault();
+    const destinationPlanetPda = await this.findPlanetByCoordinates(
+      mission.targetGalaxy, mission.targetSystem, mission.targetPosition,
+    );
+    if (!destinationPlanetPda) {
+      throw new Error("Target planet not found for espionage resolution.");
+    }
+
+    const destinationCoordsPda = derivePlanetCoordsPda(
+      mission.targetGalaxy,
+      mission.targetSystem,
+      mission.targetPosition,
+    );
+    const state = await this.loadPlanetStateByPda(sourceEntityPda);
+    const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    const writer = new BorshWriter();
+    writer.writeU8(slot);
+    writer.writeI64(Math.floor(Date.now() / 1000));
+
+    return this.sendInstruction(
+      [this.buildVaultEspionageInstruction(
+        sourceEntityPda,
+        destinationPlanetPda,
+        destinationCoordsPda,
+        authority,
+        writer.toBuffer(),
+      )],
+      this.vaultSigners(),
+    );
+  }
+
   /**
    * Resolve a colonize mission.
    *
@@ -3151,7 +3848,7 @@ export const SHIP_TYPE_IDX: Record<string, number> = {
   recycler: 10, espionageProbe: 11, colonyShip: 12, solarSatellite: 13,
 };
 
-export const MISSION_LABELS: Record<number, string> = { 1: "ATTACK", 2: "TRANSPORT", 5: "COLONIZE" };
+export const MISSION_LABELS: Record<number, string> = { 1: "ATTACK", 2: "TRANSPORT", 5: "COLONIZE", 6: "ESPIONAGE" };
 
 const BASE_COSTS: Record<number, [number, number, number]> = {
   0: [60, 15, 0], 1: [48, 24, 0], 2: [225, 75, 0], 3: [75, 30, 0],
