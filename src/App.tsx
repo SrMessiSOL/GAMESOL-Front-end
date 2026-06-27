@@ -17,7 +17,7 @@ import {
   type EspionageReportEvent,
   type EspionageReportEventRecord,
   type VaultRecoveryPromptRequest,
-  Planet, Resources, Fleet, Mission, PlayerState, Research,
+  Planet, Resources, Fleet, Mission, PlayerState, PublicPlanetInfo, Research,
   BUILDINGS, SHIPS, SHIP_TYPE_IDX, MISSION_LABELS,
   ALLIANCE_CREATE_USDC_COST, ALLIANCE_CREATE_ANTIMATTER_COST,
   ALLIANCE_CREATE_ANTIMATTER_BURN, ALLIANCE_CREATE_ANTIMATTER_TREASURY,
@@ -2834,6 +2834,8 @@ const InstantFinishButton: React.FC<{ secondsLeft: number; balance: bigint; txBu
 
 type CoordStatus = "idle" | "checking" | "free" | "occupied";
 
+type PublicTargetInfo = Pick<PublicPlanetInfo, "owner" | "protectionUntilTs" | "lastAttackedTs" | "galaxy" | "system" | "position" | "name">;
+
 const SHIP_COMBAT_POINTS: Record<string, number> = {
   lightFighter: 50,
   heavyFighter: 150,
@@ -2891,8 +2893,8 @@ function getMissionShipCount(mission: Mission, shipKey: string): number {
   return field ? Number(mission[field] ?? 0) : 0;
 }
 
-const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number; res: Resources; ownedPlanets: PlayerState[]; currentPlanetPda: string; nowTs: number; onClose: () => void; txBusy: boolean; onCheckCoord: (galaxy: number, system: number, position: number) => Promise<boolean>; onLoadTargetPlanet: (galaxy: number, system: number, position: number) => Promise<PlayerState | null>; onLaunch: (ships: Record<string, number>, cargo: { metal: bigint; crystal: bigint; deuterium: bigint }, missionType: number, speedFactor: number, target: LaunchTargetInput) => Promise<void>; prefillTarget?: { galaxy: number; system: number; position: number; missionType?: number }; }> =
-  ({ planet, fleet, computerTech, res, ownedPlanets, currentPlanetPda, nowTs, onClose, onLaunch, txBusy, onCheckCoord, onLoadTargetPlanet, prefillTarget }) => {
+const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number; res: Resources; ownedPlanets: PlayerState[]; currentPlanetPda: string; nowTs: number; onClose: () => void; txBusy: boolean; onCheckCoord: (galaxy: number, system: number, position: number) => Promise<boolean>; onLoadPublicTarget: (galaxy: number, system: number, position: number) => Promise<PublicTargetInfo | null>; onLaunch: (ships: Record<string, number>, cargo: { metal: bigint; crystal: bigint; deuterium: bigint }, missionType: number, speedFactor: number, target: LaunchTargetInput) => Promise<void>; prefillTarget?: { galaxy: number; system: number; position: number; missionType?: number }; }> =
+  ({ planet, fleet, computerTech, res, ownedPlanets, currentPlanetPda, nowTs, onClose, onLaunch, txBusy, onCheckCoord, onLoadPublicTarget, prefillTarget }) => {
     const [shipQty, setShipQty] = useState<Record<string, number>>({});
     const [missionType, setMissionType] = useState(prefillTarget?.missionType ?? 2);
     const [cargoM, setCargoM] = useState(0); const [cargoC, setCargoC] = useState(0); const [cargoD, setCargoD] = useState(0);
@@ -2904,7 +2906,7 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
     const [colonyName, setColonyName] = useState("Colony");
     const [launching, setLaunching] = useState(false); const [localErr, setLocalErr] = useState<string | null>(null);
     const [coordStatus, setCoordStatus] = useState<CoordStatus>("idle");
-    const [targetPlanetState, setTargetPlanetState] = useState<PlayerState | null>(null);
+    const [targetPublicInfo, setTargetPublicInfo] = useState<PublicTargetInfo | null>(null);
     const coordCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const selectableOwned = ownedPlanets.filter(p => p.planetPda !== currentPlanetPda);
     const [targetEntity, setTargetEntity] = useState(selectableOwned[0]?.entityPda ?? "");
@@ -2923,10 +2925,10 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
     const attackPoints = fleetCombatPoints(shipQty);
     const attackUnlockLeft = missionType === 1 ? Math.max(0, planet.attackUnlockedAt - nowTs) : 0;
     const attackLaunchCooldownLeft = missionType === 1 && planet.lastAttackLaunchTs > 0 ? Math.max(0, planet.lastAttackLaunchTs + ATTACK_LAUNCH_COOLDOWN_SECONDS - nowTs) : 0;
-    const targetProtectionLeft = missionType === 1 && targetPlanetState ? Math.max(0, effectiveAttackProtectionUntil(targetPlanetState.planet) - nowTs) : 0;
-    const targetCooldownLeft = missionType === 1 && targetPlanetState && targetPlanetState.planet.lastAttackedTs > 0 ? Math.max(0, targetPlanetState.planet.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - nowTs) : 0;
+    const targetProtectionLeft = missionType === 1 && targetPublicInfo ? Math.max(0, targetPublicInfo.protectionUntilTs - nowTs) : 0;
+    const targetCooldownLeft = missionType === 1 && targetPublicInfo && targetPublicInfo.lastAttackedTs > 0 ? Math.max(0, targetPublicInfo.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - nowTs) : 0;
     const attackBlocked = missionType === 1 && (attackUnlockLeft > 0 || attackLaunchCooldownLeft > 0 || targetProtectionLeft > 0 || targetCooldownLeft > 0 || attackPoints < MIN_ATTACK_COMBAT_POINTS || coordStatus === "checking" || coordStatus === "free");
-    const scheduleCoordCheck = useCallback((g: number, s: number, p: number) => { setCoordStatus("checking"); setTargetPlanetState(null); if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current); coordCheckTimer.current = setTimeout(async () => { try { const free = await onCheckCoord(g, s, p); setCoordStatus(free ? "free" : "occupied"); if (!free) setTargetPlanetState(await onLoadTargetPlanet(g, s, p)); } catch { setCoordStatus("idle"); setTargetPlanetState(null); } }, 400); }, [onCheckCoord, onLoadTargetPlanet]);
+    const scheduleCoordCheck = useCallback((g: number, s: number, p: number) => { setCoordStatus("checking"); setTargetPublicInfo(null); if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current); coordCheckTimer.current = setTimeout(async () => { try { const free = await onCheckCoord(g, s, p); setCoordStatus(free ? "free" : "occupied"); if (!free) setTargetPublicInfo(await onLoadPublicTarget(g, s, p)); } catch { setCoordStatus("idle"); setTargetPublicInfo(null); } }, 400); }, [onCheckCoord, onLoadPublicTarget]);
 
     // Auto-check coords if prefilled for colonize
     useEffect(() => {
@@ -2940,7 +2942,7 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
         scheduleCoordCheck(targetGalaxy, targetSystem, targetPosition);
       } else {
         setCoordStatus("idle");
-        setTargetPlanetState(null);
+        setTargetPublicInfo(null);
         if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current);
       }
       return () => {
@@ -4956,11 +4958,11 @@ const App: React.FC = () => {
     if (target.kind === "attack") {
       const free = await clientRef.current.isCoordFree(target.galaxy, target.system, target.position);
       if (free) throw new Error(`Attack missions can only target occupied planets. [${target.galaxy}:${target.system}:${target.position}] is empty.`);
-      const targetState = await clientRef.current.getPlanetStateByCoordinates(target.galaxy, target.system, target.position);
-      if (targetState) {
-        const targetProtectionLeft = Math.max(0, effectiveAttackProtectionUntil(targetState.planet) - now);
-        const targetCooldownLeft = targetState.planet.lastAttackedTs > 0
-          ? Math.max(0, targetState.planet.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - now)
+      const targetInfo = await clientRef.current.getPublicPlanetInfoByCoordinates(target.galaxy, target.system, target.position);
+      if (targetInfo) {
+        const targetProtectionLeft = Math.max(0, targetInfo.protectionUntilTs - now);
+        const targetCooldownLeft = targetInfo.lastAttackedTs > 0
+          ? Math.max(0, targetInfo.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - now)
           : 0;
         if (targetProtectionLeft > 0) throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`);
         if (targetCooldownLeft > 0) throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);
@@ -4989,8 +4991,8 @@ const App: React.FC = () => {
     return clientRef.current?.isCoordFree(galaxy, system, position) ?? true;
   }, []);
 
-  const loadTargetPlanetByCoords = useCallback(async (galaxy: number, system: number, position: number) => {
-    return clientRef.current?.getPlanetStateByCoordinates(galaxy, system, position) ?? null;
+  const loadPublicTargetByCoords = useCallback(async (galaxy: number, system: number, position: number) => {
+    return clientRef.current?.getPublicPlanetInfoByCoordinates(galaxy, system, position) ?? null;
   }, []);
 
   const executeResolveColonize = async (mission: Mission, slotIdx: number) => {
@@ -5405,7 +5407,7 @@ const App: React.FC = () => {
           onLaunch={handleLaunch}
           txBusy={txBusy}
           onCheckCoord={checkCoordAvailability}
-          onLoadTargetPlanet={loadTargetPlanetByCoords}
+          onLoadPublicTarget={loadPublicTargetByCoords}
           prefillTarget={launchPrefill}
         />
       )}

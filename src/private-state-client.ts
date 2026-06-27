@@ -5,13 +5,18 @@ export const PRIVATE_STATE_DOMAIN = "GAMESOL_PRIVATE_STATE_V1";
 export const PRIVATE_REPORT_DOMAIN = "GAMESOL_SPY_REPORT_V1";
 export const MAX_PRIVATE_PLANET_NAME_LEN = 32;
 export const MAX_REVEAL_LEVEL = 4;
+export const PRIVACY_ENGINE_COMMITMENT_ONLY = 0;
+export const PRIVACY_ENGINE_ENCRYPT_FHE = 1;
+export const PRIVATE_CIPHERTEXT_SCHEMA_V1 = 1;
 
 const PRIVATE_PLANET_STATE_DISCRIMINATOR = Buffer.from([221, 195, 110, 189, 171, 244, 234, 75]);
 const SPY_REPORT_DISCRIMINATOR = Buffer.from([129, 115, 165, 165, 24, 139, 117, 156]);
+const SPY_REPORT_REQUEST_DISCRIMINATOR = Buffer.from([174, 246, 219, 122, 153, 169, 29, 117]);
 
 const IX = {
   initializePrivatePlanet: Buffer.from([75, 22, 41, 60, 22, 207, 113, 51]),
   rotatePrivateCommitments: Buffer.from([116, 211, 172, 165, 169, 210, 199, 149]),
+  requestSpyReport: Buffer.from([69, 133, 52, 122, 139, 12, 31, 197]),
   publishSpyReport: Buffer.from([140, 217, 42, 129, 115, 74, 159, 167]),
 } as const;
 
@@ -23,21 +28,44 @@ export type PrivateCommitments = {
   defense: Uint8Array;
 };
 
+export type PrivateStateDigest = {
+  stateHash: Uint8Array;
+  encryptedStateHash: Uint8Array;
+  seal: PrivateStateSeal;
+  commitments: PrivateCommitments;
+};
+
+export type PrivateStateSeal = {
+  privacyEngine: number;
+  ciphertextSchema: number;
+  fheCluster: PublicKey;
+  decryptPolicyHash: Uint8Array;
+};
+
 export type PrivatePlanetPublicState = {
   authority: string;
+  publicPlanet: string;
   galaxy: number;
   system: number;
   position: number;
   name: string;
   createdAt: number;
   publicProtectionUntilTs: number;
+  schemaVersion: number;
   stateEpoch: bigint;
+  stateHash: Uint8Array;
+  encryptedStateHash: Uint8Array;
+  privacyEngine: number;
+  ciphertextSchema: number;
+  fheCluster: string;
+  decryptPolicyHash: Uint8Array;
   resourcesCommitment: Uint8Array;
   buildingsCommitment: Uint8Array;
   researchCommitment: Uint8Array;
   fleetCommitment: Uint8Array;
   defenseCommitment: Uint8Array;
   lastTransitionHash: Uint8Array;
+  lastActionKind: number;
   reportNonce: bigint;
 };
 
@@ -54,6 +82,20 @@ export type PrivateSpyReport = {
   createdAt: number;
 };
 
+export type PrivateSpyReportRequest = {
+  targetPlanet: string;
+  targetAuthority: string;
+  spyAuthority: string;
+  resolver: string;
+  targetEpoch: bigint;
+  reportNonce: bigint;
+  revealLevelCap: number;
+  encryptedInputHash: Uint8Array;
+  requestCommitment: Uint8Array;
+  createdAt: number;
+  resolved: boolean;
+};
+
 export type PrivateSnapshot = {
   resources: unknown;
   buildings: unknown;
@@ -67,6 +109,11 @@ export type EncryptedPrivateReport = {
   ciphertext: Uint8Array;
   ciphertextHash: Uint8Array;
   reportCommitment: Uint8Array;
+};
+
+export type PrivateSpyRequestHashes = {
+  encryptedInputHash: Uint8Array;
+  requestCommitment: Uint8Array;
 };
 
 function asCryptoBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
@@ -101,6 +148,10 @@ class BinaryWriter {
     const bytes = Buffer.alloc(2);
     bytes.writeUInt16LE(value, 0);
     this.chunks.push(bytes);
+  }
+
+  writePubkey(value: PublicKey): void {
+    this.chunks.push(value.toBuffer());
   }
 
   writeFixedBytes(value: Uint8Array, expectedLength?: number): void {
@@ -156,6 +207,18 @@ function encodeCommitments(commitments: PrivateCommitments): Buffer {
   writer.writeFixedBytes(commitments.research, 32);
   writer.writeFixedBytes(commitments.fleet, 32);
   writer.writeFixedBytes(commitments.defense, 32);
+  return writer.toBuffer();
+}
+
+function encodePrivateStateDigest(digest: PrivateStateDigest): Buffer {
+  const writer = new BinaryWriter();
+  writer.writeFixedBytes(digest.stateHash, 32);
+  writer.writeFixedBytes(digest.encryptedStateHash, 32);
+  writer.writeU8(digest.seal.privacyEngine);
+  writer.writeU16(digest.seal.ciphertextSchema);
+  writer.writePubkey(digest.seal.fheCluster);
+  writer.writeFixedBytes(digest.seal.decryptPolicyHash, 32);
+  writer.writeFixedBytes(encodeCommitments(digest.commitments));
   return writer.toBuffer();
 }
 
@@ -221,6 +284,48 @@ export async function derivePrivateCommitments(
   return { resources, buildings, research, fleet, defense };
 }
 
+export async function derivePrivateStateDigest(
+  snapshot: PrivateSnapshot,
+  salt: Uint8Array,
+  encryptedStateBytes?: Uint8Array,
+  seal?: Partial<PrivateStateSeal>,
+): Promise<PrivateStateDigest> {
+  const serialized = serializePrivatePayload(snapshot);
+  const resolvedSeal = await derivePrivateStateSeal(snapshot, encryptedStateBytes, seal);
+  const [stateHash, encryptedStateHash, commitments] = await Promise.all([
+    sha256Bytes(concatBytes([utf8Bytes(PRIVATE_STATE_DOMAIN), utf8Bytes("state"), salt, serialized])),
+    sha256Bytes(concatBytes([utf8Bytes(PRIVATE_STATE_DOMAIN), utf8Bytes("encrypted"), encryptedStateBytes ?? serialized])),
+    derivePrivateCommitments(snapshot, salt),
+  ]);
+  return { stateHash, encryptedStateHash, seal: resolvedSeal, commitments };
+}
+
+export async function derivePrivateStateSeal(
+  snapshot: PrivateSnapshot,
+  encryptedStateBytes?: Uint8Array,
+  overrides?: Partial<PrivateStateSeal>,
+): Promise<PrivateStateSeal> {
+  const policyPayload = {
+    domain: PRIVATE_STATE_DOMAIN,
+    schema: PRIVATE_CIPHERTEXT_SCHEMA_V1,
+    privacyEngine: overrides?.privacyEngine ?? PRIVACY_ENGINE_COMMITMENT_ONLY,
+    revealLevels: [0, 1, 2, 3, 4],
+    spyOnly: true,
+    stateShape: Object.keys(snapshot).sort(),
+  };
+  const policyBytes = serializePrivatePayload(policyPayload);
+  const ciphertextBytes = encryptedStateBytes ?? serializePrivatePayload(snapshot);
+  const decryptPolicyHash = overrides?.decryptPolicyHash ?? await sha256Bytes(
+    concatBytes([utf8Bytes(PRIVATE_STATE_DOMAIN), utf8Bytes("decrypt-policy"), policyBytes, ciphertextBytes]),
+  );
+  return {
+    privacyEngine: overrides?.privacyEngine ?? PRIVACY_ENGINE_COMMITMENT_ONLY,
+    ciphertextSchema: overrides?.ciphertextSchema ?? PRIVATE_CIPHERTEXT_SCHEMA_V1,
+    fheCluster: overrides?.fheCluster ?? PublicKey.default,
+    decryptPolicyHash,
+  };
+}
+
 export async function importPrivateReportKey(rawKey: Uint8Array): Promise<CryptoKey> {
   const keyBytes = rawKey.length === 32 ? rawKey : await sha256Bytes(rawKey);
   return crypto.subtle.importKey("raw", asCryptoBytes(keyBytes), "AES-GCM", false, ["encrypt", "decrypt"]);
@@ -244,6 +349,25 @@ export async function encryptPrivateReport(
   return { iv, ciphertext, ciphertextHash, reportCommitment };
 }
 
+export async function derivePrivateSpyRequestHashes(
+  request: unknown,
+  encryptedInputBytes?: Uint8Array,
+): Promise<PrivateSpyRequestHashes> {
+  const inputBytes = encryptedInputBytes ?? serializePrivatePayload(request);
+  const encryptedInputHash = await sha256Bytes(
+    concatBytes([utf8Bytes(PRIVATE_REPORT_DOMAIN), utf8Bytes("spy-input"), inputBytes]),
+  );
+  const requestCommitment = await sha256Bytes(
+    concatBytes([
+      utf8Bytes(PRIVATE_REPORT_DOMAIN),
+      utf8Bytes("spy-request"),
+      encryptedInputHash,
+      serializePrivatePayload(request),
+    ]),
+  );
+  return { encryptedInputHash, requestCommitment };
+}
+
 export async function decryptPrivateReport<T = unknown>(
   encrypted: Pick<EncryptedPrivateReport, "iv" | "ciphertext">,
   rawKey: Uint8Array,
@@ -260,22 +384,12 @@ export async function decryptPrivateReport<T = unknown>(
 }
 
 export function derivePrivatePlanetPda(
-  authority: PublicKey,
-  galaxy: number,
-  system: number,
-  position: number,
+  publicPlanet: PublicKey,
 ): PublicKey {
-  const galaxyBytes = Buffer.alloc(2);
-  galaxyBytes.writeUInt16LE(galaxy);
-  const systemBytes = Buffer.alloc(2);
-  systemBytes.writeUInt16LE(system);
   return PublicKey.findProgramAddressSync(
     [
       Buffer.from("private-planet"),
-      authority.toBuffer(),
-      galaxyBytes,
-      systemBytes,
-      Buffer.from([position]),
+      publicPlanet.toBuffer(),
     ],
     PRIVATE_STATE_PROGRAM_ID,
   )[0];
@@ -283,23 +397,25 @@ export function derivePrivatePlanetPda(
 
 export function buildInitializePrivatePlanetInstruction(
   authority: PublicKey,
+  publicPlanet: PublicKey,
   galaxy: number,
   system: number,
   position: number,
   name: string,
-  commitments: PrivateCommitments,
+  digest: PrivateStateDigest,
 ): TransactionInstruction {
-  const privatePlanet = derivePrivatePlanetPda(authority, galaxy, system, position);
+  const privatePlanet = derivePrivatePlanetPda(publicPlanet);
   const writer = new BinaryWriter();
   writer.writeU16(galaxy);
   writer.writeU16(system);
   writer.writeU8(position);
   writer.writeFixedBytes(fixedNameBytes(name), MAX_PRIVATE_PLANET_NAME_LEN);
-  writer.writeFixedBytes(encodeCommitments(commitments));
+  writer.writeFixedBytes(encodePrivateStateDigest(digest));
   return new TransactionInstruction({
     programId: PRIVATE_STATE_PROGRAM_ID,
     keys: [
       { pubkey: authority, isSigner: true, isWritable: true },
+      { pubkey: publicPlanet, isSigner: false, isWritable: false },
       { pubkey: privatePlanet, isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
@@ -310,12 +426,14 @@ export function buildInitializePrivatePlanetInstruction(
 export function buildRotatePrivateCommitmentsInstruction(
   authority: PublicKey,
   privatePlanet: PublicKey,
-  commitments: PrivateCommitments,
+  digest: PrivateStateDigest,
   transitionHash: Uint8Array,
+  actionKind: number,
 ): TransactionInstruction {
   const writer = new BinaryWriter();
-  writer.writeFixedBytes(encodeCommitments(commitments));
+  writer.writeFixedBytes(encodePrivateStateDigest(digest));
   writer.writeFixedBytes(transitionHash, 32);
+  writer.writeU8(actionKind);
   return new TransactionInstruction({
     programId: PRIVATE_STATE_PROGRAM_ID,
     keys: [
@@ -331,24 +449,21 @@ export function buildPublishSpyReportInstruction(
   resolver: PublicKey,
   privatePlanet: PublicKey,
   reportNonce: bigint,
-  revealLevel: number,
   reportCiphertextHash: Uint8Array,
   reportCommitment: Uint8Array,
 ): TransactionInstruction {
-  if (revealLevel < 0 || revealLevel > MAX_REVEAL_LEVEL) {
-    throw new Error(`Reveal level must be between 0 and ${MAX_REVEAL_LEVEL}.`);
-  }
+  const spyReportRequest = deriveSpyReportRequestPda(privatePlanet, spyAuthority, reportNonce);
   const spyReport = deriveSpyReportPda(privatePlanet, spyAuthority, reportNonce);
   const writer = new BinaryWriter();
-  writer.writeU8(revealLevel);
   writer.writeFixedBytes(reportCiphertextHash, 32);
   writer.writeFixedBytes(reportCommitment, 32);
   return new TransactionInstruction({
     programId: PRIVATE_STATE_PROGRAM_ID,
     keys: [
-      { pubkey: resolver, isSigner: false, isWritable: false },
+      { pubkey: resolver, isSigner: true, isWritable: false },
       { pubkey: spyAuthority, isSigner: true, isWritable: true },
       { pubkey: privatePlanet, isSigner: false, isWritable: true },
+      { pubkey: spyReportRequest, isSigner: false, isWritable: true },
       { pubkey: spyReport, isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
@@ -374,11 +489,61 @@ export function deriveSpyReportPda(
   )[0];
 }
 
+export function deriveSpyReportRequestPda(
+  privatePlanet: PublicKey,
+  spyAuthority: PublicKey,
+  reportNonce: bigint,
+): PublicKey {
+  const nonceBytes = Buffer.alloc(8);
+  nonceBytes.writeBigUInt64LE(reportNonce);
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("spy-report-request"),
+      privatePlanet.toBuffer(),
+      spyAuthority.toBuffer(),
+      nonceBytes,
+    ],
+    PRIVATE_STATE_PROGRAM_ID,
+  )[0];
+}
+
+export function buildRequestSpyReportInstruction(
+  spyAuthority: PublicKey,
+  resolver: PublicKey,
+  privatePlanet: PublicKey,
+  reportNonce: bigint,
+  revealLevelCap: number,
+  encryptedInputHash: Uint8Array,
+  requestCommitment: Uint8Array,
+): TransactionInstruction {
+  if (revealLevelCap < 0 || revealLevelCap > MAX_REVEAL_LEVEL) {
+    throw new Error(`Reveal level must be between 0 and ${MAX_REVEAL_LEVEL}.`);
+  }
+  const spyReportRequest = deriveSpyReportRequestPda(privatePlanet, spyAuthority, reportNonce);
+  const writer = new BinaryWriter();
+  writer.writeU8(revealLevelCap);
+  writer.writeFixedBytes(encryptedInputHash, 32);
+  writer.writeFixedBytes(requestCommitment, 32);
+  return new TransactionInstruction({
+    programId: PRIVATE_STATE_PROGRAM_ID,
+    keys: [
+      { pubkey: spyAuthority, isSigner: true, isWritable: true },
+      { pubkey: resolver, isSigner: false, isWritable: false },
+      { pubkey: privatePlanet, isSigner: false, isWritable: true },
+      { pubkey: spyReportRequest, isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: encodeInstruction(IX.requestSpyReport, writer.toBuffer()),
+  });
+}
+
 export function deserializePrivatePlanetPublicState(data: Buffer | Uint8Array): PrivatePlanetPublicState {
   const buffer = Buffer.from(data);
   assertDiscriminator(buffer, PRIVATE_PLANET_STATE_DISCRIMINATOR, "private planet");
   let offset = 8;
   const authority = readPubkey(buffer, offset);
+  offset += 32;
+  const publicPlanet = readPubkey(buffer, offset);
   offset += 32;
   const galaxy = readU16(buffer, offset);
   offset += 2;
@@ -392,8 +557,22 @@ export function deserializePrivatePlanetPublicState(data: Buffer | Uint8Array): 
   offset += 8;
   const publicProtectionUntilTs = readI64(buffer, offset);
   offset += 8;
+  const schemaVersion = readU8(buffer, offset);
+  offset += 1;
   const stateEpoch = readU64(buffer, offset);
   offset += 8;
+  const stateHash = buffer.slice(offset, offset + 32);
+  offset += 32;
+  const encryptedStateHash = buffer.slice(offset, offset + 32);
+  offset += 32;
+  const privacyEngine = readU8(buffer, offset);
+  offset += 1;
+  const ciphertextSchema = readU16(buffer, offset);
+  offset += 2;
+  const fheCluster = readPubkey(buffer, offset);
+  offset += 32;
+  const decryptPolicyHash = buffer.slice(offset, offset + 32);
+  offset += 32;
   const resourcesCommitment = buffer.slice(offset, offset + 32);
   offset += 32;
   const buildingsCommitment = buffer.slice(offset, offset + 32);
@@ -406,22 +585,33 @@ export function deserializePrivatePlanetPublicState(data: Buffer | Uint8Array): 
   offset += 32;
   const lastTransitionHash = buffer.slice(offset, offset + 32);
   offset += 32;
+  const lastActionKind = readU8(buffer, offset);
+  offset += 1;
   const reportNonce = readU64(buffer, offset);
   return {
     authority,
+    publicPlanet,
     galaxy,
     system,
     position,
     name,
     createdAt,
     publicProtectionUntilTs,
+    schemaVersion,
     stateEpoch,
+    stateHash,
+    encryptedStateHash,
+    privacyEngine,
+    ciphertextSchema,
+    fheCluster,
+    decryptPolicyHash,
     resourcesCommitment,
     buildingsCommitment,
     researchCommitment,
     fleetCommitment,
     defenseCommitment,
     lastTransitionHash,
+    lastActionKind,
     reportNonce,
   };
 }
@@ -460,5 +650,45 @@ export function deserializePrivateSpyReport(data: Buffer | Uint8Array): PrivateS
     reportCiphertextHash,
     reportCommitment,
     createdAt,
+  };
+}
+
+export function deserializePrivateSpyReportRequest(data: Buffer | Uint8Array): PrivateSpyReportRequest {
+  const buffer = Buffer.from(data);
+  assertDiscriminator(buffer, SPY_REPORT_REQUEST_DISCRIMINATOR, "spy report request");
+  let offset = 8;
+  const targetPlanet = readPubkey(buffer, offset);
+  offset += 32;
+  const targetAuthority = readPubkey(buffer, offset);
+  offset += 32;
+  const spyAuthority = readPubkey(buffer, offset);
+  offset += 32;
+  const resolver = readPubkey(buffer, offset);
+  offset += 32;
+  const targetEpoch = readU64(buffer, offset);
+  offset += 8;
+  const reportNonce = readU64(buffer, offset);
+  offset += 8;
+  const revealLevelCap = readU8(buffer, offset);
+  offset += 1;
+  const encryptedInputHash = buffer.slice(offset, offset + 32);
+  offset += 32;
+  const requestCommitment = buffer.slice(offset, offset + 32);
+  offset += 32;
+  const createdAt = readI64(buffer, offset);
+  offset += 8;
+  const resolved = readU8(buffer, offset) !== 0;
+  return {
+    targetPlanet,
+    targetAuthority,
+    spyAuthority,
+    resolver,
+    targetEpoch,
+    reportNonce,
+    revealLevelCap,
+    encryptedInputHash,
+    requestCommitment,
+    createdAt,
+    resolved,
   };
 }

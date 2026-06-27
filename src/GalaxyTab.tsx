@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { GameClient, Planet, PlayerState } from "./game-state";
+import { GameClient, Planet, PlayerState, PublicPlanetInfo } from "./game-state";
 
 const MAX_GALAXY = 999;
 const MAX_SYSTEM = 999;
@@ -19,14 +19,14 @@ const GalaxyTab: React.FC<GalaxyTabProps> = ({
 }) => {
   const [galaxy, setGalaxy] = useState(currentPlanet.galaxy);
   const [system, setSystem] = useState(currentPlanet.system);
-  const [planets, setPlanets] = useState<Planet[]>([]);
+  const [planets, setPlanets] = useState<PublicPlanetInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionSlot, setActionSlot] = useState<number | null>(null);
   const userHasManuallyScanned = useRef(false);
 
   // Check if a planet is owned by the connected wallet
-  const isMyPlanet = useCallback((p: Planet): boolean =>
+  const isMyPlanet = useCallback((p: PublicPlanetInfo): boolean =>
     ownedPlanets.some(op =>
       op.planet.galaxy === p.galaxy &&
       op.planet.system === p.system &&
