@@ -1,5 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
+const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
+
 // ── Program IDs ───────────────────────────────────────────────────────────────
 export const WORLD_PROGRAM_ID       = new PublicKey("WorLD15A7CrDwLcLy4fRqtaTb9fbd8o8iqiEMUDse2n");
 export const COMPONENT_PLANET_ID    = new PublicKey("4AAQeP54KQy4HSjMsMS9VwVY8mWy4BisdsTwSxen4Df6");
@@ -29,10 +31,10 @@ export const MAGIC_CONTEXT_PROGRAM_ID = new PublicKey("MagicContext1111111111111
 // Magic Router: single endpoint that automatically routes to base layer or ER
 // based on whether the destination accounts are currently delegated.
 // Use this for all game actions after startSession().
-export const ER_RPC = "https://devnet-router.magicblock.app";
+export const ER_RPC = env.VITE_ER_RPC_ENDPOINT?.trim() || "https://devnet-router.magicblock.app";
 
 // Direct ER endpoint (for reading ER state when needed)
-export const ER_DIRECT_RPC = "https://devnet.magicblock.app";
+export const ER_DIRECT_RPC = env.VITE_ER_DIRECT_RPC?.trim() || "https://devnet.magicblock.app";
 
 // ── ER Validator pubkeys (choose one based on player location) ────────────────
 // Pass as validatorPubkey to startSession() for lower latency.

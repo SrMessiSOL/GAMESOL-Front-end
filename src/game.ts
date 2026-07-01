@@ -15,7 +15,23 @@ import { AnchorProvider, Program, Idl, setProvider } from "@coral-xyz/anchor";
 import { anchor as BoltAnchor, AddEntity, InitializeComponent, ApplySystem, createDelegateInstruction, createUndelegateInstruction } from "@magicblock-labs/bolt-sdk";
 import { GetCommitmentSignature } from "@magicblock-labs/ephemeral-rollups-sdk";
 
-export const ER_DIRECT_RPC = "https://devnet.magicblock.app";
+const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
+const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
+const DEFAULT_RPC_ENDPOINT =
+  SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta"
+    ? "https://api.mainnet-beta.solana.com"
+    : "https://api.devnet.solana.com";
+
+function envPublicKey(name: string, fallback: string): PublicKey {
+  const configured = env[name]?.trim();
+  if (!configured && (SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta")) {
+    throw new Error(`${name} is required when VITE_SOLANA_CLUSTER=mainnet.`);
+  }
+  const value = configured || fallback;
+  return new PublicKey(value);
+}
+
+export const ER_DIRECT_RPC = env.VITE_ER_DIRECT_RPC?.trim() || "https://devnet.magicblock.app";
 
 // ─── Program IDs ──────────────────────────────────────────────────────────────
 export const WORLD_PROGRAM_ID      = new PublicKey("WorLD15A7CrDwLcLy4fRqtaTb9fbd8o8iqiEMUDse2n");
@@ -39,8 +55,8 @@ export const PROGRAM_IDS = {
 } as const;
 
 export const SHARED_WORLD_PDA = new PublicKey("5KY9KS6iKAwSDq3LbErP7LEPLdTPhqBLJ5VLG1555X8N");
-export const RPC_ENDPOINT     = import.meta.env.VITE_SOLANA_RPC_ENDPOINT?.trim() || "https://api.devnet.solana.com";
-export const ER_RPC           = "https://devnet-router.magicblock.app";
+export const RPC_ENDPOINT     = env.VITE_SOLANA_RPC_ENDPOINT?.trim() || DEFAULT_RPC_ENDPOINT;
+export const ER_RPC           = env.VITE_ER_RPC_ENDPOINT?.trim() || "https://devnet-router.magicblock.app";
 
 export const REGISTRY_PROGRAM_ID = new PublicKey("BV6JwMdA9gLfG5ut2VBzbmQoJTXUu5umXErBqv4V3PJq");
 const MAGIC_PROGRAM_ID = new PublicKey("Magic11111111111111111111111111111111111111");
@@ -1739,7 +1755,10 @@ async initializePlanet(planetName = "Homeworld", reportProgress?: ProgressReport
 
 private buildCommitInstruction(primaryPlanetPda: PublicKey): TransactionInstruction {
   const payer = this.getSessionAuthority();
-  const GAME_STATE_PROGRAM_ID = new PublicKey("HheELu8GJ7EAw7afAxinmJLEnzQK7gAMBWYqDUXtec2S");
+  const GAME_STATE_PROGRAM_ID = envPublicKey(
+    "VITE_GAME_STATE_PROGRAM_ID",
+    "FJGxh6SKgNoTVzHj98oBsC2oaEy8ovadVJf8rDUNaEHb",
+  );
   const discriminator = Buffer.from([230, 31, 100, 83, 140, 6, 40, 154]);
 
   const keys: AccountMeta[] = [

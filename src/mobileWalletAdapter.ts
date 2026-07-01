@@ -5,10 +5,16 @@ import {
 
 const PUBLIC_APP_URL = ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_PUBLIC_APP_URL
   || "https://chained-universe.vercel.app");
+const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
+const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
+const WALLET_CHAIN =
+  SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta"
+    ? "solana:mainnet"
+    : "solana:devnet";
 
 const APP_NAME = "GAMESOL";
-const APP_DESCRIPTION = "On-chain space strategy on Solana devnet";
-const DEVNET_CHAIN = "solana:devnet";
+const APP_DESCRIPTION = `On-chain space strategy on Solana ${WALLET_CHAIN === "solana:mainnet" ? "mainnet" : "devnet"}`;
+const DEVNET_CHAIN = WALLET_CHAIN;
 export const MOBILE_WALLET_STATUS_EVENT = "chained-universe:mobile-wallet-status";
 
 let hasRegisteredMwa = false;

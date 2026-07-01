@@ -9,21 +9,30 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { AnchorProvider, setProvider } from "@coral-xyz/anchor";
-import {
-  buildRequestSpyReportInstruction,
-  buildInitializePrivatePlanetInstruction,
-  derivePrivatePlanetPda,
-  derivePrivateSpyRequestHashes,
-  derivePrivateStateDigest,
-  deserializePrivatePlanetPublicState,
-  generatePrivateSalt,
-  MAX_REVEAL_LEVEL,
-  type PrivateSnapshot,
-} from "./private-state-client";
+import { type PrivateSnapshot } from "./private-state-client";
+
+const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
+const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
+const DEFAULT_RPC_ENDPOINT =
+  SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta"
+    ? "https://api.mainnet-beta.solana.com"
+    : "https://api.devnet.solana.com";
+
+function envPublicKey(name: string, fallback: string): PublicKey {
+  const configured = env[name]?.trim();
+  if (!configured && (SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta")) {
+    throw new Error(`${name} is required when VITE_SOLANA_CLUSTER=mainnet.`);
+  }
+  const value = configured || fallback;
+  return new PublicKey(value);
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-export const GAME_STATE_PROGRAM_ID = new PublicKey("HheELu8GJ7EAw7afAxinmJLEnzQK7gAMBWYqDUXtec2S");
-export const RPC_ENDPOINT = import.meta.env.VITE_SOLANA_RPC_ENDPOINT?.trim() || "https://api.devnet.solana.com";
+export const GAME_STATE_PROGRAM_ID = envPublicKey(
+  "VITE_GAME_STATE_PROGRAM_ID",
+  "FJGxh6SKgNoTVzHj98oBsC2oaEy8ovadVJf8rDUNaEHb",
+);
+export const RPC_ENDPOINT = env.VITE_SOLANA_RPC_ENDPOINT?.trim() || DEFAULT_RPC_ENDPOINT;
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 export const ALLIANCE_CREATE_USDC_COST = 1_000_000n;
@@ -1106,7 +1115,7 @@ async function isCoordOccupied(
   system: number,
   position: number,
 ): Promise<boolean> {
-  const pda = derivePublicPlanetCoordsPda(galaxy, system, position);
+  const pda = derivePlanetCoordsPda(galaxy, system, position);
   const info = await connection.getAccountInfo(pda, "confirmed");
   return info !== null && info.owner.equals(GAME_STATE_PROGRAM_ID);
 }
@@ -3302,14 +3311,14 @@ export class GameClient {
       nextIndex, galaxy, system, position, planetName, now, mission,
     } = opts;
 
-    const planetStatePda = derivePublicPlanetStatePda(authority, nextIndex);
-    const planetCoordsPda = derivePublicPlanetCoordsPda(galaxy, system, position);
+    const planetStatePda = derivePlanetStatePda(authority, nextIndex);
+    const planetCoordsPda = derivePlanetCoordsPda(galaxy, system, position);
 
     const args = isHomeworld
       ? encodeHomeworldArgs(now, planetName.trim() || "Homeworld", galaxy, system, position)
       : encodeColonyArgs(now, mission!);
 
-    const discriminator = isHomeworld ? IX.initializePublicHomeworld : IX.initializePublicColony;
+    const discriminator = isHomeworld ? IX.initializeHomeworld : IX.initializeColony;
 
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
@@ -3318,8 +3327,8 @@ export class GameClient {
         { pubkey: authority,          isSigner: false, isWritable: false }, // authority
         { pubkey: authorizedVaultPda, isSigner: false, isWritable: false }, // authorized_vault
         { pubkey: playerProfilePda,   isSigner: false, isWritable: true  }, // player_profile
-        { pubkey: planetStatePda,     isSigner: false, isWritable: true  }, // public_planet_state
-        { pubkey: planetCoordsPda,    isSigner: false, isWritable: true  }, // public_planet_coords
+        { pubkey: planetStatePda,     isSigner: false, isWritable: true  }, // planet_state
+        { pubkey: planetCoordsPda,    isSigner: false, isWritable: true  }, // planet_coords
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       data: encodeInstruction(discriminator, args),
@@ -3397,27 +3406,11 @@ export class GameClient {
           now,
         });
 
-        const publicAccount = await this.connection.getAccountInfo(planetStatePda, "confirmed");
-        if (!isPublicPlanetStateAccount(publicAccount)) {
+        const planetAccount = await this.connection.getAccountInfo(planetStatePda, "confirmed");
+        if (!planetAccount || !planetAccount.owner.equals(GAME_STATE_PROGRAM_ID)) {
           throw new Error("Planet created but public account could not be loaded.");
         }
-        const publicState = deserializePublicPlanetState(Buffer.from(publicAccount.data));
-        const snapshot = initialPrivateSnapshot(now);
-        const salt = generatePrivateSalt();
-        const digest = await derivePrivateStateDigest(snapshot, salt);
-        reportProgress?.("Wallet signing: initializing private planet state");
-        await this.sendInstruction([
-          buildInitializePrivatePlanetInstruction(
-            authority,
-            planetStatePda,
-            galaxy,
-            system,
-            position,
-            planetName.trim() || "Homeworld",
-            digest,
-          ),
-        ]);
-        return stateFromPublicPlanet(planetStatePda, publicState, snapshot);
+        return adaptPlanetState(planetStatePda, deserializePlanetState(Buffer.from(planetAccount.data)));
       } catch (err) {
         // Tx failed — could be a race condition where someone else claimed the slot.
         // Log and try the next candidate.
@@ -3463,20 +3456,32 @@ export class GameClient {
   async findPlanets(walletPubkey: PublicKey): Promise<PlayerState[]> {
     const profile = await this.fetchPlayerProfile(walletPubkey);
     if (!profile) return [];
-    const pdas = Array.from({ length: profile.planetCount }, (_, i) => derivePublicPlanetStatePda(walletPubkey, i));
-    const accounts = await this.connection.getMultipleAccountsInfo(pdas, "confirmed");
-    const states = accounts.map((account, idx) => {
+    const legacyPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePlanetStatePda(walletPubkey, i));
+    const legacyAccounts = await this.connection.getMultipleAccountsInfo(legacyPdas, "confirmed");
+    const states = legacyAccounts.map((account, idx) => {
       if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
       const discriminator = account.data.slice(0, 8);
-      if (discriminator.equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
-        return stateFromPublicPlanet(pdas[idx], deserializePublicPlanetState(Buffer.from(account.data)));
-      }
       if (discriminator.equals(PLANET_STATE_DISCRIMINATOR)) {
-        return adaptPlanetState(pdas[idx], deserializePlanetState(Buffer.from(account.data)));
+        return adaptPlanetState(legacyPdas[idx], deserializePlanetState(Buffer.from(account.data)));
       }
       return null;
     });
-    return states
+    if (states.some(Boolean)) {
+      return states
+        .filter((s): s is PlayerState => !!s)
+        .sort((a, b) => a.planet.planetIndex - b.planet.planetIndex);
+    }
+
+    const publicPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePublicPlanetStatePda(walletPubkey, i));
+    const publicAccounts = await this.connection.getMultipleAccountsInfo(publicPdas, "confirmed");
+    const publicStates = publicAccounts.map((account, idx) => {
+      if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+      if (account.data.slice(0, 8).equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
+        return stateFromPublicPlanet(publicPdas[idx], deserializePublicPlanetState(Buffer.from(account.data)));
+      }
+      return null;
+    });
+    return publicStates
       .filter((s): s is PlayerState => !!s)
       .sort((a, b) => a.planet.planetIndex - b.planet.planetIndex);
   }
@@ -3898,22 +3903,30 @@ export class GameClient {
   }
 
   private async findPlanetByCoordinates(galaxy: number, system: number, position: number): Promise<PublicKey | null> {
-    // Fast path: look up via public_planet_coords PDA
-    const coordsPda = derivePublicPlanetCoordsPda(galaxy, system, position);
+    // Fast path: look up via planet_coords PDA.
+    const coordsPda = derivePlanetCoordsPda(galaxy, system, position);
     const coordsAccount = await this.connection.getAccountInfo(coordsPda, "confirmed");
     if (coordsAccount && coordsAccount.owner.equals(GAME_STATE_PROGRAM_ID) && coordsAccount.data.length >= 8 + 5 + 32 + 32 + 1) {
-      if (coordsAccount.data.slice(0, 8).equals(PUBLIC_PLANET_COORDS_DISCRIMINATOR)) {
-        // public_planet field is at offset 8 (disc) + 2 + 2 + 1 (galaxy/system/position) = offset 13
+      if (coordsAccount.data.slice(0, 8).equals(PLANET_COORDS_DISCRIMINATOR)) {
+        // planet field is at offset 8 (disc) + 2 + 2 + 1 (galaxy/system/position) = offset 13
         return new PublicKey(coordsAccount.data.slice(13, 13 + 32));
+      }
+    }
+
+    const publicCoordsPda = derivePublicPlanetCoordsPda(galaxy, system, position);
+    const publicCoordsAccount = await this.connection.getAccountInfo(publicCoordsPda, "confirmed");
+    if (publicCoordsAccount && publicCoordsAccount.owner.equals(GAME_STATE_PROGRAM_ID) && publicCoordsAccount.data.length >= 8 + 5 + 32 + 32 + 1) {
+      if (publicCoordsAccount.data.slice(0, 8).equals(PUBLIC_PLANET_COORDS_DISCRIMINATOR)) {
+        return new PublicKey(publicCoordsAccount.data.slice(13, 13 + 32));
       }
     }
 
     // Fallback: scan all program accounts (slow, kept for safety)
     const accounts = await this.connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed" });
     for (const account of accounts) {
-      if (!account.account.data.slice(0, 8).equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) continue;
+      if (!account.account.data.slice(0, 8).equals(PLANET_STATE_DISCRIMINATOR)) continue;
       try {
-        const s = deserializePublicPlanetState(Buffer.from(account.account.data));
+        const s = deserializePlanetState(Buffer.from(account.account.data));
         if (s.galaxy === galaxy && s.system === system && s.position === position) return account.pubkey;
       } catch { /* ignore */ }
     }
@@ -3988,46 +4001,6 @@ export class GameClient {
     );
     if (!destinationPlanetPda) {
       throw new Error("Target planet not found for espionage resolution.");
-    }
-
-    const destinationAccount = await this.connection.getAccountInfo(destinationPlanetPda, "confirmed");
-    if (isPublicPlanetStateAccount(destinationAccount)) {
-      const targetPrivatePlanetPda = derivePrivatePlanetPda(destinationPlanetPda);
-      const targetPrivateAccount = await this.connection.getAccountInfo(targetPrivatePlanetPda, "confirmed");
-      if (!targetPrivateAccount) {
-        throw new Error("Target private planet state is not initialized yet.");
-      }
-      const targetPrivate = deserializePrivatePlanetPublicState(Buffer.from(targetPrivateAccount.data));
-      const spyAuthority = this.provider.wallet.publicKey;
-      const resolver = spyAuthority;
-      const revealLevelCap = MAX_REVEAL_LEVEL;
-      const requestPayload = {
-        sourcePlanet: sourceEntityPda.toBase58(),
-        targetPlanet: destinationPlanetPda.toBase58(),
-        targetPrivatePlanet: targetPrivatePlanetPda.toBase58(),
-        targetEpoch: targetPrivate.stateEpoch.toString(),
-        reportNonce: targetPrivate.reportNonce.toString(),
-        missionSlot: slot,
-        revealLevelCap,
-        probes: mission.sEspionageProbe,
-        target: {
-          galaxy: mission.targetGalaxy,
-          system: mission.targetSystem,
-          position: mission.targetPosition,
-        },
-      };
-      const { encryptedInputHash, requestCommitment } = await derivePrivateSpyRequestHashes(requestPayload);
-      return this.sendInstruction([
-        buildRequestSpyReportInstruction(
-          spyAuthority,
-          resolver,
-          targetPrivatePlanetPda,
-          targetPrivate.reportNonce,
-          revealLevelCap,
-          encryptedInputHash,
-          requestCommitment,
-        ),
-      ]);
     }
 
     await this.ensureVault();

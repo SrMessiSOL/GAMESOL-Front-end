@@ -18,14 +18,28 @@ import {
 import { AnchorProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
 import type { GameClient,} from "./game-state";
+
+const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
+const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
+
+function envPublicKey(name: string, fallback: string): PublicKey {
+  const configured = env[name]?.trim();
+  if (!configured && (SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta")) {
+    throw new Error(`${name} is required when VITE_SOLANA_CLUSTER=mainnet.`);
+  }
+  const value = configured || fallback;
+  return new PublicKey(value);
+}
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-export const MARKET_PROGRAM_ID = new PublicKey(
-  "ESjW56VLfUfvjgWmAMtQnhgyEpo8esQZQh2meRVNg1gA",
+export const MARKET_PROGRAM_ID = envPublicKey(
+  "VITE_MARKET_PROGRAM_ID",
+  "Dow7f1UqLGKyvs1D2uNR5c6bmAdnKRy2ZDtnsa4UhApp",
 );
 
-export const GAME_STATE_PROGRAM_ID = new PublicKey(
-  "HheELu8GJ7EAw7afAxinmJLEnzQK7gAMBWYqDUXtec2S",
+export const GAME_STATE_PROGRAM_ID = envPublicKey(
+  "VITE_GAME_STATE_PROGRAM_ID",
+  "FJGxh6SKgNoTVzHj98oBsC2oaEy8ovadVJf8rDUNaEHb",
 );
 export const ANTIMATTER_SCALE = 1_000_000n;
 export const MIN_RESOURCE_AMOUNT = 1_000n;

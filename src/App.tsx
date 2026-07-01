@@ -116,7 +116,7 @@ type SpyReport = {
 };
 
 const DEV_CONFIG_ADMIN_WALLET = "HAHnFdgoASDzzma7fP9nfKo5nByU1uStYR964QhWnL2X";
-const DEFAULT_ANTIMATTER_MINT = "FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh";
+const DEFAULT_ANTIMATTER_MINT = import.meta.env.VITE_ANTIMATTER_MINT?.trim() || "FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh";
 const DEFAULT_ANTIMATTER_DECIMALS = 6;
 const SPL_TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const MAX_GALAXY = 999;
@@ -2118,7 +2118,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
         justifyContent: "flex-end",
       }}
     >
-      <WalletConnectControl disconnectedLabel={isMobile ? "Launch" : "Launch App (devnet)"} connectingLabel="Launching..." />
+      <WalletConnectControl disconnectedLabel={isMobile ? "Launch" : "Launch App"} connectingLabel="Launching..." />
     </div>
     <div
       aria-hidden="true"
@@ -2432,7 +2432,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
               Open the beta
             </div>
             <div style={{ fontSize: isMobile ? 13 : 14, color: "rgba(200,214,229,0.8)", lineHeight: 1.8, marginBottom: 16, maxWidth: 420, marginInline: "auto" }}>
-              Connect your wallet to access the live Solana devnet client and begin building your first position in the galaxy.
+              Connect your wallet to access the live Solana client and begin building your first position in the galaxy.
             </div>
             <div style={{ marginBottom: 14 }}>
               <WalletConnectControl disconnectedLabel="OPEN GAME (BETA)" connectingLabel="OPENING..." />

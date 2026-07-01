@@ -7,7 +7,13 @@ import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
 import NativeMobileWalletAdapter from "./NativeMobileWalletAdapter";
 
-const RPC_ENDPOINT = import.meta.env.VITE_SOLANA_RPC_ENDPOINT?.trim() || "https://api.devnet.solana.com";
+const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
+const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
+const DEFAULT_RPC_ENDPOINT =
+  SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta"
+    ? "https://api.mainnet-beta.solana.com"
+    : "https://api.devnet.solana.com";
+const RPC_ENDPOINT = env.VITE_SOLANA_RPC_ENDPOINT?.trim() || DEFAULT_RPC_ENDPOINT;
 
 /**
  * Returns true when running inside a Capacitor native Android shell (APK).
