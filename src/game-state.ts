@@ -40,7 +40,7 @@ export const ALLIANCE_CREATE_ANTIMATTER_COST = 10_000_000_000n;
 export const ALLIANCE_CREATE_ANTIMATTER_BURN = 5_000_000_000n;
 export const ALLIANCE_CREATE_ANTIMATTER_TREASURY = 5_000_000_000n;
 
-const VAULT_MIN_BALANCE_LAMPORTS = 5_000_000;
+const VAULT_MIN_BALANCE_LAMPORTS = 10_000_000;
 const VAULT_TARGET_BALANCE_LAMPORTS = 20_000_000;
 const DEFAULT_TX_COMPUTE_UNITS = 250_000;
 const DEFAULT_PRIORITY_FEE_MICROLAMPORTS = 0;
@@ -1328,8 +1328,6 @@ function deserializeMission(data: Buffer, offset: number): { mission: Mission; b
   const cargoDeuterium = readU64(data, o); o += 8;
   const applied = readU8(data, o) !== 0; o += 1;
   const speedFactor = readU8(data, o); o += 1;
-  const combatRounds = readU8(data, o); o += 1;
-  const attackerWon = readU8(data, o) !== 0; o += 1;
 
   return {
     mission: {
@@ -1340,7 +1338,8 @@ function deserializeMission(data: Buffer, offset: number): { mission: Mission; b
       sBattleship, sBattlecruiser, sBomber, sDestroyer, sDeathstar,
       sRecycler, sEspionageProbe, sColonyShip,
       cargoMetal, cargoCrystal, cargoDeuterium, applied, speedFactor,
-      combatRounds, attackerWon,
+      combatRounds: 0,
+      attackerWon: false,
     },
     bytesRead: o - offset,
   };
@@ -1383,9 +1382,9 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const computerTech = readU8(data, o); o += 1;
   const astrophysics = readU8(data, o); o += 1;
   const igrNetwork = readU8(data, o); o += 1;
-  const weaponsTechnology = readU8(data, o); o += 1;
-  const shieldingTechnology = readU8(data, o); o += 1;
-  const armorTechnology = readU8(data, o); o += 1;
+  const weaponsTechnology = 0;
+  const shieldingTechnology = 0;
+  const armorTechnology = 0;
   const researchQueueItem = readU8(data, o); o += 1;
   const researchQueueTarget = readU8(data, o); o += 1;
   const researchFinishTs = readI64(data, o); o += 8;
@@ -1405,12 +1404,12 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const crystalCap = readU64(data, o); o += 8;
   const deuteriumCap = readU64(data, o); o += 8;
   const lastUpdateTs = readI64(data, o); o += 8;
-  const createdAt = readI64(data, o); o += 8;
-  const protectionUntilTs = readI64(data, o); o += 8;
-  const marketUnlockedAt = readI64(data, o); o += 8;
-  const attackUnlockedAt = readI64(data, o); o += 8;
-  const lastAttackLaunchTs = readI64(data, o); o += 8;
-  const lastAttackedTs = readI64(data, o); o += 8;
+  const createdAt = lastUpdateTs;
+  const protectionUntilTs = 0;
+  const marketUnlockedAt = 0;
+  const attackUnlockedAt = 0;
+  const lastAttackLaunchTs = 0;
+  const lastAttackedTs = 0;
   const smallCargo = readU32(data, o); o += 4;
   const largeCargo = readU32(data, o); o += 4;
   const lightFighter = readU32(data, o); o += 4;
@@ -1425,16 +1424,16 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const espionageProbe = readU32(data, o); o += 4;
   const colonyShip = readU32(data, o); o += 4;
   const solarSatellite = readU32(data, o); o += 4;
-  const rocketLauncher = readU32(data, o); o += 4;
-  const lightLaser = readU32(data, o); o += 4;
-  const heavyLaser = readU32(data, o); o += 4;
-  const gaussCannon = readU32(data, o); o += 4;
-  const ionCannon = readU32(data, o); o += 4;
-  const plasmaTurret = readU32(data, o); o += 4;
-  const smallShieldDome = readU32(data, o); o += 4;
-  const largeShieldDome = readU32(data, o); o += 4;
-  const antiBallisticMissile = readU32(data, o); o += 4;
-  const interplanetaryMissile = readU32(data, o); o += 4;
+  const rocketLauncher = 0;
+  const lightLaser = 0;
+  const heavyLaser = 0;
+  const gaussCannon = 0;
+  const ionCannon = 0;
+  const plasmaTurret = 0;
+  const smallShieldDome = 0;
+  const largeShieldDome = 0;
+  const antiBallisticMissile = 0;
+  const interplanetaryMissile = 0;
   const activeMissions = readU8(data, o); o += 1;
 
   const missions: Mission[] = [];
@@ -1449,9 +1448,9 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const shipBuildItem = readU8(data, o); o += 1;
   const shipBuildQty = readU32(data, o); o += 4;
   const shipBuildFinishTs = readI64(data, o); o += 8;
-  const defenseBuildItem = readU8(data, o); o += 1;
-  const defenseBuildQty = readU32(data, o); o += 4;
-  const defenseBuildFinishTs = readI64(data, o); o += 8;
+  const defenseBuildItem = 255;
+  const defenseBuildQty = 0;
+  const defenseBuildFinishTs = 0;
 
   void bump;
 
@@ -1936,6 +1935,9 @@ function isNonRetryableHomeworldError(message: string): boolean {
     message.includes("ConstraintSeeds") ||
     message.includes("A seeds constraint was violated") ||
     message.includes("custom program error: 0x7d6") ||
+    message.includes("insufficient lamports") ||
+    message.includes("Transfer: insufficient lamports") ||
+    message.includes("custom program error: 0x1") ||
     message.includes("InvalidVaultAuthorization") ||
     message.includes("Vault authorization mismatch") ||
     message.includes("custom program error: 0x1795")
@@ -1950,6 +1952,13 @@ function mapSendTransactionError(message: string, logs: string[]): string {
     details.includes("custom program error: 0x7d6")
   ) {
     return "On-chain PDA seed mismatch (ConstraintSeeds / 0x7d6). Refresh and retry; if it persists, the player profile index is out of sync.";
+  }
+  if (
+    details.includes("insufficient lamports") ||
+    details.includes("Transfer: insufficient lamports") ||
+    details.includes("custom program error: 0x1")
+  ) {
+    return "Vault needs more devnet SOL for account rent (insufficient lamports / 0x1).";
   }
   if (
     details.includes("Error Code: QueueBusy") ||
@@ -2449,6 +2458,28 @@ export class GameClient {
     return this.provider.sendAndConfirm(tx, [], { commitment: "confirmed" });
   }
 
+  private async ensureVaultLamports(
+    vault: Keypair,
+    minLamports = VAULT_MIN_BALANCE_LAMPORTS,
+    reportProgress?: ProgressReporter,
+  ): Promise<void> {
+    const balance = await this.connection.getBalance(vault.publicKey, "confirmed");
+    if (balance >= minLamports) return;
+
+    const topUp = VAULT_TARGET_BALANCE_LAMPORTS - balance;
+    if (topUp <= 0) return;
+
+    reportProgress?.("Signing with wallet: topping up vault SOL for account rent");
+    const fundTx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: this.provider.wallet.publicKey,
+        toPubkey: vault.publicKey,
+        lamports: topUp,
+      }),
+    );
+    await this.provider.sendAndConfirm(fundTx, [], { commitment: "confirmed" });
+  }
+
   private async getVaultRecoverySignature(salt: Uint8Array): Promise<Uint8Array | null> {
     const wallet = this.provider.wallet as unknown as { signMessage?: (msg: Uint8Array) => Promise<Uint8Array> };
     if (typeof wallet.signMessage === "function") {
@@ -2580,21 +2611,7 @@ export class GameClient {
       return null;
     }
     this.vaultBackupDecryptFailed = false;
-    const balance = await this.connection.getBalance(vault.publicKey, "confirmed");
-    if (balance < VAULT_MIN_BALANCE_LAMPORTS) {
-      const topUp = VAULT_TARGET_BALANCE_LAMPORTS - balance;
-      if (topUp > 0) {
-        reportProgress?.("Topping up vault with SOL...");
-        const fundTx = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: this.provider.wallet.publicKey,
-            toPubkey: vault.publicKey,
-            lamports: topUp,
-          }),
-        );
-        await this.provider.sendAndConfirm(fundTx, [], { commitment: "confirmed" });
-      }
-    }
+    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
     this.vaultKeypair = vault;
     console.log("[GAME_STATE:vault_backup] restored", { vault: vault.publicKey.toBase58() });
     return vault;
@@ -3321,13 +3338,16 @@ export class GameClient {
     position: number;
     planetName: string;
     now: number;
+    reportProgress?: ProgressReporter;
     /** Only for colony */
     mission?: Mission;
   }): Promise<PublicKey> {
     const {
       isHomeworld, authority, vault, playerProfilePda, authorizedVaultPda,
-      nextIndex, galaxy, system, position, planetName, now, mission,
+      nextIndex, galaxy, system, position, planetName, now, reportProgress, mission,
     } = opts;
+
+    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
 
     const latestProfile = await this.fetchPlayerProfile(authority);
     const currentIndex = latestProfile?.planetCount ?? nextIndex ?? 0;
@@ -3421,6 +3441,7 @@ export class GameClient {
           position,
           planetName,
           now,
+          reportProgress,
         });
 
         const planetAccount = await this.connection.getAccountInfo(planetStatePda, "confirmed");
@@ -4058,6 +4079,7 @@ export class GameClient {
   ): Promise<{ entityPda: PublicKey; planetPda: PublicKey }> {
     await this.ensureVault(reportProgress);
     const vault = this.vaultKeypair!;
+    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
     const authority = this.provider.wallet.publicKey;
 
     // Verify the target slot is free before committing
