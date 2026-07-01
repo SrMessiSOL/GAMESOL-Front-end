@@ -1126,8 +1126,8 @@ async function isCoordOccupied(
  */
 function deriveHomeworldCoordsFromWallet(walletPubkey: PublicKey): { galaxy: number; system: number; position: number } {
   const b = walletPubkey.toBytes();
-  const galaxy = (b[0] % 999) + 1;
-  const system = (((b[1] | (b[2] << 8)) >>> 0) % 999) + 1;
+  const galaxy = (b[0] % 9) + 1;
+  const system = (((b[1] | (b[2] << 8)) >>> 0) % 499) + 1;
   const position = (b[3] % 15) + 1;
   return { galaxy, system, position };
 }
@@ -1137,9 +1137,9 @@ function deriveHomeworldCoordsFromWallet(walletPubkey: PublicKey): { galaxy: num
  */
 function randomCoords(): { galaxy: number; system: number; position: number } {
   return {
-    galaxy:   Math.floor(Math.random() * 999) + 1,   // 1–999
-    system:   Math.floor(Math.random() * 999) + 1,   // 1–999
-    position: Math.floor(Math.random() * 15)  + 1,   // 1–15
+    galaxy:   Math.floor(Math.random() * 9) + 1,
+    system:   Math.floor(Math.random() * 499) + 1,
+    position: Math.floor(Math.random() * 15) + 1,
   };
 }
 
