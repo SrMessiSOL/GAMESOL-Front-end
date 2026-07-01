@@ -1931,8 +1931,26 @@ function describeTxError(err: unknown): string {
   return String(err);
 }
 
+function isNonRetryableHomeworldError(message: string): boolean {
+  return (
+    message.includes("ConstraintSeeds") ||
+    message.includes("A seeds constraint was violated") ||
+    message.includes("custom program error: 0x7d6") ||
+    message.includes("InvalidVaultAuthorization") ||
+    message.includes("Vault authorization mismatch") ||
+    message.includes("custom program error: 0x1795")
+  );
+}
+
 function mapSendTransactionError(message: string, logs: string[]): string {
   const details = [message, ...logs].join("\n");
+  if (
+    details.includes("ConstraintSeeds") ||
+    details.includes("A seeds constraint was violated") ||
+    details.includes("custom program error: 0x7d6")
+  ) {
+    return "On-chain PDA seed mismatch (ConstraintSeeds / 0x7d6). Refresh and retry; if it persists, the player profile index is out of sync.";
+  }
   if (
     details.includes("Error Code: QueueBusy") ||
     details.includes("Build queue is busy") ||
@@ -3297,7 +3315,7 @@ export class GameClient {
     vault: Keypair;
     playerProfilePda: PublicKey;
     authorizedVaultPda: PublicKey;
-    nextIndex: number;
+    nextIndex?: number;
     galaxy: number;
     system: number;
     position: number;
@@ -3311,7 +3329,9 @@ export class GameClient {
       nextIndex, galaxy, system, position, planetName, now, mission,
     } = opts;
 
-    const planetStatePda = derivePlanetStatePda(authority, nextIndex);
+    const latestProfile = await this.fetchPlayerProfile(authority);
+    const currentIndex = latestProfile?.planetCount ?? nextIndex ?? 0;
+    const planetStatePda = derivePlanetStatePda(authority, currentIndex);
     const planetCoordsPda = derivePlanetCoordsPda(galaxy, system, position);
 
     const args = isHomeworld
@@ -3362,8 +3382,6 @@ export class GameClient {
       vault = await this.restoreAuthorizedVaultForExistingProfile(authority, reportProgress);
     }
 
-    const updatedProfile = await this.fetchPlayerProfile(authority);
-    const nextIndex = updatedProfile?.planetCount ?? 0;
     const playerProfilePda = derivePlayerProfilePda(authority);
     const authorizedVaultPda = deriveAuthorizedVaultPda(authority);
     const now = Math.floor(Date.now() / 1000);
@@ -3398,7 +3416,6 @@ export class GameClient {
           vault,
           playerProfilePda,
           authorizedVaultPda,
-          nextIndex,
           galaxy,
           system,
           position,
@@ -3415,11 +3432,7 @@ export class GameClient {
         // Tx failed — could be a race condition where someone else claimed the slot.
         // Log and try the next candidate.
         const message = describeTxError(err);
-        if (
-          message.includes("InvalidVaultAuthorization") ||
-          message.includes("Vault authorization mismatch") ||
-          message.includes("custom program error: 0x1795")
-        ) {
+        if (isNonRetryableHomeworldError(message)) {
           throw err;
         }
         console.warn(`[GAME_STATE:homeworld] tx failed for ${galaxy}:${system}:${position}:`, message);
