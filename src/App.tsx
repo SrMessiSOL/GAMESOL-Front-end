@@ -182,6 +182,44 @@ function formatTokenAmount(raw: bigint, decimals: number): string {
   return `${whole.toString()}.${fractionText}`;
 }
 
+type ResourceKind = "metal" | "crystal" | "deuterium";
+
+const RESOURCE_UI: Record<ResourceKind, { label: string; short: string; color: string }> = {
+  metal: { label: "Metal", short: "MTL", color: "var(--metal)" },
+  crystal: { label: "Crystal", short: "CRY", color: "var(--crystal)" },
+  deuterium: { label: "Deuterium", short: "DEU", color: "var(--deut)" },
+};
+
+const ResourceIcon: React.FC<{ kind: ResourceKind; size?: "sm" | "md" }> = ({ kind, size = "md" }) => (
+  <span className={`resource-icon resource-icon-${kind} ${size === "sm" ? "small" : ""}`} aria-hidden="true" />
+);
+
+const UsdcIcon: React.FC<{ size?: "sm" | "md" }> = ({ size = "md" }) => (
+  <span className={`usdc-icon ${size === "sm" ? "small" : ""}`} aria-hidden="true">USDC</span>
+);
+
+const ResourceLabel: React.FC<{ kind: ResourceKind; short?: boolean }> = ({ kind, short = false }) => (
+  <span className="asset-label" style={{ color: RESOURCE_UI[kind].color }}>
+    <ResourceIcon kind={kind} size="sm" />
+    <span>{short ? RESOURCE_UI[kind].short : RESOURCE_UI[kind].label}</span>
+  </span>
+);
+
+const ResourceAmount: React.FC<{ kind: ResourceKind; value: bigint | number; compact?: boolean }> = ({ kind, value, compact = false }) => (
+  <span className="asset-amount" style={{ color: RESOURCE_UI[kind].color }}>
+    <ResourceIcon kind={kind} size="sm" />
+    <span>{fmt(value)}</span>
+    {!compact && <span className="asset-amount-label">{RESOURCE_UI[kind].short}</span>}
+  </span>
+);
+
+const UsdcAmount: React.FC<{ raw: bigint; className?: string }> = ({ raw, className }) => (
+  <span className={`asset-amount usdc-amount${className ? ` ${className}` : ""}`}>
+    <UsdcIcon size="sm" />
+    <span>{formatTokenAmount(raw, 6)}</span>
+  </span>
+);
+
 function toResourceAmount(value: bigint | number | undefined): bigint {
   if (typeof value === "bigint") return value;
   return BigInt(Math.max(0, Math.floor(value ?? 0)));
@@ -1299,6 +1337,22 @@ const CSS = `
   .token-badge-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--warn); }
   .token-badge-amount { font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700; color: var(--text); }
   .token-badge-label { font-size: 9px; color: var(--warn); letter-spacing: 1.4px; }
+  .asset-label, .asset-amount { display:inline-flex; align-items:center; gap:6px; min-width:0; }
+  .asset-amount { font-family:'Share Tech Mono',monospace; font-weight:700; letter-spacing:0.4px; }
+  .asset-amount-label { font-size:8px; letter-spacing:1px; color:rgba(200,214,229,0.58); }
+  .resource-icon, .usdc-icon { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; position:relative; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 0 12px rgba(255,255,255,0.06); }
+  .resource-icon.small, .usdc-icon.small { width:14px; height:14px; }
+  .resource-icon-metal { background:linear-gradient(145deg, #d8e2ea, #687887 58%, #27313d); border:1px solid rgba(216,226,234,0.38); }
+  .resource-icon-metal::after { content:""; width:45%; height:45%; border-radius:3px; background:rgba(255,255,255,0.42); transform:rotate(18deg); box-shadow:4px 3px 0 rgba(0,0,0,0.18); }
+  .resource-icon-crystal { background:linear-gradient(145deg, #d7fbff, #53cff6 48%, #135779); border:1px solid rgba(122,212,255,0.44); clip-path:polygon(50% 0, 92% 28%, 76% 100%, 24% 100%, 8% 28%); border-radius:4px; }
+  .resource-icon-crystal::after { content:""; position:absolute; inset:3px; background:linear-gradient(120deg, rgba(255,255,255,0.55), transparent 58%); clip-path:inherit; }
+  .resource-icon-deuterium { background:linear-gradient(145deg, #c8fff0, #06d6a0 48%, #0b5c4b); border:1px solid rgba(6,214,160,0.42); }
+  .resource-icon-deuterium::after { content:""; width:38%; height:58%; border-radius:999px 999px 6px 6px; background:rgba(8,10,22,0.45); border:1px solid rgba(255,255,255,0.32); }
+  .usdc-icon { width:26px; height:26px; font-family:'Orbitron',sans-serif; font-size:6px; letter-spacing:0; color:white; background:linear-gradient(145deg, #7fb7ff, #2775ca 55%, #144b8c); border:1px solid rgba(127,183,255,0.48); text-shadow:0 1px 2px rgba(0,0,0,0.5); }
+  .usdc-icon.small { width:18px; height:18px; font-size:5px; }
+  .store-wallet-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; padding:10px 12px; border:1px solid rgba(39,117,202,0.22); background:rgba(39,117,202,0.06); border-radius:10px; }
+  .store-wallet-label { font-size:9px; letter-spacing:1.3px; text-transform:uppercase; color:var(--dim); }
+  .store-muted-status { margin-bottom:18px; font-size:10px; color:var(--warn); letter-spacing:1px; }
   .vault-tag { font-size: 10px; letter-spacing: 1px; color: var(--success);
     border: 1px solid rgba(6,214,160,0.3); padding: 4px 8px; border-radius: 2px;
     background: rgba(6,214,160,0.05); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
@@ -1575,7 +1629,7 @@ const CSS = `
   .quest-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
   .quest-title { font-size:12px; color:var(--text); line-height:1.35; }
   .quest-hint { font-size:10px; color:var(--dim); line-height:1.5; margin-top:5px; }
-  .quest-badge { flex:0 0 auto; font-family:'Orbitron',sans-serif; font-size:10px; color:var(--cyan); border:1px solid rgba(0,245,212,0.25); background:rgba(0,245,212,0.06); border-radius:999px; padding:5px 8px; }
+  .quest-badge { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; font-family:'Orbitron',sans-serif; font-size:10px; color:var(--cyan); border:1px solid rgba(0,245,212,0.25); background:rgba(0,245,212,0.06); border-radius:999px; padding:5px 8px; }
   .quest-badge.locked { color:var(--danger); border-color:rgba(255,0,110,0.32); background:rgba(255,0,110,0.06); }
   .quest-badge.claimed { color:var(--success); border-color:rgba(6,214,160,0.32); background:rgba(6,214,160,0.06); }
   .quest-status-line { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:9px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; }
@@ -1585,8 +1639,9 @@ const CSS = `
   .quest-progress-fill.locked { background:linear-gradient(90deg,var(--danger),var(--warn)); }
   .quest-rewards { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
   .quest-reward { border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.035); border-radius:8px; padding:7px 6px; min-width:0; }
-  .quest-reward span { display:block; font-size:8px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; }
+  .quest-reward > span { display:block; font-size:8px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; }
   .quest-reward strong { display:block; font-size:11px; margin-top:3px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .quest-reward .asset-label, .quest-reward .asset-amount { max-width:100%; }
   .quest-req-list { display:grid; gap:6px; }
   .quest-req-row { display:flex; justify-content:space-between; gap:10px; align-items:center; font-size:10px; color:var(--dim); border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:5px; min-height:22px; }
   .quest-req-row:last-child { border-bottom:none; padding-bottom:0; }
@@ -3625,9 +3680,9 @@ const QuestsTab: React.FC<{
                     </div>
 
                     <div className="quest-rewards">
-                      <div className="quest-reward"><span>Metal</span><strong>{fmt(reward.metal)}</strong></div>
-                      <div className="quest-reward"><span>Crystal</span><strong>{fmt(reward.crystal)}</strong></div>
-                      <div className="quest-reward"><span>Deut</span><strong>{fmt(reward.deuterium)}</strong></div>
+                      <div className="quest-reward"><span><ResourceLabel kind="metal" short /></span><strong><ResourceAmount kind="metal" value={reward.metal} compact /></strong></div>
+                      <div className="quest-reward"><span><ResourceLabel kind="crystal" short /></span><strong><ResourceAmount kind="crystal" value={reward.crystal} compact /></strong></div>
+                      <div className="quest-reward"><span><ResourceLabel kind="deuterium" short /></span><strong><ResourceAmount kind="deuterium" value={reward.deuterium} compact /></strong></div>
                     </div>
 
                     <div className="quest-req-list">
@@ -3836,18 +3891,15 @@ const StoreTab: React.FC<{
   return (
     <div>
       <div className="section-title">USDC STORE</div>
-      <div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>
-        Wallet USDC {formatTokenAmount(usdcBalance, 6)} · Rewards respect on-chain storage caps.
+      <div className="store-wallet-row">
+        <span className="store-wallet-label">Wallet balance</span>
+        <UsdcAmount raw={usdcBalance} />
       </div>
       {!storeConfig && (
-        <div className="notice-box" style={{marginBottom:18}}>
-          Store config is not initialized on-chain yet.
-        </div>
+        <div className="store-muted-status">Store opening soon.</div>
       )}
       {storeConfig && !storeConfig.enabled && (
-        <div className="notice-box" style={{marginBottom:18}}>
-          Store is currently disabled on-chain.
-        </div>
+        <div className="store-muted-status">Store paused.</div>
       )}
       {groups.map(group => (
         <div key={group} style={{marginBottom:24}}>
@@ -3867,7 +3919,7 @@ const StoreTab: React.FC<{
                       <div className="quest-title">{pack.title}</div>
                       <div className="quest-hint">{pack.hint}</div>
                     </div>
-                    <div className={`quest-badge ${purchased ? "claimed" : canBuy ? "" : "locked"}`}>${formatTokenAmount(pack.priceUsdc, 6)}</div>
+                    <div className={`quest-badge ${purchased ? "claimed" : canBuy ? "" : "locked"}`}><UsdcIcon size="sm" />{formatTokenAmount(pack.priceUsdc, 6)}</div>
                   </div>
 
                   <div className="quest-rewards">
@@ -3875,17 +3927,16 @@ const StoreTab: React.FC<{
                       <div className="quest-reward"><span>Shield</span><strong>{fmtCountdown(pack.shieldSeconds)}</strong></div>
                     ) : (
                       <>
-                        <div className="quest-reward"><span>Metal</span><strong>{fmt(pack.reward.metal)}</strong></div>
-                        <div className="quest-reward"><span>Crystal</span><strong>{fmt(pack.reward.crystal)}</strong></div>
-                        <div className="quest-reward"><span>Deut</span><strong>{fmt(pack.reward.deuterium)}</strong></div>
+                        <div className="quest-reward"><span><ResourceLabel kind="metal" short /></span><strong><ResourceAmount kind="metal" value={pack.reward.metal} compact /></strong></div>
+                        <div className="quest-reward"><span><ResourceLabel kind="crystal" short /></span><strong><ResourceAmount kind="crystal" value={pack.reward.crystal} compact /></strong></div>
+                        <div className="quest-reward"><span><ResourceLabel kind="deuterium" short /></span><strong><ResourceAmount kind="deuterium" value={pack.reward.deuterium} compact /></strong></div>
                       </>
                     )}
                   </div>
 
                   <div className="quest-req-list">
-                    <div className={`quest-req-row ${storeReady ? "met" : "missing"}`}><span>Store enabled</span><strong>{storeReady ? "yes" : "no"}</strong></div>
                     <div className={`quest-req-row ${!purchased ? "met" : "missing"}`}><span>Period limit</span><strong>{purchased ? "used" : "open"}</strong></div>
-                    <div className={`quest-req-row ${canAfford ? "met" : "missing"}`}><span>USDC</span><strong>{formatTokenAmount(usdcBalance, 6)}/{formatTokenAmount(pack.priceUsdc, 6)}</strong></div>
+                    <div className={`quest-req-row ${canAfford ? "met" : "missing"}`}><span>Balance</span><strong><UsdcAmount raw={usdcBalance} /> / {formatTokenAmount(pack.priceUsdc, 6)}</strong></div>
                     {pack.shieldSeconds && <div className="quest-req-row met"><span>Current shield</span><strong>{Math.max(0, effectiveAttackProtectionUntil(state.planet) - nowTs) > 0 ? fmtCountdown(Math.max(0, effectiveAttackProtectionUntil(state.planet) - nowTs)) : "none"}</strong></div>}
                   </div>
 
@@ -4144,7 +4195,11 @@ const ActivityTab: React.FC<{ reports: BattleReport[]; spyReports: SpyReport[]; 
 
 const MobileResStrip: React.FC<{ res: Resources; planet: Planet }> = ({ res, planet }) => (
   <div className="mobile-res-strip">
-    {[{label:"MTL",value:res.metal,rate:res.metalHour,color:"var(--metal)"},{label:"CRY",value:res.crystal,rate:res.crystalHour,color:"var(--crystal)"},{label:"DEU",value:res.deuterium,rate:res.deuteriumHour,color:"var(--deut)"}].map(r=>(<div key={r.label} className="mobile-res-item"><div className="mobile-res-label" style={{color:r.color}}>{r.label}</div><div className="mobile-res-value" style={{color:r.color}}>{fmt(r.value)}</div><div className="mobile-res-rate">+{fmt(r.rate)}/h</div></div>))}
+    {[
+      {kind:"metal" as const,value:res.metal,rate:res.metalHour},
+      {kind:"crystal" as const,value:res.crystal,rate:res.crystalHour},
+      {kind:"deuterium" as const,value:res.deuterium,rate:res.deuteriumHour},
+    ].map(r=>(<div key={r.kind} className="mobile-res-item"><div className="mobile-res-label"><ResourceLabel kind={r.kind} short /></div><div className="mobile-res-value" style={{color:RESOURCE_UI[r.kind].color}}>{fmt(r.value)}</div><div className="mobile-res-rate">+{fmt(r.rate)}/h</div></div>))}
     <div className="mobile-res-item" style={{minWidth:90}}><div className="mobile-res-label">⚡ PWR</div><div className="mobile-res-value" style={{color:energyEfficiency(res)>=80?"var(--success)":energyEfficiency(res)>=36?"var(--warn)":"var(--danger)",fontSize:11}}>{energyEfficiency(res)}%</div><div className="mobile-res-rate">{fmt(res.energyProduction)}/{fmt(res.energyConsumption)}</div></div>
     <div className="mobile-res-item" style={{minWidth:80}}><div className="mobile-res-label">FIELDS</div><div className="mobile-res-value" style={{fontSize:11}}>{planet.usedFields}/{planet.maxFields}</div><div className="mobile-res-rate">{planet.name.slice(0,8)}</div></div>
   </div>
@@ -4155,9 +4210,9 @@ const DesktopResourceMenu: React.FC<{ res: Resources; planet: Planet }> = ({ res
   const efficiency = energyEfficiency(res);
   const efficiencyColor = efficiency >= 80 ? "var(--success)" : efficiency >= 36 ? "var(--warn)" : "var(--danger)";
   const resourceItems = [
-    { label: "Metal", value: res.metal, rate: res.metalHour, cap: res.metalCap, color: "var(--metal)" },
-    { label: "Crystal", value: res.crystal, rate: res.crystalHour, cap: res.crystalCap, color: "var(--crystal)" },
-    { label: "Deuterium", value: res.deuterium, rate: res.deuteriumHour, cap: res.deuteriumCap, color: "var(--deut)" },
+    { kind: "metal" as const, value: res.metal, rate: res.metalHour, cap: res.metalCap },
+    { kind: "crystal" as const, value: res.crystal, rate: res.crystalHour, cap: res.crystalCap },
+    { kind: "deuterium" as const, value: res.deuterium, rate: res.deuteriumHour, cap: res.deuteriumCap },
   ];
 
   return (
@@ -4165,12 +4220,12 @@ const DesktopResourceMenu: React.FC<{ res: Resources; planet: Planet }> = ({ res
       {resourceItems.map(item => {
         const capPct = item.cap > 0n ? Math.max(0, Math.min(100, Number((item.value * 100n) / item.cap))) : 0;
         return (
-          <div key={item.label} className="desktop-resource-pill">
-            <div className="desktop-resource-label" style={{ color: item.color }}>{item.label}</div>
-            <div className="desktop-resource-value" style={{ color: item.color }}>{fmt(item.value)}</div>
+          <div key={item.kind} className="desktop-resource-pill">
+            <div className="desktop-resource-label"><ResourceLabel kind={item.kind} /></div>
+            <div className="desktop-resource-value" style={{ color: RESOURCE_UI[item.kind].color }}>{fmt(item.value)}</div>
             <div className="desktop-resource-meta">+{fmt(item.rate)}/h · cap {fmt(item.cap)}</div>
             <div className="desktop-resource-cap">
-              <div className="desktop-resource-cap-fill" style={{ width: `${capPct}%`, background: item.color }} />
+              <div className="desktop-resource-cap-fill" style={{ width: `${capPct}%`, background: RESOURCE_UI[item.kind].color }} />
             </div>
           </div>
         );
@@ -4211,7 +4266,7 @@ const TAB_META: Record<Tab, { eyebrow: string; title: string; subtitle: string }
   overview: { eyebrow: "Command", title: "Planet Overview", subtitle: "Read colony health, queues, and next pressure points at a glance." },
   quests: { eyebrow: "Objectives", title: "Quest Command", subtitle: "Claim tutorial, daily, weekly, and monthly rewards verified by the on-chain program." },
   alliance: { eyebrow: "Alliance", title: "Alliance Command", subtitle: "Create, join, and level alliances through shared on-chain missions." },
-  store: { eyebrow: "Supply", title: "USDC Store", subtitle: "Buy capped daily, weekly, and monthly resource packs." },
+  store: { eyebrow: "Store", title: "Resource Packs", subtitle: "Daily, weekly, and monthly boosts." },
   resources: { eyebrow: "Economy", title: "Resource Grid", subtitle: "Tune production before capacity, energy, or field limits become blockers." },
   buildings: { eyebrow: "Infrastructure", title: "Planet Build Queue", subtitle: "Upgrade mines, factories, storage, and shipyard support from one surface." },
   research: { eyebrow: "Research", title: "Technology Lab", subtitle: "Unlock deeper fleet, defense, and expansion options through focused research." },
