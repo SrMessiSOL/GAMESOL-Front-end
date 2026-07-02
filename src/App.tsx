@@ -35,6 +35,7 @@ import { usePsg1Controls } from "./usePsg1Controls";
 import WalletConnectControl from "./WalletConnectControl";
 import { PUBLIC_APP_URL } from "./mobileWalletAdapter";
 import gamesolLogo from "./assets/ui/logobg.png";
+import usdcLogo from "./assets/ui/usdc.svg";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Tab = "overview" | "quests" | "alliance" | "resources" | "buildings" | "research" | "shipyard" | "defense" | "fleet" | "missions" | "activity" | "galaxy" | "market" | "store";
@@ -195,7 +196,9 @@ const ResourceIcon: React.FC<{ kind: ResourceKind; size?: "sm" | "md" }> = ({ ki
 );
 
 const UsdcIcon: React.FC<{ size?: "sm" | "md" }> = ({ size = "md" }) => (
-  <span className={`usdc-icon ${size === "sm" ? "small" : ""}`} aria-hidden="true">USDC</span>
+  <span className={`usdc-icon ${size === "sm" ? "small" : ""}`} aria-hidden="true">
+    <img src={usdcLogo} alt="" />
+  </span>
 );
 
 const ResourceLabel: React.FC<{ kind: ResourceKind; short?: boolean }> = ({ kind, short = false }) => (
@@ -207,7 +210,7 @@ const ResourceLabel: React.FC<{ kind: ResourceKind; short?: boolean }> = ({ kind
 
 const ResourceAmount: React.FC<{ kind: ResourceKind; value: bigint | number; compact?: boolean }> = ({ kind, value, compact = false }) => (
   <span className="asset-amount" style={{ color: RESOURCE_UI[kind].color }}>
-    <ResourceIcon kind={kind} size="sm" />
+    {!compact && <ResourceIcon kind={kind} size="sm" />}
     <span>{fmt(value)}</span>
     {!compact && <span className="asset-amount-label">{RESOURCE_UI[kind].short}</span>}
   </span>
@@ -1348,8 +1351,9 @@ const CSS = `
   .resource-icon-crystal::after { content:""; position:absolute; inset:3px; background:linear-gradient(120deg, rgba(255,255,255,0.55), transparent 58%); clip-path:inherit; }
   .resource-icon-deuterium { background:linear-gradient(145deg, #c8fff0, #06d6a0 48%, #0b5c4b); border:1px solid rgba(6,214,160,0.42); }
   .resource-icon-deuterium::after { content:""; width:38%; height:58%; border-radius:999px 999px 6px 6px; background:rgba(8,10,22,0.45); border:1px solid rgba(255,255,255,0.32); }
-  .usdc-icon { width:26px; height:26px; font-family:'Orbitron',sans-serif; font-size:6px; letter-spacing:0; color:white; background:linear-gradient(145deg, #7fb7ff, #2775ca 55%, #144b8c); border:1px solid rgba(127,183,255,0.48); text-shadow:0 1px 2px rgba(0,0,0,0.5); }
-  .usdc-icon.small { width:18px; height:18px; font-size:5px; }
+  .usdc-icon { width:26px; height:26px; background:transparent; border:0; overflow:hidden; box-shadow:0 0 12px rgba(11,83,191,0.22); }
+  .usdc-icon.small { width:18px; height:18px; }
+  .usdc-icon img { width:100%; height:100%; display:block; object-fit:contain; }
   .store-wallet-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; padding:10px 12px; border:1px solid rgba(39,117,202,0.22); background:rgba(39,117,202,0.06); border-radius:10px; }
   .store-wallet-label { font-size:9px; letter-spacing:1.3px; text-transform:uppercase; color:var(--dim); }
   .store-muted-status { margin-bottom:18px; font-size:10px; color:var(--warn); letter-spacing:1px; }
