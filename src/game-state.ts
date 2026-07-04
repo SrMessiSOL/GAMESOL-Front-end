@@ -9,6 +9,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { AnchorProvider, setProvider } from "@coral-xyz/anchor";
+import bs58 from "bs58";
 import { type PrivateSnapshot } from "./private-state-client";
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
@@ -35,10 +36,10 @@ export const GAME_STATE_PROGRAM_ID = envPublicKey(
 export const RPC_ENDPOINT = env.VITE_SOLANA_RPC_ENDPOINT?.trim() || DEFAULT_RPC_ENDPOINT;
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
-export const ALLIANCE_CREATE_USDC_COST = 1_000_000n;
-export const ALLIANCE_CREATE_ANTIMATTER_COST = 10_000_000_000n;
-export const ALLIANCE_CREATE_ANTIMATTER_BURN = 5_000_000_000n;
-export const ALLIANCE_CREATE_ANTIMATTER_TREASURY = 5_000_000_000n;
+export const ALLIANCE_CREATE_USDC_COST = 500_000_000n;
+export const ALLIANCE_CREATE_ANTIMATTER_COST = 100_000_000_000n;
+export const ALLIANCE_CREATE_ANTIMATTER_BURN = 50_000_000_000n;
+export const ALLIANCE_CREATE_ANTIMATTER_TREASURY = 50_000_000_000n;
 
 const VAULT_MIN_BALANCE_LAMPORTS = 10_000_000;
 const VAULT_TARGET_BALANCE_LAMPORTS = 20_000_000;
@@ -60,13 +61,45 @@ const AUTHORIZED_VAULT_DISCRIMINATOR = Buffer.from([224, 162, 234, 3, 170, 103, 
 const VAULT_BACKUP_DISCRIMINATOR     = Buffer.from([167, 172, 2, 221, 196, 20, 199, 27]);
 const GAME_CONFIG_DISCRIMINATOR      = Buffer.from([45, 146, 146, 33, 170, 69, 96, 133]);
 const QUEST_STATE_DISCRIMINATOR      = Buffer.from([91, 149, 47, 55, 121, 144, 93, 66]);
+const QUEST_PROGRESS_STATE_DISCRIMINATOR = Buffer.from([171, 27, 80, 9, 167, 242, 144, 222]);
 const STORE_CONFIG_DISCRIMINATOR     = Buffer.from([108, 23, 66, 65, 67, 124, 167, 135]);
 const STORE_PURCHASE_STATE_DISCRIMINATOR = Buffer.from([98, 26, 131, 62, 86, 147, 141, 175]);
 const ALLIANCE_STATE_DISCRIMINATOR = Buffer.from([177, 12, 51, 254, 131, 106, 170, 219]);
+const ALLIANCE_METADATA_DISCRIMINATOR = Buffer.from([72, 120, 236, 103, 72, 139, 9, 252]);
+const ALLIANCE_TREASURY_STATE_DISCRIMINATOR = Buffer.from([147, 99, 224, 142, 178, 22, 232, 94]);
 const ALLIANCE_MEMBERSHIP_DISCRIMINATOR = Buffer.from([126, 58, 186, 213, 41, 116, 92, 8]);
 const ALLIANCE_JOIN_REQUEST_DISCRIMINATOR = Buffer.from([63, 14, 157, 153, 45, 39, 160, 253]);
 const BATTLE_RESOLVED_EVENT_DISCRIMINATOR = Buffer.from([205, 161, 192, 151, 125, 116, 201, 210]);
 const ESPIONAGE_REPORT_EVENT_DISCRIMINATOR = Buffer.from([232, 103, 204, 173, 23, 198, 156, 251]);
+
+function storePackPriceUsdc(period: number, packId: number): bigint {
+  if (period === 1 && packId === 0) return 1_000_000n;
+  if (period === 1 && packId === 1) return 1_000_000n;
+  if (period === 1 && packId === 2) return 1_000_000n;
+  if (period === 1 && packId === 3) return 3_000_000n;
+  if (period === 1 && packId === 4) return 5_000_000n;
+  if (period === 1 && packId === 5) return 7_500_000n;
+  if (period === 1 && packId === 16) return 1_000_000n;
+  if (period === 2 && packId === 0) return 5_000_000n;
+  if (period === 2 && packId === 1) return 5_000_000n;
+  if (period === 2 && packId === 2) return 5_000_000n;
+  if (period === 2 && packId === 3) return 15_000_000n;
+  if (period === 2 && packId === 4) return 30_000_000n;
+  if (period === 2 && packId === 5) return 45_000_000n;
+  if (period === 2 && packId === 16) return 5_000_000n;
+  if (period === 3 && packId === 0) return 20_000_000n;
+  if (period === 3 && packId === 1) return 20_000_000n;
+  if (period === 3 && packId === 2) return 20_000_000n;
+  if (period === 3 && packId === 3) return 60_000_000n;
+  if (period === 3 && packId === 4) return 100_000_000n;
+  if (period === 3 && packId === 5) return 150_000_000n;
+  if (period === 3 && packId === 6) return 200_000_000n;
+  if (period === 3 && packId === 7) return 250_000_000n;
+  if (period === 3 && packId === 8) return 300_000_000n;
+  if (period === 3 && packId === 9) return 400_000_000n;
+  if (period === 3 && packId === 16) return 12_500_000n;
+  throw new Error("Unsupported store pack.");
+}
 
 // ─── Instruction Discriminators ───────────────────────────────────────────────
 // NOTE: These must be updated after `anchor build` generates the new IDL.
@@ -81,6 +114,7 @@ const IX = {
   initializePublicHomeworld: Buffer.from([4, 8, 173, 73, 62, 63, 97, 221]),
   initializePublicColony: Buffer.from([182, 254, 149, 165, 237, 174, 216, 102]),
   initializeQuestState:   Buffer.from([228, 241, 34, 120, 153, 28, 158, 130]),
+  initializeQuestProgress: Buffer.from([180, 174, 237, 53, 63, 6, 200, 222]),
   dailyCheckIn:           Buffer.from([98, 111, 198, 206, 70, 84, 67, 98]),
   dailyCheckInVault:      Buffer.from([19, 45, 28, 31, 198, 108, 54, 148]),
   claimQuest:             Buffer.from([38, 197, 33, 123, 0, 108, 206, 161]),
@@ -88,12 +122,18 @@ const IX = {
   createAlliance:         Buffer.from([201, 92, 183, 64, 131, 82, 174, 203]),
   joinAlliance:           Buffer.from([237, 35, 212, 158, 181, 98, 153, 166]),
   requestJoinAlliance:    Buffer.from([120, 1, 199, 157, 103, 240, 194, 241]),
+  requestJoinAllianceVault: Buffer.from([194, 192, 5, 193, 32, 45, 240, 140]),
   approveJoinRequest:     Buffer.from([155, 51, 199, 71, 35, 84, 237, 59]),
   rejectJoinRequest:      Buffer.from([82, 16, 45, 213, 231, 147, 56, 127]),
   expelAllianceMember:    Buffer.from([169, 245, 62, 100, 232, 190, 127, 220]),
   transferAllianceLeadership: Buffer.from([189, 125, 244, 81, 135, 19, 204, 2]),
   leaveAlliance:          Buffer.from([224, 61, 93, 128, 148, 155, 98, 231]),
   claimAllianceMission:   Buffer.from([175, 98, 163, 189, 178, 161, 219, 60]),
+  initializeAllianceTreasury: Buffer.from([60, 88, 8, 162, 213, 206, 46, 178]),
+  initializeAllianceTreasuryVault: Buffer.from([47, 188, 187, 250, 22, 115, 107, 127]),
+  depositAllianceResources: Buffer.from([64, 70, 103, 74, 35, 162, 164, 162]),
+  depositAllianceResourcesVault: Buffer.from([239, 141, 68, 29, 218, 136, 41, 7]),
+  upgradeAllianceBuilding: Buffer.from([41, 29, 72, 215, 26, 86, 132, 34]),
 
   produce:                Buffer.from([240, 243, 185, 55, 195, 151, 136, 205]),
   produceVault:           Buffer.from([228, 109, 51, 38, 151, 15, 255, 118]),
@@ -144,6 +184,7 @@ const IX = {
   accelerateBuildWithAntimatter: Buffer.from([214, 108, 93, 196, 157, 250, 5, 38]),
   accelerateResearchWithAntimatter: Buffer.from([3, 138, 193, 93, 109, 41, 36, 73]),
   accelerateShipBuildWithAntimatter: Buffer.from([144, 20, 132, 188, 15, 71, 35, 74]),
+  accelerateDefenseBuildWithAntimatter: Buffer.from([106, 220, 109, 50, 191, 203, 96, 78]),
   accelerateMissionWithAntimatter: Buffer.from([35, 144, 155, 162, 180, 188, 237, 220]),
   initializeStoreConfig: Buffer.from([231, 234, 72, 35, 116, 218, 119, 251]),
   updateStoreConfig: Buffer.from([207, 88, 146, 207, 46, 108, 147, 209]),
@@ -155,6 +196,8 @@ const MAX_MISSIONS = 4;
 const MAX_PLANET_NAME_LEN = 32;
 const MAX_MISSION_COLONY_NAME_LEN = 32;
 const MAX_ALLIANCE_NAME_LEN = 32;
+const MAX_ALLIANCE_TAG_LEN = 3;
+const MAX_ALLIANCE_IMAGE_URL_LEN = 160;
 
 // ─── Public interfaces ────────────────────────────────────────────────────────
 export interface Mission {
@@ -211,6 +254,8 @@ export interface BattleResolvedEvent {
   lootDeuterium: bigint;
   debrisMetal: bigint;
   debrisCrystal: bigint;
+  recycledMetal: bigint;
+  recycledCrystal: bigint;
   attackerSmallCargo: number;
   attackerLargeCargo: number;
   attackerLightFighter: number;
@@ -462,6 +507,33 @@ export interface QuestStateAccount {
   bump: number;
 }
 
+export interface QuestProgressStateAccount {
+  authority: PublicKey;
+  dailyEpoch: number;
+  weeklyEpoch: number;
+  monthlyEpoch: number;
+  dailyStorePacksBought: number;
+  weeklyStorePacksBought: number;
+  monthlyStorePacksBought: number;
+  dailyAntimatterSpent: bigint;
+  weeklyAntimatterSpent: bigint;
+  monthlyAntimatterSpent: bigint;
+  dailyPlanetsColonized: number;
+  weeklyPlanetsColonized: number;
+  monthlyPlanetsColonized: number;
+  dailyAttacksResolved: number;
+  weeklyAttacksResolved: number;
+  monthlyAttacksResolved: number;
+  dailyTransportsResolved: number;
+  weeklyTransportsResolved: number;
+  monthlyTransportsResolved: number;
+  dailySpyMissionsResolved: number;
+  weeklySpyMissionsResolved: number;
+  monthlySpyMissionsResolved: number;
+  lastUpdatedTs: number;
+  bump: number;
+}
+
 export interface StoreConfigState {
   admin: string;
   usdcMint: string;
@@ -485,12 +557,40 @@ export interface AllianceStateAccount {
   publicKey: string;
   founder: string;
   name: string;
+  tag?: string;
+  imageUrl?: string;
   level: number;
   xp: bigint;
   memberCount: number;
   maxMembers: number;
   totalMissionsCompleted: bigint;
   createdAt: number;
+  bump: number;
+}
+
+export interface AllianceMetadataAccount {
+  publicKey: string;
+  alliance: string;
+  tag: string;
+  imageUrl: string;
+  bump: number;
+}
+
+export interface AllianceTreasuryStateAccount {
+  publicKey: string;
+  alliance: string;
+  metal: bigint;
+  crystal: bigint;
+  deuterium: bigint;
+  antimatter: bigint;
+  logisticsHub: number;
+  researchGrid: number;
+  defenseCoordination: number;
+  tradeNetwork: number;
+  totalMetalDeposited: bigint;
+  totalCrystalDeposited: bigint;
+  totalDeuteriumDeposited: bigint;
+  totalAntimatterDeposited: bigint;
   bump: number;
 }
 
@@ -679,7 +779,9 @@ function readFixedString(data: Buffer, offset: number, length: number): string {
 }
 
 function decodeBattleResolvedEvent(data: Buffer): BattleResolvedEvent | null {
-  if (data.length < 251 || !data.slice(0, 8).equals(BATTLE_RESOLVED_EVENT_DISCRIMINATOR)) {
+  const oldEventSize = 251;
+  const currentEventSize = 267;
+  if (data.length < oldEventSize || !data.slice(0, 8).equals(BATTLE_RESOLVED_EVENT_DISCRIMINATOR)) {
     return null;
   }
 
@@ -705,6 +807,11 @@ function decodeBattleResolvedEvent(data: Buffer): BattleResolvedEvent | null {
   const lootDeuterium = readU64(data, o); o += 8;
   const debrisMetal = readU64(data, o); o += 8;
   const debrisCrystal = readU64(data, o); o += 8;
+  const hasRecycledFields = data.length >= currentEventSize;
+  const recycledMetal = hasRecycledFields ? readU64(data, o) : 0n;
+  if (hasRecycledFields) o += 8;
+  const recycledCrystal = hasRecycledFields ? readU64(data, o) : 0n;
+  if (hasRecycledFields) o += 8;
 
   return {
     sourcePlanet,
@@ -728,6 +835,8 @@ function decodeBattleResolvedEvent(data: Buffer): BattleResolvedEvent | null {
     lootDeuterium,
     debrisMetal,
     debrisCrystal,
+    recycledMetal,
+    recycledCrystal,
     attackerSmallCargo: readU32(data, o),
     attackerLargeCargo: readU32(data, o + 4),
     attackerLightFighter: readU32(data, o + 8),
@@ -1012,9 +1121,23 @@ export function deriveQuestStatePda(walletPubkey: PublicKey): PublicKey {
   )[0];
 }
 
+export function deriveQuestProgressPda(walletPubkey: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("quest_progress"), walletPubkey.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
 export function deriveAlliancePda(founderPubkey: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("alliance"), founderPubkey.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
+export function deriveAllianceMetadataPda(alliancePda: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("alliance_metadata"), alliancePda.toBuffer()],
     GAME_STATE_PROGRAM_ID,
   )[0];
 }
@@ -1033,11 +1156,34 @@ export function deriveAllianceJoinRequestPda(alliancePda: PublicKey, applicant: 
   )[0];
 }
 
+export function deriveAllianceTreasuryPda(alliancePda: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("alliance_treasury"), alliancePda.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
 export function deriveAssociatedTokenAccount(owner: PublicKey, mint: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
     ASSOCIATED_TOKEN_PROGRAM_ID,
   )[0];
+}
+
+function createAssociatedTokenAccountInstruction(payer: PublicKey, owner: PublicKey, mint: PublicKey): TransactionInstruction {
+  const ata = deriveAssociatedTokenAccount(owner, mint);
+  return new TransactionInstruction({
+    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+    keys: [
+      { pubkey: payer, isSigner: true, isWritable: true },
+      { pubkey: ata, isSigner: false, isWritable: true },
+      { pubkey: owner, isSigner: false, isWritable: false },
+      { pubkey: mint, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.alloc(0),
+  });
 }
 
 export function deriveStoreConfigPda(): PublicKey {
@@ -1188,6 +1334,63 @@ function deserializeQuestState(data: Buffer): QuestStateAccount {
     bump,
   };
 }
+
+function deserializeQuestProgressState(data: Buffer): QuestProgressStateAccount {
+  if (!data.slice(0, 8).equals(QUEST_PROGRESS_STATE_DISCRIMINATOR)) {
+    throw new Error("Invalid quest progress state discriminator.");
+  }
+  let o = 8;
+  const authority = readPubkeyRaw(data, o); o += 32;
+  const dailyEpoch = readI64(data, o); o += 8;
+  const weeklyEpoch = readI64(data, o); o += 8;
+  const monthlyEpoch = readI64(data, o); o += 8;
+  const dailyStorePacksBought = readU32(data, o); o += 4;
+  const weeklyStorePacksBought = readU32(data, o); o += 4;
+  const monthlyStorePacksBought = readU32(data, o); o += 4;
+  const dailyAntimatterSpent = readU64(data, o); o += 8;
+  const weeklyAntimatterSpent = readU64(data, o); o += 8;
+  const monthlyAntimatterSpent = readU64(data, o); o += 8;
+  const dailyPlanetsColonized = readU32(data, o); o += 4;
+  const weeklyPlanetsColonized = readU32(data, o); o += 4;
+  const monthlyPlanetsColonized = readU32(data, o); o += 4;
+  const dailyAttacksResolved = readU32(data, o); o += 4;
+  const weeklyAttacksResolved = readU32(data, o); o += 4;
+  const monthlyAttacksResolved = readU32(data, o); o += 4;
+  const dailyTransportsResolved = readU32(data, o); o += 4;
+  const weeklyTransportsResolved = readU32(data, o); o += 4;
+  const monthlyTransportsResolved = readU32(data, o); o += 4;
+  const dailySpyMissionsResolved = readU32(data, o); o += 4;
+  const weeklySpyMissionsResolved = readU32(data, o); o += 4;
+  const monthlySpyMissionsResolved = readU32(data, o); o += 4;
+  const lastUpdatedTs = readI64(data, o); o += 8;
+  const bump = readU8(data, o);
+  return {
+    authority,
+    dailyEpoch,
+    weeklyEpoch,
+    monthlyEpoch,
+    dailyStorePacksBought,
+    weeklyStorePacksBought,
+    monthlyStorePacksBought,
+    dailyAntimatterSpent,
+    weeklyAntimatterSpent,
+    monthlyAntimatterSpent,
+    dailyPlanetsColonized,
+    weeklyPlanetsColonized,
+    monthlyPlanetsColonized,
+    dailyAttacksResolved,
+    weeklyAttacksResolved,
+    monthlyAttacksResolved,
+    dailyTransportsResolved,
+    weeklyTransportsResolved,
+    monthlyTransportsResolved,
+    dailySpyMissionsResolved,
+    weeklySpyMissionsResolved,
+    monthlySpyMissionsResolved,
+    lastUpdatedTs,
+    bump,
+  };
+}
 function deserializeStoreConfig(data: Buffer): StoreConfigState {
   if (!data.slice(0, 8).equals(STORE_CONFIG_DISCRIMINATOR)) {
     throw new Error("Invalid store config discriminator.");
@@ -1247,6 +1450,62 @@ function deserializeAllianceState(publicKey: PublicKey, data: Buffer): AllianceS
     maxMembers,
     totalMissionsCompleted,
     createdAt,
+    bump,
+  };
+}
+
+function deserializeAllianceMetadata(publicKey: PublicKey, data: Buffer): AllianceMetadataAccount {
+  if (!data.slice(0, 8).equals(ALLIANCE_METADATA_DISCRIMINATOR)) {
+    throw new Error("Invalid alliance metadata discriminator.");
+  }
+  let o = 8;
+  const alliance = readPubkeyRaw(data, o); o += 32;
+  const tag = readFixedString(data, o, MAX_ALLIANCE_TAG_LEN); o += MAX_ALLIANCE_TAG_LEN;
+  const imageUrl = readFixedString(data, o, MAX_ALLIANCE_IMAGE_URL_LEN); o += MAX_ALLIANCE_IMAGE_URL_LEN;
+  const bump = readU8(data, o);
+  return {
+    publicKey: publicKey.toBase58(),
+    alliance: alliance.toBase58(),
+    tag,
+    imageUrl,
+    bump,
+  };
+}
+
+function deserializeAllianceTreasuryState(publicKey: PublicKey, data: Buffer): AllianceTreasuryStateAccount {
+  if (!data.slice(0, 8).equals(ALLIANCE_TREASURY_STATE_DISCRIMINATOR)) {
+    throw new Error("Invalid alliance treasury discriminator.");
+  }
+  let o = 8;
+  const alliance = readPubkeyRaw(data, o); o += 32;
+  const metal = readU64(data, o); o += 8;
+  const crystal = readU64(data, o); o += 8;
+  const deuterium = readU64(data, o); o += 8;
+  const antimatter = readU64(data, o); o += 8;
+  const logisticsHub = readU8(data, o); o += 1;
+  const researchGrid = readU8(data, o); o += 1;
+  const defenseCoordination = readU8(data, o); o += 1;
+  const tradeNetwork = readU8(data, o); o += 1;
+  const totalMetalDeposited = readU64(data, o); o += 8;
+  const totalCrystalDeposited = readU64(data, o); o += 8;
+  const totalDeuteriumDeposited = readU64(data, o); o += 8;
+  const totalAntimatterDeposited = readU64(data, o); o += 8;
+  const bump = readU8(data, o);
+  return {
+    publicKey: publicKey.toBase58(),
+    alliance: alliance.toBase58(),
+    metal,
+    crystal,
+    deuterium,
+    antimatter,
+    logisticsHub,
+    researchGrid,
+    defenseCoordination,
+    tradeNetwork,
+    totalMetalDeposited,
+    totalCrystalDeposited,
+    totalDeuteriumDeposited,
+    totalAntimatterDeposited,
     bump,
   };
 }
@@ -1328,6 +1587,8 @@ function deserializeMission(data: Buffer, offset: number): { mission: Mission; b
   const cargoDeuterium = readU64(data, o); o += 8;
   const applied = readU8(data, o) !== 0; o += 1;
   const speedFactor = readU8(data, o); o += 1;
+  const combatRounds = readU8(data, o); o += 1;
+  const attackerWon = readU8(data, o) !== 0; o += 1;
 
   return {
     mission: {
@@ -1338,8 +1599,8 @@ function deserializeMission(data: Buffer, offset: number): { mission: Mission; b
       sBattleship, sBattlecruiser, sBomber, sDestroyer, sDeathstar,
       sRecycler, sEspionageProbe, sColonyShip,
       cargoMetal, cargoCrystal, cargoDeuterium, applied, speedFactor,
-      combatRounds: 0,
-      attackerWon: false,
+      combatRounds,
+      attackerWon,
     },
     bytesRead: o - offset,
   };
@@ -1382,9 +1643,9 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const computerTech = readU8(data, o); o += 1;
   const astrophysics = readU8(data, o); o += 1;
   const igrNetwork = readU8(data, o); o += 1;
-  const weaponsTechnology = 0;
-  const shieldingTechnology = 0;
-  const armorTechnology = 0;
+  const weaponsTechnology = readU8(data, o); o += 1;
+  const shieldingTechnology = readU8(data, o); o += 1;
+  const armorTechnology = readU8(data, o); o += 1;
   const researchQueueItem = readU8(data, o); o += 1;
   const researchQueueTarget = readU8(data, o); o += 1;
   const researchFinishTs = readI64(data, o); o += 8;
@@ -1404,12 +1665,12 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const crystalCap = readU64(data, o); o += 8;
   const deuteriumCap = readU64(data, o); o += 8;
   const lastUpdateTs = readI64(data, o); o += 8;
-  const createdAt = lastUpdateTs;
-  const protectionUntilTs = 0;
-  const marketUnlockedAt = 0;
-  const attackUnlockedAt = 0;
-  const lastAttackLaunchTs = 0;
-  const lastAttackedTs = 0;
+  const createdAt = readI64(data, o); o += 8;
+  const protectionUntilTs = readI64(data, o); o += 8;
+  const marketUnlockedAt = readI64(data, o); o += 8;
+  const attackUnlockedAt = readI64(data, o); o += 8;
+  const lastAttackLaunchTs = readI64(data, o); o += 8;
+  const lastAttackedTs = readI64(data, o); o += 8;
   const smallCargo = readU32(data, o); o += 4;
   const largeCargo = readU32(data, o); o += 4;
   const lightFighter = readU32(data, o); o += 4;
@@ -1424,16 +1685,16 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
   const espionageProbe = readU32(data, o); o += 4;
   const colonyShip = readU32(data, o); o += 4;
   const solarSatellite = readU32(data, o); o += 4;
-  const rocketLauncher = 0;
-  const lightLaser = 0;
-  const heavyLaser = 0;
-  const gaussCannon = 0;
-  const ionCannon = 0;
-  const plasmaTurret = 0;
-  const smallShieldDome = 0;
-  const largeShieldDome = 0;
-  const antiBallisticMissile = 0;
-  const interplanetaryMissile = 0;
+  const rocketLauncher = readU32(data, o); o += 4;
+  const lightLaser = readU32(data, o); o += 4;
+  const heavyLaser = readU32(data, o); o += 4;
+  const gaussCannon = readU32(data, o); o += 4;
+  const ionCannon = readU32(data, o); o += 4;
+  const plasmaTurret = readU32(data, o); o += 4;
+  const smallShieldDome = readU32(data, o); o += 4;
+  const largeShieldDome = readU32(data, o); o += 4;
+  const antiBallisticMissile = readU32(data, o); o += 4;
+  const interplanetaryMissile = readU32(data, o); o += 4;
   const activeMissions = readU8(data, o); o += 1;
 
   const missions: Mission[] = [];
@@ -1445,12 +1706,14 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
 
   const bump = readU8(data, o); o += 1;
 
-  const shipBuildItem = readU8(data, o); o += 1;
+  let shipBuildItem = readU8(data, o); o += 1;
   const shipBuildQty = readU32(data, o); o += 4;
   const shipBuildFinishTs = readI64(data, o); o += 8;
-  const defenseBuildItem = 255;
-  const defenseBuildQty = 0;
-  const defenseBuildFinishTs = 0;
+  let defenseBuildItem = readU8(data, o); o += 1;
+  const defenseBuildQty = readU32(data, o); o += 4;
+  const defenseBuildFinishTs = readI64(data, o); o += 8;
+  if (shipBuildQty === 0 && shipBuildFinishTs === 0) shipBuildItem = 255;
+  if (defenseBuildQty === 0 && defenseBuildFinishTs === 0) defenseBuildItem = 255;
 
   void bump;
 
@@ -1937,15 +2200,21 @@ function isNonRetryableHomeworldError(message: string): boolean {
     message.includes("custom program error: 0x7d6") ||
     message.includes("insufficient lamports") ||
     message.includes("Transfer: insufficient lamports") ||
-    message.includes("custom program error: 0x1") ||
     message.includes("InvalidVaultAuthorization") ||
     message.includes("Vault authorization mismatch") ||
     message.includes("custom program error: 0x1795")
   );
 }
 
+function hasCustomProgramError(details: string, hexCode: string): boolean {
+  return new RegExp(`custom program error: ${hexCode}(?![0-9a-f])`, "i").test(details);
+}
+
 function mapSendTransactionError(message: string, logs: string[]): string {
   const details = [message, ...logs].join("\n");
+  const suffix = logs.length > 0
+    ? `\n\nLogs:\n${logs.join("\n")}`
+    : `\n\nRaw transaction error:\n${message}`;
   if (
     details.includes("ConstraintSeeds") ||
     details.includes("A seeds constraint was violated") ||
@@ -1955,10 +2224,15 @@ function mapSendTransactionError(message: string, logs: string[]): string {
   }
   if (
     details.includes("insufficient lamports") ||
-    details.includes("Transfer: insufficient lamports") ||
-    details.includes("custom program error: 0x1")
+    details.includes("Transfer: insufficient lamports")
   ) {
-    return "Vault needs more devnet SOL for account rent (insufficient lamports / 0x1).";
+    return "Vault needs more devnet SOL for account rent or transaction fees.";
+  }
+  if (
+    details.includes("Access violation") ||
+    hasCustomProgramError(details, "0x1")
+  ) {
+    return `On-chain program failed before returning a game error. The client did not receive program logs for this failure, so use the raw transaction error below.${suffix}`;
   }
   if (
     details.includes("Error Code: QueueBusy") ||
@@ -2072,8 +2346,17 @@ function mapSendTransactionError(message: string, logs: string[]): string {
   if (
     details.includes("ShipyardQueueBusy") ||
     details.includes("Shipyard queue is busy") ||
-    details.includes("custom program error: 0x1785")
+    hasCustomProgramError(details, "0x1785")
   ) {
+    const queue = details.match(/ship gate: type \d+ qty \d+ sy \d+ queue (\d+) (\d+) (-?\d+)/);
+    if (queue) {
+      const queueItem = Number(queue[1]);
+      const queueQty = Number(queue[2]);
+      const finishTs = Number(queue[3]);
+      if (queueItem !== 255 && queueQty > 0 && finishTs > 0 && finishTs <= Math.floor(Date.now() / 1000)) {
+        return "Shipyard queue is ready. Finish the current ship build before starting another ship.";
+      }
+    }
     return "Shipyard queue is already busy. Finish the current ship or defense build first.";
   }
   if (
@@ -2578,17 +2861,26 @@ export class GameClient {
   }
 
 
-  private async findUserTokenAccountForMint(owner: PublicKey, mint: PublicKey): Promise<PublicKey> {
+  private async findUserTokenAccountForMint(owner: PublicKey, mint: PublicKey, minAmount: bigint = 1n): Promise<PublicKey> {
     const response = await this.connection.getParsedTokenAccountsByOwner(
       owner,
       { mint, programId: TOKEN_PROGRAM_ID },
       "confirmed",
     );
-    const first = response.value[0];
-    if (!first) {
+    let best: { pubkey: PublicKey; amount: bigint } | null = null;
+    for (const account of response.value) {
+      const parsed = account.account.data as any;
+      const amount = BigInt(parsed?.parsed?.info?.tokenAmount?.amount ?? "0");
+      if (!best || amount > best.amount) best = { pubkey: account.pubkey, amount };
+      if (amount >= minAmount) return account.pubkey;
+    }
+    if (!best) {
       throw new Error(`No token account found for mint ${mint.toBase58()}.`);
     }
-    return first.pubkey;
+    throw new Error(
+      `No single token account for mint ${mint.toBase58()} has enough balance. ` +
+      `Required ${minAmount.toString()}, best account has ${best.amount.toString()}.`,
+    );
   }
 
   private async tryRestoreVaultFromBackup(reportProgress?: ProgressReporter): Promise<Keypair | null> {
@@ -2848,6 +3140,7 @@ export class GameClient {
     discriminator: Buffer,
   ): Promise<string> {
     const authority = this.provider.wallet.publicKey;
+    await this.ensureQuestProgress();
     const gameConfigPda = deriveGameConfigPda();
     const config = await this.getGameConfig();
     if (!config) {
@@ -2865,6 +3158,7 @@ export class GameClient {
         { pubkey: antimatterMint, isSigner: false, isWritable: true },
         { pubkey: userAntimatterAccount, isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(discriminator),
     });
@@ -2884,8 +3178,13 @@ export class GameClient {
     return this.accelerateWithAntimatter(entityPda, IX.accelerateShipBuildWithAntimatter);
   }
 
+  async accelerateDefenseBuildWithAntimatter(entityPda: PublicKey): Promise<string> {
+    return this.accelerateWithAntimatter(entityPda, IX.accelerateDefenseBuildWithAntimatter);
+  }
+
   async accelerateMissionWithAntimatter(entityPda: PublicKey, slot: number, leg: number): Promise<string> {
     const authority = this.provider.wallet.publicKey;
+    await this.ensureQuestProgress();
     const gameConfigPda = deriveGameConfigPda();
     const config = await this.getGameConfig();
     if (!config) throw new Error("Game config is not initialized.");
@@ -2903,6 +3202,7 @@ export class GameClient {
         { pubkey: antimatterMint, isSigner: false, isWritable: true },
         { pubkey: userAntimatterAccount, isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.accelerateMissionWithAntimatter, writer.toBuffer()),
     });
@@ -2911,11 +3211,16 @@ export class GameClient {
 
   async purchaseStorePack(entityPda: PublicKey, period: number, packId: number): Promise<string> {
     const authority = this.provider.wallet.publicKey;
+    await this.ensureQuestProgress();
     const config = await this.getStoreConfig();
     if (!config) throw new Error("Store is not initialized yet.");
     if (!config.enabled) throw new Error("Store is currently disabled.");
     const usdcMint = new PublicKey(config.usdcMint);
-    const userUsdcAccount = await this.findUserTokenAccountForMint(authority, usdcMint);
+    const userUsdcAccount = await this.findUserTokenAccountForMint(
+      authority,
+      usdcMint,
+      storePackPriceUsdc(period, packId),
+    );
     const writer = new BorshWriter();
     writer.writeU8(period);
     writer.writeU8(packId);
@@ -2931,6 +3236,7 @@ export class GameClient {
         { pubkey: new PublicKey(config.treasuryUsdcAccount), isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.purchaseStorePack, writer.toBuffer()),
     });
@@ -3014,6 +3320,14 @@ export class GameClient {
     catch { return null; }
   }
 
+  async getQuestProgress(authority: PublicKey = this.provider.wallet.publicKey): Promise<QuestProgressStateAccount | null> {
+    const progressPda = deriveQuestProgressPda(authority);
+    const account = await this.connection.getAccountInfo(progressPda, "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeQuestProgressState(Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
   async getAllianceMembership(authority: PublicKey = this.provider.wallet.publicKey): Promise<AllianceMembershipAccount | null> {
     const membershipPda = deriveAllianceMembershipPda(authority);
     const account = await this.connection.getAccountInfo(membershipPda, "confirmed");
@@ -3025,7 +3339,33 @@ export class GameClient {
   async getAlliance(alliancePda: PublicKey): Promise<AllianceStateAccount | null> {
     const account = await this.connection.getAccountInfo(alliancePda, "confirmed");
     if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
-    try { return deserializeAllianceState(alliancePda, Buffer.from(account.data)); }
+    try { return this.withAllianceMetadata(deserializeAllianceState(alliancePda, Buffer.from(account.data))); }
+    catch { return null; }
+  }
+
+  async getAllianceMetadata(alliancePda: PublicKey): Promise<AllianceMetadataAccount | null> {
+    const metadataPda = deriveAllianceMetadataPda(alliancePda);
+    const account = await this.connection.getAccountInfo(metadataPda, "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeAllianceMetadata(metadataPda, Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
+  private async withAllianceMetadata(alliance: AllianceStateAccount): Promise<AllianceStateAccount> {
+    const metadata = await this.getAllianceMetadata(new PublicKey(alliance.publicKey));
+    if (!metadata) return alliance;
+    return {
+      ...alliance,
+      tag: metadata.tag,
+      imageUrl: metadata.imageUrl,
+    };
+  }
+
+  async getAllianceTreasury(alliancePda: PublicKey): Promise<AllianceTreasuryStateAccount | null> {
+    const treasuryPda = deriveAllianceTreasuryPda(alliancePda);
+    const account = await this.connection.getAccountInfo(treasuryPda, "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeAllianceTreasuryState(treasuryPda, Buffer.from(account.data)); }
     catch { return null; }
   }
 
@@ -3049,7 +3389,7 @@ export class GameClient {
     const alliances: AllianceStateAccount[] = [];
     for (const { pubkey, account } of accounts) {
       try {
-        alliances.push(deserializeAllianceState(pubkey, Buffer.from(account.data)));
+        alliances.push(await this.withAllianceMetadata(deserializeAllianceState(pubkey, Buffer.from(account.data))));
       } catch {
         /* skip non-alliance accounts */
       }
@@ -3105,8 +3445,9 @@ export class GameClient {
     catch { return null; }
   }
 
-  async createAlliance(name: string): Promise<string> {
+  async createAlliance(name: string, tag: string, imageUrl: string): Promise<string> {
     const authority = this.provider.wallet.publicKey;
+    const alliancePda = deriveAlliancePda(authority);
     const gameConfig = await this.getGameConfig();
     if (!gameConfig) throw new Error("Game config is not initialized yet.");
     const storeConfig = await this.getStoreConfig();
@@ -3114,8 +3455,16 @@ export class GameClient {
     if (!storeConfig.enabled) throw new Error("Store is currently disabled on-chain.");
     const antimatterMint = new PublicKey(gameConfig.antimatterMint);
     const usdcMint = new PublicKey(storeConfig.usdcMint);
-    const userAntimatterAccount = await this.findUserTokenAccountForMint(authority, antimatterMint);
-    const userUsdcAccount = await this.findUserTokenAccountForMint(authority, usdcMint);
+    const userAntimatterAccount = await this.findUserTokenAccountForMint(
+      authority,
+      antimatterMint,
+      ALLIANCE_CREATE_ANTIMATTER_COST,
+    );
+    const userUsdcAccount = await this.findUserTokenAccountForMint(
+      authority,
+      usdcMint,
+      ALLIANCE_CREATE_USDC_COST,
+    );
     const treasuryAntimatterAccount = deriveAssociatedTokenAccount(new PublicKey(storeConfig.admin), antimatterMint);
     const treasuryAntimatterInfo = await this.connection.getAccountInfo(treasuryAntimatterAccount, "confirmed");
     if (!treasuryAntimatterInfo) {
@@ -3123,12 +3472,15 @@ export class GameClient {
     }
     const writer = new BorshWriter();
     writer.writeString(name.trim());
+    writer.writeString(tag.trim().toUpperCase());
+    writer.writeString(imageUrl.trim());
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
       keys: [
         { pubkey: authority, isSigner: true, isWritable: true },
         { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
-        { pubkey: deriveAlliancePda(authority), isSigner: false, isWritable: true },
+        { pubkey: alliancePda, isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMetadataPda(alliancePda), isSigner: false, isWritable: true },
         { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
         { pubkey: deriveGameConfigPda(), isSigner: false, isWritable: false },
         { pubkey: deriveStoreConfigPda(), isSigner: false, isWritable: false },
@@ -3164,18 +3516,21 @@ export class GameClient {
 
   async requestJoinAlliance(alliancePda: PublicKey): Promise<string> {
     const authority = this.provider.wallet.publicKey;
+    const vault = await this.restoreAuthorizedVaultForExistingProfile(authority);
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
       keys: [
-        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: vault.publicKey, isSigner: true, isWritable: true },
+        { pubkey: authority, isSigner: false, isWritable: false },
+        { pubkey: deriveAuthorizedVaultPda(authority), isSigner: false, isWritable: false },
         { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
         { pubkey: alliancePda, isSigner: false, isWritable: false },
         { pubkey: deriveAllianceJoinRequestPda(alliancePda, authority), isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      data: encodeInstruction(IX.requestJoinAlliance),
+      data: encodeInstruction(IX.requestJoinAllianceVault),
     });
-    return this.sendInstruction([ix]);
+    return this.sendInstruction([ix], [vault]);
   }
 
   async approveJoinRequest(applicant: PublicKey): Promise<string> {
@@ -3295,6 +3650,158 @@ export class GameClient {
     });
     return this.sendInstruction([ix]);
   }
+
+  async initializeAllianceTreasury(): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(authority);
+    if (!membership) throw new Error("Join or create an alliance first.");
+    const alliancePda = new PublicKey(membership.alliance);
+    const existing = await this.getAllianceTreasury(alliancePda);
+    if (existing) return "";
+    const vault = await this.prepareVaultSigningForAuthority(authority);
+    if (vault) {
+      const ix = new TransactionInstruction({
+        programId: GAME_STATE_PROGRAM_ID,
+        keys: [
+          { pubkey: vault.publicKey, isSigner: true, isWritable: true },
+          { pubkey: authority, isSigner: false, isWritable: false },
+          { pubkey: deriveAuthorizedVaultPda(authority), isSigner: false, isWritable: false },
+          { pubkey: alliancePda, isSigner: false, isWritable: false },
+          { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: false },
+          { pubkey: deriveAllianceTreasuryPda(alliancePda), isSigner: false, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        data: encodeInstruction(IX.initializeAllianceTreasuryVault),
+      });
+      return this.sendInstruction([ix], [vault]);
+    }
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: alliancePda, isSigner: false, isWritable: false },
+        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: false },
+        { pubkey: deriveAllianceTreasuryPda(alliancePda), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.initializeAllianceTreasury),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  private async getOrCreateVaultTokenAccountInstructions(owner: PublicKey, mint: PublicKey, minAmount: bigint): Promise<{ tokenAccount: PublicKey; setupInstructions: TransactionInstruction[] }> {
+    const ata = deriveAssociatedTokenAccount(owner, mint);
+    const account = await this.connection.getAccountInfo(ata, "confirmed");
+    const setupInstructions: TransactionInstruction[] = [];
+    if (!account) {
+      const payer = this.preferVaultSigning && this.vaultKeypair ? this.vaultKeypair.publicKey : this.provider.wallet.publicKey;
+      setupInstructions.push(createAssociatedTokenAccountInstruction(payer, owner, mint));
+      if (minAmount > 0n) {
+        throw new Error(`Vault ANTIMATTER account does not exist yet. Created account can be used after it receives ${minAmount.toString()} raw ANTIMATTER.`);
+      }
+      return { tokenAccount: ata, setupInstructions };
+    }
+    if (minAmount > 0n) {
+      await this.findUserTokenAccountForMint(owner, mint, minAmount);
+    }
+    return { tokenAccount: ata, setupInstructions };
+  }
+
+  async depositAllianceResources(
+    entityPda: PublicKey,
+    period: number,
+    missionId: number,
+    amounts: { metal?: bigint | number; crystal?: bigint | number; deuterium?: bigint | number; antimatter?: bigint | number },
+  ): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(authority);
+    if (!membership) throw new Error("Join or create an alliance first.");
+    const gameConfig = await this.getGameConfig();
+    if (!gameConfig) throw new Error("Game config is not initialized yet.");
+    const storeConfig = await this.getStoreConfig();
+    if (!storeConfig) throw new Error("Store config is not initialized yet.");
+    const alliancePda = new PublicKey(membership.alliance);
+    if (!(await this.getAllianceTreasury(alliancePda))) {
+      await this.initializeAllianceTreasury();
+    }
+    const antimatterMint = new PublicKey(gameConfig.antimatterMint);
+    const antimatterRaw = BigInt(amounts.antimatter ?? 0);
+    if (this.preferVaultSigning && antimatterRaw === 0n) {
+      await this.prepareVaultSigningForAuthority(authority);
+    }
+    const useVault = this.preferVaultSigning && this.vaultKeypair !== null && antimatterRaw === 0n;
+    if (this.preferVaultSigning && this.vaultKeypair === null && antimatterRaw === 0n) {
+      throw new Error("Vault is locked or not ready. Unlock the vault before depositing alliance resources.");
+    }
+    if (useVault) await this.ensureVaultLamports(this.vaultKeypair!, VAULT_MIN_BALANCE_LAMPORTS);
+    const tokenOwner = useVault ? this.vaultKeypair!.publicKey : authority;
+    const tokenSetup = useVault
+      ? await this.getOrCreateVaultTokenAccountInstructions(tokenOwner, antimatterMint, antimatterRaw)
+      : { tokenAccount: await this.findUserTokenAccountForMint(authority, antimatterMint, antimatterRaw), setupInstructions: [] as TransactionInstruction[] };
+    const treasuryAntimatterAccount = deriveAssociatedTokenAccount(new PublicKey(storeConfig.admin), antimatterMint);
+    const writer = new BorshWriter();
+    writer.writeU8(period);
+    writer.writeU8(missionId);
+    writer.writeU64(amounts.metal ?? 0n);
+    writer.writeU64(amounts.crystal ?? 0n);
+    writer.writeU64(amounts.deuterium ?? 0n);
+    writer.writeU64(antimatterRaw);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: useVault ? [
+        { pubkey: this.vaultKeypair!.publicKey, isSigner: true, isWritable: true },
+        { pubkey: authority, isSigner: false, isWritable: false },
+        { pubkey: deriveAuthorizedVaultPda(authority), isSigner: false, isWritable: false },
+        { pubkey: alliancePda, isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceTreasuryPda(alliancePda), isSigner: false, isWritable: true },
+        { pubkey: entityPda, isSigner: false, isWritable: true },
+        { pubkey: deriveGameConfigPda(), isSigner: false, isWritable: false },
+        { pubkey: deriveStoreConfigPda(), isSigner: false, isWritable: false },
+        { pubkey: antimatterMint, isSigner: false, isWritable: false },
+        { pubkey: tokenSetup.tokenAccount, isSigner: false, isWritable: true },
+        { pubkey: treasuryAntimatterAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ] : [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: alliancePda, isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceTreasuryPda(alliancePda), isSigner: false, isWritable: true },
+        { pubkey: entityPda, isSigner: false, isWritable: true },
+        { pubkey: deriveGameConfigPda(), isSigner: false, isWritable: false },
+        { pubkey: deriveStoreConfigPda(), isSigner: false, isWritable: false },
+        { pubkey: antimatterMint, isSigner: false, isWritable: false },
+        { pubkey: tokenSetup.tokenAccount, isSigner: false, isWritable: true },
+        { pubkey: treasuryAntimatterAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(useVault ? IX.depositAllianceResourcesVault : IX.depositAllianceResources, writer.toBuffer()),
+    });
+    return this.sendInstruction([...tokenSetup.setupInstructions, ix], useVault ? [this.vaultKeypair!] : []);
+  }
+
+  async upgradeAllianceBuilding(buildingId: number): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const membership = await this.getAllianceMembership(authority);
+    if (!membership) throw new Error("Join or create an alliance first.");
+    const alliancePda = new PublicKey(membership.alliance);
+    if (!(await this.getAllianceTreasury(alliancePda))) {
+      await this.initializeAllianceTreasury();
+    }
+    const writer = new BorshWriter();
+    writer.writeU8(buildingId);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: alliancePda, isSigner: false, isWritable: true },
+        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: false },
+        { pubkey: deriveAllianceTreasuryPda(alliancePda), isSigner: false, isWritable: true },
+      ],
+      data: encodeInstruction(IX.upgradeAllianceBuilding, writer.toBuffer()),
+    });
+    return this.sendInstruction([ix]);
+  }
   async initializeQuestState(): Promise<string> {
     const authority = this.provider.wallet.publicKey;
     const existing = await this.getQuestState(authority);
@@ -3313,9 +3820,33 @@ export class GameClient {
     return this.sendInstruction([ix]);
   }
 
+  async initializeQuestProgress(): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const existing = await this.getQuestProgress(authority);
+    if (existing) return "";
+
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
+        { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.initializeQuestProgress),
+    });
+    return this.sendInstruction([ix]);
+  }
+
   private async ensureQuestState(): Promise<void> {
     if (!(await this.getQuestState())) {
       await this.initializeQuestState();
+    }
+  }
+
+  private async ensureQuestProgress(): Promise<void> {
+    if (!(await this.getQuestProgress())) {
+      await this.initializeQuestProgress();
     }
   }
 
@@ -3353,6 +3884,8 @@ export class GameClient {
     const currentIndex = latestProfile?.planetCount ?? nextIndex ?? 0;
     const planetStatePda = derivePlanetStatePda(authority, currentIndex);
     const planetCoordsPda = derivePlanetCoordsPda(galaxy, system, position);
+    const questStatePda = deriveQuestStatePda(authority);
+    const questProgressPda = deriveQuestProgressPda(authority);
 
     const args = isHomeworld
       ? encodeHomeworldArgs(now, planetName.trim() || "Homeworld", galaxy, system, position)
@@ -3369,6 +3902,8 @@ export class GameClient {
         { pubkey: playerProfilePda,   isSigner: false, isWritable: true  }, // player_profile
         { pubkey: planetStatePda,     isSigner: false, isWritable: true  }, // planet_state
         { pubkey: planetCoordsPda,    isSigner: false, isWritable: true  }, // planet_coords
+        { pubkey: questStatePda,      isSigner: false, isWritable: true  }, // quest_state
+        { pubkey: questProgressPda,   isSigner: false, isWritable: true  }, // quest_progress
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       data: encodeInstruction(discriminator, args),
@@ -3490,33 +4025,50 @@ export class GameClient {
   async findPlanets(walletPubkey: PublicKey): Promise<PlayerState[]> {
     const profile = await this.fetchPlayerProfile(walletPubkey);
     if (!profile) return [];
+    const byPda = new Map<string, PlayerState>();
     const legacyPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePlanetStatePda(walletPubkey, i));
     const legacyAccounts = await this.connection.getMultipleAccountsInfo(legacyPdas, "confirmed");
     const states = legacyAccounts.map((account, idx) => {
       if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
       const discriminator = account.data.slice(0, 8);
       if (discriminator.equals(PLANET_STATE_DISCRIMINATOR)) {
-        return adaptPlanetState(legacyPdas[idx], deserializePlanetState(Buffer.from(account.data)));
+        const planet = deserializePlanetState(Buffer.from(account.data));
+        if (!planet.authority.equals(walletPubkey)) return null;
+        return adaptPlanetState(legacyPdas[idx], planet);
       }
       return null;
     });
-    if (states.some(Boolean)) {
-      return states
-        .filter((s): s is PlayerState => !!s)
-        .sort((a, b) => a.planet.planetIndex - b.planet.planetIndex);
-    }
+    states.filter((s): s is PlayerState => !!s).forEach(s => byPda.set(s.planetPda, s));
 
     const publicPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePublicPlanetStatePda(walletPubkey, i));
     const publicAccounts = await this.connection.getMultipleAccountsInfo(publicPdas, "confirmed");
     const publicStates = publicAccounts.map((account, idx) => {
       if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
       if (account.data.slice(0, 8).equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
-        return stateFromPublicPlanet(publicPdas[idx], deserializePublicPlanetState(Buffer.from(account.data)));
+        const planet = deserializePublicPlanetState(Buffer.from(account.data));
+        if (!planet.authority.equals(walletPubkey)) return null;
+        return stateFromPublicPlanet(publicPdas[idx], planet);
       }
       return null;
     });
-    return publicStates
-      .filter((s): s is PlayerState => !!s)
+    publicStates.filter((s): s is PlayerState => !!s).forEach(s => byPda.set(s.planetPda, s));
+
+    const ownedPlanetAccounts = await this.connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, {
+      commitment: "confirmed",
+      filters: [
+        { memcmp: { offset: 0, bytes: bs58.encode(PLANET_STATE_DISCRIMINATOR) } },
+        { memcmp: { offset: 8, bytes: walletPubkey.toBase58() } },
+      ],
+    });
+    for (const account of ownedPlanetAccounts) {
+      try {
+        if (!account.account.data.slice(0, 8).equals(PLANET_STATE_DISCRIMINATOR)) continue;
+        const state = adaptPlanetState(account.pubkey, deserializePlanetState(Buffer.from(account.account.data)));
+        byPda.set(state.planetPda, state);
+      } catch { /* skip malformed */ }
+    }
+
+    return Array.from(byPda.values())
       .sort((a, b) => a.planet.planetIndex - b.planet.planetIndex);
   }
 
@@ -3550,19 +4102,51 @@ export class GameClient {
     return restored;
   }
 
+  private async prepareVaultSigningForAuthority(
+    authority: PublicKey,
+    reportProgress?: ProgressReporter,
+  ): Promise<Keypair | null> {
+    if (!this.preferVaultSigning) return null;
+
+    if (this.vaultKeypair) {
+      const authorizedVault = await this.fetchAuthorizedVault(authority);
+      if (!authorizedVault) {
+        this.vaultKeypair = null;
+        throw new Error("Vault authorization is missing. Reconnect the wallet and restore the saved vault password.");
+      }
+      if (!authorizedVault.vault.equals(this.vaultKeypair.publicKey)) {
+        this.vaultKeypair = null;
+        throw new Error("Vault authorization mismatch. Restore the saved vault password before sending this action.");
+      }
+      await this.ensureVaultLamports(this.vaultKeypair, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
+      return this.vaultKeypair;
+    }
+
+    const vault = await this.restoreAuthorizedVaultForExistingProfile(authority, reportProgress);
+    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
+    return vault;
+  }
+
   async getSystemPlanets(galaxy: number, system: number): Promise<PublicPlanetInfo[]> {
     const accounts = await this.connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed" });
-    const planets: PublicPlanetInfo[] = [];
+    const bySlot = new Map<number, PublicPlanetInfo>();
     for (const account of accounts) {
-      if (!account.account.data.slice(0, 8).equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) continue;
+      const discriminator = account.account.data.slice(0, 8);
       try {
-        const s = deserializePublicPlanetState(Buffer.from(account.account.data));
-        if (s.galaxy === galaxy && s.system === system) {
-          planets.push(publicPlanetInfoFromPublicState(account.pubkey, s));
+        if (discriminator.equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
+          const s = deserializePublicPlanetState(Buffer.from(account.account.data));
+          if (s.galaxy === galaxy && s.system === system) {
+            bySlot.set(s.position, publicPlanetInfoFromPublicState(account.pubkey, s));
+          }
+        } else if (discriminator.equals(PLANET_STATE_DISCRIMINATOR)) {
+          const s = deserializePlanetState(Buffer.from(account.account.data));
+          if (s.galaxy === galaxy && s.system === system) {
+            bySlot.set(s.position, publicPlanetInfoFromState(account.pubkey, s));
+          }
         }
       } catch { /* ignore */ }
     }
-    return planets.sort((a, b) => a.position - b.position);
+    return Array.from(bySlot.values()).sort((a, b) => a.position - b.position);
   }
 
   async getPublicPlanetInfoByCoordinates(
@@ -3600,6 +4184,7 @@ export class GameClient {
     planetAuthority: PublicKey,
     args: Buffer,
   ): TransactionInstruction {
+    const questProgressPda = deriveQuestProgressPda(planetAuthority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
       return new TransactionInstruction({
@@ -3631,6 +4216,7 @@ export class GameClient {
     args?: Buffer,
   ): TransactionInstruction {
     const questPda = deriveQuestStatePda(authority);
+    const questProgressPda = deriveQuestProgressPda(authority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(authority);
       return new TransactionInstruction({
@@ -3641,6 +4227,7 @@ export class GameClient {
           { pubkey: authorizedVaultPda,           isSigner: false, isWritable: false },
           { pubkey: questPda,                     isSigner: false, isWritable: true  },
           { pubkey: planetPda,                    isSigner: false, isWritable: true  },
+          { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
         ],
         data: encodeInstruction(vaultDiscriminator, args),
       });
@@ -3652,6 +4239,7 @@ export class GameClient {
         { pubkey: authority,  isSigner: true,  isWritable: true  },
         { pubkey: questPda,   isSigner: false, isWritable: true  },
         { pubkey: planetPda,  isSigner: false, isWritable: true  },
+        { pubkey: questProgressPda, isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(walletDiscriminator, args),
     });
@@ -3663,6 +4251,7 @@ export class GameClient {
     planetAuthority: PublicKey,
     args: Buffer,
   ): TransactionInstruction {
+    const questProgressPda = deriveQuestProgressPda(planetAuthority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
       return new TransactionInstruction({
@@ -3672,6 +4261,7 @@ export class GameClient {
           { pubkey: authorizedVaultPda,           isSigner: false, isWritable: false },
           { pubkey: sourcePlanetPda,              isSigner: false, isWritable: true  },
           { pubkey: destinationPlanetPda,         isSigner: false, isWritable: true  },
+          { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
         ],
         data: encodeInstruction(IX.resolveTransportVault, args),
       });
@@ -3683,6 +4273,7 @@ export class GameClient {
         { pubkey: this.provider.wallet.publicKey, isSigner: true,  isWritable: true  },
         { pubkey: sourcePlanetPda,                isSigner: false, isWritable: true  },
         { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
+        { pubkey: questProgressPda,               isSigner: false, isWritable: true  },
       ],
       data: encodeInstruction(IX.resolveTransport, args),
     });
@@ -3695,6 +4286,7 @@ export class GameClient {
     planetAuthority: PublicKey,
     args: Buffer,
   ): TransactionInstruction {
+    const questProgressPda = deriveQuestProgressPda(planetAuthority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
       return new TransactionInstruction({
@@ -3705,6 +4297,7 @@ export class GameClient {
           { pubkey: sourcePlanetPda,              isSigner: false, isWritable: true  },
           { pubkey: destinationPlanetPda,         isSigner: false, isWritable: true  },
           { pubkey: destinationCoordsPda,         isSigner: false, isWritable: true  },
+          { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
         ],
         data: encodeInstruction(IX.resolveAttackVault, args),
       });
@@ -3717,6 +4310,7 @@ export class GameClient {
         { pubkey: sourcePlanetPda,                isSigner: false, isWritable: true  },
         { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
         { pubkey: destinationCoordsPda,           isSigner: false, isWritable: true  },
+        { pubkey: questProgressPda,               isSigner: false, isWritable: true  },
       ],
       data: encodeInstruction(IX.resolveAttack, args),
     });
@@ -3731,6 +4325,7 @@ export class GameClient {
     planetAuthority: PublicKey,
     args: Buffer,
   ): TransactionInstruction {
+    const questProgressPda = deriveQuestProgressPda(planetAuthority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
       return new TransactionInstruction({
@@ -3741,6 +4336,7 @@ export class GameClient {
           { pubkey: sourcePlanetPda,              isSigner: false, isWritable: true  },
           { pubkey: destinationPlanetPda,         isSigner: false, isWritable: true  },
           { pubkey: destinationCoordsPda,         isSigner: false, isWritable: true  },
+          { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
         ],
         data: encodeInstruction(IX.resolveEspionageVault, args),
       });
@@ -3753,16 +4349,18 @@ export class GameClient {
         { pubkey: sourcePlanetPda,                isSigner: false, isWritable: true  },
         { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
         { pubkey: destinationCoordsPda,           isSigner: false, isWritable: true  },
+        { pubkey: questProgressPda,               isSigner: false, isWritable: true  },
       ],
       data: encodeInstruction(IX.resolveEspionage, args),
     });
   }
 
   async dailyCheckIn(entityPda: PublicKey): Promise<string> {
-    await this.ensureVault();
     await this.ensureQuestState();
+    await this.ensureQuestProgress();
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildQuestInstruction(IX.dailyCheckInVault, IX.dailyCheckIn, entityPda, authority)],
       this.vaultSigners(),
@@ -3770,10 +4368,11 @@ export class GameClient {
   }
 
   async claimQuest(entityPda: PublicKey, period: number, questId: number): Promise<string> {
-    await this.ensureVault();
     await this.ensureQuestState();
+    await this.ensureQuestProgress();
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(period);
     writer.writeU8(questId);
@@ -3784,12 +4383,12 @@ export class GameClient {
   }
 
   async startBuild(entityPda: PublicKey, buildingIdx: number): Promise<string> {
-    await this.ensureVault();
     const writer = new BorshWriter();
     writer.writeU8(buildingIdx);
     writer.writeI64(Math.floor(Date.now() / 1000));
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(IX.startBuildVault, IX.startBuild, entityPda, authority, writer.toBuffer())],
       this.vaultSigners(),
@@ -3797,7 +4396,6 @@ export class GameClient {
   }
 
   async finishBuild(entityPda: PublicKey): Promise<string> {
-    await this.ensureVault();
     const state = await this.loadPlanetStateByPda(entityPda);
     if (!state || state.planet.buildFinishTs <= 0 || state.planet.buildQueueItem === 255) {
       return "";
@@ -3805,6 +4403,7 @@ export class GameClient {
     const writer = new BorshWriter();
     writer.writeI64(Math.floor(Date.now() / 1000));
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(IX.finishBuildVault, IX.finishBuild, entityPda, authority, writer.toBuffer())],
       this.vaultSigners(),
@@ -3812,12 +4411,12 @@ export class GameClient {
   }
 
   async startResearch(entityPda: PublicKey, techIdx: number): Promise<string> {
-    await this.ensureVault();
     const writer = new BorshWriter();
     writer.writeU8(techIdx);
     writer.writeI64(Math.floor(Date.now() / 1000));
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(IX.startResearchVault, IX.startResearch, entityPda, authority, writer.toBuffer())],
       this.vaultSigners(),
@@ -3825,11 +4424,11 @@ export class GameClient {
   }
 
   async finishResearch(entityPda: PublicKey): Promise<string> {
-    await this.ensureVault();
     const writer = new BorshWriter();
     writer.writeI64(Math.floor(Date.now() / 1000));
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(IX.finishResearchVault, IX.finishResearch, entityPda, authority, writer.toBuffer())],
       this.vaultSigners(),
@@ -3837,9 +4436,9 @@ export class GameClient {
   }
 
   async buildShip(entityPda: PublicKey, shipType: number, quantity: number): Promise<string> {
-    await this.ensureVault();
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(
         IX.buildShipVault,
@@ -3853,11 +4452,11 @@ export class GameClient {
   }
 
   async finishShipBuild(entityPda: PublicKey): Promise<string> {
-    await this.ensureVault();
     const writer = new BorshWriter();
     writer.writeI64(Math.floor(Date.now() / 1000));
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(
         IX.finishShipBuildVault,
@@ -3871,9 +4470,9 @@ export class GameClient {
   }
 
   async buildDefense(entityPda: PublicKey, defenseType: number, quantity: number): Promise<string> {
-    await this.ensureVault();
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(
         IX.buildDefenseVault,
@@ -3887,11 +4486,11 @@ export class GameClient {
   }
 
   async finishDefenseBuild(entityPda: PublicKey): Promise<string> {
-    await this.ensureVault();
     const writer = new BorshWriter();
     writer.writeI64(Math.floor(Date.now() / 1000));
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(
         IX.finishDefenseBuildVault,
@@ -3913,9 +4512,9 @@ export class GameClient {
     target?: LaunchFleetTarget,
   ): Promise<string> {
     if (!target) throw new Error("Launch target is required.");
-    await this.ensureVault();
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.prepareVaultSigningForAuthority(authority);
 
     return this.sendInstruction(
       [this.buildVaultMutationInstruction(
@@ -3968,12 +4567,13 @@ export class GameClient {
   }
 
   async resolveTransport(sourceEntityPda: PublicKey, mission: Mission, slot: number): Promise<string> {
-    await this.ensureVault();
     const destinationPlanetPda = await this.findPlanetByCoordinates(
       mission.targetGalaxy, mission.targetSystem, mission.targetPosition,
     );
     const state = await this.loadPlanetStateByPda(sourceEntityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.ensureQuestProgress();
+    await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(slot);
     writer.writeI64(Math.floor(Date.now() / 1000));
@@ -3998,7 +4598,6 @@ export class GameClient {
   }
 
   async resolveAttack(sourceEntityPda: PublicKey, mission: Mission, slot: number): Promise<string> {
-    await this.ensureVault();
     const destinationPlanetPda = await this.findPlanetByCoordinates(
       mission.targetGalaxy, mission.targetSystem, mission.targetPosition,
     );
@@ -4013,6 +4612,8 @@ export class GameClient {
     );
     const state = await this.loadPlanetStateByPda(sourceEntityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.ensureQuestProgress();
+    await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(slot);
     writer.writeI64(Math.floor(Date.now() / 1000));
@@ -4037,7 +4638,6 @@ export class GameClient {
       throw new Error("Target planet not found for espionage resolution.");
     }
 
-    await this.ensureVault();
     const destinationCoordsPda = derivePlanetCoordsPda(
       mission.targetGalaxy,
       mission.targetSystem,
@@ -4045,6 +4645,8 @@ export class GameClient {
     );
     const state = await this.loadPlanetStateByPda(sourceEntityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    await this.ensureQuestProgress();
+    await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(slot);
     writer.writeI64(Math.floor(Date.now() / 1000));
@@ -4077,10 +4679,10 @@ export class GameClient {
     now = Math.floor(Date.now() / 1000),
     reportProgress?: ProgressReporter,
   ): Promise<{ entityPda: PublicKey; planetPda: PublicKey }> {
-    await this.ensureVault(reportProgress);
-    const vault = this.vaultKeypair!;
-    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
     const authority = this.provider.wallet.publicKey;
+    await this.ensureQuestProgress();
+    const vault = await this.prepareVaultSigningForAuthority(authority, reportProgress);
+    if (!vault) throw new Error("Vault signing must be enabled to create a colony.");
 
     // Verify the target slot is free before committing
     const occupied = await isCoordOccupied(
@@ -4105,6 +4707,8 @@ export class GameClient {
       mission.targetSystem,
       mission.targetPosition,
     );
+    const questStatePda = deriveQuestStatePda(authority);
+    const questProgressPda = deriveQuestProgressPda(authority);
 
     // ── Step 1: initialize colony planet + coords ──────────────────────────
     reportProgress?.("Vault signing: creating colony planet");
@@ -4118,6 +4722,8 @@ export class GameClient {
         { pubkey: playerProfilePda,   isSigner: false, isWritable: true  }, // player_profile
         { pubkey: colonyPda,          isSigner: false, isWritable: true  }, // planet_state
         { pubkey: colonyCoordsPda,    isSigner: false, isWritable: true  }, // planet_coords
+        { pubkey: questStatePda,      isSigner: false, isWritable: true  }, // quest_state
+        { pubkey: questProgressPda,   isSigner: false, isWritable: true  }, // quest_progress
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       data: encodeInstruction(IX.initializeColony, encodeColonyArgs(now, mission)),
@@ -4145,6 +4751,7 @@ export class GameClient {
           { pubkey: sourceEntityPda,    isSigner: false, isWritable: true  }, // source_planet
           { pubkey: colonyPda,          isSigner: false, isWritable: false }, // colony_planet (read)
           { pubkey: colonyCoordsPda,    isSigner: false, isWritable: false }, // colony_coords (read)
+          { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
         ],
         data: encodeInstruction(IX.resolveColonizeVault, resolveWriter.toBuffer()),
       });
@@ -4157,6 +4764,7 @@ export class GameClient {
           { pubkey: sourceEntityPda, isSigner: false, isWritable: true  }, // source_planet
           { pubkey: colonyPda,       isSigner: false, isWritable: false }, // colony_planet (read)
           { pubkey: colonyCoordsPda, isSigner: false, isWritable: false }, // colony_coords (read)
+          { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
         ],
         data: encodeInstruction(IX.resolveColonize, resolveWriter.toBuffer()),
       });
@@ -4258,7 +4866,7 @@ export const BUILDINGS = [
   { idx: 9,  key: "crystalStorage",       name: "Crystal Storage",        icon: "🏗", desc: "Increases crystal cap." },
   { idx: 10, key: "deuteriumTank",        name: "Deuterium Tank",         icon: "🏗", desc: "Increases deuterium cap." },
   { idx: 11, key: "researchLab",          name: "Research Lab",           icon: "🔭", desc: "Required for all technology research." },
-  { idx: 12, key: "missileSilo",          name: "Missile Silo",           icon: "🎯", desc: "Stores interplanetary missiles." },
+  { idx: 12, key: "missileSilo",          name: "Missile Silo",           icon: "🎯", desc: "Legacy missile infrastructure." },
 ] as const;
 
 export const SHIPS = [

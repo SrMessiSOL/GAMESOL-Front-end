@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useConnection, useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider } from "@coral-xyz/anchor";
@@ -9,7 +9,9 @@ import {
   type QuestStateAccount,
   type StoreConfigState,
   type StorePurchaseStateAccount,
+  type QuestProgressStateAccount,
   type AllianceStateAccount,
+  type AllianceTreasuryStateAccount,
   type AllianceMembershipAccount,
   type AllianceJoinRequestAccount,
   type BattleResolvedEvent,
@@ -20,13 +22,12 @@ import {
   Planet, Resources, Fleet, Mission, PlayerState, PublicPlanetInfo, Research,
   BUILDINGS, SHIPS, SHIP_TYPE_IDX, MISSION_LABELS,
   ALLIANCE_CREATE_USDC_COST, ALLIANCE_CREATE_ANTIMATTER_COST,
-  ALLIANCE_CREATE_ANTIMATTER_BURN, ALLIANCE_CREATE_ANTIMATTER_TREASURY,
   upgradeCost, buildTimeSecs,
   fmt, fmtCountdown, missionProgress, energyEfficiency,
 } from "./game-state";
 import GalaxyTab from "./GalaxyTab";
 import MarketTab from "./Markettab";
-import { MarketClient } from "./market-client";
+import { MarketClient, formatResource as formatMarketResource } from "./market-client";
 import { BUILDING_REQUIREMENTS, RESEARCH_REQUIREMENTS, type Requirement } from "./combat-engine";
 import { getPlanetTheme } from "./art-direction";
 import { getPlanetIdentity } from "./planet-generation";
@@ -76,6 +77,8 @@ type BattleReport = {
   cargoDeuterium: string;
   debrisMetal?: string;
   debrisCrystal?: string;
+  recycledMetal?: string;
+  recycledCrystal?: string;
   attacker?: string;
   defender?: string;
   destinationPlanet?: string;
@@ -119,6 +122,7 @@ type SpyReport = {
 const DEV_CONFIG_ADMIN_WALLET = "HAHnFdgoASDzzma7fP9nfKo5nByU1uStYR964QhWnL2X";
 const DEFAULT_ANTIMATTER_MINT = import.meta.env.VITE_ANTIMATTER_MINT?.trim() || "FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh";
 const DEFAULT_ANTIMATTER_DECIMALS = 6;
+const ANTIMATTER_RAW_SCALE = 1_000_000n;
 const SPL_TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const MAX_GALAXY = 999;
 const MAX_SYSTEM = 999;
@@ -183,6 +187,34 @@ function formatTokenAmount(raw: bigint, decimals: number): string {
   return `${whole.toString()}.${fractionText}`;
 }
 
+function compactSuffix(value: number): string {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return value.toString();
+}
+
+function formatCompactResource(value: bigint | number): string {
+  const amount = toResourceAmount(value);
+  return formatMarketResource(amount).replace(/k$/, "K");
+}
+
+function formatCompactTokenAmount(raw: bigint, decimals: number): string {
+  const base = 10n ** BigInt(decimals);
+  const whole = raw / base;
+  if (whole >= 1_000n) return compactSuffix(Number(raw) / Number(base));
+  return formatTokenAmount(raw, decimals);
+}
+
+function formatUsdcAmount(raw: bigint): string {
+  const base = 1_000_000n;
+  const whole = raw / base;
+  const fraction = raw % base;
+  const cents = (fraction / 10_000n).toString().padStart(2, "0");
+  const dust = (fraction % 10_000n).toString().padStart(4, "0").replace(/0+$/, "");
+  return `$${whole.toString()}.${cents}${dust ? dust : ""}`;
+}
+
 type ResourceKind = "metal" | "crystal" | "deuterium";
 
 const RESOURCE_UI: Record<ResourceKind, { label: string; short: string; color: string }> = {
@@ -211,15 +243,24 @@ const ResourceLabel: React.FC<{ kind: ResourceKind; short?: boolean }> = ({ kind
 const ResourceAmount: React.FC<{ kind: ResourceKind; value: bigint | number; compact?: boolean }> = ({ kind, value, compact = false }) => (
   <span className="asset-amount" style={{ color: RESOURCE_UI[kind].color }}>
     {!compact && <ResourceIcon kind={kind} size="sm" />}
-    <span>{fmt(value)}</span>
+    <span>{compact ? formatCompactResource(value) : fmt(value)}</span>
     {!compact && <span className="asset-amount-label">{RESOURCE_UI[kind].short}</span>}
   </span>
 );
 
-const UsdcAmount: React.FC<{ raw: bigint; className?: string }> = ({ raw, className }) => (
+const UsdcAmount: React.FC<{ raw: bigint; className?: string; icon?: boolean }> = ({ raw, className, icon = true }) => (
   <span className={`asset-amount usdc-amount${className ? ` ${className}` : ""}`}>
-    <UsdcIcon size="sm" />
-    <span>{formatTokenAmount(raw, 6)}</span>
+    {icon && <UsdcIcon size="sm" />}
+    <span>{formatUsdcAmount(raw)}</span>
+  </span>
+);
+
+const StoreBalanceAmount: React.FC<{ balance: bigint; price: bigint }> = ({ balance, price }) => (
+  <span className="store-balance-value">
+    <span className="store-balance-token">USDC</span>
+    <UsdcAmount raw={balance} icon={false} />
+    <span className="store-balance-separator">/</span>
+    <span className="store-price-required">{formatUsdcAmount(price)}</span>
   </span>
 );
 
@@ -249,8 +290,8 @@ function resourceCapWarningMessage(action: string, res: Resources | undefined, d
 function formatSolBalance(lamports: bigint): string {
   const sol = Number(lamports) / 1_000_000_000;
   if (sol === 0) return "0";
-  if (sol < 0.001) return "<0.001";
-  return sol.toFixed(3);
+  const precision = sol < 1 ? 6 : 4;
+  return sol.toFixed(precision).replace(/\.?0+$/, "");
 }
 
 const BATTLE_SHIP_FIELDS = [
@@ -377,6 +418,8 @@ function buildBattleReportFromEvent(wallet: string, source: PlayerState | undefi
     cargoDeuterium: event.lootDeuterium.toString(),
     debrisMetal: event.debrisMetal.toString(),
     debrisCrystal: event.debrisCrystal.toString(),
+    recycledMetal: event.recycledMetal.toString(),
+    recycledCrystal: event.recycledCrystal.toString(),
     attacker: event.attacker,
     defender: event.defender,
     destinationPlanet: event.destinationPlanet,
@@ -523,8 +566,7 @@ const totalQuestShips = (state: PlayerState) => SHIPS.reduce((sum, ship) => sum 
 const totalQuestDefenses = (state: PlayerState) => (
   state.planet.rocketLauncher + state.planet.lightLaser + state.planet.heavyLaser +
   state.planet.gaussCannon + state.planet.ionCannon + state.planet.plasmaTurret +
-  state.planet.smallShieldDome + state.planet.largeShieldDome +
-  state.planet.antiBallisticMissile + state.planet.interplanetaryMissile
+  state.planet.smallShieldDome + state.planet.largeShieldDome
 );
 
 const QUEST_DEFINITIONS: QuestDefinition[] = [
@@ -548,7 +590,7 @@ const QUEST_DEFINITIONS: QuestDefinition[] = [
   { period: 0, id: 17, group: "Tutorial", title: "Research Impulse Drive", hint: "Impulse drive unlocks stronger movement options.", reward: { metal: 1500, crystal: 1500, deuterium: 600 }, requirements: [questReq("Impulse Drive", 1, s => s.research.impulseDrive)] },
   { period: 0, id: 18, group: "Tutorial", title: "Research Astrophysics", hint: "Astrophysics is the road to expansion.", reward: { metal: 1500, crystal: 1800, deuterium: 700 }, requirements: [questReq("Astrophysics", 1, s => s.research.astrophysics)] },
   { period: 0, id: 19, group: "Tutorial", title: "Hold five defenses", hint: "A small defense grid is better than an empty planet.", reward: { metal: 1200, crystal: 900, deuterium: 200 }, requirements: [questReq("Defense units", 5, totalQuestDefenses)] },
-  { period: 0, id: 20, group: "Tutorial", title: "Build a Colony Ship", hint: "Colony ships turn research progress into new worlds.", reward: { metal: 2000, crystal: 2000, deuterium: 800 }, requirements: [questReq("Colony Ship", 1, s => s.fleet.colonyShip)] },
+  { period: 0, id: 20, group: "Tutorial", title: "Build a Colony Ship", hint: "Complete command training and claim the final tutorial reward.", reward: { metal: 5000, crystal: 5000, deuterium: 2000 }, requirements: [questReq("Colony Ship", 1, s => s.fleet.colonyShip)] },
   { period: 1, id: 0, group: "Daily", title: "Daily check-in", hint: "Claim once every 24 hours. Streak bonus is small and capped.", reward: { metal: 500, crystal: 300, deuterium: 100 }, requirements: [], checkIn: true },
   { period: 1, id: 1, group: "Daily", title: "Metal Mine Lv 3", hint: "Keep basic metal production moving.", reward: { metal: 1000, crystal: 500, deuterium: 100 }, requirements: [questReq("Metal Mine", 3, s => s.planet.metalMine)] },
   { period: 1, id: 2, group: "Daily", title: "Crystal Mine Lv 3", hint: "Keep crystal production balanced.", reward: { metal: 500, crystal: 1000, deuterium: 100 }, requirements: [questReq("Crystal Mine", 3, s => s.planet.crystalMine)] },
@@ -681,6 +723,23 @@ const MONTHLY_ROTATING_QUESTS_UI: QuestCatalogUiEntry[] = [
   qCatalog("Weapons Technology Lv 3", "Build a stronger combat foundation.", "Weapons Technology", 3, s => s.research.weaponsTechnology, { metal: 55000, crystal: 45000, deuterium: 20000 }),
 ];
 
+function gcdBigInt(a: bigint, b: bigint): bigint {
+  while (b !== 0n) {
+    const next = a % b;
+    a = b;
+    b = next;
+  }
+  return a;
+}
+
+function coprimeQuestStep(seed: bigint, len: bigint): bigint {
+  let step = ((seed >> 32n) % (len - 1n)) + 1n;
+  while (gcdBigInt(step, len) !== 1n) {
+    step = step + 1n >= len ? 1n : step + 1n;
+  }
+  return step;
+}
+
 function rotatingQuestIndex(period: 1 | 2 | 3, slot: number, epoch: number, catalogLength: number): number {
   const len = BigInt(catalogLength);
   const seed = BigInt.asUintN(
@@ -688,21 +747,148 @@ function rotatingQuestIndex(period: 1 | 2 | 3, slot: number, epoch: number, cata
     BigInt(epoch) * 0x9E3779B97F4A7C15n + BigInt(period) * 0xBF58476D1CE4E5B9n,
   );
   const offset = seed % len;
-  const step = ((seed >> 32n) % (len - 1n)) + 1n;
+  const step = coprimeQuestStep(seed, len);
   return Number((offset + BigInt(slot) * step) % len);
 }
 
-function buildRotatingQuest(period: 1 | 2 | 3, id: number, group: "Daily" | "Weekly" | "Monthly", epoch: number, catalog: QuestCatalogUiEntry[]): QuestDefinition {
+function progressU32ForPeriod(
+  period: 1 | 2 | 3,
+  progress: QuestProgressStateAccount | null | undefined,
+  nowTs: number,
+  daily: keyof QuestProgressStateAccount,
+  weekly: keyof QuestProgressStateAccount,
+  monthly: keyof QuestProgressStateAccount,
+): number {
+  if (!progress) return 0;
+  const currentEpoch = period === 1
+    ? Math.floor(nowTs / 86400)
+    : period === 2
+      ? Math.floor(nowTs / 604800)
+      : Math.floor(nowTs / 2592000);
+  const progressEpoch = period === 1 ? progress.dailyEpoch : period === 2 ? progress.weeklyEpoch : progress.monthlyEpoch;
+  if (progressEpoch !== currentEpoch) return 0;
+  const value = period === 1 ? progress[daily] : period === 2 ? progress[weekly] : progress[monthly];
+  return typeof value === "number" ? value : Number(value);
+}
+
+function progressAntimatterForPeriod(period: 1 | 2 | 3, progress: QuestProgressStateAccount | null | undefined, nowTs: number): number {
+  if (!progress) return 0;
+  const currentEpoch = period === 1
+    ? Math.floor(nowTs / 86400)
+    : period === 2
+      ? Math.floor(nowTs / 604800)
+      : Math.floor(nowTs / 2592000);
+  const progressEpoch = period === 1 ? progress.dailyEpoch : period === 2 ? progress.weeklyEpoch : progress.monthlyEpoch;
+  if (progressEpoch !== currentEpoch) return 0;
+  const raw = period === 1 ? progress.dailyAntimatterSpent : period === 2 ? progress.weeklyAntimatterSpent : progress.monthlyAntimatterSpent;
+  return Number(raw / ANTIMATTER_RAW_SCALE);
+}
+
+function recurringActionRequirement(
+  period: 1 | 2 | 3,
+  entry: QuestCatalogUiEntry,
+  progress: QuestProgressStateAccount | null | undefined,
+  nowTs: number,
+): { title: string; hint: string; label: string; current: number; required: number } {
+  const label = entry.label;
+  if (["Metal Mine", "Crystal Mine", "Metal Storage", "Crystal Storage", "Deuterium Tank"].includes(label)) {
+    return {
+      title: `Buy ${entry.required} store pack${entry.required === 1 ? "" : "s"}`,
+      hint: "Recurring economy quest based on actual store usage.",
+      label: "Store packs bought",
+      current: progressU32ForPeriod(period, progress, nowTs, "dailyStorePacksBought", "weeklyStorePacksBought", "monthlyStorePacksBought"),
+      required: entry.required,
+    };
+  }
+  if (["Solar Plant", "Small Cargo", "Large Cargo"].includes(label)) {
+    return {
+      title: `Complete ${entry.required} transport${entry.required === 1 ? "" : "s"}`,
+      hint: "Move resources between planets to earn recurring rewards.",
+      label: "Transports completed",
+      current: progressU32ForPeriod(period, progress, nowTs, "dailyTransportsResolved", "weeklyTransportsResolved", "monthlyTransportsResolved"),
+      required: entry.required,
+    };
+  }
+  if (["Research Lab", "Computer Technology", "Espionage Probe", "Intergalactic Research Network"].includes(label)) {
+    return {
+      title: `Complete ${entry.required} spy mission${entry.required === 1 ? "" : "s"}`,
+      hint: "Gather intelligence through resolved espionage missions.",
+      label: "Spy missions completed",
+      current: progressU32ForPeriod(period, progress, nowTs, "dailySpyMissionsResolved", "weeklySpyMissionsResolved", "monthlySpyMissionsResolved"),
+      required: entry.required,
+    };
+  }
+  if (["Astrophysics", "Colony Ship"].includes(label)) {
+    const required = Math.max(1, Math.min(3, entry.required));
+    return {
+      title: `Colonize ${required} planet${required === 1 ? "" : "s"}`,
+      hint: "Expansion quests track completed colonization, not owned ship state.",
+      label: "Planets colonized",
+      current: progressU32ForPeriod(period, progress, nowTs, "dailyPlanetsColonized", "weeklyPlanetsColonized", "monthlyPlanetsColonized"),
+      required,
+    };
+  }
+  const antimatterLabels = [
+    "Energy Technology", "Deuterium Synthesizer", "Fusion Reactor", "Robotics Factory", "Nanite Factory",
+    "Shipyard", "Combustion Drive", "Impulse Drive", "Hyperspace Drive", "Weapons Technology",
+    "Shielding Technology", "Armor Technology",
+  ];
+  if (antimatterLabels.includes(label)) {
+    const base = period === 1 ? 50 : period === 2 ? 250 : 1000;
+    const required = Math.max(1, entry.required) * base;
+    return {
+      title: `Spend ${required} ANTIMATTER`,
+      hint: "Use ANTIMATTER on acceleration or other on-chain spend paths.",
+      label: "ANTIMATTER spent",
+      current: progressAntimatterForPeriod(period, progress, nowTs),
+      required,
+    };
+  }
+  return {
+    title: `Resolve ${entry.required} attack${entry.required === 1 ? "" : "s"}`,
+    hint: "Combat quests track resolved attack activity.",
+    label: "Attacks resolved",
+    current: progressU32ForPeriod(period, progress, nowTs, "dailyAttacksResolved", "weeklyAttacksResolved", "monthlyAttacksResolved"),
+    required: entry.required,
+  };
+}
+
+function recurringActionSignature(period: 1 | 2 | 3, entry: QuestCatalogUiEntry): string {
+  const action = recurringActionRequirement(period, entry, null, 0);
+  return `${action.label}:${action.required}`;
+}
+
+function rotatingQuestEntry(
+  period: 1 | 2 | 3,
+  slot: number,
+  epoch: number,
+  catalog: QuestCatalogUiEntry[],
+): QuestCatalogUiEntry {
+  const seen = new Set<string>();
+  let selected = 0;
+  for (let candidateSlot = 0; candidateSlot < catalog.length; candidateSlot += 1) {
+    const entry = catalog[rotatingQuestIndex(period, candidateSlot, epoch, catalog.length)];
+    const signature = recurringActionSignature(period, entry);
+    if (seen.has(signature)) continue;
+    if (selected === slot) return entry;
+    seen.add(signature);
+    selected += 1;
+  }
+  return catalog[rotatingQuestIndex(period, slot, epoch, catalog.length)];
+}
+
+function buildRotatingQuest(period: 1 | 2 | 3, id: number, group: "Daily" | "Weekly" | "Monthly", epoch: number, catalog: QuestCatalogUiEntry[], progress: QuestProgressStateAccount | null | undefined, nowTs: number): QuestDefinition {
   const slot = period === 1 ? id - 1 : id;
-  const entry = catalog[rotatingQuestIndex(period, slot, epoch, catalog.length)];
+  const entry = rotatingQuestEntry(period, slot, epoch, catalog);
+  const action = recurringActionRequirement(period, entry, progress, nowTs);
   return {
     period,
     id,
     group,
-    title: entry.title,
-    hint: entry.hint,
+    title: action.title,
+    hint: action.hint,
     reward: entry.reward,
-    requirements: [questReq(entry.label, entry.required, entry.current)],
+    requirements: [questReq(action.label, action.required, () => action.current)],
   };
 }
 
@@ -714,6 +900,94 @@ type AllianceMissionDefinition = {
   xp: number;
   requirements: QuestRequirement[];
 };
+
+type AllianceDepositDefinition = {
+  period: 1 | 2 | 3;
+  id: number;
+  group: "Daily" | "Weekly" | "Monthly";
+  title: string;
+  xp: number;
+  metal: bigint;
+  crystal: bigint;
+  deuterium: bigint;
+  antimatter: bigint;
+};
+
+const ALLIANCE_DEPOSIT_DEFINITIONS: AllianceDepositDefinition[] = [
+  { period: 1, id: 0, group: "Daily", title: "Deposit Metal", xp: 80, metal: 1_000n, crystal: 0n, deuterium: 0n, antimatter: 0n },
+  { period: 1, id: 1, group: "Daily", title: "Deposit Crystal", xp: 80, metal: 0n, crystal: 1_000n, deuterium: 0n, antimatter: 0n },
+  { period: 1, id: 2, group: "Daily", title: "Deposit Deuterium", xp: 90, metal: 0n, crystal: 0n, deuterium: 500n, antimatter: 0n },
+  { period: 1, id: 3, group: "Daily", title: "Deposit ANTIMATTER", xp: 150, metal: 0n, crystal: 0n, deuterium: 0n, antimatter: 100_000_000n },
+  { period: 2, id: 0, group: "Weekly", title: "Logistics Stockpile", xp: 420, metal: 10_000n, crystal: 6_000n, deuterium: 0n, antimatter: 0n },
+  { period: 2, id: 1, group: "Weekly", title: "Research Stockpile", xp: 440, metal: 0n, crystal: 8_000n, deuterium: 3_000n, antimatter: 0n },
+  { period: 2, id: 2, group: "Weekly", title: "Fuel Stockpile", xp: 450, metal: 6_000n, crystal: 0n, deuterium: 5_000n, antimatter: 0n },
+  { period: 2, id: 3, group: "Weekly", title: "ANTIMATTER Reserve", xp: 900, metal: 0n, crystal: 0n, deuterium: 0n, antimatter: 1_000_000_000n },
+  { period: 3, id: 0, group: "Monthly", title: "Sector Reserve", xp: 1800, metal: 60_000n, crystal: 40_000n, deuterium: 20_000n, antimatter: 0n },
+  { period: 3, id: 1, group: "Monthly", title: "Foundry Reserve", xp: 1400, metal: 120_000n, crystal: 0n, deuterium: 0n, antimatter: 0n },
+  { period: 3, id: 2, group: "Monthly", title: "Laboratory Reserve", xp: 1650, metal: 0n, crystal: 90_000n, deuterium: 35_000n, antimatter: 0n },
+  { period: 3, id: 3, group: "Monthly", title: "Core ANTIMATTER Reserve", xp: 3500, metal: 0n, crystal: 0n, deuterium: 0n, antimatter: 5_000_000_000n },
+];
+
+const ALLIANCE_PERIOD_COPY: Record<AllianceDepositDefinition["group"], { title: string; note: string }> = {
+  Daily: { title: "DAILY ALLIANCE QUESTS", note: "Resets every chain day for each member." },
+  Weekly: { title: "WEEKLY ALLIANCE QUESTS", note: "Resets every chain week for each member." },
+  Monthly: { title: "MONTHLY ALLIANCE QUESTS", note: "Resets every 30-day chain period for each member." },
+};
+
+const ALLIANCE_BUILDINGS = [
+  { id: 0, key: "logisticsHub", title: "Logistics Hub", hint: "Shared shipping and contribution capacity." },
+  { id: 1, key: "researchGrid", title: "Research Grid", hint: "Shared scientific coordination." },
+  { id: 2, key: "defenseCoordination", title: "Defense Coordination", hint: "Alliance-wide defensive organization." },
+  { id: 3, key: "tradeNetwork", title: "Trade Network", hint: "Shared market and treasury infrastructure." },
+] as const;
+
+function allianceBuildingCost(buildingId: number, nextLevel: number): { metal: bigint; crystal: bigint; deuterium: bigint; antimatter: bigint } {
+  const level = BigInt(Math.max(1, nextLevel));
+  const scale = level * level;
+  if (buildingId === 0) return { metal: 5_000n * scale, crystal: 2_000n * scale, deuterium: 1_000n * scale, antimatter: 50_000_000n * level };
+  if (buildingId === 1) return { metal: 2_000n * scale, crystal: 5_000n * scale, deuterium: 2_000n * scale, antimatter: 75_000_000n * level };
+  if (buildingId === 2) return { metal: 4_000n * scale, crystal: 4_000n * scale, deuterium: 1_500n * scale, antimatter: 60_000_000n * level };
+  return { metal: 3_000n * scale, crystal: 3_000n * scale, deuterium: 3_000n * scale, antimatter: 100_000_000n * level };
+}
+
+function applyBpsDiscount(value: bigint, bps: number): bigint {
+  if (value <= 0n || bps <= 0) return value;
+  const discount = (value * BigInt(Math.min(bps, 9000))) / 10_000n;
+  const discounted = value - discount;
+  return discounted > 0n ? discounted : 1n;
+}
+
+function allianceBoosts(treasury: AllianceTreasuryStateAccount | null | undefined) {
+  const logistics = treasury?.logisticsHub ?? 0;
+  const research = treasury?.researchGrid ?? 0;
+  const defense = treasury?.defenseCoordination ?? 0;
+  const trade = treasury?.tradeNetwork ?? 0;
+  return {
+    logisticsXpBonusBps: logistics * 500,
+    researchXpBonusBps: research * 500,
+    defenseDeuteriumDiscountBps: defense * 400,
+    tradeCostDiscountBps: trade * 300,
+  };
+}
+
+function discountedAllianceBuildingCost(
+  buildingId: number,
+  nextLevel: number,
+  treasury: AllianceTreasuryStateAccount | null | undefined,
+): { metal: bigint; crystal: bigint; deuterium: bigint; antimatter: bigint } {
+  const base = allianceBuildingCost(buildingId, nextLevel);
+  const boosts = allianceBoosts(treasury);
+  return {
+    metal: applyBpsDiscount(base.metal, boosts.tradeCostDiscountBps),
+    crystal: applyBpsDiscount(base.crystal, boosts.tradeCostDiscountBps),
+    deuterium: applyBpsDiscount(base.deuterium, boosts.defenseDeuteriumDiscountBps),
+    antimatter: applyBpsDiscount(base.antimatter, boosts.tradeCostDiscountBps),
+  };
+}
+
+function boostPercentLabel(bps: number): string {
+  return `${(bps / 100).toFixed(bps % 100 === 0 ? 0 : 1)}%`;
+}
 
 const ALLIANCE_MISSION_DEFINITIONS: AllianceMissionDefinition[] = [
   { period: 1, id: 0, group: "Daily", title: "Metal Mine Lv 3", xp: 80, requirements: [questReq("Metal Mine", 3, s => s.planet.metalMine)] },
@@ -758,14 +1032,14 @@ function allianceThreshold(level: number): bigint {
   const prev = BigInt(Math.max(0, level - 1));
   return (prev * BigInt(level) * 1000n) / 2n;
 }
-function activeQuestDefinitions(nowTs: number): QuestDefinition[] {
+function activeQuestDefinitions(nowTs: number, questProgress: QuestProgressStateAccount | null | undefined): QuestDefinition[] {
   const tutorialAndCheckIn = QUEST_DEFINITIONS.filter(q => q.period === 0 || (q.period === 1 && q.id === 0));
   const dailyEpoch = Math.floor(nowTs / 86400);
   const weeklyEpoch = Math.floor(nowTs / 604800);
   const monthlyEpoch = Math.floor(nowTs / 2592000);
-  const daily = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(1, slot + 1, "Daily", dailyEpoch, DAILY_ROTATING_QUESTS_UI));
-  const weekly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(2, slot, "Weekly", weeklyEpoch, WEEKLY_ROTATING_QUESTS_UI));
-  const monthly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(3, slot, "Monthly", monthlyEpoch, MONTHLY_ROTATING_QUESTS_UI));
+  const daily = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(1, slot + 1, "Daily", dailyEpoch, DAILY_ROTATING_QUESTS_UI, questProgress, nowTs));
+  const weekly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(2, slot, "Weekly", weeklyEpoch, WEEKLY_ROTATING_QUESTS_UI, questProgress, nowTs));
+  const monthly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(3, slot, "Monthly", monthlyEpoch, MONTHLY_ROTATING_QUESTS_UI, questProgress, nowTs));
   return [...tutorialAndCheckIn, ...daily, ...weekly, ...monthly];
 }
 const DEFENSE_DEFS = [
@@ -777,9 +1051,15 @@ const DEFENSE_DEFS = [
   { idx: 5, key: "plasmaTurret", name: "Plasma Turret", icon: "🟣", cost: { m: 50000, c: 50000, d: 30000 } },
   { idx: 6, key: "smallShieldDome", name: "Small Shield Dome", icon: "🛡", cost: { m: 10000, c: 10000, d: 0 } },
   { idx: 7, key: "largeShieldDome", name: "Large Shield Dome", icon: "🏰", cost: { m: 50000, c: 50000, d: 0 } },
-  { idx: 8, key: "antiBallisticMissile", name: "Anti-Ballistic Missile", icon: "🎯", cost: { m: 8000, c: 0, d: 2000 } },
-  { idx: 9, key: "interplanetaryMissile", name: "Interplanetary Missile", icon: "☄", cost: { m: 12500, c: 2500, d: 10000 } },
 ] as const;
+
+const legacyDefenseBuildLabel = (idx: number): { name: string; icon: string } | null => {
+  if (idx === 8) return { name: "Legacy Anti-Ballistic Missile", icon: "🎯" };
+  if (idx === 9) return { name: "Legacy Interplanetary Missile", icon: "☄" };
+  return null;
+};
+
+const supportedDefenseBuild = (idx: number) => DEFENSE_DEFS.some(defense => defense.idx === idx);
 
 const SUPPORTED_RESEARCH_KEYS = new Set(RESEARCH_TECHS.map(tech => tech.field));
 const SUPPORTED_BUILDING_KEYS = new Set(BUILDINGS.map(building => building.key));
@@ -1333,6 +1613,13 @@ const CSS = `
   .header-callout { font-size:10px; color:var(--dim); letter-spacing:1.1px; }
   .chain-tag { font-size: 10px; letter-spacing: 1px; color: var(--dim);
     border: 1px solid var(--border); padding: 4px 8px; border-radius: 2px; }
+  .shield-tag { display:inline-flex; align-items:center; gap:6px; font-size:10px; letter-spacing:1px;
+    color:var(--success); border:1px solid rgba(6,214,160,0.34); padding:4px 8px; border-radius:2px;
+    background:linear-gradient(135deg, rgba(6,214,160,0.12), rgba(76,201,240,0.04)); white-space:nowrap; }
+  .shield-tag.off { color:rgba(200,214,229,0.46); border-color:rgba(255,255,255,0.09); background:rgba(255,255,255,0.025); }
+  .shield-tag-label { color:currentColor; opacity:0.82; }
+  .shield-tag-value { font-family:'Orbitron',sans-serif; font-size:10px; font-weight:700; color:var(--text); }
+  .shield-tag.off .shield-tag-value { color:rgba(200,214,229,0.58); }
   .token-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 1px;
     color: var(--warn); border: 1px solid rgba(255,214,10,0.35); padding: 4px 9px; border-radius: 999px;
     background: linear-gradient(135deg, rgba(255,214,10,0.12), rgba(0,245,212,0.04)); box-shadow: 0 0 18px rgba(255,214,10,0.08); }
@@ -1357,6 +1644,11 @@ const CSS = `
   .store-wallet-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; padding:10px 12px; border:1px solid rgba(39,117,202,0.22); background:rgba(39,117,202,0.06); border-radius:10px; }
   .store-wallet-label { font-size:9px; letter-spacing:1.3px; text-transform:uppercase; color:var(--dim); }
   .store-muted-status { margin-bottom:18px; font-size:10px; color:var(--warn); letter-spacing:1px; }
+  .store-balance-value { display:inline-grid; grid-template-columns:auto auto auto auto; align-items:center; justify-content:end; column-gap:6px; min-width:154px; white-space:nowrap; font-family:'Share Tech Mono',monospace; font-weight:700; font-size:10px; line-height:1; }
+  .store-balance-token { color:rgba(200,214,229,0.58); font-size:8px; letter-spacing:1px; }
+  .store-balance-value .usdc-amount { min-width:42px; justify-content:flex-end; color:currentColor; }
+  .store-balance-separator { color:rgba(200,214,229,0.42); }
+  .store-price-required { min-width:42px; color:currentColor; text-align:right; }
   .vault-tag { font-size: 10px; letter-spacing: 1px; color: var(--success);
     border: 1px solid rgba(6,214,160,0.3); padding: 4px 8px; border-radius: 2px;
     background: rgba(6,214,160,0.05); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
@@ -1396,16 +1688,19 @@ const CSS = `
   .main-shell::before { content:""; position:absolute; inset:0; background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 25%), radial-gradient(circle at 75% 10%, rgba(255,255,255,0.03), transparent 30%); pointer-events:none; }
   .main::-webkit-scrollbar { width: 4px; }
   .main::-webkit-scrollbar-thumb { background: var(--border); }
-  .desktop-tab-chrome { display:grid; gap:16px; padding-top:20px; }
-  .desktop-resource-shell { position: sticky; top: 0; z-index: 6; padding: 14px 0 2px; background: transparent; backdrop-filter: none; }
-  .desktop-resource-menu { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px; padding:14px 16px; border-radius:20px; }
-  .desktop-resource-pill { position:relative; overflow:hidden; padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,10,22,0.94)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); min-width:0; }
+  .desktop-tab-chrome { display:grid; gap:12px; padding-top:12px; }
+  .desktop-resource-shell { position: sticky; top: 0; z-index: 6; padding: 8px 0 0; background: transparent; backdrop-filter: none; }
+  .desktop-resource-menu { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:10px; padding:10px 14px; border-radius:16px; }
+  .desktop-resource-pill { position:relative; overflow:hidden; padding:10px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,10,22,0.94)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); min-width:0; }
   .desktop-resource-pill::before { content:""; position:absolute; inset:0; background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent 46%, rgba(255,255,255,0.02)); pointer-events:none; }
   .desktop-resource-pill > * { position:relative; z-index:1; }
   .desktop-resource-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:rgba(200,214,229,0.54); }
-  .desktop-resource-value { margin-top:8px; font-family:'Orbitron',sans-serif; font-size:18px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .desktop-resource-meta { margin-top:6px; font-size:10px; color:rgba(200,214,229,0.68); letter-spacing:0.8px; }
-  .desktop-resource-cap { margin-top:10px; height:3px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; }
+  .desktop-resource-value { margin-top:6px; font-family:'Orbitron',sans-serif; font-size:17px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .desktop-resource-meta, .desktop-resource-meter-meta { margin-top:5px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:9px; color:rgba(200,214,229,0.68); letter-spacing:0.8px; text-transform:uppercase; }
+  .desktop-resource-pill[title] > .desktop-resource-meta { display:none; }
+  .desktop-resource-rate { color:rgba(200,214,229,0.76); white-space:nowrap; }
+  .desktop-resource-storage { color:rgba(200,214,229,0.5); white-space:nowrap; }
+  .desktop-resource-cap { margin-top:7px; height:3px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; }
   .desktop-resource-cap-fill { height:100%; border-radius:999px; }
   .desktop-tab-body { min-width:0; }
   .tab-masthead { position:relative; overflow:hidden; display:flex; align-items:flex-end; justify-content:space-between; gap:18px; padding:16px 18px; border-radius:18px; border:1px solid rgba(255,255,255,0.08); background:linear-gradient(135deg, rgba(255,255,255,0.055), rgba(8,10,22,0.9)); box-shadow:var(--shell-shadow); }
@@ -1602,6 +1897,15 @@ const CSS = `
   .build-btn.no-funds { background: transparent; border: 1px solid var(--border); color: var(--dim); cursor: not-allowed; }
   .build-btn.locked-btn { background: rgba(255,0,110,0.06); border: 1px solid rgba(255,0,110,0.5); color: var(--danger); }
   .build-btn.locked-btn:hover { background: rgba(255,0,110,0.14); }
+  .galaxy-step-btn { width:30px; height:34px; min-width:30px; padding:0; margin:0; border-radius:6px;
+    border:1px solid rgba(80,92,140,0.7); background:linear-gradient(180deg,rgba(20,24,48,0.96),rgba(8,10,24,0.96));
+    color:rgba(155,182,220,0.88); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);
+    font-family:'Share Tech Mono',monospace; font-size:13px; font-weight:700; line-height:1; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; transition:border-color .15s, background .15s, color .15s, box-shadow .15s; }
+  .galaxy-step-btn:hover:not(:disabled) { border-color:rgba(0,245,212,0.72); background:linear-gradient(180deg,rgba(20,32,54,0.98),rgba(9,18,36,0.98)); color:var(--cyan); box-shadow:0 0 10px rgba(0,245,212,0.16), inset 0 1px 0 rgba(255,255,255,0.08); }
+  .galaxy-step-btn:active:not(:disabled) { background:rgba(0,245,212,0.08); box-shadow:inset 0 0 10px rgba(0,245,212,0.12); }
+  .galaxy-step-btn:focus-visible { outline:1px solid rgba(0,245,212,0.55); outline-offset:2px; }
+  .galaxy-step-btn:disabled { border-color:rgba(80,88,120,0.28); background:rgba(12,14,28,0.72); color:rgba(143,154,190,0.28); box-shadow:none; cursor:not-allowed; }
   .ship-build-card { position:relative; overflow:hidden; background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(8,10,22,0.95)); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px;
     padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.2s, transform 0.2s; box-shadow: var(--shell-shadow); }
   .ship-build-card::before { content:""; position:absolute; inset:0; background: radial-gradient(circle at 82% 16%, rgba(0,245,212,0.08), transparent 18%), linear-gradient(145deg, rgba(255,255,255,0.04), transparent 40%); pointer-events:none; }
@@ -1641,6 +1945,16 @@ const CSS = `
   .quest-progress-fill { height:100%; background:linear-gradient(90deg,var(--purple),var(--cyan)); border-radius:999px; }
   .quest-progress-fill.ready { background:linear-gradient(90deg,var(--success),var(--cyan)); }
   .quest-progress-fill.locked { background:linear-gradient(90deg,var(--danger),var(--warn)); }
+  .alliance-summary { display:grid; gap:14px; }
+  .alliance-stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  .alliance-stat { min-width:0; border:1px solid rgba(255,255,255,0.07); background:rgba(255,255,255,0.035); border-radius:8px; padding:11px 12px; }
+  .alliance-stat span { display:block; font-size:9px; letter-spacing:1.5px; color:var(--dim); text-transform:uppercase; margin-bottom:6px; }
+  .alliance-stat strong { display:block; font-family:'Orbitron',sans-serif; font-size:15px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .alliance-xp-box { display:grid; gap:8px; }
+  .alliance-xp-head { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:10px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; }
+  .alliance-xp-value { color:var(--cyan); font-family:'Share Tech Mono',monospace; white-space:nowrap; }
+  .alliance-xp-track { height:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.06); border-radius:999px; overflow:hidden; }
+  .alliance-xp-fill { height:100%; min-width:2px; background:linear-gradient(90deg,var(--purple),var(--cyan)); border-radius:999px; box-shadow:0 0 14px rgba(0,245,212,0.28); }
   .quest-rewards { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
   .quest-reward { border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.035); border-radius:8px; padding:7px 6px; min-width:0; }
   .quest-reward > span { display:block; font-size:8px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; }
@@ -1706,14 +2020,16 @@ const CSS = `
   .stat-row:last-child { border-bottom: none; }
   .stat-key { color: var(--dim); font-size: 11px; letter-spacing: 1px; }
   .stat-val { font-size: 11px; color: var(--text); }
-  .build-queue-banner { position:relative; overflow:hidden; background: linear-gradient(135deg, rgba(255,214,10,0.08), rgba(255,255,255,0.03)); border: 1px solid rgba(255,214,10,0.24);
-    border-radius: 18px; padding: 14px 18px; margin-bottom: 20px;
+  .build-queue-banner { position:relative; overflow:hidden; background: linear-gradient(135deg, rgba(255,214,10,0.07), rgba(255,255,255,0.025)); border: 1px solid rgba(255,214,10,0.22);
+    border-radius: 14px; padding: 9px 14px; margin-bottom: 14px; min-height: 54px;
     display: flex; align-items: center; justify-content: space-between; }
   .build-queue-banner::before { content:""; position:absolute; inset:0; background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent 44%); pointer-events:none; }
-  .build-queue-label { font-size: 10px; color: var(--warn); letter-spacing: 2px; text-transform: uppercase; }
-  .build-queue-item-name { font-size: 13px; color: var(--text); margin-top: 2px; }
+  .build-queue-label { font-size: 9px; color: var(--warn); letter-spacing: 2px; text-transform: uppercase; }
+  .build-queue-item-name { font-size: 12px; color: var(--text); margin-top: 1px; }
   .build-queue-right { text-align: right; }
-  .build-queue-eta { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; color: var(--warn); }
+  .build-queue-banner .build-queue-right { flex-direction: row !important; align-items: center !important; gap: 10px !important; }
+  .build-queue-eta { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; color: var(--warn); white-space:nowrap; }
+  .build-queue-banner .build-btn { width:auto; margin-top:0; padding:7px 10px; border-radius:8px; font-size:9px; white-space:nowrap; }
   .modal-backdrop { position: fixed; inset: 0; background: rgba(4,4,13,0.85); z-index: 100;
     display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
   @media (min-width: 600px) { .modal-backdrop { align-items: center; } }
@@ -2596,7 +2912,7 @@ const ResRow: React.FC<{ color: string; label: string; value: bigint; cap: bigin
   return (<>
     <div className="res-row">
       <div className="res-name"><div className="res-dot" style={{background:color}}/>{label}</div>
-      <div><div className="res-val" style={{color}}>{fmt(value)}</div><div className="res-rate">+{fmt(rate)}/h</div></div>
+      <div><div className="res-val" style={{color}}>{formatCompactResource(value)}</div><div className="res-rate">+{formatCompactResource(rate)}/h</div></div>
     </div>
     <div className="cap-bar"><div className="cap-fill" style={{width:`${pct}%`,background:color}}/></div>
   </>);
@@ -2881,12 +3197,24 @@ const GameConfigAdminCard: React.FC<{ visible: boolean; config: GameConfigState 
 
 const InstantFinishButton: React.FC<{ secondsLeft: number; balance: bigint; txBusy: boolean; enabled: boolean; onClick: () => void; }> =
   ({ secondsLeft, balance, txBusy, enabled, onClick }) => {
-    const costTokens = BigInt(Math.max(0, secondsLeft));
-    const enough = balance >= costTokens;
+    const costSeconds = Math.max(0, secondsLeft);
+    const costRaw = BigInt(costSeconds) * 1_000_000n;
+    const enough = balance >= costRaw;
     const disabled = txBusy || !enabled || secondsLeft <= 0 || !enough;
     return (
-      <button className="build-btn" style={{ border: "1px solid rgba(255,214,10,0.45)", color: disabled ? "var(--dim)" : "var(--warn)", background: disabled ? "rgba(255,255,255,0.03)" : "rgba(255,214,10,0.08)" }} disabled={disabled} onClick={onClick}>
-        {`INSTANT ${fmt(costTokens)} AM`}
+      <button
+        className="build-btn"
+        title={enabled ? `Burn ${fmt(costSeconds)} ANTIMATTER to finish instantly.` : "ANTIMATTER acceleration is not configured."}
+        style={{
+          border: "1px solid rgba(255,214,10,0.45)",
+          color: disabled ? "var(--dim)" : "var(--warn)",
+          background: disabled ? "rgba(255,255,255,0.03)" : "rgba(255,214,10,0.08)",
+          minWidth: 148,
+        }}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {secondsLeft <= 0 ? "INSTANT READY" : `⚡ INSTANT ${fmt(costSeconds)} AM`}
       </button>
     );
   };
@@ -2932,6 +3260,75 @@ function launchFuelCost(ships: Record<string, number>, speedFactor: number): num
   return Math.floor((fuel * Math.max(10, Math.min(100, speedFactor)) ** 2) / 10_000);
 }
 
+function shipFlightSpeed(shipKey: string, research: Research): number {
+  const combustion = 100 + research.combustionDrive * 10;
+  const impulse = 100 + research.impulseDrive * 20;
+  const hyperspace = 100 + research.hyperspaceDrive * 30;
+  switch (shipKey) {
+    case "smallCargo": return Math.floor(5_000 * combustion / 100);
+    case "largeCargo": return Math.floor(7_500 * combustion / 100);
+    case "lightFighter": return Math.floor(12_500 * combustion / 100);
+    case "heavyFighter": return Math.floor(10_000 * impulse / 100);
+    case "cruiser": return Math.floor(15_000 * impulse / 100);
+    case "battleship":
+    case "battlecruiser": return Math.floor(10_000 * hyperspace / 100);
+    case "bomber": return Math.floor(4_000 * impulse / 100);
+    case "destroyer": return Math.floor(5_000 * hyperspace / 100);
+    case "deathstar": return Math.floor(100 * hyperspace / 100);
+    case "recycler": return Math.floor(2_000 * combustion / 100);
+    case "espionageProbe": return Math.floor(100_000_000 * combustion / 100);
+    case "colonyShip": return Math.floor(2_500 * impulse / 100);
+    default: return 0;
+  }
+}
+
+function slowestSelectedFleetSpeed(ships: Record<string, number>, research: Research): number {
+  let speed = Number.POSITIVE_INFINITY;
+  for (const [key, qty] of Object.entries(ships)) {
+    if (qty <= 0) continue;
+    const shipSpeed = shipFlightSpeed(key, research);
+    if (shipSpeed > 0) speed = Math.min(speed, shipSpeed);
+  }
+  return Number.isFinite(speed) ? Math.max(1, speed) : 0;
+}
+
+function baseFlightSeconds(from: Planet, target: { galaxy: number; system: number; position: number }): number {
+  const galaxyDelta = Math.abs(from.galaxy - target.galaxy);
+  const systemDelta = Math.abs(from.system - target.system);
+  const positionDelta = Math.abs(from.position - target.position);
+  if (galaxyDelta > 0) {
+    return Math.max(86_400, galaxyDelta * 86_400 + systemDelta * 3_600 + positionDelta * 300);
+  }
+  if (systemDelta > 0) {
+    return Math.max(3_600, systemDelta * 3_600 + positionDelta * 300);
+  }
+  return Math.max(1, positionDelta) * 300;
+}
+
+function researchFlightBonusPct(from: Planet, target: { galaxy: number; system: number }, research: Research): number {
+  if (from.galaxy === target.galaxy && from.system === target.system) {
+    return 100 + (research.astrophysics >= 1 ? research.astrophysics * 2 : 0);
+  }
+  if (from.galaxy === target.galaxy) {
+    return 100 + (research.astrophysics >= 1 ? research.astrophysics * 3 : 0);
+  }
+  return 100 + (research.astrophysics >= 4 ? research.astrophysics * 10 : 0);
+}
+
+function estimateMissionFlightSeconds(
+  from: Planet,
+  target: { galaxy: number; system: number; position: number },
+  ships: Record<string, number>,
+  research: Research,
+  speedFactor: number,
+): number {
+  const fleetSpeed = slowestSelectedFleetSpeed(ships, research);
+  if (fleetSpeed <= 0) return 0;
+  const sf = Math.max(10, Math.min(100, speedFactor));
+  const effectiveSpeed = Math.floor(fleetSpeed * sf * Math.max(100, researchFlightBonusPct(from, target, research)) / 100);
+  return Math.max(1, Math.floor(baseFlightSeconds(from, target) * 500_000 / Math.max(1, effectiveSpeed)));
+}
+
 function getMissionShipCount(mission: Mission, shipKey: string): number {
   const fieldByShip: Record<string, keyof Mission> = {
     smallCargo: "sSmallCargo",
@@ -2952,8 +3349,8 @@ function getMissionShipCount(mission: Mission, shipKey: string): number {
   return field ? Number(mission[field] ?? 0) : 0;
 }
 
-const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number; res: Resources; ownedPlanets: PlayerState[]; currentPlanetPda: string; nowTs: number; onClose: () => void; txBusy: boolean; onCheckCoord: (galaxy: number, system: number, position: number) => Promise<boolean>; onLoadPublicTarget: (galaxy: number, system: number, position: number) => Promise<PublicTargetInfo | null>; onLaunch: (ships: Record<string, number>, cargo: { metal: bigint; crystal: bigint; deuterium: bigint }, missionType: number, speedFactor: number, target: LaunchTargetInput) => Promise<void>; prefillTarget?: { galaxy: number; system: number; position: number; missionType?: number }; }> =
-  ({ planet, fleet, computerTech, res, ownedPlanets, currentPlanetPda, nowTs, onClose, onLaunch, txBusy, onCheckCoord, onLoadPublicTarget, prefillTarget }) => {
+const LaunchModal: React.FC<{ planet: Planet; research: Research; fleet: Fleet; computerTech: number; res: Resources; ownedPlanets: PlayerState[]; currentPlanetPda: string; nowTs: number; onClose: () => void; txBusy: boolean; onCheckCoord: (galaxy: number, system: number, position: number) => Promise<boolean>; onLoadPublicTarget: (galaxy: number, system: number, position: number) => Promise<PublicTargetInfo | null>; onLaunch: (ships: Record<string, number>, cargo: { metal: bigint; crystal: bigint; deuterium: bigint }, missionType: number, speedFactor: number, target: LaunchTargetInput) => Promise<void>; prefillTarget?: { galaxy: number; system: number; position: number; missionType?: number }; }> =
+  ({ planet, research, fleet, computerTech, res, ownedPlanets, currentPlanetPda, nowTs, onClose, onLaunch, txBusy, onCheckCoord, onLoadPublicTarget, prefillTarget }) => {
     const [shipQty, setShipQty] = useState<Record<string, number>>({});
     const [missionType, setMissionType] = useState(prefillTarget?.missionType ?? 2);
     const [cargoM, setCargoM] = useState(0); const [cargoC, setCargoC] = useState(0); const [cargoD, setCargoD] = useState(0);
@@ -2987,6 +3384,15 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
     const targetProtectionLeft = missionType === 1 && targetPublicInfo ? Math.max(0, targetPublicInfo.protectionUntilTs - nowTs) : 0;
     const targetCooldownLeft = missionType === 1 && targetPublicInfo && targetPublicInfo.lastAttackedTs > 0 ? Math.max(0, targetPublicInfo.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - nowTs) : 0;
     const attackBlocked = missionType === 1 && (attackUnlockLeft > 0 || attackLaunchCooldownLeft > 0 || targetProtectionLeft > 0 || targetCooldownLeft > 0 || attackPoints < MIN_ATTACK_COMBAT_POINTS || coordStatus === "checking" || coordStatus === "free");
+    const selectedOwnedTarget = selectableOwned.find(p => p.entityPda === targetEntity);
+    const selectedTargetCoords = missionType === 2 && transportMode === "owned"
+      ? selectedOwnedTarget ? { galaxy: selectedOwnedTarget.planet.galaxy, system: selectedOwnedTarget.planet.system, position: selectedOwnedTarget.planet.position } : null
+      : { galaxy: targetGalaxy, system: targetSystem, position: targetPosition };
+    const estimatedOutboundSecs = totalSent > 0 && selectedTargetCoords
+      ? estimateMissionFlightSeconds(planet, selectedTargetCoords, shipQty, research, speed)
+      : 0;
+    const estimatedRoundTripSecs = estimatedOutboundSecs > 0 ? estimatedOutboundSecs * 2 : 0;
+    const slowestSpeed = totalSent > 0 ? slowestSelectedFleetSpeed(shipQty, research) : 0;
     const scheduleCoordCheck = useCallback((g: number, s: number, p: number) => { setCoordStatus("checking"); setTargetPublicInfo(null); if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current); coordCheckTimer.current = setTimeout(async () => { try { const free = await onCheckCoord(g, s, p); setCoordStatus(free ? "free" : "occupied"); if (!free) setTargetPublicInfo(await onLoadPublicTarget(g, s, p)); } catch { setCoordStatus("idle"); setTargetPublicInfo(null); } }, 400); }, [onCheckCoord, onLoadPublicTarget]);
 
     // Auto-check coords if prefilled for colonize
@@ -3023,7 +3429,7 @@ const LaunchModal: React.FC<{ planet: Planet; fleet: Fleet; computerTech: number
           {missionType===5&&(<div className="modal-section"><div className="modal-label">Colony Target</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Galaxy</span><input className="modal-input" type="number" min={1} max={MAX_GALAXY} value={targetGalaxy} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"g",Math.max(1,Math.min(MAX_GALAXY,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>System</span><input className="modal-input" type="number" min={1} max={MAX_SYSTEM} value={targetSystem} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"s",Math.max(1,Math.min(MAX_SYSTEM,parseInt(e.target.value)||1)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Position</span><input className="modal-input" type="number" min={1} max={MAX_POSITION} value={targetPosition} onChange={e=>handleColonyCoordChange(targetGalaxy,targetSystem,targetPosition,setTargetGalaxy,setTargetSystem,setTargetPosition,"p",Math.max(1,Math.min(MAX_POSITION,parseInt(e.target.value)||1)))}/></div>{coordStatus!=="idle"&&<div className="coord-status-badge" style={{color:coordStatusConfig[coordStatus].color}}>{coordStatusConfig[coordStatus].text}</div>}<div className="modal-row" style={{marginTop:10}}><span style={{fontSize:11,color:"var(--dim)"}}>Colony Name</span><input className="modal-input" type="text" maxLength={32} value={colonyName} onChange={e=>setColonyName(e.target.value)}/></div></div>)}
           <div className="modal-section"><div className="modal-label">Ships <span style={{color:"var(--cyan)"}}>{totalSent>0?`${totalSent} selected`:"none"}</span></div><div className="modal-ship-grid">{SHIPS.map(ship=>{const avail=((fleet as any)[ship.key]as number)??0; if(avail===0)return null; return(<div key={ship.key} className="modal-ship-row"><div className="modal-ship-art"><img src={getShipArtUrl(ship.key)} alt={ship.name} loading="lazy" /></div><div className="modal-ship-top"><div className="modal-ship-copy"><div className="modal-ship-label">{ship.name}</div><div className="modal-ship-avail">Avail: {avail.toLocaleString()}</div></div><input className="modal-input" type="number" min={0} max={avail} value={getQty(ship.key)||""} placeholder="0" onChange={e=>setQty(ship.key,parseInt(e.target.value)||0)}/></div></div>);})}</div></div>
           {cargoCap>0&&(<div className="modal-section"><div className="modal-label">Cargo <span style={{color:cargoUsed>cargoCap?"var(--danger)":"var(--dim)"}}>{cargoUsed.toLocaleString()} / {cargoCap.toLocaleString()}</span></div>{[{label:"Metal",color:"var(--metal)",val:cargoM,max:Number(res.metal),set:setCargoM},{label:"Crystal",color:"var(--crystal)",val:cargoC,max:Number(res.crystal),set:setCargoC},{label:"Deuterium",color:"var(--deut)",val:cargoD,max:Number(res.deuterium),set:setCargoD}].map(r=>(<div key={r.label} className="modal-row"><span style={{color:r.color,fontSize:11}}>{r.label} (avail: {fmt(r.max)})</span><input className="modal-input" type="number" min={0} max={r.max} value={r.val||""} placeholder="0" onChange={e=>r.set(Math.max(0,Math.min(r.max,parseInt(e.target.value)||0)))}/></div>))}</div>)}
-          <div className="modal-section"><div className="modal-label">Flight Parameters</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Speed (10–100%)</span><input className="modal-input" type="number" min={10} max={100} step={10} value={speed} onChange={e=>setSpeed(Math.max(10,Math.min(100,parseInt(e.target.value)||100)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Launch fuel</span><span style={{fontSize:11,color:hasLaunchDeuterium?"var(--text)":"var(--danger)"}}>{fmt(launchFuel)} deuterium</span></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mission Slots</span><span style={{fontSize:11,color:hasFreeMissionSlot?"var(--text)":"var(--danger)"}}>{freeMissionSlots} free / {usableMissionSlots} usable ({activeMissionSlots} active)</span></div></div>
+          <div className="modal-section"><div className="modal-label">Flight Parameters</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Speed (10–100%)</span><input className="modal-input" type="number" min={10} max={100} step={10} value={speed} onChange={e=>setSpeed(Math.max(10,Math.min(100,parseInt(e.target.value)||100)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Launch fuel</span><span style={{fontSize:11,color:hasLaunchDeuterium?"var(--text)":"var(--danger)"}}>{fmt(launchFuel)} deuterium</span></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mission Slots</span><span style={{fontSize:11,color:hasFreeMissionSlot?"var(--text)":"var(--danger)"}}>{freeMissionSlots} free / {usableMissionSlots} usable ({activeMissionSlots} active)</span></div>{selectedTargetCoords&&<div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Route</span><span style={{fontSize:11,color:"var(--text)"}}>[{planet.galaxy}:{planet.system}:{planet.position}] → [{selectedTargetCoords.galaxy}:{selectedTargetCoords.system}:{selectedTargetCoords.position}]</span></div>}<div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Slowest ship speed</span><span style={{fontSize:11,color:slowestSpeed>0?"var(--text)":"var(--dim)"}}>{slowestSpeed>0?slowestSpeed.toLocaleString():"Select ships"}</span></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Outbound ETA</span><span style={{fontSize:11,color:estimatedOutboundSecs>0?"var(--cyan)":"var(--dim)"}}>{estimatedOutboundSecs>0?fmtCountdown(estimatedOutboundSecs):"Select ships and target"}</span></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Outbound + return</span><span style={{fontSize:11,color:estimatedRoundTripSecs>0?"var(--purple)":"var(--dim)"}}>{estimatedRoundTripSecs>0?fmtCountdown(estimatedRoundTripSecs):"Select ships and target"}</span></div></div>
           {!hasFreeMissionSlot&&<div className="error-msg" style={{marginBottom:8}}>No mission slots available. Resolve an existing mission first.</div>}
           {!hasLaunchDeuterium&&<div className="error-msg" style={{marginBottom:8}}>Not enough deuterium for cargo plus launch fuel.</div>}
           {localErr&&<div className="error-msg" style={{marginBottom:8}}>{localErr}</div>}
@@ -3041,6 +3447,7 @@ const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Plane
     const now = Math.floor(Date.now() / 1000);
     const isResearching = research.queueItem !== 255;
     const researchSecsLeft = isResearching ? Math.max(0, research.researchFinishTs - now) : 0;
+    const researchLabUpgrading = planet.buildQueueItem === 11 && planet.buildFinishTs > 0;
     const [reqCheck, setReqCheck] = useState<RequirementCheck | null>(null);
 
     return (
@@ -3073,12 +3480,19 @@ const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Plane
               const requirementCheck = checkResearchRequirements(tech, planet, research);
               const requirementsMet = requirementCheck.allMet;
               const isThis = isResearching && research.queueItem === tech.idx;
+              const isReady = isThis && researchSecsLeft === 0;
               const missingCount = requirementCheck.requirements.filter(requirement => !requirement.met).length;
               let btnClass = "build-btn no-funds";
               let btnText = "INSUFFICIENT FUNDS";
-              if (isResearching) {
+              if (isReady) {
+                btnClass = "build-btn finish-btn";
+                btnText = "FINISH RESEARCH";
+              } else if (isResearching) {
                 btnClass = isThis ? "build-btn building-now" : "build-btn no-funds";
                 btnText = isThis ? fmtCountdown(researchSecsLeft) : "QUEUE FULL";
+              } else if (researchLabUpgrading) {
+                btnClass = "build-btn no-funds";
+                btnText = "LAB UPGRADING";
               } else if (!requirementsMet) {
                 btnClass = "build-btn locked-btn";
                 btnText = `REQUIREMENTS (${missingCount})`;
@@ -3110,8 +3524,13 @@ const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Plane
                   </div>
                   <button
                     className={btnClass}
-                    disabled={txBusy || (isResearching && !isThis) || (!requirementsMet ? false : !canAfford)}
+                    disabled={txBusy || researchLabUpgrading || (isResearching && !isReady) || (!isReady && (!requirementsMet ? false : !canAfford))}
                     onClick={() => {
+                      if (isReady) {
+                        onFinishResearch();
+                        return;
+                      }
+                      if (researchLabUpgrading) return;
                       if (isResearching) return;
                       if (!requirementsMet) {
                         setReqCheck(requirementCheck);
@@ -3162,8 +3581,37 @@ const NoPlanetView: React.FC<{ planetName:string; onNameChange:(v:string)=>void;
     </div>
   );
 
-const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: Resources; nowTs: number; onSelectPlanet: (pda: string) => void; onFinishBuild: () => void; onFinishResearch: () => void; onFinishShipyard: () => void; onFinishDefense: () => void; onInstantFinishBuild: () => void; onInstantFinishResearch: () => void; onInstantFinishShipyard: () => void; txBusy: boolean; antimatterBalance: bigint; antimatterEnabled: boolean; }> =
-  ({ state, planets, res, nowTs, onSelectPlanet, onFinishBuild, onFinishResearch, onFinishShipyard, onFinishDefense, onInstantFinishBuild, onInstantFinishResearch, onInstantFinishShipyard, txBusy, antimatterBalance, antimatterEnabled }) => {
+const AllianceBoostPanel: React.FC<{ alliance: AllianceStateAccount | null; treasury: AllianceTreasuryStateAccount | null; membership: AllianceMembershipAccount | null }> =
+  ({ alliance, treasury, membership }) => {
+    if (!alliance || !treasury || !membership) return null;
+    const boosts = allianceBoosts(treasury);
+    const items = [
+      { title: "Logistics Hub", level: treasury.logisticsHub, effect: `+${boostPercentLabel(boosts.logisticsXpBonusBps)} deposit XP` },
+      { title: "Research Grid", level: treasury.researchGrid, effect: `+${boostPercentLabel(boosts.researchXpBonusBps)} upgrade XP` },
+      { title: "Defense Coordination", level: treasury.defenseCoordination, effect: `${boostPercentLabel(boosts.defenseDeuteriumDiscountBps)} deuterium discount` },
+      { title: "Trade Network", level: treasury.tradeNetwork, effect: `${boostPercentLabel(boosts.tradeCostDiscountBps)} metal/crystal/ANTIMATTER discount` },
+    ];
+    return (
+      <div className="overview-section-panel shell-panel">
+        <div className="section-title">Alliance Boosts</div>
+        <div className="overview-card-grid" style={{marginTop:0}}>
+          {items.map(item => (
+            <div key={item.title} className="card overview-metric shell-panel" style={{borderColor:item.level>0?"rgba(0,245,212,0.28)":"rgba(255,255,255,0.08)"}}>
+              <div className="card-label">{item.title}</div>
+              <div className="card-value" style={{fontSize:14}}>Lv {item.level}</div>
+              <div className="card-sub">{item.effect}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{fontSize:10,color:"var(--dim)",letterSpacing:0.6,marginTop:10}}>
+          {alliance.name || "Alliance"} active effects. Only the alliance leader can spend treasury resources on upgrades.
+        </div>
+      </div>
+    );
+  };
+
+const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: Resources; nowTs: number; alliance: AllianceStateAccount | null; allianceTreasury: AllianceTreasuryStateAccount | null; allianceMembership: AllianceMembershipAccount | null; onSelectPlanet: (pda: string) => void; onFinishBuild: () => void; onFinishResearch: () => void; onFinishShipyard: () => void; onFinishDefense: () => void; onInstantFinishBuild: () => void; onInstantFinishResearch: () => void; onInstantFinishShipyard: () => void; onInstantFinishDefense: () => void; txBusy: boolean; antimatterBalance: bigint; antimatterEnabled: boolean; }> =
+  ({ state, planets, res, nowTs, alliance, allianceTreasury, allianceMembership, onSelectPlanet, onFinishBuild, onFinishResearch, onFinishShipyard, onFinishDefense, onInstantFinishBuild, onInstantFinishResearch, onInstantFinishShipyard, onInstantFinishDefense, txBusy, antimatterBalance, antimatterEnabled }) => {
     const { planet, research, fleet } = state;
     const buildInProgress = planet.buildFinishTs > 0 && planet.buildQueueItem !== 255;
     const buildSecsLeft = buildInProgress ? Math.max(0, planet.buildFinishTs - nowTs) : 0;
@@ -3175,9 +3623,9 @@ const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: 
     const shipyardInProgress = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
     const shipyardSecsLeft = shipyardInProgress ? Math.max(0, planet.shipBuildFinishTs - nowTs) : 0;
     const currentShip = SHIPS.find(s => SHIP_TYPE_IDX[s.key] === planet.shipBuildItem);
-    const defenseInProgress = planet.defenseBuildFinishTs > 0 && planet.defenseBuildItem !== 255 && planet.defenseBuildQty > 0;
+    const defenseInProgress = planet.defenseBuildFinishTs > 0 && supportedDefenseBuild(planet.defenseBuildItem) && planet.defenseBuildQty > 0;
     const defenseSecsLeft = defenseInProgress ? Math.max(0, planet.defenseBuildFinishTs - nowTs) : 0;
-    const currentDefense = DEFENSE_DEFS.find(defense => defense.idx === planet.defenseBuildItem);
+    const currentDefense = DEFENSE_DEFS.find(defense => defense.idx === planet.defenseBuildItem) ?? legacyDefenseBuildLabel(planet.defenseBuildItem);
     const somethingInProgress = buildInProgress || researchInProgress || shipyardInProgress || defenseInProgress;
     const theme = getPlanetTheme(planet);
     const heroStyle = {
@@ -3227,6 +3675,8 @@ const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: 
           </div>
         )}
 
+        <AllianceBoostPanel alliance={alliance} treasury={allianceTreasury} membership={allianceMembership} />
+
         {somethingInProgress && (
           <div className="overview-section-panel shell-panel">
             <div className="section-title">In Progress</div>
@@ -3251,7 +3701,7 @@ const OverviewTab: React.FC<{ state: PlayerState; planets: PlayerState[]; res?: 
             {defenseInProgress && currentDefense && (
               <div className="build-queue-banner">
                 <div><div className="build-queue-label">🛡 DEFENSE</div><div className="build-queue-item-name">{currentDefense.icon} {currentDefense.name} × {planet.defenseBuildQty}</div></div>
-                <div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button onClick={onFinishDefense} disabled={txBusy} className="build-btn finish-btn">FINISH DEFENSE</button>}</div>
+                <div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button onClick={onFinishDefense} disabled={txBusy} className="build-btn finish-btn">FINISH DEFENSE</button>}<InstantFinishButton secondsLeft={defenseSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishDefense}/></div>
               </div>
             )}
           </div>
@@ -3371,7 +3821,7 @@ const ResourcesTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
                   </div>
                   <button
                     className={btnClass}
-                    disabled={(isQueued && !isReady) || txBusy || (!isReady && !isQueued && !hasFreeField) || (!isReady && !isQueued && !requirementsMet ? false : !isReady && !isQueued && !canAfford)}
+                    disabled={txBusy || (isQueued && !isReady) || (!isReady && ((!hasFreeField) || (!requirementsMet ? false : !canAfford)))}
                     onClick={() => {
                       if (isReady) {
                         onFinishBuild();
@@ -3481,7 +3931,7 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
                   </div>
                   <button
                     className={btnClass}
-                    disabled={(isQueued && !isReady) || txBusy || (!isReady && !isQueued && !hasFreeField) || (!isReady && !isQueued && !requirementsMet ? false : !isReady && !isQueued && !canAfford)}
+                    disabled={txBusy || (isQueued && !isReady) || (!isReady && ((!hasFreeField) || (!requirementsMet ? false : !canAfford)))}
                     onClick={() => {
                       if (isReady) {
                         onFinishBuild();
@@ -3515,9 +3965,13 @@ const ShipyardTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number
     const shipyardInProgress = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
     const shipyardSecsLeft = shipyardInProgress ? Math.max(0, planet.shipBuildFinishTs - nowTs) : 0;
     const currentShip = SHIPS.find(s => SHIP_TYPE_IDX[s.key] === planet.shipBuildItem);
+    const defenseInProgress = planet.defenseBuildFinishTs > 0 && supportedDefenseBuild(planet.defenseBuildItem) && planet.defenseBuildQty > 0;
+    const shipyardUpgrading = planet.buildQueueItem === 7 && planet.buildFinishTs > 0;
+    const shipyardBusy = shipyardInProgress || defenseInProgress || shipyardUpgrading;
+    const shipyardBlockLabel = shipyardUpgrading ? "SHIPYARD UPGRADING" : "QUEUE BUSY";
     const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !!res && (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
     const visibleShips = SHIPS.filter(s => ["smallCargo","largeCargo","colonyShip"].includes(s.key));
-    return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Timed construction queue</div>{shipyardInProgress&&currentShip&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip.name} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="grid-3">{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,quantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardInProgress||(!reqsMet?false:!affordable); return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div>{!reqsMet&&<div style={{fontSize:9,color:"var(--danger)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--danger)",display:"inline-block"}}/> locked{missingCount>0?` · ${missingCount} missing`:""}</div>}{reqsMet&&<div style={{fontSize:9,color:"var(--success)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--success)",display:"inline-block"}}/> unlocked</div>}</div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={reqCheck} onClose={()=>setReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
+    return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Timed construction queue</div>{shipyardInProgress&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip?.name ?? `Ship #${planet.shipBuildItem}`} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="grid-3">{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,quantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardBusy||(!reqsMet?false:!affordable); return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div>{!reqsMet&&<div style={{fontSize:9,color:"var(--danger)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--danger)",display:"inline-block"}}/> locked{missingCount>0?` · ${missingCount} missing`:""}</div>}{reqsMet&&<div style={{fontSize:9,color:"var(--success)",letterSpacing:0.5,marginTop:2,display:"flex",alignItems:"center",gap:4}}><span style={{width:5,height:5,borderRadius:"50%",background:"var(--success)",display:"inline-block"}}/> unlocked</div>}</div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardBusy}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardBusy?shipyardBlockLabel:!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={reqCheck} onClose={()=>setReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
   };
 
 const CommandShipyardTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number; txBusy: boolean; onBuildShip: (shipType: number, qty: number) => void; onBuildDefense: (defenseType: number, qty: number) => void; onFinishShipyard: () => void; onFinishDefense: () => void; onInstantFinishShipyard: () => void; antimatterBalance: bigint; antimatterEnabled: boolean; onGoBuildings: () => void; onGoResearch: () => void; }> =
@@ -3529,25 +3983,33 @@ const CommandShipyardTab: React.FC<{ state: PlayerState; res?: Resources; nowTs:
     const shipyardInProgress = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
     const shipyardSecsLeft = shipyardInProgress ? Math.max(0, planet.shipBuildFinishTs - nowTs) : 0;
     const currentShip = SHIPS.find(s => SHIP_TYPE_IDX[s.key] === planet.shipBuildItem);
+    const defenseInProgress = planet.defenseBuildFinishTs > 0 && supportedDefenseBuild(planet.defenseBuildItem) && planet.defenseBuildQty > 0;
+    const shipyardUpgrading = planet.buildQueueItem === 7 && planet.buildFinishTs > 0;
+    const shipyardBusy = shipyardInProgress || defenseInProgress || shipyardUpgrading;
+    const shipyardBlockLabel = shipyardUpgrading ? "SHIPYARD UPGRADING" : "QUEUE BUSY";
     const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !!res && (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
     const visibleShips = SHIPS;
-    return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Fleet construction queue.</div>{shipyardInProgress&&currentShip&&(<div className="build-queue-banner" style={{marginBottom:16}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip.name} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="section-title" style={{marginTop:8}}>FLEET CONSTRUCTION</div><div className="grid-3" style={{marginBottom:24}}>{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,shipQuantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardInProgress||(!reqsMet?false:!affordable); return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setShipQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setShipReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={shipReqCheck} onClose={()=>setShipReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
+    return (<><div><div className="section-title">SHIPYARD</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Fleet construction queue.</div>{shipyardInProgress&&(<div className="build-queue-banner" style={{marginBottom:16}}><div><div className="build-queue-label">🚀 SHIPYARD</div><div className="build-queue-item-name">{currentShip?.name ?? `Ship #${planet.shipBuildItem}`} × {planet.shipBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(shipyardSecsLeft)}</div>{shipyardSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishShipyard}>FINISH SHIPYARD</button>}<InstantFinishButton secondsLeft={shipyardSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishShipyard}/></div></div>)}<div className="section-title" style={{marginTop:8}}>FLEET CONSTRUCTION</div><div className="grid-3" style={{marginBottom:24}}>{visibleShips.map(ship=>{const typeIdx=SHIP_TYPE_IDX[ship.key]; if(typeIdx===undefined)return null; const qty=Math.max(1,shipQuantities[ship.key]??1); const affordable=canAfford(ship.cost,qty); const current=((state.fleet as any)[ship.key]as number)??0; const check=checkShipRequirements(ship.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardBusy||(!reqsMet?false:!affordable); return(<div key={ship.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getShipArt(ship.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{ship.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{ship.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(ship.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(ship.cost.m*qty)}</div>}{ship.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(ship.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(ship.cost.c*qty)}</div>}{ship.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(ship.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(ship.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setShipQuantities(prev=>({...prev,[ship.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardBusy}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setShipReqCheck(check);return;}onBuildShip(typeIdx,qty);}}>{shipyardBusy?shipyardBlockLabel:!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div><ShipRequirementsModal check={shipReqCheck} onClose={()=>setShipReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/></>);
   };
 
-const DefenseTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number; txBusy: boolean; onBuildDefense: (defenseType: number, qty: number) => void; onFinishDefense: () => void; onGoBuildings: () => void; onGoResearch: () => void; }> =
-  ({ state, res, nowTs, txBusy, onBuildDefense, onFinishDefense, onGoBuildings, onGoResearch }) => {
+const DefenseTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number; txBusy: boolean; onBuildDefense: (defenseType: number, qty: number) => void; onFinishDefense: () => void; onInstantFinishDefense: () => void; antimatterBalance: bigint; antimatterEnabled: boolean; onGoBuildings: () => void; onGoResearch: () => void; }> =
+  ({ state, res, nowTs, txBusy, onBuildDefense, onFinishDefense, onInstantFinishDefense, antimatterBalance, antimatterEnabled, onGoBuildings, onGoResearch }) => {
     const [defenseQuantities, setDefenseQuantities] = useState<Record<string, number>>({});
     const [defenseReqCheck, setDefenseReqCheck] = useState<DefenseRequirementsCheck | null>(null);
     const { planet, research } = state;
 
     if (planet.shipyard === 0) return (<div><div className="section-title">DEFENSE SYSTEMS</div><div className="notice-box" style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:36,marginBottom:12}}>🛡</div><div style={{fontSize:13,color:"var(--purple)",letterSpacing:2}}>DEFENSE GRID OFFLINE</div><div style={{fontSize:11,color:"var(--dim)"}}>Build a Shipyard in the Buildings tab first.</div></div></div>);
 
-    const defenseInProgress = planet.defenseBuildFinishTs > 0 && planet.defenseBuildItem !== 255 && planet.defenseBuildQty > 0;
+    const defenseInProgress = planet.defenseBuildFinishTs > 0 && supportedDefenseBuild(planet.defenseBuildItem) && planet.defenseBuildQty > 0;
     const defenseSecsLeft = defenseInProgress ? Math.max(0, planet.defenseBuildFinishTs - nowTs) : 0;
-    const currentDefense = DEFENSE_DEFS.find(defense => defense.idx === planet.defenseBuildItem);
+    const currentDefense = DEFENSE_DEFS.find(defense => defense.idx === planet.defenseBuildItem) ?? legacyDefenseBuildLabel(planet.defenseBuildItem);
+    const shipyardInProgress = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
+    const shipyardUpgrading = planet.buildQueueItem === 7 && planet.buildFinishTs > 0;
+    const shipyardBusy = shipyardInProgress || defenseInProgress || shipyardUpgrading;
+    const shipyardBlockLabel = shipyardUpgrading ? "SHIPYARD UPGRADING" : "QUEUE BUSY";
     const canAfford = (cost: { m: number; c: number; d: number }, qty: number) => !!res && (res.metal >= BigInt(cost.m * qty) && res.crystal >= BigInt(cost.c * qty) && res.deuterium >= BigInt(cost.d * qty));
 
-    return (<><div><div className="section-title">DEFENSE SYSTEMS</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Planetary batteries, domes, and missiles.</div>{defenseInProgress&&currentDefense&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🛡 DEFENSE YARD</div><div className="build-queue-item-name">{currentDefense.name} × {planet.defenseBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishDefense}>FINISH DEFENSE</button>}</div></div>)}<div className="grid-3">{DEFENSE_DEFS.map(defense=>{const qty=Math.max(1,defenseQuantities[defense.key]??1); const affordable=canAfford(defense.cost,qty); const current=((planet as any)[defense.key]as number)??0; const check=checkDefenseRequirements(defense.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||defenseInProgress||(!reqsMet?false:!affordable); return(<div key={defense.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getDefenseArt(defense.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{defense.icon} {defense.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{defense.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(defense.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(defense.cost.m*qty)}</div>}{defense.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(defense.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(defense.cost.c*qty)}</div>}{defense.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(defense.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(defense.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setDefenseQuantities(prev=>({...prev,[defense.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||defenseInProgress}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setDefenseReqCheck(check);return;}onBuildDefense(defense.idx,qty);}}>{defenseInProgress?"QUEUE BUSY":!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div>{defenseReqCheck&&<ShipRequirementsModal check={{shipName:defenseReqCheck.defenseName,shipIcon:defenseReqCheck.defenseIcon,requirements:defenseReqCheck.requirements,allMet:defenseReqCheck.allMet}} onClose={()=>setDefenseReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/>}</>);
+    return (<><div><div className="section-title">DEFENSE SYSTEMS</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Planetary batteries, shield domes, and turrets.</div>{defenseInProgress&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🛡 DEFENSE YARD</div><div className="build-queue-item-name">{currentDefense?.name ?? `Defense #${planet.defenseBuildItem}`} × {planet.defenseBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishDefense}>FINISH DEFENSE</button>}<InstantFinishButton secondsLeft={defenseSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishDefense}/></div></div>)}<div className="grid-3">{DEFENSE_DEFS.map(defense=>{const qty=Math.max(1,defenseQuantities[defense.key]??1); const affordable=canAfford(defense.cost,qty); const current=((planet as any)[defense.key]as number)??0; const check=checkDefenseRequirements(defense.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardBusy||(!reqsMet?false:!affordable); return(<div key={defense.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getDefenseArt(defense.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{defense.icon} {defense.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{defense.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(defense.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(defense.cost.m*qty)}</div>}{defense.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(defense.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(defense.cost.c*qty)}</div>}{defense.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(defense.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(defense.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setDefenseQuantities(prev=>({...prev,[defense.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardBusy}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setDefenseReqCheck(check);return;}onBuildDefense(defense.idx,qty);}}>{shipyardBusy?shipyardBlockLabel:!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div>{defenseReqCheck&&<ShipRequirementsModal check={{shipName:defenseReqCheck.defenseName,shipIcon:defenseReqCheck.defenseIcon,requirements:defenseReqCheck.requirements,allMet:defenseReqCheck.allMet}} onClose={()=>setDefenseReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/>}</>);
   };
 
 const hasQuestBit = (mask: bigint, id: number) => ((mask >> BigInt(id)) & 1n) === 1n;
@@ -3559,6 +4021,27 @@ function questClaimedMask(period: QuestPeriod, questState: QuestStateAccount | n
   if (period === 2) return questState.weeklyEpoch === Math.floor(nowTs / 604800) ? questState.weeklyClaimedMask : 0n;
   return questState.monthlyEpoch === Math.floor(nowTs / 2592000) ? questState.monthlyClaimedMask : 0n;
 }
+
+const tutorialQuestsComplete = (questState: QuestStateAccount | null): boolean => {
+  if (!questState) return false;
+  return QUEST_DEFINITIONS
+    .filter(quest => quest.period === 0)
+    .every(quest => hasQuestBit(questState.tutorialClaimedMask, quest.id));
+};
+
+const questGroupSeconds = (group: QuestDefinition["group"]): number | null => {
+  if (group === "Daily") return 86400;
+  if (group === "Weekly") return 604800;
+  if (group === "Monthly") return 2592000;
+  return null;
+};
+
+const questGroupResetSeconds = (group: QuestDefinition["group"], nowTs: number): number | null => {
+  const period = questGroupSeconds(group);
+  if (!period) return null;
+  const elapsed = ((nowTs % period) + period) % period;
+  return elapsed === 0 ? period : period - elapsed;
+};
 
 
 type StorePeriod = 1 | 2 | 3;
@@ -3574,16 +4057,34 @@ type StorePack = {
 };
 
 const STORE_PACKS: StorePack[] = [
-  { period: 1, id: 0, group: "Daily", title: "Daily Supply Drop", hint: "Small refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 3000, crystal: 2000, deuterium: 750 } },
-  { period: 1, id: 1, group: "Daily", title: "Daily Logistics Crate", hint: "A modest boost without skipping progression.", priceUsdc: 2_500_000n, reward: { metal: 8000, crystal: 5000, deuterium: 2000 } },
+  { period: 1, id: 0, group: "Daily", title: "Daily Metal Cache", hint: "Focused metal refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 3000, crystal: 0, deuterium: 0 } },
+  { period: 1, id: 1, group: "Daily", title: "Daily Crystal Cache", hint: "Focused crystal refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 2000, deuterium: 0 } },
+  { period: 1, id: 2, group: "Daily", title: "Daily Deuterium Cache", hint: "Focused fuel refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 0, deuterium: 750 } },
+  { period: 1, id: 3, group: "Daily", title: "Daily Supply Drop", hint: "Metal, crystal, and deuterium together.", priceUsdc: 3_000_000n, reward: { metal: 3000, crystal: 2000, deuterium: 750 } },
+  { period: 1, id: 4, group: "Daily", title: "Daily Logistics Crate", hint: "A modest boost without skipping progression.", priceUsdc: 5_000_000n, reward: { metal: 8000, crystal: 5000, deuterium: 2000 } },
+  { period: 1, id: 5, group: "Daily", title: "Daily Builder Cache", hint: "Extra daily materials for active builders.", priceUsdc: 7_500_000n, reward: { metal: 14000, crystal: 9000, deuterium: 3500 } },
   { period: 1, id: 16, group: "Daily", title: "Daily Defense Shield", hint: "Adds 6 hours of attack protection, capped on-chain.", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 6 * 60 * 60 },
-  { period: 2, id: 0, group: "Weekly", title: "Weekly Foundry Pack", hint: "Enough material to keep queues moving.", priceUsdc: 7_500_000n, reward: { metal: 35000, crystal: 24000, deuterium: 10000 } },
-  { period: 2, id: 1, group: "Weekly", title: "Weekly Expansion Pack", hint: "Supports fleet and building momentum.", priceUsdc: 15_000_000n, reward: { metal: 80000, crystal: 55000, deuterium: 25000 } },
+  { period: 2, id: 0, group: "Weekly", title: "Weekly Metal Reserve", hint: "Focused weekly metal for construction queues.", priceUsdc: 5_000_000n, reward: { metal: 35000, crystal: 0, deuterium: 0 } },
+  { period: 2, id: 1, group: "Weekly", title: "Weekly Crystal Reserve", hint: "Focused weekly crystal for research and ships.", priceUsdc: 5_000_000n, reward: { metal: 0, crystal: 24000, deuterium: 0 } },
+  { period: 2, id: 2, group: "Weekly", title: "Weekly Deuterium Reserve", hint: "Focused weekly fuel for fleet activity.", priceUsdc: 5_000_000n, reward: { metal: 0, crystal: 0, deuterium: 10000 } },
+  { period: 2, id: 3, group: "Weekly", title: "Weekly Foundry Pack", hint: "Balanced material to keep queues moving.", priceUsdc: 15_000_000n, reward: { metal: 35000, crystal: 24000, deuterium: 10000 } },
+  { period: 2, id: 4, group: "Weekly", title: "Weekly Expansion Pack", hint: "Supports fleet and building momentum.", priceUsdc: 30_000_000n, reward: { metal: 80000, crystal: 55000, deuterium: 25000 } },
+  { period: 2, id: 5, group: "Weekly", title: "Weekly War Chest", hint: "Heavier weekly support for active commanders.", priceUsdc: 45_000_000n, reward: { metal: 140000, crystal: 90000, deuterium: 40000 } },
   { period: 2, id: 16, group: "Weekly", title: "Weekly Defense Shield", hint: "Adds 24 hours of attack protection, capped on-chain.", priceUsdc: 5_000_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 24 * 60 * 60 },
-  { period: 3, id: 0, group: "Monthly", title: "Monthly Sector Pack", hint: "A larger but capped monthly resource bundle.", priceUsdc: 30_000_000n, reward: { metal: 180000, crystal: 125000, deuterium: 60000 } },
-  { period: 3, id: 1, group: "Monthly", title: "Monthly Command Pack", hint: "Top monthly support for established planets.", priceUsdc: 60_000_000n, reward: { metal: 400000, crystal: 275000, deuterium: 140000 } },
+  { period: 3, id: 0, group: "Monthly", title: "Monthly Metal Reserve", hint: "Focused monthly metal for large construction.", priceUsdc: 20_000_000n, reward: { metal: 180000, crystal: 0, deuterium: 0 } },
+  { period: 3, id: 1, group: "Monthly", title: "Monthly Crystal Reserve", hint: "Focused monthly crystal for research growth.", priceUsdc: 20_000_000n, reward: { metal: 0, crystal: 125000, deuterium: 0 } },
+  { period: 3, id: 2, group: "Monthly", title: "Monthly Deuterium Reserve", hint: "Focused monthly fuel for fleet operations.", priceUsdc: 20_000_000n, reward: { metal: 0, crystal: 0, deuterium: 60000 } },
+  { period: 3, id: 3, group: "Monthly", title: "Monthly Sector Pack", hint: "A larger but capped monthly resource bundle.", priceUsdc: 60_000_000n, reward: { metal: 180000, crystal: 125000, deuterium: 60000 } },
+  { period: 3, id: 4, group: "Monthly", title: "Monthly Command Pack", hint: "Strong monthly support for established planets.", priceUsdc: 100_000_000n, reward: { metal: 400000, crystal: 275000, deuterium: 140000 } },
+  { period: 3, id: 5, group: "Monthly", title: "Monthly Builder Pack", hint: "Deep resource support for long build plans.", priceUsdc: 150_000_000n, reward: { metal: 700000, crystal: 450000, deuterium: 220000 } },
+  { period: 3, id: 6, group: "Monthly", title: "Monthly Fleet Pack", hint: "Large support for active shipyard cycles.", priceUsdc: 200_000_000n, reward: { metal: 1000000, crystal: 650000, deuterium: 320000 } },
+  { period: 3, id: 7, group: "Monthly", title: "Monthly Research Pack", hint: "Premium monthly support for research-heavy players.", priceUsdc: 250_000_000n, reward: { metal: 1350000, crystal: 900000, deuterium: 450000 } },
+  { period: 3, id: 8, group: "Monthly", title: "Monthly Empire Pack", hint: "A high-cap monthly bundle for mature accounts.", priceUsdc: 300_000_000n, reward: { metal: 1750000, crystal: 1150000, deuterium: 600000 } },
+  { period: 3, id: 9, group: "Monthly", title: "Monthly Deep Space Pack", hint: "Largest monthly resource support before caps.", priceUsdc: 400_000_000n, reward: { metal: 2500000, crystal: 1700000, deuterium: 850000 } },
   { period: 3, id: 16, group: "Monthly", title: "Monthly Defense Shield", hint: "Adds 3 days of attack protection, capped on-chain.", priceUsdc: 12_500_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 3 * 24 * 60 * 60 },
 ];
+
+const STORE_SHIELD_PACKS_ENABLED = false;
 
 function effectiveAttackProtectionUntil(planet: Planet): number {
   const beginnerUntil = planet.createdAt > 0 ? planet.createdAt + NEW_PLAYER_PROTECTION_SECONDS : 0;
@@ -3621,14 +4122,16 @@ const QuestRequirementModal: React.FC<{ quest: QuestDefinition | null; state: Pl
 const QuestsTab: React.FC<{
   state: PlayerState;
   questState: QuestStateAccount | null;
+  questProgress: QuestProgressStateAccount | null;
   nowTs: number;
   txBusy: boolean;
   onDailyCheckIn: () => void;
   onClaimQuest: (period: QuestPeriod, questId: number) => void;
-}> = ({ state, questState, nowTs, txBusy, onDailyCheckIn, onClaimQuest }) => {
+}> = ({ state, questState, questProgress, nowTs, txBusy, onDailyCheckIn, onClaimQuest }) => {
   const [lockedQuest, setLockedQuest] = useState<QuestDefinition | null>(null);
-  const groups: Array<QuestDefinition["group"]> = ["Tutorial", "Daily", "Weekly", "Monthly"];
-  const visibleQuests = activeQuestDefinitions(nowTs);
+  const hideTutorial = tutorialQuestsComplete(questState);
+  const groups: Array<QuestDefinition["group"]> = hideTutorial ? ["Daily", "Weekly", "Monthly"] : ["Tutorial", "Daily", "Weekly", "Monthly"];
+  const visibleQuests = activeQuestDefinitions(nowTs, questProgress).filter(quest => !hideTutorial || quest.group !== "Tutorial");
   const currentDay = Math.floor(nowTs / 86400);
   const checkInClaimed = questState?.dailyCheckinDay === currentDay || hasQuestBit(questClaimedMask(1, questState, nowTs), 0);
   const nextStreak = Math.min((questState?.dailyCheckinStreak ?? 0) + 1, 30);
@@ -3640,11 +4143,29 @@ const QuestsTab: React.FC<{
         <div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>
           Daily streak {questState?.dailyCheckinStreak ?? 0} / 30 · Total check-ins {questState?.totalCheckins ?? 0}
         </div>
-        {groups.map(group => (
+        {hideTutorial && (
+          <div className="quest-card claimed" style={{marginBottom:20}}>
+            <div className="quest-top">
+              <div>
+                <div className="quest-title">Tutorial complete</div>
+                <div className="quest-hint">Command training is finished. Daily, weekly, and monthly objectives are now the main progression loop.</div>
+              </div>
+              <div className="quest-badge claimed">OK</div>
+            </div>
+          </div>
+        )}
+        {groups.map(group => {
+          const groupQuests = visibleQuests.filter(q => q.group === group);
+          const resetSeconds = questGroupResetSeconds(group, nowTs);
+          if (groupQuests.length === 0) return null;
+          return (
           <div key={group} style={{marginBottom:24}}>
-            <div className="section-title" style={{marginBottom:12}}>{group}</div>
+            <div className="section-title" style={{marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+              <span>{group}</span>
+              {resetSeconds !== null && <span style={{fontSize:9,color:"var(--warn)",letterSpacing:1}}>Ends in {fmtCountdown(resetSeconds)}</span>}
+            </div>
             <div className="grid-3">
-              {visibleQuests.filter(q => q.group === group).map(quest => {
+              {groupQuests.map(quest => {
                 const mask = questClaimedMask(quest.period, questState, nowTs);
                 const claimed = quest.checkIn ? checkInClaimed : hasQuestBit(mask, quest.id);
                 const statuses = quest.requirements.map(req => {
@@ -3717,7 +4238,7 @@ const QuestsTab: React.FC<{
               })}
             </div>
           </div>
-        ))}
+        )})}
       </div>
       <QuestRequirementModal quest={lockedQuest} state={state} onClose={() => setLockedQuest(null)} />
     </>
@@ -3728,34 +4249,43 @@ const QuestsTab: React.FC<{
 const AllianceTab: React.FC<{
   state: PlayerState;
   alliance: AllianceStateAccount | null;
+  allianceTreasury: AllianceTreasuryStateAccount | null;
   membership: AllianceMembershipAccount | null;
   alliances: AllianceStateAccount[];
   joinRequests: AllianceJoinRequestAccount[];
+  myJoinRequests: AllianceJoinRequestAccount[];
   members: AllianceMembershipAccount[];
   storeConfig: StoreConfigState | null;
   usdcBalance: bigint;
   antimatterBalance: bigint;
   txBusy: boolean;
-  onCreate: (name: string) => void;
+  onCreate: (name: string, tag: string, imageUrl: string) => void;
   onRequestJoin: (alliancePda: string) => void;
   onApproveRequest: (applicant: string) => void;
   onRejectRequest: (applicant: string) => void;
   onExpelMember: (member: string) => void;
   onTransferLeadership: (member: string) => void;
   onLeave: () => void;
-  onClaimMission: (period: number, missionId: number) => void;
-}> = ({ state, alliance, membership, alliances, joinRequests, members, storeConfig, usdcBalance, antimatterBalance, txBusy, onCreate, onRequestJoin, onApproveRequest, onRejectRequest, onExpelMember, onTransferLeadership, onLeave, onClaimMission }) => {
+  onDepositMission: (mission: AllianceDepositDefinition) => void;
+  onUpgradeBuilding: (buildingId: number) => void;
+}> = ({ state, alliance, allianceTreasury, membership, alliances, joinRequests, myJoinRequests, members, storeConfig, usdcBalance, antimatterBalance, txBusy, onCreate, onRequestJoin, onApproveRequest, onRejectRequest, onExpelMember, onTransferLeadership, onLeave, onDepositMission, onUpgradeBuilding }) => {
   const [name, setName] = useState("");
+  const [tag, setTag] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [search, setSearch] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showFindModal, setShowFindModal] = useState(false);
   const storeReady = !!storeConfig?.enabled;
   const hasUsdc = usdcBalance >= ALLIANCE_CREATE_USDC_COST;
   const hasAntimatter = antimatterBalance >= ALLIANCE_CREATE_ANTIMATTER_COST;
-  const canCreateAlliance = storeReady && hasUsdc && hasAntimatter && name.trim().length >= 2;
+  const normalizedTag = tag.trim().toUpperCase();
+  const canCreateAlliance = storeReady && hasUsdc && hasAntimatter && name.trim().length >= 2 && normalizedTag.length === 3;
   const filteredAlliances = alliances.filter(item => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
-    return item.name.toLowerCase().includes(q);
+    return item.name.toLowerCase().includes(q) || (item.tag ?? "").toLowerCase().includes(q);
   });
+  const requestedAllianceIds = useMemo(() => new Set(myJoinRequests.map(request => request.alliance)), [myJoinRequests]);
   const nextThreshold = alliance ? allianceThreshold(alliance.level + 1) : 0n;
   const currentThreshold = alliance ? allianceThreshold(alliance.level) : 0n;
   const xpSpan = nextThreshold > currentThreshold ? nextThreshold - currentThreshold : 1n;
@@ -3770,58 +4300,183 @@ const AllianceTab: React.FC<{
 
   if (!alliance || !membership) {
     return (
-      <div className="tab-grid">
-        <div className="panel">
-          <div className="section-title">CREATE ALLIANCE</div>
-          <div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,lineHeight:1.8,marginBottom:12}}>
-            Cost: {formatTokenAmount(ALLIANCE_CREATE_USDC_COST, 6)} USDC + {formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)} ANTIMATTER.
-            Burns {formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_BURN, 6)} ANTIMATTER and sends {formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_TREASURY, 6)} ANTIMATTER plus all USDC to the DAO treasury.
-          </div>
-          <div className="quest-req-list" style={{marginBottom:12}}>
-            <div className={`quest-req-row ${storeReady ? "met" : "missing"}`}><span>DAO store config</span><strong>{storeReady ? "ready" : "disabled"}</strong></div>
+      <>
+      <div className="tab-grid" style={{gap:36}}>
+        <div className="panel" style={{paddingBottom:28}}>
+          <div className="section-title" style={{marginBottom:24}}>CREATE ALLIANCE</div>
+          <div className="quest-req-list" style={{marginBottom:24,gap:14}}>
             <div className={`quest-req-row ${hasUsdc ? "met" : "missing"}`}><span>USDC</span><strong>{formatTokenAmount(usdcBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_USDC_COST, 6)}</strong></div>
             <div className={`quest-req-row ${hasAntimatter ? "met" : "missing"}`}><span>ANTIMATTER</span><strong>{formatTokenAmount(antimatterBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)}</strong></div>
           </div>
-          <input className="modal-input" value={name} onChange={e => setName(e.target.value)} placeholder="Alliance name" maxLength={32}/>
-          <button className="modal-btn primary" disabled={txBusy || !canCreateAlliance} onClick={() => onCreate(name)}>CREATE</button>
+          <button className="modal-btn primary" style={{width:"min(280px,100%)"}} disabled={txBusy} onClick={() => setShowCreateModal(true)}>CREATE ALLIANCE</button>
         </div>
-        <div className="panel">
-          <div className="section-title">FIND ALLIANCE</div>
-          <input className="modal-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by alliance name"/>
-          <div className="quest-grid" style={{marginTop:12}}>
+        <div className="panel" style={{paddingTop:28}}>
+          <div className="section-title" style={{marginBottom:24}}>FIND ALLIANCE</div>
+          <div className="notice-box" style={{marginBottom:24}}>Search existing alliances and request access from one place.</div>
+          <button className="modal-btn primary" style={{width:"min(280px,100%)"}} disabled={txBusy} onClick={() => setShowFindModal(true)}>FIND ALLIANCE</button>
+        </div>
+      </div>
+      {showCreateModal && (
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget && !txBusy) setShowCreateModal(false); }}>
+          <div className="modal" style={{width:"min(720px,100%)"}}>
+            <div className="modal-title">CREATE ALLIANCE</div>
+            <div className="modal-section">
+              <div className="quest-req-list">
+                <div className={`quest-req-row ${hasUsdc ? "met" : "missing"}`}><span>USDC</span><strong>{formatTokenAmount(usdcBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_USDC_COST, 6)}</strong></div>
+                <div className={`quest-req-row ${hasAntimatter ? "met" : "missing"}`}><span>ANTIMATTER</span><strong>{formatTokenAmount(antimatterBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)}</strong></div>
+              </div>
+            </div>
+            <div className="modal-section">
+              <div className="modal-label">Alliance identity</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:14,alignItems:"center"}}>
+            <input className="modal-input" style={{width:"min(460px,100%)"}} value={name} onChange={e => setName(e.target.value)} placeholder="Alliance name" maxLength={32}/>
+            <input
+              className="modal-input"
+              style={{width:110,textTransform:"uppercase"}}
+              value={tag}
+              onChange={e => setTag(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3))}
+              placeholder="TAG"
+              maxLength={3}
+            />
+              </div>
+            </div>
+            <div className="modal-section">
+              <div className="modal-label">Image URL</div>
+              <input
+                className="modal-select"
+                style={{fontFamily:"'Share Tech Mono', monospace"}}
+                value={imageUrl}
+                onChange={e => setImageUrl(e.target.value)}
+                placeholder="https://..."
+                maxLength={160}
+              />
+            </div>
+            <div className="modal-footer">
+              <button className="modal-btn secondary" disabled={txBusy} onClick={() => setShowCreateModal(false)}>CANCEL</button>
+              <button className="modal-btn primary" disabled={txBusy || !canCreateAlliance} onClick={() => onCreate(name, normalizedTag, imageUrl)}>CREATE</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showFindModal && (
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget && !txBusy) setShowFindModal(false); }}>
+          <div className="modal" style={{width:"min(900px,100%)"}}>
+            <div className="modal-title">FIND ALLIANCE</div>
+            <div className="modal-section">
+              <div className="modal-label">Search</div>
+              <input className="modal-select" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by alliance name or tag"/>
+            </div>
+            <div className="quest-grid" style={{marginTop:12}}>
             {filteredAlliances.map(item => {
               const full = item.memberCount >= item.maxMembers;
+              const requested = requestedAllianceIds.has(item.publicKey);
               return (
-                <div key={item.publicKey} className={`quest-card ${full ? "locked" : "ready"}`}>
+                <div key={item.publicKey} className={`quest-card ${full || requested ? "locked" : "ready"}`}>
                   <div className="quest-head">
-                    <div><div className="quest-group">LV {item.level}</div><div className="quest-title">{item.name || "Alliance"}</div></div>
+                    <div style={{display:"flex",gap:10,alignItems:"center",minWidth:0}}>
+                      {item.imageUrl && <img src={item.imageUrl} alt="" style={{width:34,height:34,borderRadius:8,objectFit:"cover",border:"1px solid rgba(0,255,209,.35)"}} />}
+                      <div style={{minWidth:0}}>
+                        <div className="quest-group">LV {item.level}{item.tag ? ` [${item.tag}]` : ""}</div>
+                        <div className="quest-title">{item.name || "Alliance"}</div>
+                      </div>
+                    </div>
                     <div className="quest-reward">{item.memberCount}/{item.maxMembers}</div>
                   </div>
                   <div className="quest-req-list">
                     <div className="quest-req-row met"><span>Founder</span><strong>{shortAddress(item.founder)}</strong></div>
                     <div className={`quest-req-row ${full ? "missing" : "met"}`}><span>Capacity</span><strong>{full ? "full" : "open"}</strong></div>
+                    {requested && <div className="quest-req-row met"><span>Status</span><strong>request pending</strong></div>}
                   </div>
-                  <button className="modal-btn primary" disabled={txBusy || full} onClick={() => onRequestJoin(item.publicKey)}>{full ? "FULL" : "REQUEST JOIN"}</button>
+                  <button className="modal-btn primary" disabled={txBusy || full || requested} onClick={() => onRequestJoin(item.publicKey)}>{full ? "FULL" : requested ? "REQUESTED" : "REQUEST JOIN"}</button>
                 </div>
               );
             })}
             {filteredAlliances.length === 0 && <div className="notice-box">No alliances found.</div>}
+            </div>
+            <div className="modal-footer">
+              <button className="modal-btn secondary" disabled={txBusy} onClick={() => setShowFindModal(false)}>CLOSE</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+      </>
     );
   }
 
   return (
     <div className="tab-stack">
       <div className="panel">
-        <div className="section-title">{alliance.name || "Alliance"}</div>
-        <div className="resource-row"><span>Level</span><strong>{alliance.level}</strong></div>
-        <div className="resource-row"><span>Members</span><strong>{alliance.memberCount}/{alliance.maxMembers}</strong></div>
-        <div className="resource-row"><span>Total Missions</span><strong>{alliance.totalMissionsCompleted.toString()}</strong></div>
-        <div className="desktop-resource-cap"><div className="desktop-resource-cap-fill" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} /></div>
-        <div className="modal-info-row"><span>XP</span><span className="modal-info-val">{alliance.xp.toString()} / {nextThreshold.toString()}</span></div>
+        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:10}}>
+          {alliance.imageUrl && <img src={alliance.imageUrl} alt="" style={{width:42,height:42,borderRadius:8,objectFit:"cover",border:"1px solid rgba(0,255,209,.4)"}} />}
+          <div className="section-title" style={{marginBottom:0}}>{alliance.tag ? `[${alliance.tag}] ` : ""}{alliance.name || "Alliance"}</div>
+        </div>
+        <div className="alliance-summary">
+          <div className="alliance-stat-grid">
+            <div className="alliance-stat"><span>Level</span><strong>{alliance.level}</strong></div>
+            <div className="alliance-stat"><span>Members</span><strong>{alliance.memberCount}/{alliance.maxMembers}</strong></div>
+            <div className="alliance-stat"><span>Missions</span><strong>{alliance.totalMissionsCompleted.toString()}</strong></div>
+          </div>
+          <div className="alliance-xp-box">
+            <div className="alliance-xp-head">
+              <span>XP progress</span>
+              <strong className="alliance-xp-value">{alliance.xp.toString()} / {nextThreshold.toString()}</strong>
+            </div>
+            <div className="alliance-xp-track">
+              <div className="alliance-xp-fill" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
+            </div>
+          </div>
+        </div>
+        <div className="quest-rewards" style={{marginTop:14}}>
+          <div className="quest-reward"><span><ResourceLabel kind="metal" short /></span><strong>{fmt(allianceTreasury?.metal ?? 0n)}</strong></div>
+          <div className="quest-reward"><span><ResourceLabel kind="crystal" short /></span><strong>{fmt(allianceTreasury?.crystal ?? 0n)}</strong></div>
+          <div className="quest-reward"><span><ResourceLabel kind="deuterium" short /></span><strong>{fmt(allianceTreasury?.deuterium ?? 0n)}</strong></div>
+        </div>
+        <div className="quest-req-row met" style={{marginTop:10}}>
+          <span>ANTIMATTER deposited</span><strong>{formatTokenAmount(allianceTreasury?.antimatter ?? 0n, 6)}</strong>
+        </div>
         {membership.role !== 2 && <button className="modal-btn" disabled={txBusy} onClick={onLeave}>LEAVE</button>}
+      </div>
+      <div className="panel">
+        <div className="section-title">ALLIANCE BUILDINGS</div>
+        <div className="grid-4">
+          {ALLIANCE_BUILDINGS.map(building => {
+            const current = Number((allianceTreasury as any)?.[building.key] ?? 0);
+            const cost = discountedAllianceBuildingCost(building.id, current + 1, allianceTreasury);
+            const boosts = allianceBoosts(allianceTreasury);
+            const effect = building.key === "logisticsHub"
+              ? `+${boostPercentLabel(boosts.logisticsXpBonusBps)} deposit XP`
+              : building.key === "researchGrid"
+                ? `+${boostPercentLabel(boosts.researchXpBonusBps)} upgrade XP`
+                : building.key === "defenseCoordination"
+                  ? `${boostPercentLabel(boosts.defenseDeuteriumDiscountBps)} deuterium discount`
+                  : `${boostPercentLabel(boosts.tradeCostDiscountBps)} metal/crystal/ANTIMATTER discount`;
+            const isLeader = membership.role === 2;
+            const canUpgrade = isLeader
+              && !!allianceTreasury
+              && allianceTreasury.metal >= cost.metal
+              && allianceTreasury.crystal >= cost.crystal
+              && allianceTreasury.deuterium >= cost.deuterium
+              && allianceTreasury.antimatter >= cost.antimatter;
+            return (
+              <div key={building.id} className={`quest-card ${canUpgrade ? "ready" : "locked"}`}>
+                <div className="quest-top">
+                  <div><div className="quest-title">{building.title}</div><div className="quest-hint">{building.hint}</div></div>
+                  <div className="quest-badge">Lv {current}</div>
+                </div>
+                <div className="quest-req-row met" style={{marginBottom:10}}>
+                  <span>Current effect</span><strong>{effect}</strong>
+                </div>
+                <div className="quest-req-list">
+                  <div className={`quest-req-row ${(allianceTreasury?.metal ?? 0n) >= cost.metal ? "met" : "missing"}`}><span>Metal</span><strong>{fmt(allianceTreasury?.metal ?? 0n)}/{fmt(cost.metal)}</strong></div>
+                  <div className={`quest-req-row ${(allianceTreasury?.crystal ?? 0n) >= cost.crystal ? "met" : "missing"}`}><span>Crystal</span><strong>{fmt(allianceTreasury?.crystal ?? 0n)}/{fmt(cost.crystal)}</strong></div>
+                  <div className={`quest-req-row ${(allianceTreasury?.deuterium ?? 0n) >= cost.deuterium ? "met" : "missing"}`}><span>Deuterium</span><strong>{fmt(allianceTreasury?.deuterium ?? 0n)}/{fmt(cost.deuterium)}</strong></div>
+                  <div className={`quest-req-row ${(allianceTreasury?.antimatter ?? 0n) >= cost.antimatter ? "met" : "missing"}`}><span>ANTIMATTER</span><strong>{formatTokenAmount(allianceTreasury?.antimatter ?? 0n, 6)}/{formatTokenAmount(cost.antimatter, 6)}</strong></div>
+                </div>
+                <button className="modal-btn primary" disabled={txBusy || !canUpgrade} onClick={() => onUpgradeBuilding(building.id)}>{isLeader ? "LEVEL UP" : "LEADER ONLY"}</button>
+              </div>
+            );
+          })}
+        </div>
       </div>
       {membership.role === 2 && (
         <div className="panel">
@@ -3857,26 +4512,47 @@ const AllianceTab: React.FC<{
           </div>
         </div>
       )}
-      <div className="quest-grid">
-        {ALLIANCE_MISSION_DEFINITIONS.map(mission => {
-          const bit = 1n << BigInt(mission.id);
-          const claimed = (claimedMaskFor(mission.period) & bit) !== 0n;
-          const met = mission.requirements.every(req => req.current(state) >= req.required);
-          return (
-            <div key={`${mission.period}:${mission.id}`} className={`quest-card ${met && !claimed ? "ready" : claimed ? "claimed" : "locked"}`}>
-              <div className="quest-head"><div><div className="quest-group">{mission.group}</div><div className="quest-title">{mission.title}</div></div><div className="quest-reward">+{mission.xp} XP</div></div>
-              <div className="quest-req-list">
-                {mission.requirements.map(req => {
-                  const current = req.current(state);
-                  const ok = current >= req.required;
-                  return <div key={req.label} className={`quest-req-row ${ok ? "met" : "missing"}`}><span>{req.label}</span><strong>{current}/{req.required}</strong></div>;
-                })}
-              </div>
-              <button className="modal-btn primary" disabled={txBusy || claimed || !met} onClick={() => onClaimMission(mission.period, mission.id)}>{claimed ? "CLAIMED" : met ? "CLAIM" : "LOCKED"}</button>
+      {(["Daily", "Weekly", "Monthly"] as const).map(group => {
+        const copy = ALLIANCE_PERIOD_COPY[group];
+        const missions = ALLIANCE_DEPOSIT_DEFINITIONS.filter(mission => mission.group === group);
+        return (
+          <div key={group} style={{ marginTop: 20 }}>
+            <div className="section-title" style={{ marginBottom: 6 }}>{copy.title}</div>
+            <div className="quest-hint" style={{ marginBottom: 12 }}>{copy.note}</div>
+            <div className="quest-grid">
+              {missions.map(mission => {
+                const bit = 1n << BigInt(mission.id);
+                const claimed = (claimedMaskFor(mission.period) & bit) !== 0n;
+                const hasMetal = state.resources.metal >= mission.metal;
+                const hasCrystal = state.resources.crystal >= mission.crystal;
+                const hasDeuterium = state.resources.deuterium >= mission.deuterium;
+                const hasAntimatter = antimatterBalance >= mission.antimatter;
+                const met = hasMetal && hasCrystal && hasDeuterium && hasAntimatter;
+                const reqRows = [
+                  mission.metal > 0n ? { label: "Metal", current: state.resources.metal, required: mission.metal, token: false } : null,
+                  mission.crystal > 0n ? { label: "Crystal", current: state.resources.crystal, required: mission.crystal, token: false } : null,
+                  mission.deuterium > 0n ? { label: "Deuterium", current: state.resources.deuterium, required: mission.deuterium, token: false } : null,
+                  mission.antimatter > 0n ? { label: "ANTIMATTER", current: antimatterBalance, required: mission.antimatter, token: true } : null,
+                ].filter((row): row is { label: string; current: bigint; required: bigint; token: boolean } => !!row);
+                return (
+                  <div key={`${mission.period}:${mission.id}`} className={`quest-card ${met && !claimed ? "ready" : claimed ? "claimed" : "locked"}`}>
+                    <div className="quest-head"><div><div className="quest-group">{mission.group} reset</div><div className="quest-title">{mission.title}</div></div><div className="quest-reward">+{mission.xp} XP</div></div>
+                    <div className="quest-req-list">
+                      {reqRows.map(req => {
+                        const ok = req.current >= req.required;
+                        const current = req.token ? formatTokenAmount(req.current, 6) : fmt(req.current);
+                        const required = req.token ? formatTokenAmount(req.required, 6) : fmt(req.required);
+                        return <div key={req.label} className={`quest-req-row ${ok ? "met" : "missing"}`}><span>{req.label}</span><strong>{current}/{required}</strong></div>;
+                      })}
+                    </div>
+                    <button className="modal-btn primary" disabled={txBusy || claimed || !met} onClick={() => onDepositMission(mission)}>{claimed ? "DONE THIS PERIOD" : met ? "DEPOSIT" : "LOCKED"}</button>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -3913,8 +4589,9 @@ const StoreTab: React.FC<{
               const mask = storePurchasedMask(pack.period, storePurchaseState, nowTs);
               const purchased = ((mask >> BigInt(pack.id)) & 1n) === 1n;
               const canAfford = usdcBalance >= pack.priceUsdc;
-              const canBuy = storeReady && !purchased && canAfford;
-              const status = purchased ? "purchased" : !storeReady ? "unavailable" : !canAfford ? "need USDC" : "ready";
+              const shieldPaused = !!pack.shieldSeconds && !STORE_SHIELD_PACKS_ENABLED;
+              const canBuy = storeReady && !purchased && canAfford && !shieldPaused;
+              const status = purchased ? "purchased" : shieldPaused ? "shield paused" : !storeReady ? "store offline" : !canAfford ? "need USDC" : "ready";
 
               return (
                 <div key={`${pack.period}:${pack.id}`} className={`quest-card ${purchased ? "claimed" : canBuy ? "ready" : "locked"}`}>
@@ -3923,7 +4600,7 @@ const StoreTab: React.FC<{
                       <div className="quest-title">{pack.title}</div>
                       <div className="quest-hint">{pack.hint}</div>
                     </div>
-                    <div className={`quest-badge ${purchased ? "claimed" : canBuy ? "" : "locked"}`}><UsdcIcon size="sm" />{formatTokenAmount(pack.priceUsdc, 6)}</div>
+                    <div className={`quest-badge ${purchased ? "claimed" : canBuy ? "" : "locked"}`}><UsdcIcon size="sm" />{formatUsdcAmount(pack.priceUsdc)}</div>
                   </div>
 
                   <div className="quest-rewards">
@@ -3940,7 +4617,7 @@ const StoreTab: React.FC<{
 
                   <div className="quest-req-list">
                     <div className={`quest-req-row ${!purchased ? "met" : "missing"}`}><span>Period limit</span><strong>{purchased ? "used" : "open"}</strong></div>
-                    <div className={`quest-req-row ${canAfford ? "met" : "missing"}`}><span>Balance</span><strong><UsdcAmount raw={usdcBalance} /> / {formatTokenAmount(pack.priceUsdc, 6)}</strong></div>
+                    <div className={`quest-req-row ${canAfford ? "met" : "missing"}`}><span>Balance</span><strong><StoreBalanceAmount balance={usdcBalance} price={pack.priceUsdc} /></strong></div>
                     {pack.shieldSeconds && <div className="quest-req-row met"><span>Current shield</span><strong>{Math.max(0, effectiveAttackProtectionUntil(state.planet) - nowTs) > 0 ? fmtCountdown(Math.max(0, effectiveAttackProtectionUntil(state.planet) - nowTs)) : "none"}</strong></div>}
                   </div>
 
@@ -3948,7 +4625,7 @@ const StoreTab: React.FC<{
                     <button
                       className={`quest-btn${purchased ? " claimed" : canBuy ? "" : " locked"}`}
                       disabled={txBusy || !canBuy}
-                      title={!storeReady ? "Store is not enabled on-chain." : purchased ? "This pack was already purchased for the current period." : !canAfford ? "Not enough USDC." : undefined}
+                      title={shieldPaused ? "Defense shield packs are paused until the planet layout migration stores shield time safely." : !storeReady ? "Store is not enabled on-chain." : purchased ? "This pack was already purchased for the current period." : !canAfford ? "Not enough USDC." : undefined}
                       onClick={() => onPurchase(pack.period, pack.id)}
                     >
                       {purchased ? "PURCHASED" : canBuy ? "BUY" : status.toUpperCase()}
@@ -4152,6 +4829,7 @@ const ActivityTab: React.FC<{ reports: BattleReport[]; spyReports: SpyReport[]; 
           {reports.map(report => {
             const lootTotal = BigInt(report.cargoMetal) + BigInt(report.cargoCrystal) + BigInt(report.cargoDeuterium);
             const debrisTotal = BigInt(report.debrisMetal ?? "0") + BigInt(report.debrisCrystal ?? "0");
+            const recycledTotal = BigInt(report.recycledMetal ?? "0") + BigInt(report.recycledCrystal ?? "0");
             const survivorEntries = Object.entries(report.survivors);
             return (
               <div key={report.id} className="mission-card">
@@ -4170,6 +4848,7 @@ const ActivityTab: React.FC<{ reports: BattleReport[]; spyReports: SpyReport[]; 
                   <div className="card"><div className="card-label">Target</div><div className="card-value" style={{ fontSize: 12 }}>{report.targetCoords}</div></div>
                   <div className="card"><div className="card-label">Rounds</div><div className="card-value">{report.combatRounds}</div></div>
                   <div className="card"><div className="card-label">Loot</div><div className="card-value" style={{ fontSize: 12 }}>{fmt(lootTotal)}</div></div>
+                  <div className="card"><div className="card-label">Recycled</div><div className="card-value" style={{ fontSize: 12 }}>{fmt(recycledTotal)}</div></div>
                 </div>
                 <div style={{ fontSize: 10, color: "var(--dim)", display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
                   <span>Source: {report.sourcePlanet}</span>
@@ -4180,7 +4859,9 @@ const ActivityTab: React.FC<{ reports: BattleReport[]; spyReports: SpyReport[]; 
                   {BigInt(report.cargoMetal) > 0n && <span style={{ color: "var(--metal)" }}>Metal {fmt(BigInt(report.cargoMetal))}</span>}
                   {BigInt(report.cargoCrystal) > 0n && <span style={{ color: "var(--crystal)" }}>Crystal {fmt(BigInt(report.cargoCrystal))}</span>}
                   {BigInt(report.cargoDeuterium) > 0n && <span style={{ color: "var(--deut)" }}>Deuterium {fmt(BigInt(report.cargoDeuterium))}</span>}
-                  {debrisTotal > 0n && <span>Debris {fmt(debrisTotal)}</span>}
+                  {BigInt(report.recycledMetal ?? "0") > 0n && <span style={{ color: "var(--metal)" }}>Recycled metal {fmt(BigInt(report.recycledMetal ?? "0"))}</span>}
+                  {BigInt(report.recycledCrystal ?? "0") > 0n && <span style={{ color: "var(--crystal)" }}>Recycled crystal {fmt(BigInt(report.recycledCrystal ?? "0"))}</span>}
+                  {debrisTotal > 0n && <span>Generated debris {fmt(debrisTotal)}</span>}
                   {report.defenderSurvived && <span>Defender survived</span>}
                 </div>
                 <div className="mission-ships">
@@ -4203,8 +4884,8 @@ const MobileResStrip: React.FC<{ res: Resources; planet: Planet }> = ({ res, pla
       {kind:"metal" as const,value:res.metal,rate:res.metalHour},
       {kind:"crystal" as const,value:res.crystal,rate:res.crystalHour},
       {kind:"deuterium" as const,value:res.deuterium,rate:res.deuteriumHour},
-    ].map(r=>(<div key={r.kind} className="mobile-res-item"><div className="mobile-res-label"><ResourceLabel kind={r.kind} short /></div><div className="mobile-res-value" style={{color:RESOURCE_UI[r.kind].color}}>{fmt(r.value)}</div><div className="mobile-res-rate">+{fmt(r.rate)}/h</div></div>))}
-    <div className="mobile-res-item" style={{minWidth:90}}><div className="mobile-res-label">⚡ PWR</div><div className="mobile-res-value" style={{color:energyEfficiency(res)>=80?"var(--success)":energyEfficiency(res)>=36?"var(--warn)":"var(--danger)",fontSize:11}}>{energyEfficiency(res)}%</div><div className="mobile-res-rate">{fmt(res.energyProduction)}/{fmt(res.energyConsumption)}</div></div>
+    ].map(r=>(<div key={r.kind} className="mobile-res-item"><div className="mobile-res-label"><ResourceLabel kind={r.kind} short /></div><div className="mobile-res-value" style={{color:RESOURCE_UI[r.kind].color}}>{formatCompactResource(r.value)}</div><div className="mobile-res-rate">+{formatCompactResource(r.rate)}/h</div></div>))}
+    <div className="mobile-res-item" style={{minWidth:90}}><div className="mobile-res-label">⚡ PWR</div><div className="mobile-res-value" style={{color:energyEfficiency(res)>=100?"var(--success)":energyEfficiency(res)>=36?"var(--warn)":"var(--danger)",fontSize:11}}>{energyEfficiency(res)}%</div><div className="mobile-res-rate">{fmt(res.energyProduction)}/{fmt(res.energyConsumption)}</div></div>
     <div className="mobile-res-item" style={{minWidth:80}}><div className="mobile-res-label">FIELDS</div><div className="mobile-res-value" style={{fontSize:11}}>{planet.usedFields}/{planet.maxFields}</div><div className="mobile-res-rate">{planet.name.slice(0,8)}</div></div>
   </div>
 );
@@ -4212,7 +4893,7 @@ const MobileResStrip: React.FC<{ res: Resources; planet: Planet }> = ({ res, pla
 // ─── Nav definitions ──────────────────────────────────────────────────────────
 const DesktopResourceMenu: React.FC<{ res: Resources; planet: Planet }> = ({ res, planet }) => {
   const efficiency = energyEfficiency(res);
-  const efficiencyColor = efficiency >= 80 ? "var(--success)" : efficiency >= 36 ? "var(--warn)" : "var(--danger)";
+  const efficiencyColor = efficiency >= 100 ? "var(--success)" : efficiency >= 36 ? "var(--warn)" : "var(--danger)";
   const resourceItems = [
     { kind: "metal" as const, value: res.metal, rate: res.metalHour, cap: res.metalCap },
     { kind: "crystal" as const, value: res.crystal, rate: res.crystalHour, cap: res.crystalCap },
@@ -4224,9 +4905,13 @@ const DesktopResourceMenu: React.FC<{ res: Resources; planet: Planet }> = ({ res
       {resourceItems.map(item => {
         const capPct = item.cap > 0n ? Math.max(0, Math.min(100, Number((item.value * 100n) / item.cap))) : 0;
         return (
-          <div key={item.kind} className="desktop-resource-pill">
+          <div key={item.kind} className="desktop-resource-pill" title={`Storage cap: ${fmt(item.cap)}`}>
             <div className="desktop-resource-label"><ResourceLabel kind={item.kind} /></div>
-            <div className="desktop-resource-value" style={{ color: RESOURCE_UI[item.kind].color }}>{fmt(item.value)}</div>
+            <div className="desktop-resource-value" style={{ color: RESOURCE_UI[item.kind].color }}>{formatCompactResource(item.value)}</div>
+            <div className="desktop-resource-meter-meta">
+              <span className="desktop-resource-rate">+{formatCompactResource(item.rate)}/h</span>
+              <span className="desktop-resource-storage">{capPct}% storage</span>
+            </div>
             <div className="desktop-resource-meta">+{fmt(item.rate)}/h · cap {fmt(item.cap)}</div>
             <div className="desktop-resource-cap">
               <div className="desktop-resource-cap-fill" style={{ width: `${capPct}%`, background: RESOURCE_UI[item.kind].color }} />
@@ -4266,54 +4951,6 @@ const SECONDARY_TABS: { id: Tab; icon: string; label: string }[] = [
 ];
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
-const TAB_META: Record<Tab, { eyebrow: string; title: string; subtitle: string }> = {
-  overview: { eyebrow: "Command", title: "Planet Overview", subtitle: "Read colony health, queues, and next pressure points at a glance." },
-  quests: { eyebrow: "Objectives", title: "Quest Command", subtitle: "Claim tutorial, daily, weekly, and monthly rewards verified by the on-chain program." },
-  alliance: { eyebrow: "Alliance", title: "Alliance Command", subtitle: "Create, join, and level alliances through shared on-chain missions." },
-  store: { eyebrow: "Store", title: "Resource Packs", subtitle: "Daily, weekly, and monthly boosts." },
-  resources: { eyebrow: "Economy", title: "Resource Grid", subtitle: "Tune production before capacity, energy, or field limits become blockers." },
-  buildings: { eyebrow: "Infrastructure", title: "Planet Build Queue", subtitle: "Upgrade mines, factories, storage, and shipyard support from one surface." },
-  research: { eyebrow: "Research", title: "Technology Lab", subtitle: "Unlock deeper fleet, defense, and expansion options through focused research." },
-  shipyard: { eyebrow: "Industry", title: "Shipyard", subtitle: "Convert stored resources into cargo, combat power, probes, and colony reach." },
-  defense: { eyebrow: "Security", title: "Defense Systems", subtitle: "Harden the colony with batteries, domes, and missiles before hostile scans arrive." },
-  fleet: { eyebrow: "Fleet", title: "Fleet Command", subtitle: "Review hangars, launch missions, and keep transport capacity moving." },
-  missions: { eyebrow: "Operations", title: "Active Missions", subtitle: "Track arrivals, returns, cargo, and missions ready to resolve." },
-  activity: { eyebrow: "Intel", title: "Battle Activity", subtitle: "Inspect recent combat outcomes, debris, loot, and surviving ships." },
-  galaxy: { eyebrow: "Navigation", title: "Galaxy Explorer", subtitle: "Scan systems, find occupied targets, and identify open colony slots." },
-  market: { eyebrow: "Exchange", title: "Resource Market", subtitle: "Trade surplus resources for antimatter and monitor live offers." },
-};
-
-const TabMasthead: React.FC<{
-  tab: Tab;
-  state?: PlayerState | null;
-  activeMissionCount: number;
-  txBusy: boolean;
-  onOpenLaunch: () => void;
-}> = ({ tab, state, activeMissionCount, txBusy, onOpenLaunch }) => {
-  const meta = TAB_META[tab];
-  const planet = state?.planet;
-  const freeSlots = state ? getFreeMissionSlotCount(state.fleet, state.research.computerTech) : 0;
-  return (
-    <div className="tab-masthead">
-      <div className="tab-masthead-copy">
-        <div className="tab-eyebrow">{meta.eyebrow}</div>
-        <div className="tab-title">{meta.title}</div>
-        <div className="tab-subtitle">{meta.subtitle}</div>
-      </div>
-      {state && planet && (
-        <div className="tab-masthead-rail">
-          <span className="status-chip">Planet <strong>{planet.galaxy}:{planet.system}:{planet.position}</strong></span>
-          <span className="status-chip">Missions <strong>{activeMissionCount}</strong></span>
-          <span className="status-chip">Free slots <strong>{freeSlots}</strong></span>
-          <button className="status-chip action" type="button" onClick={onOpenLaunch} disabled={txBusy}>
-            Launch fleet
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const App: React.FC = () => {
   const { connection } = useConnection();
   const anchorWallet = useAnchorWallet();
@@ -4355,12 +4992,15 @@ const App: React.FC = () => {
   const [gameConfigBusy, setGameConfigBusy] = useState(false);
   const [gameConfigMintInput, setGameConfigMintInput] = useState(DEFAULT_ANTIMATTER_MINT);
   const [questState, setQuestState] = useState<QuestStateAccount | null>(null);
+  const [questProgress, setQuestProgress] = useState<QuestProgressStateAccount | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfigState | null>(null);
   const [storePurchaseState, setStorePurchaseState] = useState<StorePurchaseStateAccount | null>(null);
   const [allianceState, setAllianceState] = useState<AllianceStateAccount | null>(null);
+  const [allianceTreasury, setAllianceTreasury] = useState<AllianceTreasuryStateAccount | null>(null);
   const [allianceMembership, setAllianceMembership] = useState<AllianceMembershipAccount | null>(null);
   const [allianceDirectory, setAllianceDirectory] = useState<AllianceStateAccount[]>([]);
   const [allianceJoinRequests, setAllianceJoinRequests] = useState<AllianceJoinRequestAccount[]>([]);
+  const [myAllianceJoinRequests, setMyAllianceJoinRequests] = useState<AllianceJoinRequestAccount[]>([]);
   const [allianceMembers, setAllianceMembers] = useState<AllianceMembershipAccount[]>([]);
   const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
   const [antimatterBalance, setAntimatterBalance] = useState<bigint>(0n);
@@ -4585,9 +5225,11 @@ const App: React.FC = () => {
   const refreshAllianceState = useCallback(async () => {
     if (!clientRef.current || !publicKey) {
       setAllianceState(null);
+      setAllianceTreasury(null);
       setAllianceMembership(null);
       setAllianceDirectory([]);
       setAllianceJoinRequests([]);
+      setMyAllianceJoinRequests([]);
       setAllianceMembers([]);
       return null;
     }
@@ -4600,15 +5242,23 @@ const App: React.FC = () => {
     setAllianceDirectory(directory);
     if (joined?.alliance) {
       const alliancePda = new PublicKey(joined.alliance.publicKey);
-      const [requests, members] = await Promise.all([
+      const [requests, members, treasury] = await Promise.all([
         joined.membership.role === 2 ? clientRef.current.fetchAllianceJoinRequests(alliancePda) : Promise.resolve([]),
         clientRef.current.fetchAllianceMembers(alliancePda),
+        clientRef.current.getAllianceTreasury(alliancePda),
       ]);
       setAllianceJoinRequests(requests);
+      setMyAllianceJoinRequests([]);
       setAllianceMembers(members);
+      setAllianceTreasury(treasury);
     } else {
+      const pendingRequests = await Promise.all(
+        directory.map(item => clientRef.current!.getAllianceJoinRequest(new PublicKey(item.publicKey), publicKey)),
+      );
       setAllianceJoinRequests([]);
+      setMyAllianceJoinRequests(pendingRequests.filter((request): request is AllianceJoinRequestAccount => !!request));
       setAllianceMembers([]);
+      setAllianceTreasury(null);
     }
     return joined;
   }, [publicKey]);
@@ -4639,10 +5289,15 @@ const App: React.FC = () => {
   const refreshQuestState = useCallback(async () => {
     if (!clientRef.current || !publicKey) {
       setQuestState(null);
+      setQuestProgress(null);
       return null;
     }
-    const next = await clientRef.current.getQuestState(publicKey);
+    const [next, progress] = await Promise.all([
+      clientRef.current.getQuestState(publicKey),
+      clientRef.current.getQuestProgress(publicKey),
+    ]);
     setQuestState(next);
+    setQuestProgress(progress);
     return next;
   }, [publicKey]);
 
@@ -4653,7 +5308,7 @@ const App: React.FC = () => {
       clientRef.current = null;
       marketClientRef.current = null;
       setPlanets([]); setSelectedPlanetPda(null); setLoading(false);
-      setVaultStatus("loading"); setGameConfig(null); setQuestState(null); setStoreConfig(null); setStorePurchaseState(null); setAllianceState(null); setAllianceMembership(null); setAllianceDirectory([]); setAllianceJoinRequests([]); setAllianceMembers([]);
+      setVaultStatus("loading"); setGameConfig(null); setQuestState(null); setQuestProgress(null); setStoreConfig(null); setStorePurchaseState(null); setAllianceState(null); setAllianceTreasury(null); setAllianceMembership(null); setAllianceDirectory([]); setAllianceJoinRequests([]); setAllianceMembers([]);
       setGameConfigMintInput(DEFAULT_ANTIMATTER_MINT); setAntimatterBalance(0n); setUsdcBalance(0n);
       setVaultBalance(0n);
       return;
@@ -4681,7 +5336,12 @@ const App: React.FC = () => {
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         await loadAntimatterBalance(config?.antimatterMint ?? DEFAULT_ANTIMATTER_MINT);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
-        setQuestState(await gameClient.getQuestState(publicKey));
+        const [loadedQuestState, loadedQuestProgress] = await Promise.all([
+          gameClient.getQuestState(publicKey),
+          gameClient.getQuestProgress(publicKey),
+        ]);
+        setQuestState(loadedQuestState);
+        setQuestProgress(loadedQuestProgress);
         const joinedAlliance = await gameClient.getMyAlliance();
         setAllianceState(joinedAlliance?.alliance ?? null);
         setAllianceMembership(joinedAlliance?.membership ?? null);
@@ -4714,9 +5374,17 @@ const App: React.FC = () => {
     if (txLockRef.current || !clientRef.current) return;
     txLockRef.current = true;
     setTxBusy(true); setTxProgress(label); setError(null);
-    try { await fn(); await afterTx(); }
+    let txSucceeded = false;
+    try {
+      await fn();
+      txSucceeded = true;
+      await afterTx();
+    }
     catch (e: any) { setError(e?.message ?? `${label} failed`); }
     finally {
+      if (txSucceeded) {
+        try { await refreshVaultBalance(); } catch { /* balance refresh is non-critical */ }
+      }
       txLockRef.current = false;
       setTxBusy(false);
       setTxProgress("Processing...");
@@ -4878,18 +5546,31 @@ const App: React.FC = () => {
 
   const handleClaimQuest = async (period: QuestPeriod, questId: number) => {
     if (!clientRef.current || !state) return;
-    const quest = activeQuestDefinitions(nowTs).find(entry => entry.period === period && entry.id === questId);
+    const quest = activeQuestDefinitions(nowTs, questProgress).find(entry => entry.period === period && entry.id === questId);
     if (quest && !confirmResourceCapWarning(`Claim ${quest.title}`, quest.reward)) return;
     await withTx("Claim quest", () => clientRef.current!.claimQuest(new PublicKey(state.entityPda), period, questId), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); });
   };
 
-  const handleInstantFinishBuild = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish build", () => clientRef.current!.accelerateBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
-  const handleInstantFinishResearch = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish research", () => clientRef.current!.accelerateResearchWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
-  const handleInstantFinishShipyard = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish shipyard", () => clientRef.current!.accelerateShipBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
-  const handleAccelerateMission = async (_mission: Mission, slot: number, leg: 0 | 1) => { if (!clientRef.current || !state) return; await withTx(leg === 1 ? "Instant mission return" : "Instant mission arrival", () => clientRef.current!.accelerateMissionWithAntimatter(new PublicKey(state.entityPda), slot, leg), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); }); };
-  const handleCreateAlliance = async (name: string) => {
+  const handleInstantFinishBuild = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish build", () => clientRef.current!.accelerateBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); await refreshQuestState(); }); };
+  const handleInstantFinishResearch = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish research", () => clientRef.current!.accelerateResearchWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); await refreshQuestState(); }); };
+  const handleInstantFinishShipyard = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish shipyard", () => clientRef.current!.accelerateShipBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); await refreshQuestState(); }); };
+  const handleInstantFinishDefense = async () => { if (!clientRef.current || !state) return; await withTx("Instant finish defense", () => clientRef.current!.accelerateDefenseBuildWithAntimatter(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); await refreshQuestState(); }); };
+  const refreshSelectedPlanetList = async () => {
+    if (publicKey && state) await loadAllPlanets(publicKey, state.planetPda);
+    else await refreshSelectedPlanetState();
+  };
+  const handleBuildShip = async (shipType: number, qty: number) => {
+    if (!clientRef.current || !state) return;
+    await withTx("Build ship", () => clientRef.current!.buildShip(new PublicKey(state.entityPda), shipType, qty), refreshSelectedPlanetList);
+  };
+  const handleBuildDefense = async (defenseType: number, qty: number) => {
+    if (!clientRef.current || !state) return;
+    await withTx("Build defense", () => clientRef.current!.buildDefense(new PublicKey(state.entityPda), defenseType, qty), refreshSelectedPlanetList);
+  };
+  const handleAccelerateMission = async (_mission: Mission, slot: number, leg: 0 | 1) => { if (!clientRef.current || !state) return; await withTx(leg === 1 ? "Instant mission return" : "Instant mission arrival", () => clientRef.current!.accelerateMissionWithAntimatter(new PublicKey(state.entityPda), slot, leg), async () => { await refreshSelectedPlanetState(); await loadAntimatterBalance(); await refreshQuestState(); }); };
+  const handleCreateAlliance = async (name: string, tag: string, imageUrl: string) => {
     if (!clientRef.current) return;
-    await withTx("Create alliance", () => clientRef.current!.createAlliance(name), async () => { await refreshAllianceState(); });
+    await withTx("Create alliance", () => clientRef.current!.createAlliance(name, tag, imageUrl), async () => { await refreshAllianceState(); });
   };
 
   const handleRequestJoinAlliance = async (alliancePda: string) => {
@@ -4922,15 +5603,33 @@ const App: React.FC = () => {
     await withTx("Leave alliance", () => clientRef.current!.leaveAlliance(), async () => { await refreshAllianceState(); });
   };
 
-  const handleClaimAllianceMission = async (period: number, missionId: number) => {
+  const handleDepositAllianceMission = async (mission: AllianceDepositDefinition) => {
     if (!clientRef.current || !state) return;
-    await withTx("Claim alliance mission", () => clientRef.current!.claimAllianceMission(new PublicKey(state.entityPda), period, missionId), async () => { await refreshAllianceState(); });
+    await withTx(
+      "Deposit alliance resources",
+      () => clientRef.current!.depositAllianceResources(new PublicKey(state.entityPda), mission.period, mission.id, {
+        metal: mission.metal,
+        crystal: mission.crystal,
+        deuterium: mission.deuterium,
+        antimatter: mission.antimatter,
+      }),
+      async () => {
+        await refreshSelectedPlanetState();
+        await refreshAllianceState();
+        await loadAntimatterBalance();
+      },
+    );
+  };
+
+  const handleUpgradeAllianceBuilding = async (buildingId: number) => {
+    if (!clientRef.current) return;
+    await withTx("Upgrade alliance building", () => clientRef.current!.upgradeAllianceBuilding(buildingId), async () => { await refreshAllianceState(); });
   };
   const handlePurchaseStorePack = async (period: StorePeriod, packId: number) => {
     if (!clientRef.current || !state) return;
     const pack = STORE_PACKS.find(entry => entry.period === period && entry.id === packId);
     if (pack && !confirmResourceCapWarning(`Buy ${pack.title}`, pack.reward)) return;
-    await withTx("Purchase store pack", () => clientRef.current!.purchaseStorePack(new PublicKey(state.entityPda), period, packId), async () => { await refreshSelectedPlanetState(); await refreshStoreState(); });
+    await withTx("Purchase store pack", () => clientRef.current!.purchaseStorePack(new PublicKey(state.entityPda), period, packId), async () => { await refreshSelectedPlanetState(); await refreshStoreState(); await refreshQuestState(); });
   };
 
   useEffect(() => { if (!publicKey) return; void loadAntimatterBalance().catch(() => setAntimatterBalance(0n)); void refreshStoreState().catch(() => {}); void refreshAllianceState().catch(() => {}); }, [publicKey, gameConfig?.antimatterMint, loadAntimatterBalance, refreshStoreState, refreshAllianceState]);
@@ -5073,7 +5772,7 @@ const App: React.FC = () => {
 
   const activeMissionCount = state?.fleet.missions.filter(m => m.missionType !== 0).length ?? 0;
   const vaultReady = clientRef.current?.isVaultReady() ?? false;
-  const antimatterBalanceLabel = formatTokenAmount(antimatterBalance, DEFAULT_ANTIMATTER_DECIMALS);
+  const antimatterBalanceLabel = formatCompactTokenAmount(antimatterBalance, DEFAULT_ANTIMATTER_DECIMALS);
   const antimatterEnabled = !!gameConfig;
   const visibleSecondaryTabs = (hasCreatedWorld
     ? SECONDARY_TABS
@@ -5152,8 +5851,12 @@ const App: React.FC = () => {
   const handleMarketTxEnd = useCallback((err?: string) => {
     setTxBusy(false); setTxProgress("Processing...");
     if (err) setError(err);
-    else void Promise.all([refreshSelectedPlanetState(), loadAntimatterBalance()]).catch(() => {});
-  }, [refreshSelectedPlanetState, loadAntimatterBalance]);
+    else void Promise.all([
+      refreshSelectedPlanetState(),
+      loadAntimatterBalance(),
+      walletPublicKey ? loadAllPlanets(walletPublicKey) : Promise.resolve([]),
+    ]).catch(() => {});
+  }, [refreshSelectedPlanetState, loadAntimatterBalance, loadAllPlanets, walletPublicKey]);
 
   // ── Galaxy launch callbacks ───────────────────────────────────────────────
   const handleGalaxyLaunchTransport = useCallback((galaxy: number, system: number, position: number) => {
@@ -5187,11 +5890,11 @@ const App: React.FC = () => {
 
     switch (tab) {
       case "overview":
-        return <OverviewTab state={state} res={liveRes} nowTs={nowTs} planets={planets} onSelectPlanet={setSelectedPlanetPda} onFinishBuild={handleFinishBuild} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishBuild={handleInstantFinishBuild} onInstantFinishResearch={handleInstantFinishResearch} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy}/>;
+        return <OverviewTab state={state} res={liveRes} nowTs={nowTs} planets={planets} alliance={allianceState} allianceTreasury={allianceTreasury} allianceMembership={allianceMembership} onSelectPlanet={setSelectedPlanetPda} onFinishBuild={handleFinishBuild} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishBuild={handleInstantFinishBuild} onInstantFinishResearch={handleInstantFinishResearch} onInstantFinishShipyard={handleInstantFinishShipyard} onInstantFinishDefense={handleInstantFinishDefense} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy}/>;
       case "quests":
-        return <QuestsTab state={state} questState={questState} nowTs={nowTs} txBusy={txBusy} onDailyCheckIn={handleDailyCheckIn} onClaimQuest={handleClaimQuest} />;
+        return <QuestsTab state={state} questState={questState} questProgress={questProgress} nowTs={nowTs} txBusy={txBusy} onDailyCheckIn={handleDailyCheckIn} onClaimQuest={handleClaimQuest} />;
       case "alliance":
-        return <AllianceTab state={state} alliance={allianceState} membership={allianceMembership} alliances={allianceDirectory} joinRequests={allianceJoinRequests} members={allianceMembers} storeConfig={storeConfig} usdcBalance={usdcBalance} antimatterBalance={antimatterBalance} txBusy={txBusy} onCreate={handleCreateAlliance} onRequestJoin={handleRequestJoinAlliance} onApproveRequest={handleApproveJoinRequest} onRejectRequest={handleRejectJoinRequest} onExpelMember={handleExpelAllianceMember} onTransferLeadership={handleTransferAllianceLeadership} onLeave={handleLeaveAlliance} onClaimMission={handleClaimAllianceMission} />;
+        return <AllianceTab state={state} alliance={allianceState} allianceTreasury={allianceTreasury} membership={allianceMembership} alliances={allianceDirectory} joinRequests={allianceJoinRequests} myJoinRequests={myAllianceJoinRequests} members={allianceMembers} storeConfig={storeConfig} usdcBalance={usdcBalance} antimatterBalance={antimatterBalance} txBusy={txBusy} onCreate={handleCreateAlliance} onRequestJoin={handleRequestJoinAlliance} onApproveRequest={handleApproveJoinRequest} onRejectRequest={handleRejectJoinRequest} onExpelMember={handleExpelAllianceMember} onTransferLeadership={handleTransferAllianceLeadership} onLeave={handleLeaveAlliance} onDepositMission={handleDepositAllianceMission} onUpgradeBuilding={handleUpgradeAllianceBuilding} />;
       case "store":
         return <StoreTab state={state} storeConfig={storeConfig} storePurchaseState={storePurchaseState} usdcBalance={usdcBalance} nowTs={nowTs} txBusy={txBusy} onPurchase={handlePurchaseStorePack} />;
       case "resources":
@@ -5199,9 +5902,9 @@ const App: React.FC = () => {
       case "buildings":
         return <BuildingsTab state={state} res={liveRes} nowTs={nowTs} onStartBuild={idx => withTx("Start build", () => clientRef.current!.startBuild(new PublicKey(state.entityPda), idx))} onFinishBuild={handleFinishBuild} onInstantFinishBuild={handleInstantFinishBuild} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "shipyard":
-        return <CommandShipyardTab state={state} res={liveRes} nowTs={nowTs} txBusy={txBusy} onBuildShip={(shipType, qty) => withTx("Build ship", () => clientRef.current!.buildShip(new PublicKey(state.entityPda), shipType, qty))} onBuildDefense={(defenseType, qty) => withTx("Build defense", () => clientRef.current!.buildDefense(new PublicKey(state.entityPda), defenseType, qty))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
+        return <CommandShipyardTab state={state} res={liveRes} nowTs={nowTs} txBusy={txBusy} onBuildShip={handleBuildShip} onBuildDefense={handleBuildDefense} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)), refreshSelectedPlanetList)} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)), refreshSelectedPlanetList)} onInstantFinishShipyard={handleInstantFinishShipyard} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "defense":
-        return <DefenseTab state={state} res={liveRes} nowTs={nowTs} txBusy={txBusy} onBuildDefense={(defenseType, qty) => withTx("Build defense", () => clientRef.current!.buildDefense(new PublicKey(state.entityPda), defenseType, qty))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
+        return <DefenseTab state={state} res={liveRes} nowTs={nowTs} txBusy={txBusy} onBuildDefense={handleBuildDefense} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)), refreshSelectedPlanetList)} onInstantFinishDefense={handleInstantFinishDefense} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} onGoBuildings={() => setTab("buildings")} onGoResearch={() => setTab("research")} />;
       case "fleet":
         return <FleetTab fleet={state.fleet} computerTech={state.research.computerTech} res={liveRes} txBusy={txBusy} onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}/>;
       case "missions":
@@ -5239,6 +5942,9 @@ const App: React.FC = () => {
   const vaultButtonLabel = vaultBalance > 0n
     ? `⚿ ${formatSolBalance(vaultBalance)} SOL`
     : "⚿ VAULT";
+  const shieldProtectionLeft = state
+    ? Math.max(0, effectiveAttackProtectionUntil(state.planet) - nowTs)
+    : 0;
   const activeTheme = getPlanetTheme(state?.planet);
   const shellStyle = {
     "--planet-accent": activeTheme.accent,
@@ -5262,19 +5968,17 @@ const App: React.FC = () => {
               <div className="header-cluster">
                 <LogoSVG size={28}/>
               </div>
-              {state && (
-                <div className="desktop-planet-chip" style={shellStyle}>
-                  <span className="desktop-planet-orbit" />
-                  <span className="desktop-planet-copy">
-                    <span className="desktop-planet-name">{state.planet.name || `Planet ${state.planet.planetIndex + 1}`}</span>
-                    <span className="desktop-planet-coords">{state.planet.galaxy}:{state.planet.system}:{state.planet.position} / fields {state.planet.usedFields}/{state.planet.maxFields}</span>
-                  </span>
-                </div>
-              )}
             </div>
             <div className="header-right">
               <div className="header-cluster">
                 <span className="chain-tag">DEVNET</span>
+                <span
+                  className={`shield-tag${shieldProtectionLeft > 0 ? "" : " off"}`}
+                  title={shieldProtectionLeft > 0 ? "Attack protection active" : "No active attack protection"}
+                >
+                  <span className="shield-tag-label">SHIELD</span>
+                  <span className="shield-tag-value">{shieldProtectionLeft > 0 ? fmtCountdown(shieldProtectionLeft) : "OFF"}</span>
+                </span>
                 <button className="vault-tag" onClick={() => setShowVaultModal(true)} type="button">
                   {vaultButtonLabel}
                 </button>
@@ -5300,7 +6004,7 @@ const App: React.FC = () => {
                   </div>
                   <div className="energy-row">
                     <span style={{color:"var(--dim)",fontSize:10,letterSpacing:1}}>⚡ ENERGY</span>
-                    <span style={{fontSize:11,fontWeight:600,color:energyEfficiency(liveRes!)>=100?"var(--success)":energyEfficiency(liveRes!)>=60?"var(--warn)":"var(--danger)"}}>
+                    <span style={{fontSize:11,fontWeight:600,color:energyEfficiency(liveRes!)>=100?"var(--success)":energyEfficiency(liveRes!)>=36?"var(--warn)":"var(--danger)"}}>
                       {fmt(liveRes!.energyProduction)}/{fmt(liveRes!.energyConsumption)} ({energyEfficiency(liveRes!)}%)
                     </span>
                   </div>
@@ -5348,15 +6052,6 @@ const App: React.FC = () => {
               {state && liveRes && <div className="desktop-resource-shell"><DesktopResourceMenu res={liveRes} planet={state.planet} /></div>}
               <GameConfigAdminCard visible={!!isDevConfigAdmin} config={gameConfig} mintInput={gameConfigMintInput} onMintInputChange={setGameConfigMintInput} onSubmit={handleSaveGameConfig} busy={gameConfigBusy || txBusy}/>
               {error && <div className="shell-error">{error}</div>}
-              {state && (
-                <TabMasthead
-                  tab={tab}
-                  state={state}
-                  activeMissionCount={activeMissionCount}
-                  txBusy={txBusy}
-                  onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}
-                />
-              )}
               <div className="desktop-tab-body">
                 {renderTabContent()}
               </div>
@@ -5387,15 +6082,6 @@ const App: React.FC = () => {
           <div className="mobile-main">
             <GameConfigAdminCard visible={!!isDevConfigAdmin} config={gameConfig} mintInput={gameConfigMintInput} onMintInputChange={setGameConfigMintInput} onSubmit={handleSaveGameConfig} busy={gameConfigBusy || txBusy}/>
             {error && <div className="shell-error">{error}</div>}
-            {state && (
-              <TabMasthead
-                tab={tab}
-                state={state}
-                activeMissionCount={activeMissionCount}
-                txBusy={txBusy}
-                onOpenLaunch={() => { setLaunchPrefill(undefined); setShowLaunchModal(true); }}
-              />
-            )}
             {renderTabContent()}
           </div>
           {showMoreDrawer && (
@@ -5456,6 +6142,7 @@ const App: React.FC = () => {
       {showLaunchModal && state && liveRes && (
         <LaunchModal
           planet={state.planet}
+          research={state.research}
           fleet={state.fleet}
           computerTech={state.research.computerTech}
           res={liveRes}

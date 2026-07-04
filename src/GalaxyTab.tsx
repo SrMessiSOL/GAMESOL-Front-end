@@ -1,9 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { GameClient, Planet, PlayerState, PublicPlanetInfo } from "./game-state";
 
 const MAX_GALAXY = 999;
 const MAX_SYSTEM = 999;
 const MAX_POSITION = 15;
+
+function fmtShieldCountdown(totalSecs: number): string {
+  if (totalSecs <= 0) return "ready";
+  const d = Math.floor(totalSecs / 86400);
+  const h = Math.floor((totalSecs % 86400) / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  if (d > 0) return `${d}d ${String(h).padStart(2, "0")}h`;
+  if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+  return `${Math.max(1, m)}m`;
+}
 
 interface GalaxyTabProps {
   client: GameClient | null;
@@ -33,6 +43,31 @@ const GalaxyTab: React.FC<GalaxyTabProps> = ({
       op.planet.position === p.position,
     ), [ownedPlanets]);
 
+  const displayedPlanets = useMemo(() => {
+    const byPosition = new Map<number, PublicPlanetInfo>();
+    for (const p of planets) byPosition.set(p.position, p);
+    for (const owned of ownedPlanets) {
+      const p = owned.planet;
+      if (p.galaxy !== galaxy || p.system !== system) continue;
+      byPosition.set(p.position, {
+        entity: p.entity || owned.entityPda || owned.planetPda,
+        owner: p.owner,
+        name: p.name,
+        galaxy: p.galaxy,
+        system: p.system,
+        position: p.position,
+        planetIndex: p.planetIndex,
+        diameter: p.diameter,
+        temperature: p.temperature,
+        maxFields: p.maxFields,
+        createdAt: p.createdAt,
+        protectionUntilTs: p.protectionUntilTs,
+        lastAttackedTs: p.lastAttackedTs,
+      });
+    }
+    return Array.from(byPosition.values()).sort((a, b) => a.position - b.position);
+  }, [galaxy, ownedPlanets, planets, system]);
+
   const loadSystem = useCallback(async (g: number, s: number, manual = false) => {
     if (!client) return;
     if (manual) userHasManuallyScanned.current = true;
@@ -53,30 +88,59 @@ const GalaxyTab: React.FC<GalaxyTabProps> = ({
     if (!userHasManuallyScanned.current) {
       loadSystem(currentPlanet.galaxy, currentPlanet.system);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPlanet.galaxy, currentPlanet.system, loadSystem]);
 
   const SLOTS = Array.from({ length: MAX_POSITION }, (_, i) => i + 1);
-
+  const clampCoord = (value: number, max: number) => Math.max(1, Math.min(max, value));
+  const adjustGalaxy = (delta: number) => {
+    const next = clampCoord(galaxy + delta, MAX_GALAXY);
+    setGalaxy(next);
+    void loadSystem(next, system, true);
+  };
+  const adjustSystem = (delta: number) => {
+    const next = clampCoord(system + delta, MAX_SYSTEM);
+    setSystem(next);
+    void loadSystem(galaxy, next, true);
+  };
+  const CoordStepper: React.FC<{ label: string; value: number; max: number; onValue: (value: number) => void; onStep: (delta: number) => void; width: number }> = ({ label, value, max, onValue, onStep, width }) => (
+    <div>
+      <div className="modal-label">{label}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "30px 1fr 30px", gap: 6, alignItems: "center" }}>
+        <button
+          type="button"
+          className="galaxy-step-btn"
+          aria-label={`Previous ${label.toLowerCase()}`}
+          title={`Previous ${label.toLowerCase()}`}
+          onClick={() => onStep(-1)}
+          disabled={loading || txBusy || value <= 1}
+        >
+          {"<"}
+        </button>
+        <input type="number" min={1} max={max} value={value}
+          onChange={e => onValue(clampCoord(parseInt(e.target.value) || 1, max))}
+          style={{ width, padding: "8px 10px", fontSize: 13, background: "var(--panel)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 2 }}
+        />
+        <button
+          type="button"
+          className="galaxy-step-btn"
+          aria-label={`Next ${label.toLowerCase()}`}
+          title={`Next ${label.toLowerCase()}`}
+          onClick={() => onStep(1)}
+          disabled={loading || txBusy || value >= max}
+        >
+          {">"}
+        </button>
+      </div>
+    </div>
+  );
   return (
     <div>
       <div className="section-title">🌌 GALAXY EXPLORER</div>
 
       {/* Search bar */}
       <div style={{ marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
-        <div>
-          <div className="modal-label">Galaxy</div>
-          <input type="number" min={1} max={MAX_GALAXY} value={galaxy}
-            onChange={e => setGalaxy(Math.max(1, Math.min(MAX_GALAXY, parseInt(e.target.value) || 1)))}
-            style={{ width: 90, padding: "8px 10px", fontSize: 13, background: "var(--panel)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 2 }}
-          />
-        </div>
-        <div>
-          <div className="modal-label">System</div>
-          <input type="number" min={1} max={MAX_SYSTEM} value={system}
-            onChange={e => setSystem(Math.max(1, Math.min(MAX_SYSTEM, parseInt(e.target.value) || 1)))}
-            style={{ width: 110, padding: "8px 10px", fontSize: 13, background: "var(--panel)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 2 }}
-          />
-        </div>
+        <CoordStepper label="Galaxy" value={galaxy} max={MAX_GALAXY} onValue={setGalaxy} onStep={adjustGalaxy} width={90} />
+        <CoordStepper label="System" value={system} max={MAX_SYSTEM} onValue={setSystem} onStep={adjustSystem} width={110} />
         <button className="build-btn can-build" onClick={() => loadSystem(galaxy, system, true)} disabled={loading || txBusy}
           style={{ padding: "10px 24px", width: "auto" }}>
           {loading ? "SCANNING..." : "SCAN SYSTEM"}
@@ -87,13 +151,12 @@ const GalaxyTab: React.FC<GalaxyTabProps> = ({
           MY SYSTEM
         </button>
       </div>
-
       {error && <div className="error-msg" style={{ marginBottom: 16 }}>{error}</div>}
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div className="section-title" style={{ marginBottom: 0 }}>
-          SYSTEM [{galaxy}:{system}] — {planets.length}/{15} slots occupied
+          SYSTEM [{galaxy}:{system}] — {displayedPlanets.length}/{15} slots occupied
         </div>
         {loading && <div className="spinner" style={{ width: 20, height: 20, border: "2px solid var(--border)", borderTopColor: "var(--cyan)" }}/>}
       </div>
@@ -101,10 +164,14 @@ const GalaxyTab: React.FC<GalaxyTabProps> = ({
       {/* Slot list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 32 }}>
         {SLOTS.map(slot => {
-          const planet = planets.find(p => p.position === slot);
+          const planet = displayedPlanets.find(p => p.position === slot);
           const mine = planet ? isMyPlanet(planet) : false;
           const isOpen = actionSlot === slot;
           const hasPlanet = !!planet;
+          const shieldLeft = planet ? Math.max(0, planet.protectionUntilTs - Math.floor(Date.now() / 1000)) : 0;
+          const attackTitle = shieldLeft > 0
+            ? `Attack blocked: shield protection active for ${fmtShieldCountdown(shieldLeft)}.`
+            : "Attack missions unavailable from this panel.";
 
           const rowBorder = isOpen
             ? (hasPlanet ? "rgba(0,245,212,0.5)" : "rgba(155,93,229,0.5)")
@@ -184,7 +251,7 @@ const GalaxyTab: React.FC<GalaxyTabProps> = ({
                       </button>
                       {!mine && (
                         <button disabled style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: 1, padding: "5px 14px", border: "1px solid rgba(255,0,110,0.3)", background: "rgba(255,0,110,0.06)", color: "rgba(255,0,110,0.5)", borderRadius: 2, cursor: "not-allowed", textTransform: "uppercase" }}
-                          title="Attack missions — coming soon">
+                          title={attackTitle}>
                           ⚔ ATTACK
                         </button>
                       )}

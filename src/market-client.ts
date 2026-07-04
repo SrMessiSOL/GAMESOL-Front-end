@@ -17,7 +17,12 @@ import {
 } from "@solana/web3.js";
 import { AnchorProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
-import type { GameClient,} from "./game-state";
+import {
+  derivePlanetCoordsPda,
+  derivePlayerProfilePda,
+  type GameClient,
+  type PlayerState,
+} from "./game-state";
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
 const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
@@ -49,12 +54,16 @@ const MARKET_PRIORITY_FEE_MICROLAMPORTS = 0;
 const TOKEN_PROGRAM_ID = new PublicKey(
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
 );
+const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
+  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+);
 
 // ─── Discriminators ────────────────────────────────────────────────────────────
 
 const MARKET_OFFER_DISCRIMINATOR   = Buffer.from([0xc9, 0xb8, 0x91, 0x18, 0xae, 0xc0, 0x4b, 0x7b]);
 const MARKET_CONFIG_DISCRIMINATOR  = Buffer.from([0x77, 0xff, 0xc8, 0x58, 0xfc, 0x52, 0x80, 0x18]);
 const SELLER_COUNTER_DISCRIMINATOR = Buffer.from([0xba, 0x07, 0x93, 0x63, 0xea, 0x2b, 0xa0, 0x3c]);
+const PLANET_LISTING_DISCRIMINATOR = Buffer.from([156, 211, 160, 84, 247, 200, 233, 109]);
 
 // Instruction discriminators - sha256("global:<ix_name>")[0..8]
 // Instruction discriminators - sha256("global:<ix_name>")[0..8]
@@ -65,6 +74,9 @@ const IX = {
   createOffer:        Buffer.from([237, 233, 192, 168, 248, 7, 249, 241]),
   cancelOffer:        Buffer.from([92, 203, 223, 40, 92, 89, 53, 119]),
   acceptOffer:        Buffer.from([227, 82, 234, 131, 1, 18, 48, 2]),
+  createPlanetListing: Buffer.from([168, 189, 82, 35, 166, 138, 116, 61]),
+  cancelPlanetListing: Buffer.from([7, 217, 165, 138, 227, 253, 25, 112]),
+  buyPlanetListing:    Buffer.from([48, 116, 122, 166, 251, 1, 167, 31]),
 } as const;
 
 // ─── Resource type ─────────────────────────────────────────────────────────────
@@ -109,9 +121,25 @@ export interface MarketOffer {
   isOwn: boolean;
 }
 
+export interface PlanetListing {
+  pubkey: string;
+  seller: string;
+  planet: string;
+  planetCoords: string;
+  priceAntimatter: bigint;
+  createdAt: number;
+  listingId: number;
+  filled: boolean;
+  isOwn: boolean;
+  planetName?: string;
+  planetIndex?: number;
+  coords?: { galaxy: number; system: number; position: number };
+}
+
 export interface MarketConfig {
   admin: string;
   antimatterMint: string;
+  treasuryAntimatterAccount: string;
   totalVolume: bigint;
   totalOffers: bigint;
 }
@@ -169,6 +197,15 @@ export function deriveOfferPda(seller: PublicKey, offerId: number): PublicKey {
   )[0];
 }
 
+export function derivePlanetListingPda(seller: PublicKey, listingId: number): PublicKey {
+  const idBuf = Buffer.alloc(4);
+  idBuf.writeUInt32LE(listingId, 0);
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("planet_listing"), seller.toBuffer(), idBuf],
+    MARKET_PROGRAM_ID,
+  )[0];
+}
+
 export function deriveMarketEscrowPda(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("market_escrow")],
@@ -181,6 +218,13 @@ export function deriveMarketAuthorityPda(): [PublicKey, number] {
     [Buffer.from("market_authority")],
     MARKET_PROGRAM_ID,
   );
+}
+
+function deriveAssociatedTokenAccount(mint: PublicKey, owner: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  )[0];
 }
 
 // ─── Deserializers ─────────────────────────────────────────────────────────────
@@ -222,6 +266,36 @@ function deserializeMarketOffer(
   };
 }
 
+function deserializePlanetListing(
+  pubkey: PublicKey,
+  data: Buffer,
+  walletPubkey?: PublicKey,
+): PlanetListing {
+  if (!data.slice(0, 8).equals(PLANET_LISTING_DISCRIMINATOR)) {
+    throw new Error("Invalid PlanetListing discriminator");
+  }
+  let o = 8;
+  const seller = readPubkey(data, o); o += 32;
+  const planet = readPubkey(data, o); o += 32;
+  const planetCoords = readPubkey(data, o); o += 32;
+  const priceAntimatter = readU64(data, o); o += 8;
+  const createdAt = readI64(data, o); o += 8;
+  const listingId = readU32(data, o); o += 4;
+  const filled = readU8(data, o) !== 0; o += 1;
+
+  return {
+    pubkey: pubkey.toBase58(),
+    seller: seller.toBase58(),
+    planet: planet.toBase58(),
+    planetCoords: planetCoords.toBase58(),
+    priceAntimatter,
+    createdAt,
+    listingId,
+    filled,
+    isOwn: walletPubkey ? seller.equals(walletPubkey) : false,
+  };
+}
+
 function deserializeMarketConfig(data: Buffer): MarketConfig {
   if (!data.slice(0, 8).equals(MARKET_CONFIG_DISCRIMINATOR)) {
     throw new Error("Invalid MarketConfig discriminator");
@@ -229,11 +303,13 @@ function deserializeMarketConfig(data: Buffer): MarketConfig {
   let o = 8;
   const admin = readPubkey(data, o); o += 32;
   const antimatterMint = readPubkey(data, o); o += 32;
+  const treasuryAntimatterAccount = deriveAssociatedTokenAccount(antimatterMint, admin);
   const totalVolume = readU128(data, o); o += 16;
   const totalOffers = readU64(data, o);
   return {
     admin: admin.toBase58(),
     antimatterMint: antimatterMint.toBase58(),
+    treasuryAntimatterAccount: treasuryAntimatterAccount.toBase58(),
     totalVolume,
     totalOffers,
   };
@@ -257,6 +333,12 @@ function encodeCreateOffer(
   const w = new BorshWriter();
   w.writeU8(resourceType);
   w.writeU64(resourceAmount);
+  w.writeU64(priceAntimatter);
+  return w.toBuffer();
+}
+
+function encodeCreatePlanetListing(priceAntimatter: bigint): Buffer {
+  const w = new BorshWriter();
   w.writeU64(priceAntimatter);
   return w.toBuffer();
 }
@@ -483,6 +565,7 @@ export class MarketClient {
     const sellerCounterPda = deriveSellerCounterPda(sellerPubkey);
     const marketConfigPda = deriveMarketConfigPda();
     const [marketEscrow] = deriveMarketEscrowPda();
+    const treasuryAntimatterAccount = new PublicKey(config.treasuryAntimatterAccount);
     const [marketEscrowAuthority] = deriveMarketAuthorityPda();
 
     const buyerAtaResponse = await this.connection.getParsedTokenAccountsByOwner(
@@ -509,12 +592,13 @@ export class MarketClient {
         { pubkey: buyerAta,                 isSigner: false, isWritable: true },  // 6  buyer_ata
         { pubkey: sellerAta,                isSigner: false, isWritable: true },  // 7  seller_ata
         { pubkey: marketEscrow,             isSigner: false, isWritable: true },  // 8  market_escrow
-        { pubkey: marketEscrowAuthority,    isSigner: false, isWritable: false }, // 9  authority
-        { pubkey: TOKEN_PROGRAM_ID,         isSigner: false, isWritable: false }, // 10 token_program
-        { pubkey: SystemProgram.programId,  isSigner: false, isWritable: false }, // 11 system_program
-        { pubkey: GAME_STATE_PROGRAM_ID,    isSigner: false, isWritable: false }, // 12 game_program
-        { pubkey: sellerPlanetPda,          isSigner: false, isWritable: true },  // 13 seller_planet
-        { pubkey: buyerPlanetPda,           isSigner: false, isWritable: true },  // 14 buyer_planet
+        { pubkey: treasuryAntimatterAccount,isSigner: false, isWritable: true },  // 9  treasury_ata
+        { pubkey: marketEscrowAuthority,    isSigner: false, isWritable: false }, // 10 authority
+        { pubkey: TOKEN_PROGRAM_ID,         isSigner: false, isWritable: false }, // 11 token_program
+        { pubkey: SystemProgram.programId,  isSigner: false, isWritable: false }, // 12 system_program
+        { pubkey: GAME_STATE_PROGRAM_ID,    isSigner: false, isWritable: false }, // 13 game_program
+        { pubkey: sellerPlanetPda,          isSigner: false, isWritable: true },  // 14 seller_planet
+        { pubkey: buyerPlanetPda,           isSigner: false, isWritable: true },  // 15 buyer_planet
       ],
       data: encodeInstruction(IX.acceptOffer),
     });
@@ -523,6 +607,112 @@ export class MarketClient {
   }
 
   // ── Fetching offers ──────────────────────────────────────────────────────────
+
+  async createPlanetListing(planet: PlayerState, priceAntimatter: bigint): Promise<string> {
+    const seller = this.provider.wallet.publicKey;
+    const marketConfigPda = deriveMarketConfigPda();
+    const sellerCounterPda = deriveSellerCounterPda(seller);
+    const planetPda = new PublicKey(planet.planetPda);
+    const planetCoordsPda = derivePlanetCoordsPda(
+      planet.planet.galaxy,
+      planet.planet.system,
+      planet.planet.position,
+    );
+
+    const counterInfo = await this.connection.getAccountInfo(sellerCounterPda, "confirmed");
+    const nextOfferId = counterInfo
+      ? deserializeSellerCounter(Buffer.from(counterInfo.data)).nextOfferId
+      : 0;
+    const listingPda = derivePlanetListingPda(seller, nextOfferId);
+
+    const ix = new TransactionInstruction({
+      programId: MARKET_PROGRAM_ID,
+      keys: [
+        { pubkey: seller,           isSigner: true,  isWritable: true },
+        { pubkey: marketConfigPda,  isSigner: false, isWritable: true },
+        { pubkey: sellerCounterPda, isSigner: false, isWritable: true },
+        { pubkey: listingPda,       isSigner: false, isWritable: true },
+        { pubkey: planetPda,        isSigner: false, isWritable: true },
+        { pubkey: planetCoordsPda,  isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.createPlanetListing, encodeCreatePlanetListing(priceAntimatter)),
+    });
+
+    return this.sendInstruction([ix]);
+  }
+
+  async cancelPlanetListing(listing: PlanetListing): Promise<string> {
+    const seller = this.provider.wallet.publicKey;
+    const listingPda = new PublicKey(listing.pubkey);
+    const sellerCounterPda = deriveSellerCounterPda(seller);
+
+    const ix = new TransactionInstruction({
+      programId: MARKET_PROGRAM_ID,
+      keys: [
+        { pubkey: seller,           isSigner: true,  isWritable: true },
+        { pubkey: listingPda,       isSigner: false, isWritable: true },
+        { pubkey: sellerCounterPda, isSigner: false, isWritable: true },
+      ],
+      data: encodeInstruction(IX.cancelPlanetListing),
+    });
+    return this.sendInstruction([ix]);
+  }
+
+  async buyPlanetListing(listing: PlanetListing): Promise<string> {
+    const buyer = this.provider.wallet.publicKey;
+    const config = await this.getMarketConfig();
+    if (!config) throw new Error("Market config not initialized.");
+
+    const antimatterMint = new PublicKey(config.antimatterMint);
+    const sellerPubkey = new PublicKey(listing.seller);
+    const listingPda = new PublicKey(listing.pubkey);
+    const planetPda = new PublicKey(listing.planet);
+    const planetCoordsPda = new PublicKey(listing.planetCoords);
+    const sellerCounterPda = deriveSellerCounterPda(sellerPubkey);
+    const marketConfigPda = deriveMarketConfigPda();
+    const [marketEscrow] = deriveMarketEscrowPda();
+    const treasuryAntimatterAccount = new PublicKey(config.treasuryAntimatterAccount);
+    const [marketEscrowAuthority] = deriveMarketAuthorityPda();
+    const buyerProfilePda = derivePlayerProfilePda(buyer);
+
+    const buyerAtaResponse = await this.connection.getParsedTokenAccountsByOwner(
+      buyer, { mint: antimatterMint, programId: TOKEN_PROGRAM_ID }, "confirmed"
+    );
+    const buyerAta = buyerAtaResponse.value[0]?.pubkey;
+    if (!buyerAta) throw new Error("Buyer has no ANTIMATTER token account.");
+
+    const sellerAtaResponse = await this.connection.getParsedTokenAccountsByOwner(
+      sellerPubkey, { mint: antimatterMint, programId: TOKEN_PROGRAM_ID }, "confirmed"
+    );
+    const sellerAta = sellerAtaResponse.value[0]?.pubkey;
+    if (!sellerAta) throw new Error("Seller has no ANTIMATTER token account.");
+
+    const ix = new TransactionInstruction({
+      programId: MARKET_PROGRAM_ID,
+      keys: [
+        { pubkey: buyer,                 isSigner: true,  isWritable: true },
+        { pubkey: sellerPubkey,          isSigner: false, isWritable: true },
+        { pubkey: marketConfigPda,       isSigner: false, isWritable: true },
+        { pubkey: listingPda,            isSigner: false, isWritable: true },
+        { pubkey: sellerCounterPda,      isSigner: false, isWritable: true },
+        { pubkey: antimatterMint,        isSigner: false, isWritable: true },
+        { pubkey: buyerAta,              isSigner: false, isWritable: true },
+        { pubkey: sellerAta,             isSigner: false, isWritable: true },
+        { pubkey: marketEscrow,          isSigner: false, isWritable: true },
+        { pubkey: treasuryAntimatterAccount, isSigner: false, isWritable: true },
+        { pubkey: marketEscrowAuthority, isSigner: false, isWritable: false },
+        { pubkey: TOKEN_PROGRAM_ID,      isSigner: false, isWritable: false },
+        { pubkey: GAME_STATE_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: planetPda,             isSigner: false, isWritable: true },
+        { pubkey: planetCoordsPda,       isSigner: false, isWritable: true },
+        { pubkey: buyerProfilePda,       isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.buyPlanetListing),
+    });
+
+    return this.sendInstruction([ix]);
+  }
 
   async fetchAllOffers(filterResource?: ResourceType): Promise<MarketOffer[]> {
     const walletPubkey = this.provider.wallet.publicKey;
@@ -566,6 +756,47 @@ export class MarketClient {
     }
   }
 
+  async fetchAllPlanetListings(): Promise<PlanetListing[]> {
+    const walletPubkey = this.provider.wallet.publicKey;
+    const accounts = await this.connection.getProgramAccounts(MARKET_PROGRAM_ID, {
+      commitment: "confirmed",
+      filters: [
+        { dataSize: 8 + 32 + 32 + 32 + 8 + 8 + 4 + 1 + 1 },
+        { memcmp: { offset: 0, bytes: bs58.encode(PLANET_LISTING_DISCRIMINATOR) } },
+      ],
+    });
+
+    const listings: PlanetListing[] = [];
+    for (const { pubkey, account } of accounts) {
+      try {
+        const listing = deserializePlanetListing(pubkey, Buffer.from(account.data), walletPubkey);
+        if (listing.filled) continue;
+        const planetState = await this.gameClient.getPlanetStateByPda(new PublicKey(listing.planet));
+        if (planetState) {
+          listing.planetName = planetState.planet.name;
+          listing.planetIndex = planetState.planet.planetIndex;
+          listing.coords = {
+            galaxy: planetState.planet.galaxy,
+            system: planetState.planet.system,
+            position: planetState.planet.position,
+          };
+        }
+        listings.push(listing);
+      } catch { /* skip malformed or unreadable listings */ }
+    }
+
+    return listings.sort((a, b) => {
+      if (a.priceAntimatter !== b.priceAntimatter) return a.priceAntimatter < b.priceAntimatter ? -1 : 1;
+      return a.createdAt - b.createdAt;
+    });
+  }
+
+  async fetchMyPlanetListings(): Promise<PlanetListing[]> {
+    const seller = this.provider.wallet.publicKey.toBase58();
+    const all = await this.fetchAllPlanetListings();
+    return all.filter(l => l.seller === seller);
+  }
+
   async getAntimatterBalance(): Promise<bigint> {
     const config = await this.getMarketConfig();
     if (!config) return 0n;
@@ -584,8 +815,18 @@ export class MarketClient {
 
 // ─── Formatting helpers ────────────────────────────────────────────────────────
 
+function compactTokenDisplay(value: number): string {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return value.toFixed(2).replace(/\.?0+$/, "");
+}
+
 export function formatAm(raw: bigint, decimals = 2): string {
   const whole = raw / ANTIMATTER_SCALE;
+  if (whole >= 1_000n) {
+    return compactTokenDisplay(Number(raw) / Number(ANTIMATTER_SCALE));
+  }
   const frac = raw % ANTIMATTER_SCALE;
   if (decimals === 0) return whole.toString();
   const fracStr = frac.toString().padStart(6, "0").slice(0, decimals);

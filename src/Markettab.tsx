@@ -19,6 +19,7 @@ import { PublicKey } from "@solana/web3.js";
 import {
   MarketClient,
   MarketOffer,
+  PlanetListing,
   ResourceType,
   ANTIMATTER_SCALE,
   RESOURCE_LABELS,
@@ -33,9 +34,13 @@ import {
 } from "./market-client";
 import { fmtCountdown, type PlayerState, type Resources } from "./game-state";
 
+const PROTOCOL_AUTHORITY = "EhT4UUmsHyd41bZSGzj1W72yu2EptHk8sEvnK7aaNuBu";
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type MarketView = "buy" | "sell" | "myoffers";
+type MarketSection = "resources" | "planets";
+type PlanetMarketView = "buy" | "sell" | "myoffers";
 type ResourceCreditDelta = { metal?: bigint; crystal?: bigint; deuterium?: bigint };
 
 interface MarketTabProps {
@@ -186,6 +191,192 @@ const OfferCard: React.FC<{
 };
 
 // ─── Create Offer Modal ────────────────────────────────────────────────────────
+
+const planetCoordsLabel = (listing: PlanetListing): string => {
+  if (!listing.coords) return `${listing.planet.slice(0, 4)}...${listing.planet.slice(-4)}`;
+  return `[${listing.coords.galaxy}:${listing.coords.system}:${listing.coords.position}]`;
+};
+
+const PlanetListingCard: React.FC<{
+  listing: PlanetListing;
+  antimatterBalance: bigint;
+  txBusy: boolean;
+  marketUnlocked: boolean;
+  onBuy: (listing: PlanetListing) => void;
+  onCancel: (listing: PlanetListing) => void;
+}> = ({ listing, antimatterBalance, txBusy, marketUnlocked, onBuy, onCancel }) => {
+  const canBuy = antimatterBalance >= listing.priceAntimatter;
+  const shortSeller = `${listing.seller.slice(0, 4)}...${listing.seller.slice(-4)}`;
+
+  return (
+    <div style={{
+      background: "var(--panel)",
+      border: `1px solid ${listing.isOwn ? "rgba(155,93,229,0.4)" : "var(--border)"}`,
+      borderRadius: 4,
+      padding: "12px 14px",
+      display: "grid",
+      gridTemplateColumns: "1fr auto",
+      gap: 10,
+      alignItems: "center",
+    }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{
+            fontFamily: "'Orbitron', sans-serif",
+            fontSize: 12,
+            color: "var(--cyan)",
+            letterSpacing: 1.5,
+          }}>
+            {listing.planetName || "Planet"} {planetCoordsLabel(listing)}
+          </span>
+          {listing.isOwn && (
+            <span style={{
+              fontSize: 9, letterSpacing: 1.5, padding: "2px 6px",
+              border: "1px solid rgba(155,93,229,0.4)", borderRadius: 2,
+              color: "var(--purple)", background: "rgba(155,93,229,0.08)",
+            }}>YOUR LISTING</span>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <AmPill amount={listing.priceAntimatter}/>
+          <span style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 0.5 }}>
+            seller {shortSeller}
+          </span>
+        </div>
+      </div>
+
+      <div>
+        {listing.isOwn ? (
+          <button
+            onClick={() => onCancel(listing)}
+            disabled={txBusy}
+            style={{
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 10, letterSpacing: 1,
+              padding: "7px 12px", borderRadius: 2,
+              border: "1px solid rgba(255,0,110,0.4)",
+              background: "rgba(255,0,110,0.06)",
+              color: "var(--danger)", cursor: "pointer",
+            }}
+          >
+            CANCEL
+          </button>
+        ) : (
+          <button
+            onClick={() => onBuy(listing)}
+            disabled={txBusy || !canBuy || !marketUnlocked}
+            title={!marketUnlocked ? "Market is still locked for this planet." : !canBuy ? `Need ${formatAm(listing.priceAntimatter)} AM` : undefined}
+            style={{
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 10, letterSpacing: 1,
+              padding: "7px 12px", borderRadius: 2,
+              border: canBuy ? "1px solid var(--cyan)" : "1px solid var(--border)",
+              background: canBuy ? "rgba(0,245,212,0.08)" : "transparent",
+              color: canBuy ? "var(--cyan)" : "var(--dim)",
+              cursor: canBuy && marketUnlocked && !txBusy ? "pointer" : "not-allowed",
+            }}
+          >
+            BUY
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const CreatePlanetListingModal: React.FC<{
+  planet: PlayerState;
+  txBusy: boolean;
+  onClose: () => void;
+  onSubmit: (priceAntimatter: bigint) => Promise<void>;
+}> = ({ planet, txBusy, onClose, onSubmit }) => {
+  const [priceStr, setPriceStr] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [localErr, setLocalErr] = useState<string | null>(null);
+  const parsedPrice = amRawFromDisplay(parseFloat(priceStr) || 0);
+  const canSubmit = parsedPrice >= ANTIMATTER_SCALE && !submitting && !txBusy;
+
+  const handleSubmit = async () => {
+    setLocalErr(null);
+    if (parsedPrice < ANTIMATTER_SCALE) { setLocalErr("Minimum price is 1.00 ANTIMATTER."); return; }
+    setSubmitting(true);
+    try {
+      await onSubmit(parsedPrice);
+      onClose();
+    } catch (e) {
+      setLocalErr(describeError(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
+        zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
+        backdropFilter: "blur(6px)",
+      }}
+      onClick={e => { if (e.target === e.currentTarget && !submitting) onClose(); }}
+    >
+      <div style={{
+        background: "var(--panel)",
+        border: "1px solid rgba(0,245,212,0.25)",
+        borderRadius: "10px 10px 0 0",
+        padding: "24px 20px",
+        width: "100%",
+        maxWidth: 520,
+      }}>
+        <div style={{ width: 36, height: 3, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }}/>
+        <div style={{
+          fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+          letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+          paddingBottom: 10, borderBottom: "1px solid var(--border)",
+        }}>
+          LIST PLANET
+        </div>
+        <div style={{ marginBottom: 14, color: "var(--text)", fontSize: 12 }}>
+          {planet.planet.name} [{planet.planet.galaxy}:{planet.planet.system}:{planet.planet.position}]
+        </div>
+        <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
+          Total Price (ANTIMATTER tokens, min 1.0)
+        </div>
+        <input
+          type="number" min={1} step={1}
+          value={priceStr}
+          onChange={e => setPriceStr(e.target.value)}
+          placeholder="e.g. 5000"
+          style={{
+            width: "100%", padding: "10px 12px", borderRadius: 2,
+            background: "rgba(0,0,0,0.4)",
+            border: "1px solid var(--border)",
+            color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 13,
+            marginBottom: 14,
+          }}
+        />
+        {localErr && <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 10 }}>{localErr}</div>}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} disabled={submitting} style={{
+            flex: 1, padding: "12px 16px", borderRadius: 2,
+            border: "1px solid var(--border)", background: "transparent",
+            color: "var(--dim)", cursor: "pointer",
+            fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+          }}>CANCEL</button>
+          <button onClick={() => void handleSubmit()} disabled={!canSubmit} style={{
+            flex: 2, padding: "12px 16px", borderRadius: 2,
+            border: `1px solid ${canSubmit ? "var(--cyan)" : "var(--border)"}`,
+            background: canSubmit ? "rgba(0,245,212,0.1)" : "transparent",
+            color: canSubmit ? "var(--cyan)" : "var(--dim)",
+            cursor: canSubmit ? "pointer" : "not-allowed",
+            fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+          }}>
+            {submitting ? "LISTING..." : "LIST PLANET"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const CreateOfferModal: React.FC<{
   liveRes: Resources | undefined;
@@ -634,34 +825,42 @@ const MarketTab: React.FC<MarketTabProps> = ({
   onResourceCreditWarning,
   txBusy,
 }) => {
+  const [section, setSection] = useState<MarketSection>("resources");
   const [view, setView] = useState<MarketView>("buy");
+  const [planetView, setPlanetView] = useState<PlanetMarketView>("buy");
   const [filterResource, setFilterResource] = useState<ResourceType | undefined>(undefined);
   const [offers, setOffers] = useState<MarketOffer[]>([]);
+  const [planetListings, setPlanetListings] = useState<PlanetListing[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreatePlanetModal, setShowCreatePlanetModal] = useState(false);
   const [buyTarget, setBuyTarget] = useState<MarketOffer | null>(null);
+  const [planetBuyTarget, setPlanetBuyTarget] = useState<PlanetListing | null>(null);
   const [lastRefresh, setLastRefresh] = useState(0);
   const [nowTs, setNowTs] = useState(() => Math.floor(Date.now() / 1000));
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const marketUnlockLeft = state ? Math.max(0, state.planet.marketUnlockedAt - nowTs) : 0;
   const marketUnlocked = marketUnlockLeft === 0;
+  const activePlanetIsHomeworld = (state?.planet.planetIndex ?? -1) === 0;
 
   // ── Market config state ──────────────────────────────────────────────────
   // undefined = loading, null = not initialized, MarketConfig = initialized
   const [marketConfig, setMarketConfig] = useState<import("./market-client").MarketConfig | null | undefined>(undefined);
   const [marketMintInput, setMarketMintInput] = useState("FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh");
   const [escrowInitialized, setEscrowInitialized] = useState(false);
-
-  // Determine if connected wallet is the market admin
   const walletAddress = state?.planet.owner ?? "";
-  const isAdmin = !!marketConfig && marketConfig.admin === walletAddress;
+  const isProtocolAuthority = walletAddress === PROTOCOL_AUTHORITY;
+  const isAdmin = marketConfig ? marketConfig.admin === walletAddress : isProtocolAuthority;
   const marketLoading = marketConfig === undefined;  // undefined = still fetching
-  // Also show admin card if market is confirmed not initialized (anyone can bootstrap on devnet)
-  const showAdminCard = marketConfig === null;
+  const showAdminCard = isProtocolAuthority || isAdmin;
 
   // ── Market admin handler ──────────────────────────────────────────────────
   const handleInitializeMarket = useCallback(async () => {
     if (!client) return;
+    if (!isAdmin) {
+      onTxEnd("Only the protocol authority can initialize or update the market config.");
+      return;
+    }
     let mint: PublicKey;
     try {
       mint = new PublicKey(marketMintInput);
@@ -689,11 +888,15 @@ const MarketTab: React.FC<MarketTabProps> = ({
     } catch (e: any) {
       onTxEnd(describeError(e));
     }
-  }, [client, marketConfig, marketMintInput, onTxStart, onTxEnd]);
+  }, [client, isAdmin, marketConfig, marketMintInput, onTxStart, onTxEnd]);
 
   // ── Escrow initialization handler (for existing markets) ──────────────────
   const handleInitializeEscrow = useCallback(async () => {
     if (!client) return;
+    if (!isAdmin) {
+      onTxEnd("Only the market admin can initialize escrow.");
+      return;
+    }
     onTxStart("Initializing escrow...");
     try {
       await client.initializeEscrow();
@@ -702,7 +905,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
     } catch (e: any) {
       onTxEnd(describeError(e));
     }
-  }, [client, onTxStart, onTxEnd]);
+  }, [client, isAdmin, onTxStart, onTxEnd]);
 
   // ── Data fetching ────────────────────────────────────────────────────────────
 
@@ -723,6 +926,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
       if (cfg) {
         const all = await client.fetchAllOffers(filterResource);
         setOffers(all);
+        const planetMarket = await client.fetchAllPlanetListings();
+        setPlanetListings(planetMarket);
       }
       setLastRefresh(Date.now());
     } catch {
@@ -745,8 +950,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   // Re-fetch when view changes to myoffers
   useEffect(() => {
-    if (view === "myoffers") void fetchOffers();
-  }, [view, fetchOffers]);
+    if (view === "myoffers" || planetView === "myoffers") void fetchOffers();
+  }, [view, planetView, fetchOffers]);
 
   // ── Filtered views ───────────────────────────────────────────────────────────
 
@@ -756,6 +961,13 @@ const MarketTab: React.FC<MarketTabProps> = ({
     // buy: exclude own offers
     return offers.filter(o => o.seller !== walletAddress);
   }, [offers, view, walletAddress]);
+
+  const displayedPlanetListings = useMemo(() => {
+    const sellableListings = planetListings.filter(l => l.planetIndex !== 0);
+    if (planetView === "myoffers") return sellableListings.filter(l => l.seller === walletAddress);
+    if (planetView === "sell") return [];
+    return sellableListings.filter(l => l.seller !== walletAddress);
+  }, [planetListings, planetView, walletAddress]);
 
   const resourceCreditDeltaForOffer = (offer: MarketOffer): ResourceCreditDelta => {
     if (offer.resourceType === ResourceType.Metal) return { metal: offer.resourceAmount };
@@ -809,6 +1021,60 @@ const MarketTab: React.FC<MarketTabProps> = ({
     onTxStart("Purchasing...");
     try {
       await client.acceptOffer(offer);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+      throw e;
+    }
+  };
+
+  const handleCreatePlanetListing = async (priceAntimatter: bigint) => {
+    if (!client || !state) return;
+    if (activePlanetIsHomeworld) {
+      onTxEnd("The initial homeworld planet cannot be sold.");
+      return;
+    }
+    if (!marketUnlocked) {
+      onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
+      return;
+    }
+    if (!marketConfig) {
+      onTxEnd("Market is not initialized yet. Initialize it first using the admin panel.");
+      return;
+    }
+    onTxStart("Listing planet...");
+    try {
+      await client.createPlanetListing(state, priceAntimatter);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+      throw e;
+    }
+  };
+
+  const handleCancelPlanetListing = async (listing: PlanetListing) => {
+    if (!client) return;
+    onTxStart("Cancelling planet listing...");
+    try {
+      await client.cancelPlanetListing(listing);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+    }
+  };
+
+  const handleBuyPlanetListing = async (listing: PlanetListing) => {
+    if (!client) return;
+    if (!marketUnlocked) {
+      onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
+      return;
+    }
+    onTxStart("Buying planet...");
+    try {
+      await client.buyPlanetListing(listing);
       await fetchOffers();
       onTxEnd();
     } catch (e) {
@@ -871,7 +1137,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   return (
     <div>
       {/* ── Header ── */}
-      <div className="section-title">P2P RESOURCE MARKET</div>
+      <div className="section-title">P2P MARKET</div>
 
       {/* ── Market Admin Card — shown when not initialized OR to admin ── */}
       <MarketAdminCard
@@ -907,6 +1173,32 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
       {/* ── Rest of UI — only shown when initialized ── */}
       {!marketLoading && !marketUninitialized && (<>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {([
+          { id: "resources", label: "RESOURCES" },
+          { id: "planets", label: "PLANETS" },
+        ] as const).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setSection(tab.id)}
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 11,
+              letterSpacing: 1.5,
+              borderRadius: 3,
+              border: `1px solid ${section === tab.id ? "var(--cyan)" : "var(--border)"}`,
+              background: section === tab.id ? "rgba(0,245,212,0.08)" : "transparent",
+              color: section === tab.id ? "var(--cyan)" : "var(--dim)",
+              cursor: "pointer",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {/* ── Balance strip ── */}
       <div style={{
@@ -965,7 +1257,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
       </div>
 
       {/* ── Nav ── */}
-      <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
+      {section === "resources" && <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
         {([
           { id: "buy",      label: "BUY",        icon: "BUY" },
           { id: "sell",     label: "SELL",       icon: "SELL" },
@@ -989,10 +1281,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
             {tab.label}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* ── Filter chips (buy only) ── */}
-      {view === "buy" && (
+      {section === "resources" && view === "buy" && (
         <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
           <button
             onClick={() => setFilterResource(undefined)}
@@ -1028,7 +1320,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
       )}
 
       {/* ── SELL view ── */}
-      {view === "sell" && (
+      {section === "resources" && view === "sell" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{
             padding: "14px 16px", borderRadius: 4,
@@ -1069,7 +1361,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
       )}
 
       {/* ── BUY / MY OFFERS offer list ── */}
-      {(view === "buy" || view === "myoffers") && (
+      {section === "resources" && (view === "buy" || view === "myoffers") && (
         <>
           {displayedOffers.length === 0 ? (
             <div style={{
@@ -1110,6 +1402,118 @@ const MarketTab: React.FC<MarketTabProps> = ({
       )}
 
       {/* ── Modals ── */}
+      {section === "planets" && (
+        <>
+          <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
+            {([
+              { id: "buy", label: "BUY" },
+              { id: "sell", label: "LIST" },
+              { id: "myoffers", label: "MY LISTINGS" },
+            ] as const).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setPlanetView(tab.id)}
+                style={{
+                  flex: 1, padding: "10px 8px",
+                  fontFamily: "'Share Tech Mono', monospace",
+                  fontSize: 10, letterSpacing: 1.5,
+                  textTransform: "uppercase",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: `2px solid ${planetView === tab.id ? "var(--cyan)" : "transparent"}`,
+                  color: planetView === tab.id ? "var(--cyan)" : "var(--dim)",
+                  cursor: "pointer",
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {planetView === "sell" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{
+                padding: "14px 16px", borderRadius: 4,
+                background: "rgba(155,93,229,0.05)",
+                border: "1px solid rgba(155,93,229,0.2)",
+                fontSize: 10, color: "var(--dim)", lineHeight: 1.8, letterSpacing: 0.5,
+              }}>
+                <strong style={{ color: "var(--purple)" }}>Planet sales:</strong> list the active planet for ANTIMATTER. The buyer receives ownership on-chain when the purchase confirms.
+              </div>
+              <button
+                onClick={() => setShowCreatePlanetModal(true)}
+                disabled={txBusy || !state || !marketUnlocked || activePlanetIsHomeworld}
+                style={{
+                  fontFamily: "'Orbitron', sans-serif",
+                  fontSize: 12, fontWeight: 700, letterSpacing: 2,
+                  padding: "14px 20px", borderRadius: 3,
+                  border: "2px solid var(--cyan)",
+                  background: "linear-gradient(135deg, rgba(0,245,212,0.1), rgba(155,93,229,0.05))",
+                  color: "var(--cyan)", cursor: "pointer",
+                  width: "100%", textTransform: "uppercase",
+                }}
+              >
+                LIST ACTIVE PLANET
+              </button>
+              {activePlanetIsHomeworld && state && (
+                <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
+                  The initial homeworld planet cannot be sold.
+                </div>
+              )}
+              {!marketUnlocked && state && (
+                <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
+                  Market unlocks for this planet in {fmtCountdown(marketUnlockLeft)}.
+                </div>
+              )}
+              {!state && (
+                <div style={{ fontSize: 10, color: "var(--dim)", textAlign: "center" }}>
+                  No active planet loaded.
+                </div>
+              )}
+            </div>
+          )}
+
+          {(planetView === "buy" || planetView === "myoffers") && (
+            <>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+                <span style={{ fontSize: 9, color: "var(--dim)" }}>
+                  {loading ? "Refreshing..." : `${displayedPlanetListings.length} listings - ${Math.round((Date.now() - lastRefresh) / 1000)}s ago`}
+                </span>
+              </div>
+              {displayedPlanetListings.length === 0 ? (
+                <div style={{
+                  textAlign: "center", padding: "48px 20px",
+                  border: "1px dashed var(--border)", borderRadius: 4,
+                  color: "var(--dim)", fontSize: 11, letterSpacing: 1,
+                }}>
+                  {loading ? (
+                    <span style={{ animation: "pulse 2s ease-in-out infinite" }}>Loading planet listings...</span>
+                  ) : planetView === "myoffers" ? (
+                    <>You have no active planet listings. Switch to <em>List</em> to create one.</>
+                  ) : (
+                    <>No planets listed yet.</>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {displayedPlanetListings.map(listing => (
+                    <PlanetListingCard
+                      key={listing.pubkey}
+                      listing={listing}
+                      antimatterBalance={antimatterBalance}
+                      txBusy={txBusy}
+                      marketUnlocked={marketUnlocked}
+                      onBuy={l => setPlanetBuyTarget(l)}
+                      onCancel={l => void handleCancelPlanetListing(l)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
       {showCreateModal && (
         <CreateOfferModal
           liveRes={liveRes}
@@ -1129,6 +1533,75 @@ const MarketTab: React.FC<MarketTabProps> = ({
           onClose={() => setBuyTarget(null)}
           onConfirm={() => handleAcceptOffer(buyTarget)}
         />
+      )}
+
+      {showCreatePlanetModal && state && (
+        <CreatePlanetListingModal
+          planet={state}
+          txBusy={txBusy}
+          onClose={() => setShowCreatePlanetModal(false)}
+          onSubmit={handleCreatePlanetListing}
+        />
+      )}
+
+      {planetBuyTarget && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
+            zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
+            backdropFilter: "blur(6px)",
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setPlanetBuyTarget(null); }}
+        >
+          <div style={{
+            background: "var(--panel)",
+            border: "1px solid rgba(0,245,212,0.25)",
+            borderRadius: "10px 10px 0 0",
+            padding: "24px 20px",
+            width: "100%",
+            maxWidth: 520,
+          }}>
+            <div style={{ width: 36, height: 3, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }}/>
+            <div style={{
+              fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+              letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+              paddingBottom: 10, borderBottom: "1px solid var(--border)",
+            }}>
+              BUY PLANET
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 11 }}>
+              <span style={{ color: "var(--dim)" }}>{planetBuyTarget.planetName || "Planet"} {planetCoordsLabel(planetBuyTarget)}</span>
+              <AmPill amount={planetBuyTarget.priceAntimatter}/>
+            </div>
+            <div style={{ fontSize: 10, color: "var(--dim)", lineHeight: 1.7, marginBottom: 16 }}>
+              This transfers the planet ownership to your player profile when the transaction confirms.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setPlanetBuyTarget(null)}
+                disabled={txBusy}
+                style={{
+                  flex: 1, padding: "12px 16px", borderRadius: 2,
+                  border: "1px solid var(--border)", background: "transparent",
+                  color: "var(--dim)", cursor: "pointer",
+                  fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                }}
+              >CANCEL</button>
+              <button
+                onClick={() => void handleBuyPlanetListing(planetBuyTarget).then(() => setPlanetBuyTarget(null))}
+                disabled={txBusy || antimatterBalance < planetBuyTarget.priceAntimatter}
+                style={{
+                  flex: 2, padding: "12px 16px", borderRadius: 2,
+                  border: `1px solid ${antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--border)"}`,
+                  background: antimatterBalance >= planetBuyTarget.priceAntimatter ? "rgba(0,245,212,0.1)" : "transparent",
+                  color: antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--dim)",
+                  cursor: !txBusy && antimatterBalance >= planetBuyTarget.priceAntimatter ? "pointer" : "not-allowed",
+                  fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                }}
+              >CONFIRM BUY</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Close the !marketLoading && !marketUninitialized wrapper */}
