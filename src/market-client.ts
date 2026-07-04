@@ -772,15 +772,17 @@ export class MarketClient {
         const listing = deserializePlanetListing(pubkey, Buffer.from(account.data), walletPubkey);
         if (listing.filled) continue;
         const planetState = await this.gameClient.getPlanetStateByPda(new PublicKey(listing.planet));
-        if (planetState) {
-          listing.planetName = planetState.planet.name;
-          listing.planetIndex = planetState.planet.planetIndex;
-          listing.coords = {
-            galaxy: planetState.planet.galaxy,
-            system: planetState.planet.system,
-            position: planetState.planet.position,
-          };
-        }
+        if (!planetState) continue;
+        if (planetState.planet.owner !== listing.seller) continue;
+        if (planetState.planet.planetIndex === 0) continue;
+
+        listing.planetName = planetState.planet.name;
+        listing.planetIndex = planetState.planet.planetIndex;
+        listing.coords = {
+          galaxy: planetState.planet.galaxy,
+          system: planetState.planet.system,
+          position: planetState.planet.position,
+        };
         listings.push(listing);
       } catch { /* skip malformed or unreadable listings */ }
     }
