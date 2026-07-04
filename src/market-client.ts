@@ -1,7 +1,7 @@
 /**
  * market-client.ts
  *
- * P2P resource-for-ANTIMATTER market client for Chained Universe / SolarGrid.
+ * P2P resource-for-ANTIMATTER market client for Chained Universe.
  */
 
 import {

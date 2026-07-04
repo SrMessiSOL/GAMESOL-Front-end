@@ -1,7 +1,7 @@
 /**
  * MarketTab.tsx
  *
- * P2P resource-for-ANTIMATTER market tab for Chained Universe / SolarGrid.
+ * P2P resource-for-ANTIMATTER market tab for Chained Universe.
  *
  * Integration:
  *   1. Add `MarketClient` instance next to `GameClient` in App.tsx.
