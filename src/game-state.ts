@@ -10,7 +10,14 @@ import {
 } from "@solana/web3.js";
 import { AnchorProvider, setProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
-import { type PrivateSnapshot } from "./private-state-client";
+
+type PrivateSnapshot = {
+  resources: unknown;
+  buildings: unknown;
+  research: unknown;
+  fleet: unknown;
+  defense: unknown;
+};
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
 const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
