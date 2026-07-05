@@ -133,8 +133,37 @@ const ATTACK_LAUNCH_COOLDOWN_SECONDS = 60;
 const TARGET_ATTACK_COOLDOWN_SECONDS = 30 * 60;
 const NEW_PLAYER_PROTECTION_SECONDS = 7 * 24 * 60 * 60;
 const MIN_ATTACK_COMBAT_POINTS = 1_000;
+const VAULT_PASSWORD_STORAGE_PREFIX = "gamesol:vault-password";
 const APK_DOWNLOAD_URL = import.meta.env.VITE_APK_DOWNLOAD_URL?.trim() || "https://we.tl/t-4k38OiGWCzoEn7jU";
 const IS_NATIVE_ANDROID_APP = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+
+function vaultPasswordStorageKey(wallet: string): string {
+  return `${VAULT_PASSWORD_STORAGE_PREFIX}:${wallet}`;
+}
+
+function readRememberedVaultPassword(wallet: string): string | null {
+  try {
+    return window.localStorage.getItem(vaultPasswordStorageKey(wallet));
+  } catch {
+    return null;
+  }
+}
+
+function writeRememberedVaultPassword(wallet: string, password: string): void {
+  try {
+    window.localStorage.setItem(vaultPasswordStorageKey(wallet), password);
+  } catch {
+    /* local password cache is optional */
+  }
+}
+
+function clearRememberedVaultPassword(wallet: string): void {
+  try {
+    window.localStorage.removeItem(vaultPasswordStorageKey(wallet));
+  } catch {
+    /* local password cache is optional */
+  }
+}
 
 function getMaxUsableMissionSlots(computerTech: number): number {
   return Math.min(4, 1 + Math.floor(computerTech / 5));
@@ -2917,10 +2946,11 @@ function useInterpolatedResources(res: Resources | undefined, nowTs: number): Re
 }
 
 // ─── Modals ───────────────────────────────────────────────────────────────────
-const VaultRecoveryModal: React.FC<{ request: VaultRecoveryPromptRequest|null; busy?: boolean; error?: string|null; onCancel: ()=>void; onSubmit: (p:string)=>void }> =
+const VaultRecoveryModal: React.FC<{ request: VaultRecoveryPromptRequest|null; busy?: boolean; error?: string|null; onCancel: ()=>void; onSubmit: (p:string, remember:boolean)=>void }> =
   ({ request, busy=false, error=null, onCancel, onSubmit }) => {
     const [password,setPassword]=useState(""); const [confirmPassword,setConfirmPassword]=useState("");
-    useEffect(()=>{setPassword("");setConfirmPassword("");},[request?.mode,request?.wallet]);
+    const [remember,setRemember]=useState(false);
+    useEffect(()=>{setPassword("");setConfirmPassword("");setRemember(false);},[request?.mode,request?.wallet]);
     if(!request) return null;
     const isCreate=request.mode==="create";
     const canSubmit=isCreate?password.trim().length>=8&&password===confirmPassword:password.trim().length>0;
@@ -2941,11 +2971,17 @@ const VaultRecoveryModal: React.FC<{ request: VaultRecoveryPromptRequest|null; b
             <input className="modal-select" type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Repeat the recovery password" disabled={busy}/>
             <div style={{fontSize:"10px",color:"var(--dim)",marginTop:8}}>Use at least 8 characters.</div>
           </div>}
-          <div style={{fontSize:"10px",color:"var(--dim)",lineHeight:1.5,marginBottom:14}}>For security, this password is only kept in memory for the current page session.</div>
+          <label style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:14,fontSize:"10px",lineHeight:1.5,color:"var(--dim)",cursor:busy?"not-allowed":"pointer"}}>
+            <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} disabled={busy} style={{marginTop:2}}/>
+            <span>
+              <span style={{color:"var(--text)",display:"block",marginBottom:2}}>Remember on this device</span>
+              Save this recovery password in this browser's local storage so vault restore can run without asking next time.
+            </span>
+          </label>
           {error&&<div style={{color:"var(--danger)",fontSize:"10px",marginBottom:8}}>{error}</div>}
           <div className="modal-footer">
             <button className="modal-btn secondary" onClick={onCancel} disabled={busy}>CANCEL</button>
-            <button className="modal-btn primary" disabled={!canSubmit||busy} onClick={()=>onSubmit(password.trim())}>{isCreate?"SAVE PASSWORD":"RESTORE VAULT"}</button>
+            <button className="modal-btn primary" disabled={!canSubmit||busy} onClick={()=>onSubmit(password.trim(),remember)}>{isCreate?"SAVE PASSWORD":"RESTORE VAULT"}</button>
           </div>
         </div>
       </div>
@@ -5152,6 +5188,8 @@ const App: React.FC = () => {
   };
 
   const requestVaultRecoveryPassphrase = useCallback((request: VaultRecoveryPromptRequest): Promise<string> => {
+    const remembered = request.mode === "unlock" ? readRememberedVaultPassword(request.wallet) : null;
+    if (remembered) return Promise.resolve(remembered);
     setVaultPromptBusy(false); setVaultPromptError(null);
     setVaultPrompt({ mode: request.mode, wallet: request.wallet });
     return new Promise((resolve, reject) => { vaultPromptResolverRef.current = { resolve, reject }; });
@@ -5165,8 +5203,9 @@ const App: React.FC = () => {
     clientRef.current?.clearCachedVaultRecoveryPassphrase();
   }, [vaultPromptBusy]);
 
-  const handleVaultPromptSubmit = useCallback((password: string) => {
+  const handleVaultPromptSubmit = useCallback((password: string, remember: boolean) => {
     if (vaultPrompt?.mode === "create" && password.length < 8) { setVaultPromptError("Recovery password must be at least 8 characters."); return; }
+    if (vaultPrompt && remember) writeRememberedVaultPassword(vaultPrompt.wallet, password);
     setVaultPromptBusy(true);
     vaultPromptResolverRef.current?.resolve(password);
     vaultPromptResolverRef.current = null;
@@ -5359,6 +5398,7 @@ const App: React.FC = () => {
     const provider = new AnchorProvider(connection, anchorWallet, { commitment: "confirmed" });
     const gameClient = new GameClient(connection, provider, {
       requestVaultRecoveryPassphrase,
+      onVaultRecoveryPassphraseRejected: clearRememberedVaultPassword,
     });
     gameClient.setPreferVaultSigning(useVaultSigning);
     const marketClient = new MarketClient(connection, provider, gameClient);
