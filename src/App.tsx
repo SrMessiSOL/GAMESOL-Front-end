@@ -3915,6 +3915,7 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
     const shipQueueActive = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
     const defenseQueueActive = planet.defenseBuildFinishTs > 0 && planet.defenseBuildItem !== 255 && planet.defenseBuildQty > 0;
     const shipyardQueueActive = shipQueueActive || defenseQueueActive;
+    const researchQueueActive = research.researchFinishTs > 0 && research.queueItem !== 255;
     const infra = [5, 6, 7, 8, 9, 10, 11].map(idx => BUILDINGS[idx]);
 
     return (
@@ -3951,6 +3952,7 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
               const isQueued = buildInProgress && planet.buildQueueItem === building.idx;
               const isReady = isQueued && buildSecsLeft === 0;
               const blockedByShipyardQueue = building.idx === 7 && shipyardQueueActive;
+              const blockedByResearchQueue = building.idx === 11 && researchQueueActive;
 
               let btnClass = "build-btn no-funds";
               let btnText = "INSUFFICIENT FUNDS";
@@ -3969,6 +3971,9 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
               } else if (!buildInProgress && blockedByShipyardQueue) {
                 btnClass = "build-btn building-now";
                 btnText = "SHIPYARD BUSY";
+              } else if (!buildInProgress && blockedByResearchQueue) {
+                btnClass = "build-btn building-now";
+                btnText = "LAB BUSY";
               } else if (!buildInProgress && canAfford) {
                 btnClass = "build-btn can-build";
                 btnText = `BUILD ${fmtCountdown(secs)}`;
@@ -3998,7 +4003,7 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
                   </div>
                   <button
                     className={btnClass}
-                    disabled={txBusy || blockedByShipyardQueue || (isQueued && !isReady) || (!isReady && ((!hasFreeField) || (!requirementsMet ? false : !canAfford)))}
+                    disabled={txBusy || blockedByShipyardQueue || blockedByResearchQueue || (isQueued && !isReady) || (!isReady && ((!hasFreeField) || (!requirementsMet ? false : !canAfford)))}
                     onClick={() => {
                       if (isReady) {
                         onFinishBuild();
