@@ -1467,32 +1467,6 @@ const MarketTab: React.FC<MarketTabProps> = ({
             marginBottom: 16,
           }}>
             <div style={{
-              minHeight: 142,
-              border: "1px solid rgba(0,245,212,0.16)",
-              borderRadius: 8,
-              background: "linear-gradient(135deg, rgba(0,245,212,0.08), rgba(7,11,22,0.9) 48%, rgba(255,214,10,0.05))",
-              padding: "18px",
-              display: "grid",
-              alignContent: "center",
-              gap: 10,
-            }}>
-              <div style={{ fontSize: 9, letterSpacing: 2.5, color: "var(--warn)", textTransform: "uppercase" }}>
-                Public Planet Marketplace
-              </div>
-              <div style={{
-                fontFamily: "'Orbitron', sans-serif",
-                fontSize: 24,
-                lineHeight: 1.05,
-                color: "var(--cyan)",
-                letterSpacing: 2,
-              }}>
-                Buy a live on-chain planet
-              </div>
-              <div style={{ maxWidth: 680, fontSize: 11, lineHeight: 1.7, color: "var(--dim)", letterSpacing: 0.7 }}>
-                Browse player-listed planets, compare coordinates and price, then connect a wallet to buy. Initial homeworlds are filtered out.
-              </div>
-            </div>
-            <div style={{
               border: "1px solid rgba(255,255,255,0.08)",
               borderRadius: 8,
               background: "rgba(7,11,22,0.72)",
