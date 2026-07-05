@@ -24,6 +24,8 @@ import {
   BUILDINGS, SHIPS, SHIP_TYPE_IDX, MISSION_LABELS,
   ALLIANCE_CREATE_USDC_COST, ALLIANCE_CREATE_ANTIMATTER_COST,
   GAME_STATE_PROGRAM_ID,
+  deriveAssociatedTokenAccount,
+  deriveStoreConfigPda,
   upgradeCost, buildTimeSecs,
   fmt, fmtCountdown, missionProgress, energyEfficiency,
 } from "./game-state";
@@ -2496,6 +2498,8 @@ type LandingMetrics = {
   marketTotalListings: bigint | null;
   marketTx24h: number | null;
   marketVolume24h: bigint | null;
+  treasuryUsdc: bigint | null;
+  treasuryAntimatter: bigint | null;
 };
 
 const MARKET_CONFIG_PDA = PublicKey.findProgramAddressSync(
@@ -2512,6 +2516,8 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
     marketTotalListings: null,
     marketTx24h: null,
     marketVolume24h: null,
+    treasuryUsdc: null,
+    treasuryAntimatter: null,
   });
 
   useEffect(() => {
@@ -2526,11 +2532,21 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
       for (let i = 7; i >= 0; i -= 1) value = (value << 8n) + BigInt(data[offset + i] ?? 0);
       return value;
     };
+    const readPubkey = (data: Uint8Array, offset: number): PublicKey => new PublicKey(data.slice(offset, offset + 32));
     const parseMarketConfig = (data: Uint8Array | undefined) => {
-      if (!data || data.length < 97) return { totalVolume: null, totalListings: null };
+      if (!data || data.length < 97) return { admin: null, antimatterMint: null, totalVolume: null, totalListings: null };
       return {
+        admin: readPubkey(data, 8),
+        antimatterMint: readPubkey(data, 8 + 32),
         totalVolume: readU128LE(data, 8 + 32 + 32),
         totalListings: readU64LE(data, 8 + 32 + 32 + 16),
+      };
+    };
+    const parseStoreConfig = (data: Uint8Array | undefined) => {
+      if (!data || data.length < 105) return { admin: null, treasuryUsdcAccount: null };
+      return {
+        admin: readPubkey(data, 8),
+        treasuryUsdcAccount: readPubkey(data, 8 + 32 + 32),
       };
     };
     const parseMarketLogVolume = (logs: string[] | null | undefined): bigint => {
@@ -2542,14 +2558,24 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
       }
       return total;
     };
+    const getTokenRawBalance = async (account: PublicKey | null): Promise<bigint | null> => {
+      if (!account) return null;
+      try {
+        const balance = await connection.getTokenAccountBalance(account, "confirmed");
+        return BigInt(balance.value.amount);
+      } catch {
+        return 0n;
+      }
+    };
     const load = async () => {
       try {
-        const [publicPlanets, legacyPlanets, resourceOffers, planetListings, marketConfigInfo, signatures] = await Promise.all([
+        const [publicPlanets, legacyPlanets, resourceOffers, planetListings, marketConfigInfo, storeConfigInfo, signatures] = await Promise.all([
           connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 121 }], dataSlice: { offset: 0, length: 0 } }),
           connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 1002 }], dataSlice: { offset: 0, length: 0 } }),
           connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 78 }], dataSlice: { offset: 0, length: 0 } }),
           connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 93 }], dataSlice: { offset: 0, length: 0 } }),
           connection.getAccountInfo(MARKET_CONFIG_PDA, "confirmed"),
+          connection.getAccountInfo(deriveStoreConfigPda(), "confirmed"),
           connection.getSignaturesForAddress(MARKET_PROGRAM_ID, { limit: 100 }, "confirmed"),
         ]);
         const now = Math.floor(Date.now() / 1000);
@@ -2573,6 +2599,16 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
           volume24h = null;
           tradeCount24h = null;
         }
+        const storeConfig = parseStoreConfig(storeConfigInfo?.data);
+        const treasuryAntimatterAccount = marketConfig.admin && marketConfig.antimatterMint
+          ? deriveAssociatedTokenAccount(marketConfig.admin, marketConfig.antimatterMint)
+          : storeConfig.admin
+            ? deriveAssociatedTokenAccount(storeConfig.admin, new PublicKey(DEFAULT_ANTIMATTER_MINT))
+            : null;
+        const [treasuryUsdc, treasuryAntimatter] = await Promise.all([
+          getTokenRawBalance(storeConfig.treasuryUsdcAccount),
+          getTokenRawBalance(treasuryAntimatterAccount),
+        ]);
         if (cancelled) return;
         setMetrics({
           planets: publicPlanets.length + legacyPlanets.length,
@@ -2582,6 +2618,8 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
           marketTotalListings: marketConfig.totalListings,
           marketTx24h: tradeCount24h,
           marketVolume24h: volume24h,
+          treasuryUsdc,
+          treasuryAntimatter,
         });
       } catch {
         if (!cancelled) {
@@ -2599,6 +2637,7 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
 const metricLabel = (value: number | null): string => value === null ? "..." : value.toLocaleString();
 const bigintMetricLabel = (value: bigint | null): string => value === null ? "..." : value.toLocaleString();
 const amMetricLabel = (value: bigint | null): string => value === null ? "..." : `${formatAm(value, 2)} AM`;
+const usdcMetricLabel = (value: bigint | null): string => value === null ? "..." : `${formatCompactTokenAmount(value, 6)} USDC`;
 
 const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetrics }> = ({ isMobile, metrics }) => (
   <div
@@ -2765,6 +2804,8 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
                   ["24H VOLUME", amMetricLabel(metrics.marketVolume24h)],
                   ["24H TRADES", metricLabel(metrics.marketTx24h)],
                   ["TOTAL LISTINGS", bigintMetricLabel(metrics.marketTotalListings)],
+                  ["TREASURY USDC", usdcMetricLabel(metrics.treasuryUsdc)],
+                  ["TREASURY AM", amMetricLabel(metrics.treasuryAntimatter)],
                 ].map(([label, value]) => (
                   <div key={label} className="landing-metric-card">
                     <div className="landing-metric-label">{label}</div>
