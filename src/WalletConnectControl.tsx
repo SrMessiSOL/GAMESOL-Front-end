@@ -139,16 +139,13 @@ export const WalletConnectControl: React.FC<{
   const [open, setOpen] = useState(false);
   const [pendingWalletName, setPendingWalletName] = useState<WalletName<string> | null>(null);
   const [status, setStatus] = useState<WalletStatusState>(null);
-  const [isCompactViewport, setIsCompactViewport] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth < 768 : false,
-  );
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const nativeAndroid = isNativeAndroid();
   const androidBrowser = isAndroidBrowser();
   // "mobile runtime" = native APK or Android browser — affects copy + error messages
   const isMobileRuntime = nativeAndroid || androidBrowser;
-  const useCenteredWalletModal = androidBrowser || isCompactViewport;
+  const useCenteredWalletModal = true;
 
   // On native Android the WalletConnectionProvider only registers NativeMobileWalletAdapter,
   // so there will be exactly one adapter entry in `wallets`. We still go through the
@@ -267,12 +264,6 @@ export const WalletConnectControl: React.FC<{
     }
     storeLastConnectedAddress(null);
   }, [connected, isMobileRuntime, publicKey, wallet]);
-
-  useEffect(() => {
-    const handleResize = () => setIsCompactViewport(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // ── Restore preferred wallet on mount ───────────────────────────────────────
   useEffect(() => {
