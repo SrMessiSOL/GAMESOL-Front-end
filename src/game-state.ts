@@ -4275,17 +4275,19 @@ export class GameClient {
   async getSystemPlanets(galaxy: number, system: number): Promise<PublicPlanetInfo[]> {
     const accounts = await this.connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed" });
     const bySlot = new Map<number, PublicPlanetInfo>();
+    const authoritativeSlots = new Set<number>();
     for (const account of accounts) {
       const discriminator = account.account.data.slice(0, 8);
       try {
         if (discriminator.equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
           const s = deserializePublicPlanetState(Buffer.from(account.account.data));
-          if (s.galaxy === galaxy && s.system === system) {
+          if (s.galaxy === galaxy && s.system === system && !authoritativeSlots.has(s.position)) {
             bySlot.set(s.position, publicPlanetInfoFromPublicState(account.pubkey, s));
           }
         } else if (discriminator.equals(PLANET_STATE_DISCRIMINATOR)) {
           const s = deserializePlanetState(Buffer.from(account.account.data));
           if (s.galaxy === galaxy && s.system === system) {
+            authoritativeSlots.add(s.position);
             bySlot.set(s.position, publicPlanetInfoFromState(account.pubkey, s));
           }
         }
