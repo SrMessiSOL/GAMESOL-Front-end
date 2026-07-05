@@ -3912,6 +3912,9 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
     const [reqCheck, setReqCheck] = useState<RequirementCheck | null>(null);
     const buildInProgress = planet.buildFinishTs > 0 && planet.buildQueueItem !== 255;
     const buildSecsLeft = Math.max(0, planet.buildFinishTs - nowTs);
+    const shipQueueActive = planet.shipBuildFinishTs > 0 && planet.shipBuildItem !== 255 && planet.shipBuildQty > 0;
+    const defenseQueueActive = planet.defenseBuildFinishTs > 0 && planet.defenseBuildItem !== 255 && planet.defenseBuildQty > 0;
+    const shipyardQueueActive = shipQueueActive || defenseQueueActive;
     const infra = [5, 6, 7, 8, 9, 10, 11].map(idx => BUILDINGS[idx]);
 
     return (
@@ -3947,6 +3950,7 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
               const missingCount = requirementCheck?.requirements.filter(requirement => !requirement.met).length ?? 0;
               const isQueued = buildInProgress && planet.buildQueueItem === building.idx;
               const isReady = isQueued && buildSecsLeft === 0;
+              const blockedByShipyardQueue = building.idx === 7 && shipyardQueueActive;
 
               let btnClass = "build-btn no-funds";
               let btnText = "INSUFFICIENT FUNDS";
@@ -3962,6 +3966,9 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
               } else if (!buildInProgress && !requirementsMet) {
                 btnClass = "build-btn locked-btn";
                 btnText = `REQUIREMENTS (${missingCount})`;
+              } else if (!buildInProgress && blockedByShipyardQueue) {
+                btnClass = "build-btn building-now";
+                btnText = "SHIPYARD BUSY";
               } else if (!buildInProgress && canAfford) {
                 btnClass = "build-btn can-build";
                 btnText = `BUILD ${fmtCountdown(secs)}`;
@@ -3991,7 +3998,7 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
                   </div>
                   <button
                     className={btnClass}
-                    disabled={txBusy || (isQueued && !isReady) || (!isReady && ((!hasFreeField) || (!requirementsMet ? false : !canAfford)))}
+                    disabled={txBusy || blockedByShipyardQueue || (isQueued && !isReady) || (!isReady && ((!hasFreeField) || (!requirementsMet ? false : !canAfford)))}
                     onClick={() => {
                       if (isReady) {
                         onFinishBuild();
