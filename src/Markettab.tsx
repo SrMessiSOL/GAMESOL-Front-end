@@ -33,7 +33,7 @@ import {
   CreateOfferParams,
 } from "./market-client";
 import { fmtCountdown, type PlayerState, type Resources } from "./game-state";
-import { getPlanetIdentity } from "./planet-generation";
+import { OrbitingPlanetVisual } from "./PlanetVisual";
 
 const PROTOCOL_AUTHORITY = "EhT4UUmsHyd41bZSGzj1W72yu2EptHk8sEvnK7aaNuBu";
 
@@ -118,74 +118,30 @@ type MarketPlanetVisualData = {
   maxFields?: number;
 };
 
-const MarketPlanetPreview: React.FC<{ planet: MarketPlanetVisualData; size?: number }> = ({ planet, size = 92 }) => {
-  const [tick, setTick] = useState(0);
-  const identity = useMemo(
-    () => getPlanetIdentity({
-      name: planet.name ?? "Planet",
-      galaxy: planet.galaxy ?? 1,
-      system: planet.system ?? 1,
-      position: planet.position ?? 1,
-      temperature: planet.temperature ?? 20,
-      diameter: planet.diameter ?? 10_000,
-      maxFields: planet.maxFields ?? 163,
-    } as any),
-    [planet.name, planet.galaxy, planet.system, planet.position, planet.temperature, planet.diameter, planet.maxFields],
-  );
-  const palette: Record<string, { base: string; glow: string; land: string; cloud: string }> = {
-    "hero-lava": { base: "#34121c", glow: "#ff5b2e", land: "#ffcc33", cloud: "rgba(255, 112, 51, 0.42)" },
-    "hero-ice": { base: "#16243b", glow: "#80eaff", land: "#d7fbff", cloud: "rgba(220, 255, 255, 0.48)" },
-    "hero-oceanic": { base: "#08243c", glow: "#21d4ff", land: "#10d6a3", cloud: "rgba(190, 245, 255, 0.4)" },
-    "hero-toxic": { base: "#102316", glow: "#7dff6a", land: "#d2ff3f", cloud: "rgba(176, 255, 98, 0.36)" },
-    "hero-storm": { base: "#171b38", glow: "#9b5de5", land: "#46d9ff", cloud: "rgba(195, 171, 255, 0.46)" },
-    "hero-arid": { base: "#32210f", glow: "#ffd166", land: "#ff8f3d", cloud: "rgba(255, 214, 140, 0.32)" },
-    "hero-temperate": { base: "#0c2b36", glow: "#00f5d4", land: "#60e681", cloud: "rgba(210, 255, 242, 0.36)" },
-    "hero-generic": { base: "#111832", glow: "#58c7ff", land: "#9b5de5", cloud: "rgba(200, 235, 255, 0.34)" },
-  };
-  const colors = palette[identity.visualFamily] ?? palette["hero-generic"];
-
-  useEffect(() => {
-    let raf = 0;
-    const started = performance.now();
-    const step = (now: number) => {
-      setTick((now - started) / 1000);
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+const MarketPlanetPreview: React.FC<{ planet: MarketPlanetVisualData; size?: number }> = ({ planet, size = 104 }) => {
+  const visualPlanet = {
+    name: planet.name ?? "Planet",
+    galaxy: planet.galaxy ?? 1,
+    system: planet.system ?? 1,
+    position: planet.position ?? 1,
+    temperature: planet.temperature ?? 20,
+    diameter: planet.diameter ?? 10_000,
+    maxFields: planet.maxFields ?? 163,
+  } as any;
 
   return (
     <div style={{
       width: size,
       height: size,
-      borderRadius: "50%",
-      position: "relative",
+      display: "grid",
+      placeItems: "center",
+      overflow: "visible",
       flex: "0 0 auto",
-      background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.75), transparent 0 5%, transparent 15%), radial-gradient(circle at 42% 34%, ${colors.land} 0 11%, transparent 12%), radial-gradient(circle at 68% 58%, ${colors.land} 0 14%, transparent 15%), radial-gradient(circle at 40% 70%, ${colors.land} 0 9%, transparent 10%), radial-gradient(circle at 50% 50%, ${colors.base}, #050816 72%)`,
-      boxShadow: `0 0 28px ${colors.glow}66, inset -18px -16px 24px rgba(0,0,0,0.58), inset 10px 8px 18px rgba(255,255,255,0.08)`,
-      overflow: "hidden",
-      transform: `rotate(${tick * 4}deg)`,
     }}>
-      <div style={{
-        position: "absolute",
-        inset: "18% -28%",
-        borderTop: `2px solid ${colors.cloud}`,
-        borderBottom: `1px solid ${colors.cloud}`,
-        borderRadius: "50%",
-        transform: `rotate(-18deg) translateX(${Math.sin(tick * 0.9) * 6}px)`,
-        opacity: 0.75,
-      }} />
-      <div style={{
-        position: "absolute",
-        inset: "7%",
-        borderRadius: "50%",
-        border: `1px solid ${colors.glow}66`,
-      }} />
+      <OrbitingPlanetVisual planet={visualPlanet} size={size} />
     </div>
   );
 };
-
 const PlanetInfoGrid: React.FC<{ items: Array<{ label: string; value: string }> }> = ({ items }) => (
   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
     {items.map(item => (
