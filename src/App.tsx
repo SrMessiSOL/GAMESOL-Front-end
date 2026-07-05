@@ -2101,8 +2101,9 @@ const CSS = `
     text-align: center; background: linear-gradient(135deg,var(--purple) 0%,var(--cyan) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .landing-sub { font-size: 12px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; text-align: center; }
-  .route-nav-link { display:inline-flex; align-items:center; justify-content:center; min-height:34px; padding:0 14px; border:1px solid rgba(0,245,212,0.45); color:var(--cyan); background:rgba(0,245,212,0.08); border-radius:3px; text-decoration:none; font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; }
+  .route-nav-link { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:34px; padding:0 14px; border:1px solid rgba(0,245,212,0.45); color:var(--cyan); background:rgba(0,245,212,0.08); border-radius:3px; text-decoration:none; font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; }
   .route-nav-link.alt { border-color:rgba(255,214,10,0.38); color:var(--warn); background:rgba(255,214,10,0.07); }
+  .route-nav-icon { flex:0 0 auto; filter:drop-shadow(0 0 5px rgba(255,214,10,0.24)); }
   .landing-metric-card { min-width:0; padding:9px 11px; border:1px solid rgba(255,255,255,0.09); border-radius:8px; background:rgba(7,11,22,0.68); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
   .landing-metric-label { font-size:8px; letter-spacing:1.4px; color:var(--dim); text-transform:uppercase; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .landing-metric-value { font-family:'Orbitron',sans-serif; font-size:15px; color:var(--cyan); letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -2117,6 +2118,7 @@ const CSS = `
   .not-found-title { font-family:'Orbitron',sans-serif; font-size:15px; letter-spacing:3px; color:var(--purple); text-transform:uppercase; margin-bottom:10px; }
   .not-found-copy { color:var(--dim); font-size:11px; letter-spacing:1px; line-height:1.7; margin:0 auto 22px; max-width:390px; }
   .not-found-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .game-entry-logo { display:flex; justify-content:center; margin:10px auto 22px; animation:float 4s ease-in-out infinite; }
   @media (max-height: 760px) and (min-width: 760px) {
     .landing-metric-card { padding:7px 10px; }
     .landing-metric-value { font-size:14px; }
@@ -2391,6 +2393,28 @@ const LogoSVG: React.FC<{ size?: number }> = ({ size = 32 }) => (
       objectFit: "contain",
     }}
   />
+);
+
+const PlanetMarketplaceIcon: React.FC<{ size?: number }> = ({ size = 14 }) => (
+  <svg
+    className="route-nav-icon"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="12" cy="12" r="5.8" fill="none" stroke="currentColor" strokeWidth="1.7" />
+    <path d="M3.4 13.7c3.2 2.4 8.6 3.1 13.7 1.7 3.2-.9 4.9-2.3 4.5-3.4-.3-.8-1.6-1.1-3.6-.9" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M20.6 10.3c-3.2-2.4-8.6-3.1-13.7-1.7-3.2.9-4.9 2.3-4.5 3.4.3.8 1.6 1.1 3.6.9" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+);
+
+const PlanetMarketplaceLink: React.FC = () => (
+  <a href="/marketplace" className="route-nav-link alt">
+    <PlanetMarketplaceIcon />
+    <span>Planets Marketplace</span>
+  </a>
 );
 
 const LandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => (
@@ -2694,7 +2718,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
     >
       <nav style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
         <a href="/app" className="route-nav-link">ENTER APP</a>
-        <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
+        <PlanetMarketplaceLink />
       </nav>
     </div>
     <div
@@ -3120,7 +3144,7 @@ const NotFoundScreen: React.FC = () => (
       <div className="not-found-actions">
         <a href="/" className="route-nav-link">HOME</a>
         <a href="/app" className="route-nav-link">ENTER APP</a>
-        <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
+        <PlanetMarketplaceLink />
       </div>
     </div>
   </div>
@@ -3129,14 +3153,14 @@ const NotFoundScreen: React.FC = () => (
 const GameEntryScreen: React.FC = () => (
   <div className="not-found-shell">
     <div className="not-found-panel">
-      <LogoSVG size={64}/>
+      <div className="game-entry-logo"><LogoSVG size={64}/></div>
       <div className="not-found-title" style={{ marginTop: 18 }}>Game Client</div>
       <p className="not-found-copy">
         Connect your wallet to load your planets or initialize your first homeworld.
       </p>
       <div className="not-found-actions">
         <WalletConnectControl disconnectedLabel="CONNECT WALLET" connectingLabel="CONNECTING..." />
-        <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
+        <PlanetMarketplaceLink />
         <a href="/" className="route-nav-link">HOME</a>
       </div>
     </div>
@@ -6382,7 +6406,7 @@ const App: React.FC = () => {
             </div>
             <div className="header-right">
               <nav style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 8 }}>
-                <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
+                <PlanetMarketplaceLink />
               </nav>
               <div className="header-cluster">
                 <span className="chain-tag">DEVNET</span>
