@@ -4694,6 +4694,13 @@ const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; 
           const accelerationCost = BigInt(Math.max(0, etaSecs)) * 1_000_000n;
           const canAccelerate = antimatterEnabled && etaSecs > 0 && antimatterBalance >= accelerationCost;
           const accelerationLabel = returning ? "INSTANT RETURN" : "INSTANT ARRIVAL";
+          const accelerationDisabledReason = !antimatterEnabled
+            ? "ANTIMATTER acceleration is not configured."
+            : etaSecs <= 0
+              ? "Mission is already ready to resolve."
+              : antimatterBalance < accelerationCost
+                ? `Need ${fmt(accelerationCost / 1_000_000n)} ANTIMATTER.`
+                : `Burn ${fmt(accelerationCost / 1_000_000n)} ANTIMATTER.`;
 
           return (
             <div key={i} className="mission-card">
@@ -4750,6 +4757,22 @@ const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; 
                 <div style={{ marginTop: 8, fontSize: 10, color: "var(--cyan)", letterSpacing: 0.6 }}>
                   SPY REPORT: PROBES RETURNING
                 </div>
+              )}
+              {etaSecs > 0 && (
+                <button
+                  className="apply-btn"
+                  style={{
+                    marginTop: 10,
+                    borderColor: canAccelerate ? "rgba(255,214,10,0.7)" : "rgba(255,255,255,0.12)",
+                    color: canAccelerate ? "var(--warn)" : "var(--dim)",
+                    background: canAccelerate ? "rgba(255,214,10,0.08)" : "rgba(255,255,255,0.03)",
+                  }}
+                  disabled={txBusy || !canAccelerate}
+                  title={accelerationDisabledReason}
+                  onClick={() => onAccelerateMission(m, i, accelerationLeg)}
+                >
+                  {accelerationLabel} · {fmt(accelerationCost / 1_000_000n)} AM
+                </button>
               )}
               {needsResolution && (
                 <button
