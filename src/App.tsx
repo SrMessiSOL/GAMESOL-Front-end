@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { Capacitor } from "@capacitor/core";
 import { useConnection, useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import {
   GameClient,
   type GameConfigState,
@@ -23,12 +23,13 @@ import {
   Planet, Resources, Fleet, Mission, PlayerState, PublicPlanetInfo, Research,
   BUILDINGS, SHIPS, SHIP_TYPE_IDX, MISSION_LABELS,
   ALLIANCE_CREATE_USDC_COST, ALLIANCE_CREATE_ANTIMATTER_COST,
+  GAME_STATE_PROGRAM_ID,
   upgradeCost, buildTimeSecs,
   fmt, fmtCountdown, missionProgress, energyEfficiency,
 } from "./game-state";
 import GalaxyTab from "./GalaxyTab";
 import MarketTab from "./Markettab";
-import { MarketClient, formatResource as formatMarketResource } from "./market-client";
+import { MarketClient, MARKET_PROGRAM_ID, formatResource as formatMarketResource } from "./market-client";
 import { BUILDING_REQUIREMENTS, RESEARCH_REQUIREMENTS, type Requirement } from "./combat-engine";
 import { getPlanetTheme } from "./art-direction";
 import { getPlanetIdentity } from "./planet-generation";
@@ -2098,6 +2099,11 @@ const CSS = `
     text-align: center; background: linear-gradient(135deg,var(--purple) 0%,var(--cyan) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .landing-sub { font-size: 12px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; text-align: center; }
+  .route-nav-link { display:inline-flex; align-items:center; justify-content:center; min-height:34px; padding:0 14px; border:1px solid rgba(0,245,212,0.45); color:var(--cyan); background:rgba(0,245,212,0.08); border-radius:3px; text-decoration:none; font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; }
+  .route-nav-link.alt { border-color:rgba(255,214,10,0.38); color:var(--warn); background:rgba(255,214,10,0.07); }
+  .landing-metric-card { padding:12px 14px; border:1px solid rgba(255,255,255,0.09); border-radius:8px; background:rgba(7,11,22,0.68); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
+  .landing-metric-label { font-size:9px; letter-spacing:1.6px; color:var(--dim); text-transform:uppercase; margin-bottom:6px; }
+  .landing-metric-value { font-family:'Orbitron',sans-serif; font-size:18px; color:var(--cyan); letter-spacing:1px; }
   .no-planet { max-width: 480px; margin: 40px auto; padding: 0 20px; text-align: center; }
   .no-planet-title { font-family:'Orbitron',sans-serif; font-size:16px; color:var(--purple); letter-spacing:3px; margin:24px 0 10px; }
   .no-planet-sub { color:var(--dim); font-size:11px; letter-spacing:1px; line-height:1.8; margin-bottom:32px; }
@@ -2478,7 +2484,58 @@ const ScrollReveal: React.FC<{
   );
 };
 
-const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => (
+type LandingMetrics = {
+  planets: number | null;
+  resourceOffers: number | null;
+  planetListings: number | null;
+  ownedPlanets: number;
+};
+
+const useLandingMetrics = (connection: Connection, ownedPlanets: number): LandingMetrics => {
+  const [metrics, setMetrics] = useState<LandingMetrics>({
+    planets: null,
+    resourceOffers: null,
+    planetListings: null,
+    ownedPlanets,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [publicPlanets, legacyPlanets, resourceOffers, planetListings] = await Promise.all([
+          connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 121 }] }),
+          connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 1002 }] }),
+          connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 78 }] }),
+          connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 93 }] }),
+        ]);
+        if (cancelled) return;
+        setMetrics({
+          planets: publicPlanets.length + legacyPlanets.length,
+          resourceOffers: resourceOffers.length,
+          planetListings: planetListings.length,
+          ownedPlanets,
+        });
+      } catch {
+        if (!cancelled) {
+          setMetrics(prev => ({ ...prev, ownedPlanets }));
+        }
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [connection, ownedPlanets]);
+
+  useEffect(() => {
+    setMetrics(prev => ({ ...prev, ownedPlanets }));
+  }, [ownedPlanets]);
+
+  return metrics;
+};
+
+const metricLabel = (value: number | null): string => value === null ? "..." : value.toLocaleString();
+
+const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetrics }> = ({ isMobile, metrics }) => (
   <div
     className="landing"
     style={{
@@ -2505,7 +2562,10 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
         justifyContent: "flex-end",
       }}
     >
-      <WalletConnectControl disconnectedLabel={isMobile ? "Launch" : "Launch App"} connectingLabel="Launching..." />
+      <nav style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <a href="/app" className="route-nav-link">ENTER APP</a>
+        <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
+      </nav>
     </div>
     <div
       aria-hidden="true"
@@ -2624,6 +2684,27 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean }> = ({ isMobile }) => 
               An on-chain space strategy project on Solana where players build planets,
               expand production, research technologies, and launch fleets across a persistent galaxy.
             </div>
+            {metrics && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
+                gap: 10,
+                width: "min(900px, 100%)",
+                marginTop: 10,
+              }}>
+                {[
+                  ["PLANETS", metricLabel(metrics.planets)],
+                  ["PLANET LISTINGS", metricLabel(metrics.planetListings)],
+                  ["RESOURCE OFFERS", metricLabel(metrics.resourceOffers)],
+                  ["YOUR PLANETS", metrics.ownedPlanets.toLocaleString()],
+                ].map(([label, value]) => (
+                  <div key={label} className="landing-metric-card">
+                    <div className="landing-metric-label">{label}</div>
+                    <div className="landing-metric-value">{value}</div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div
               style={{
                 maxWidth: isMobile ? 310 : 760,
@@ -5033,6 +5114,9 @@ const App: React.FC = () => {
   const anchorWallet = useAnchorWallet();
   const { connected, publicKey: walletPublicKey, wallet } = useWallet();
   const isMobile = useIsMobile();
+  const routePath = typeof window !== "undefined" ? window.location.pathname : "/app";
+  const isPlanetMarketplaceRoute = routePath === "/marketplace";
+  const isLandingRoute = routePath === "/";
   const [activeWalletKey, setActiveWalletKey] = useState<string | null>(walletPublicKey?.toBase58() ?? null);
   const publicKey = React.useMemo(
     () => (activeWalletKey ? new PublicKey(activeWalletKey) : null),
@@ -5042,7 +5126,7 @@ const App: React.FC = () => {
 
   const [planets, setPlanets] = useState<PlayerState[]>([]);
   const [selectedPlanetPda, setSelectedPlanetPda] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => isPlanetMarketplaceRoute ? "market" : "overview");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createProgress, setCreateProgress] = useState("");
@@ -5152,8 +5236,12 @@ const App: React.FC = () => {
     marketClientRef.current?.setActivePlanet(state ? new PublicKey(state.planetPda) : null);
   }, [state]);
   useEffect(() => {
-    if (!hasCreatedWorld && (tab === "market" || tab === "store")) setTab("overview");
-  }, [hasCreatedWorld, tab]);
+    if (isPlanetMarketplaceRoute && tab !== "market") {
+      setTab("market");
+      return;
+    }
+    if (!hasCreatedWorld && !isPlanetMarketplaceRoute && (tab === "market" || tab === "store")) setTab("overview");
+  }, [hasCreatedWorld, isPlanetMarketplaceRoute, tab]);
   useEffect(() => {
     clientRef.current?.setPreferVaultSigning(useVaultSigning);
   }, [useVaultSigning]);
@@ -5965,6 +6053,7 @@ const App: React.FC = () => {
           onTxEnd={handleMarketTxEnd}
           onResourceCreditWarning={confirmResourceCapWarning}
           txBusy={txBusy}
+          sectionMode={isPlanetMarketplaceRoute ? "planets" : "resources"}
         />
       );
     }
@@ -6033,6 +6122,17 @@ const App: React.FC = () => {
     "--planet-accent": activeTheme.accent,
     "--planet-nebula": activeTheme.nebulaGradient,
   } as React.CSSProperties;
+  const landingMetrics = useLandingMetrics(connection, planets.length);
+
+  if (isLandingRoute) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <Starfield/>
+        <ProjectLandingScreen isMobile={isMobile} metrics={landingMetrics}/>
+      </>
+    );
+  }
 
   return (
     <>
@@ -6053,6 +6153,10 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="header-right">
+              <nav style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 8 }}>
+                <a href="/app" className="route-nav-link">APP</a>
+                <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
+              </nav>
               <div className="header-cluster">
                 <span className="chain-tag">DEVNET</span>
                 <span
@@ -6151,6 +6255,7 @@ const App: React.FC = () => {
               <LogoSVG size={22}/>
             </div>
             <div className="mobile-header-right">
+              <a href="/marketplace" className="route-nav-link alt" style={{ minHeight: 28, padding: "0 8px", fontSize: 9 }}>MARKET</a>
               <span className="token-badge mobile-token-badge">
                 <span className="token-badge-icon"><AntimatterIcon size={12}/></span>
                 <span className="token-badge-amount">{antimatterBalanceLabel}</span>

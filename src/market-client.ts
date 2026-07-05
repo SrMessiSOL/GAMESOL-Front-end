@@ -706,7 +706,8 @@ export class MarketClient {
         { pubkey: GAME_STATE_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: planetPda,             isSigner: false, isWritable: true },
         { pubkey: planetCoordsPda,       isSigner: false, isWritable: true },
-        { pubkey: buyerProfilePda,       isSigner: false, isWritable: false },
+        { pubkey: buyerProfilePda,       isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       data: encodeInstruction(IX.buyPlanetListing),
     });

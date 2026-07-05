@@ -63,7 +63,6 @@ const PLAYER_PROFILE_DISCRIMINATOR = Buffer.from([82, 226, 99, 87, 164, 130, 181
 const PLANET_STATE_DISCRIMINATOR   = Buffer.from([1, 25, 230, 69, 194, 252, 152, 240]);
 const PLANET_COORDS_DISCRIMINATOR  = Buffer.from([227, 189, 46, 7, 82, 27, 239, 25]);
 const PUBLIC_PLANET_STATE_DISCRIMINATOR = Buffer.from([61, 168, 213, 170, 12, 18, 66, 158]);
-const PUBLIC_PLANET_COORDS_DISCRIMINATOR = Buffer.from([57, 144, 207, 82, 121, 47, 228, 24]);
 const AUTHORIZED_VAULT_DISCRIMINATOR = Buffer.from([224, 162, 234, 3, 170, 103, 243, 244]);
 const VAULT_BACKUP_DISCRIMINATOR     = Buffer.from([167, 172, 2, 221, 196, 20, 199, 27]);
 const GAME_CONFIG_DISCRIMINATOR      = Buffer.from([45, 146, 146, 33, 170, 69, 96, 133]);
@@ -1253,18 +1252,6 @@ export function derivePlanetCoordsPda(galaxy: number, system: number, position: 
   const positionSeed = Buffer.from([position]);
   return PublicKey.findProgramAddressSync(
     [Buffer.from("planet_coords"), galaxySeed, systemSeed, positionSeed],
-    GAME_STATE_PROGRAM_ID,
-  )[0];
-}
-
-export function derivePublicPlanetCoordsPda(galaxy: number, system: number, position: number): PublicKey {
-  const galaxySeed = Buffer.alloc(2);
-  galaxySeed.writeUInt16LE(galaxy, 0);
-  const systemSeed = Buffer.alloc(2);
-  systemSeed.writeUInt16LE(system, 0);
-  const positionSeed = Buffer.from([position]);
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("public_planet_coords"), galaxySeed, systemSeed, positionSeed],
     GAME_STATE_PROGRAM_ID,
   )[0];
 }
@@ -4687,14 +4674,6 @@ export class GameClient {
       }
     }
 
-    const publicCoordsPda = derivePublicPlanetCoordsPda(galaxy, system, position);
-    const publicCoordsAccount = await this.connection.getAccountInfo(publicCoordsPda, "confirmed");
-    if (publicCoordsAccount && publicCoordsAccount.owner.equals(GAME_STATE_PROGRAM_ID) && publicCoordsAccount.data.length >= 8 + 5 + 32 + 32 + 1) {
-      if (publicCoordsAccount.data.slice(0, 8).equals(PUBLIC_PLANET_COORDS_DISCRIMINATOR)) {
-        return new PublicKey(publicCoordsAccount.data.slice(13, 13 + 32));
-      }
-    }
-
     // Fallback: scan all program accounts (slow, kept for safety)
     const accounts = await this.connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed" });
     for (const account of accounts) {
@@ -4927,7 +4906,7 @@ export class GameClient {
       keys: [
         { pubkey: authority,           isSigner: true,  isWritable: true  }, // authority (current owner, signs)
         { pubkey: newAuthority,        isSigner: false, isWritable: false }, // new_authority
-        { pubkey: newPlayerProfilePda, isSigner: false, isWritable: false }, // new_player_profile (verified on-chain)
+        { pubkey: newPlayerProfilePda, isSigner: false, isWritable: true  }, // new_player_profile (verified on-chain)
         { pubkey: planetPda,           isSigner: false, isWritable: true  }, // planet_state
         { pubkey: coordsPda,           isSigner: false, isWritable: true  }, // planet_coords
       ],

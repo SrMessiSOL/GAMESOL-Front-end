@@ -59,6 +59,7 @@ interface MarketTabProps {
   onResourceCreditWarning?: (action: string, delta: ResourceCreditDelta) => boolean;
   /** Global tx busy flag — disables all buttons when true. */
   txBusy: boolean;
+  sectionMode?: "both" | MarketSection;
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
@@ -294,10 +295,12 @@ const CreatePlanetListingModal: React.FC<{
   const [submitting, setSubmitting] = useState(false);
   const [localErr, setLocalErr] = useState<string | null>(null);
   const parsedPrice = amRawFromDisplay(parseFloat(priceStr) || 0);
-  const canSubmit = parsedPrice >= ANTIMATTER_SCALE && !submitting && !txBusy;
+  const hasActiveMissions = planet.fleet.activeMissions > 0;
+  const canSubmit = parsedPrice >= ANTIMATTER_SCALE && !hasActiveMissions && !submitting && !txBusy;
 
   const handleSubmit = async () => {
     setLocalErr(null);
+    if (hasActiveMissions) { setLocalErr("Resolve this planet's active missions before listing it."); return; }
     if (parsedPrice < ANTIMATTER_SCALE) { setLocalErr("Minimum price is 1.00 ANTIMATTER."); return; }
     setSubmitting(true);
     try {
@@ -338,6 +341,11 @@ const CreatePlanetListingModal: React.FC<{
         <div style={{ marginBottom: 14, color: "var(--text)", fontSize: 12 }}>
           {planet.planet.name} [{planet.planet.galaxy}:{planet.planet.system}:{planet.planet.position}]
         </div>
+        {hasActiveMissions && (
+          <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 12, letterSpacing: 0.5 }}>
+            Resolve this planet's active missions before listing it.
+          </div>
+        )}
         <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
           Total Price (ANTIMATTER tokens, min 1.0)
         </div>
@@ -824,8 +832,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
   onTxEnd,
   onResourceCreditWarning,
   txBusy,
+  sectionMode = "both",
 }) => {
-  const [section, setSection] = useState<MarketSection>("resources");
+  const forcedSection = sectionMode === "both" ? null : sectionMode;
+  const [section, setSection] = useState<MarketSection>(forcedSection ?? "resources");
   const [view, setView] = useState<MarketView>("buy");
   const [planetView, setPlanetView] = useState<PlanetMarketView>("buy");
   const [filterResource, setFilterResource] = useState<ResourceType | undefined>(undefined);
@@ -841,6 +851,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const marketUnlockLeft = state ? Math.max(0, state.planet.marketUnlockedAt - nowTs) : 0;
   const marketUnlocked = marketUnlockLeft === 0;
+  const planetBuyUnlocked = forcedSection === "planets" ? true : marketUnlocked;
   const activePlanetIsHomeworld = (state?.planet.planetIndex ?? -1) === 0;
 
   // ── Market config state ──────────────────────────────────────────────────
@@ -948,6 +959,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (forcedSection) setSection(forcedSection);
+  }, [forcedSection]);
+
   // Re-fetch when view changes to myoffers
   useEffect(() => {
     if (view === "myoffers" || planetView === "myoffers") void fetchOffers();
@@ -1035,6 +1050,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
       onTxEnd("The initial homeworld planet cannot be sold.");
       return;
     }
+    if (state.fleet.activeMissions > 0) {
+      onTxEnd("Resolve this planet's active missions before listing it.");
+      return;
+    }
     if (!marketUnlocked) {
       onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
       return;
@@ -1068,7 +1087,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   const handleBuyPlanetListing = async (listing: PlanetListing) => {
     if (!client) return;
-    if (!marketUnlocked) {
+    if (!planetBuyUnlocked) {
       onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
       return;
     }
@@ -1114,7 +1133,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   if (!client) {
     return (
       <div>
-        <div className="section-title">P2P MARKET</div>
+        <div className="section-title">{forcedSection === "planets" ? "PLANET MARKETPLACE" : "P2P MARKET"}</div>
         <div style={{
           textAlign: "center", padding: "60px 20px",
           background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 4,
@@ -1137,7 +1156,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   return (
     <div>
       {/* ── Header ── */}
-      <div className="section-title">P2P MARKET</div>
+      <div className="section-title">{forcedSection === "planets" ? "PLANET MARKETPLACE" : "P2P MARKET"}</div>
 
       {/* ── Market Admin Card — shown when not initialized OR to admin ── */}
       <MarketAdminCard
@@ -1174,7 +1193,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
       {/* ── Rest of UI — only shown when initialized ── */}
       {!marketLoading && !marketUninitialized && (<>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      {sectionMode === "both" && <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {([
           { id: "resources", label: "RESOURCES" },
           { id: "planets", label: "PLANETS" },
@@ -1198,10 +1217,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
             {tab.label}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* ── Balance strip ── */}
-      <div style={{
+      {section === "resources" && <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",
         gap: 8, marginBottom: 20,
@@ -1229,10 +1248,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
             {formatAm(antimatterBalance, 2)}
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── Market price board ── */}
-      <div style={{
+      {section === "resources" && <div style={{
         display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20,
         padding: "12px 14px",
         background: "rgba(8,8,22,0.7)",
@@ -1254,7 +1273,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
             </div>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* ── Nav ── */}
       {section === "resources" && <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
