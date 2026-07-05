@@ -119,8 +119,6 @@ const IX = {
   extendVault:            Buffer.from([176, 167, 130, 249, 196, 63, 158, 200]),
   initializeHomeworld:    Buffer.from([124, 7, 81, 167, 80, 191, 227, 173]),
   initializeColony:       Buffer.from([91, 184, 105, 243, 90, 175, 137, 217]),
-  initializePublicHomeworld: Buffer.from([4, 8, 173, 73, 62, 63, 97, 221]),
-  initializePublicColony: Buffer.from([182, 254, 149, 165, 237, 174, 216, 102]),
   initializeQuestState:   Buffer.from([228, 241, 34, 120, 153, 28, 158, 130]),
   initializeQuestProgress: Buffer.from([180, 174, 237, 53, 63, 6, 200, 222]),
   initializeQuestRewardTargets: Buffer.from([248, 232, 250, 30, 79, 249, 214, 115]),
@@ -1860,7 +1858,7 @@ function deserializePublicPlanetState(data: Buffer): PublicPlanetStateAccount {
   const version = readU8(data, o); o += 1;
   const name = readFixedString(data, o, MAX_PLANET_NAME_LEN); o += MAX_PLANET_NAME_LEN;
   const createdAt = readI64(data, o);
-  if (version !== 2) throw new Error("Legacy public planet mirror is not a V2 private planet.");
+  if (version !== 1) throw new Error(`Unsupported public planet mirror version ${version}.`);
   return { authority, player, planetIndex, galaxy, system, position, version, name, createdAt };
 }
 
