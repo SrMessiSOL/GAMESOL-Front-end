@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { Capacitor } from "@capacitor/core";
 import { useConnection, useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider } from "@coral-xyz/anchor";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import {
   GameClient,
   type GameConfigState,
@@ -2106,6 +2106,11 @@ const CSS = `
   .landing-metric-card { min-width:0; padding:9px 11px; border:1px solid rgba(255,255,255,0.09); border-radius:8px; background:rgba(7,11,22,0.68); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
   .landing-metric-label { font-size:8px; letter-spacing:1.4px; color:var(--dim); text-transform:uppercase; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .landing-metric-value { font-family:'Orbitron',sans-serif; font-size:15px; color:var(--cyan); letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .marketplace-page { position:relative; z-index:1; min-height:100dvh; width:100%; padding:18px 22px 48px; box-sizing:border-box; }
+  .marketplace-header { max-width:1180px; margin:0 auto 18px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 14px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(7,11,22,0.74); box-shadow:var(--shell-shadow); }
+  .marketplace-brand { display:inline-flex; align-items:center; gap:10px; color:var(--cyan); text-decoration:none; font-family:'Orbitron',sans-serif; font-size:15px; letter-spacing:2px; font-weight:800; }
+  .marketplace-nav { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+  .marketplace-main { max-width:1180px; margin:0 auto; padding:18px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:linear-gradient(180deg, rgba(11,14,30,0.84), rgba(6,8,18,0.72)); box-shadow:var(--shell-shadow); }
   @media (max-height: 760px) and (min-width: 760px) {
     .landing-metric-card { padding:7px 10px; }
     .landing-metric-value { font-size:14px; }
@@ -2138,6 +2143,10 @@ const CSS = `
     .hero-title { max-width:none; }
     .tab-masthead { align-items:flex-start; flex-direction:column; gap:12px; padding:14px; border-radius:16px; margin-bottom:14px; }
     .tab-title { font-size:15px; }
+    .marketplace-page { padding:12px 12px 34px; }
+    .marketplace-header { align-items:flex-start; flex-direction:column; padding:12px; }
+    .marketplace-nav { width:100%; justify-content:flex-start; }
+    .marketplace-main { padding:12px; }
     .tab-subtitle { font-size:10px; }
     .tab-masthead-rail { justify-content:flex-start; width:100%; }
     .status-chip { min-height:28px; padding:6px 9px; font-size:9px; }
@@ -2639,6 +2648,15 @@ const bigintMetricLabel = (value: bigint | null): string => value === null ? "..
 const amMetricLabel = (value: bigint | null): string => value === null ? "..." : `${formatAm(value, 2)} AM`;
 const usdcMetricLabel = (value: bigint | null): string => value === null ? "..." : `${formatCompactTokenAmount(value, 6)} USDC`;
 
+const createReadOnlyAnchorProvider = (connection: Connection): AnchorProvider => {
+  const readOnlyWallet = {
+    publicKey: SystemProgram.programId,
+    signTransaction: async () => { throw new Error("Connect wallet to sign transactions."); },
+    signAllTransactions: async () => { throw new Error("Connect wallet to sign transactions."); },
+  };
+  return new AnchorProvider(connection, readOnlyWallet as any, { commitment: "confirmed" });
+};
+
 const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetrics }> = ({ isMobile, metrics }) => (
   <div
     className="landing"
@@ -2791,21 +2809,21 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
             {metrics && (
               <div style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
+                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))",
                 gap: isMobile ? 8 : 9,
-                width: "min(1040px, 100%)",
+                width: "min(960px, 100%)",
                 marginTop: 6,
               }}>
                 {[
-                  ["PLANETS", metricLabel(metrics.planets)],
-                  ["PLANET LISTINGS", metricLabel(metrics.planetListings)],
+                  ["ACTIVE PLANETS", metricLabel(metrics.planets)],
+                  ["PLANETS FOR SALE", metricLabel(metrics.planetListings)],
                   ["RESOURCE OFFERS", metricLabel(metrics.resourceOffers)],
-                  ["TOTAL VOLUME", amMetricLabel(metrics.marketTotalVolume)],
+                  ["MARKET VOLUME", amMetricLabel(metrics.marketTotalVolume)],
                   ["24H VOLUME", amMetricLabel(metrics.marketVolume24h)],
                   ["24H TRADES", metricLabel(metrics.marketTx24h)],
-                  ["TOTAL LISTINGS", bigintMetricLabel(metrics.marketTotalListings)],
                   ["TREASURY USDC", usdcMetricLabel(metrics.treasuryUsdc)],
                   ["TREASURY AM", amMetricLabel(metrics.treasuryAntimatter)],
+                  ["TOTAL LISTINGS", bigintMetricLabel(metrics.marketTotalListings)],
                 ].map(([label, value]) => (
                   <div key={label} className="landing-metric-card">
                     <div className="landing-metric-label">{label}</div>
@@ -5285,6 +5303,12 @@ const App: React.FC = () => {
   const vaultPromptResolverRef = useRef<{ resolve: (v: string) => void; reject: (r?: unknown) => void } | null>(null);
   const walletSessionRef = useRef(0);
   const txLockRef = useRef(false);
+  const readOnlyMarketClient = useMemo(() => {
+    if (connected) return null;
+    const provider = createReadOnlyAnchorProvider(connection);
+    const gameClient = new GameClient(connection, provider);
+    return new MarketClient(connection, provider, gameClient);
+  }, [connection, connected]);
 
   const state = planets.find(p => p.planetPda === selectedPlanetPda) ?? planets[0] ?? null;
   const liveRes = useInterpolatedResources(state?.resources, nowTs);
@@ -6240,6 +6264,45 @@ const App: React.FC = () => {
         <style>{CSS}</style>
         <Starfield/>
         <ProjectLandingScreen isMobile={isMobile} metrics={landingMetrics}/>
+      </>
+    );
+  }
+
+  if (isPlanetMarketplaceRoute) {
+    const marketplaceClient = connected && marketClientRef.current ? marketClientRef.current : readOnlyMarketClient;
+    return (
+      <>
+        <style>{CSS}</style>
+        <Starfield/>
+        <LoadingOverlay visible={txBusy && !vaultPrompt} message={txProgress}/>
+        <div className="marketplace-page">
+          <header className="marketplace-header">
+            <a href="/" className="marketplace-brand" aria-label="GAMESOL home">
+              <LogoSVG size={30}/>
+              <span>GAMESOL</span>
+            </a>
+            <nav className="marketplace-nav">
+              <a href="/" className="route-nav-link">HOME</a>
+              <a href="/app" className="route-nav-link">ENTER APP</a>
+              <WalletConnectControl/>
+            </nav>
+          </header>
+          {error && <div className="shell-error" style={{ maxWidth: 1180, margin: "0 auto 14px" }}>{error}</div>}
+          <main className="marketplace-main">
+            <MarketTab
+              client={marketplaceClient}
+              state={state}
+              liveRes={liveRes}
+              antimatterBalance={antimatterBalance}
+              onTxStart={handleMarketTxStart}
+              onTxEnd={handleMarketTxEnd}
+              onResourceCreditWarning={confirmResourceCapWarning}
+              txBusy={txBusy}
+              sectionMode="planets"
+              canTransact={connected && !!marketClientRef.current}
+            />
+          </main>
+        </div>
       </>
     );
   }

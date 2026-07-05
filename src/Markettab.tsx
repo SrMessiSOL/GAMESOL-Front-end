@@ -60,6 +60,7 @@ interface MarketTabProps {
   /** Global tx busy flag — disables all buttons when true. */
   txBusy: boolean;
   sectionMode?: "both" | MarketSection;
+  canTransact?: boolean;
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
@@ -211,24 +212,25 @@ const PlanetListingCard: React.FC<{
 
   return (
     <div style={{
-      background: "var(--panel)",
+      background: "linear-gradient(180deg, rgba(18,23,45,0.94), rgba(7,10,22,0.94))",
       border: `1px solid ${listing.isOwn ? "rgba(155,93,229,0.4)" : "var(--border)"}`,
-      borderRadius: 4,
-      padding: "12px 14px",
+      borderRadius: 8,
+      padding: "14px",
       display: "grid",
-      gridTemplateColumns: "1fr auto",
-      gap: 10,
-      alignItems: "center",
+      gap: 14,
+      minHeight: 152,
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
     }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, justifyContent: "space-between" }}>
           <span style={{
             fontFamily: "'Orbitron', sans-serif",
-            fontSize: 12,
+            fontSize: 13,
             color: "var(--cyan)",
             letterSpacing: 1.5,
+            lineHeight: 1.25,
           }}>
-            {listing.planetName || "Planet"} {planetCoordsLabel(listing)}
+            {listing.planetName || "Planet"}
           </span>
           {listing.isOwn && (
             <span style={{
@@ -238,23 +240,33 @@ const PlanetListingCard: React.FC<{
             }}>YOUR LISTING</span>
           )}
         </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 8, letterSpacing: 1.4, color: "var(--dim)", marginBottom: 4 }}>COORDS</div>
+            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "var(--text)" }}>{planetCoordsLabel(listing)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 8, letterSpacing: 1.4, color: "var(--dim)", marginBottom: 4 }}>PRICE</div>
+            <AmPill amount={listing.priceAntimatter}/>
+          </div>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <AmPill amount={listing.priceAntimatter}/>
           <span style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 0.5 }}>
             seller {shortSeller}
           </span>
         </div>
       </div>
 
-      <div>
+      <div style={{ alignSelf: "end" }}>
         {listing.isOwn ? (
           <button
             onClick={() => onCancel(listing)}
             disabled={txBusy}
             style={{
+              width: "100%",
               fontFamily: "'Share Tech Mono', monospace",
               fontSize: 10, letterSpacing: 1,
-              padding: "7px 12px", borderRadius: 2,
+              padding: "10px 12px", borderRadius: 3,
               border: "1px solid rgba(255,0,110,0.4)",
               background: "rgba(255,0,110,0.06)",
               color: "var(--danger)", cursor: "pointer",
@@ -266,11 +278,12 @@ const PlanetListingCard: React.FC<{
           <button
             onClick={() => onBuy(listing)}
             disabled={txBusy || !canBuy || !marketUnlocked}
-            title={!marketUnlocked ? "Market is still locked for this planet." : !canBuy ? `Need ${formatAm(listing.priceAntimatter)} AM` : undefined}
+            title={!marketUnlocked ? "Connect a wallet to buy this planet." : !canBuy ? `Need ${formatAm(listing.priceAntimatter)} AM` : undefined}
             style={{
+              width: "100%",
               fontFamily: "'Share Tech Mono', monospace",
               fontSize: 10, letterSpacing: 1,
-              padding: "7px 12px", borderRadius: 2,
+              padding: "10px 12px", borderRadius: 3,
               border: canBuy ? "1px solid var(--cyan)" : "1px solid var(--border)",
               background: canBuy ? "rgba(0,245,212,0.08)" : "transparent",
               color: canBuy ? "var(--cyan)" : "var(--dim)",
@@ -833,6 +846,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   onResourceCreditWarning,
   txBusy,
   sectionMode = "both",
+  canTransact = true,
 }) => {
   const forcedSection = sectionMode === "both" ? null : sectionMode;
   const [section, setSection] = useState<MarketSection>(forcedSection ?? "resources");
@@ -983,6 +997,17 @@ const MarketTab: React.FC<MarketTabProps> = ({
     if (planetView === "sell") return [];
     return sellableListings.filter(l => l.seller !== walletAddress);
   }, [planetListings, planetView, walletAddress]);
+  const planetMarketStats = useMemo(() => {
+    const sellableListings = planetListings.filter(l => l.planetIndex !== 0);
+    const prices = sellableListings.map(l => l.priceAntimatter).sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
+    const totalValue = prices.reduce((sum, value) => sum + value, 0n);
+    return {
+      listed: sellableListings.length,
+      floor: prices[0] ?? null,
+      average: prices.length > 0 ? totalValue / BigInt(prices.length) : null,
+      owned: walletAddress ? sellableListings.filter(l => l.seller === walletAddress).length : 0,
+    };
+  }, [planetListings, walletAddress]);
 
   const resourceCreditDeltaForOffer = (offer: MarketOffer): ResourceCreditDelta => {
     if (offer.resourceType === ResourceType.Metal) return { metal: offer.resourceAmount };
@@ -1046,6 +1071,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   const handleCreatePlanetListing = async (priceAntimatter: bigint) => {
     if (!client || !state) return;
+    if (!canTransact) {
+      onTxEnd("Connect wallet to list a planet.");
+      return;
+    }
     if (activePlanetIsHomeworld) {
       onTxEnd("The initial homeworld planet cannot be sold.");
       return;
@@ -1075,6 +1104,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   const handleCancelPlanetListing = async (listing: PlanetListing) => {
     if (!client) return;
+    if (!canTransact) {
+      onTxEnd("Connect wallet to cancel a listing.");
+      return;
+    }
     onTxStart("Cancelling planet listing...");
     try {
       await client.cancelPlanetListing(listing);
@@ -1087,6 +1120,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   const handleBuyPlanetListing = async (listing: PlanetListing) => {
     if (!client) return;
+    if (!canTransact) {
+      onTxEnd("Connect wallet to buy a planet.");
+      return;
+    }
     if (!planetBuyUnlocked) {
       onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
       return;
@@ -1423,23 +1460,84 @@ const MarketTab: React.FC<MarketTabProps> = ({
       {/* ── Modals ── */}
       {section === "planets" && (
         <>
-          <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 14,
+            marginBottom: 16,
+          }}>
+            <div style={{
+              minHeight: 142,
+              border: "1px solid rgba(0,245,212,0.16)",
+              borderRadius: 8,
+              background: "linear-gradient(135deg, rgba(0,245,212,0.08), rgba(7,11,22,0.9) 48%, rgba(255,214,10,0.05))",
+              padding: "18px",
+              display: "grid",
+              alignContent: "center",
+              gap: 10,
+            }}>
+              <div style={{ fontSize: 9, letterSpacing: 2.5, color: "var(--warn)", textTransform: "uppercase" }}>
+                Public Planet Marketplace
+              </div>
+              <div style={{
+                fontFamily: "'Orbitron', sans-serif",
+                fontSize: 24,
+                lineHeight: 1.05,
+                color: "var(--cyan)",
+                letterSpacing: 2,
+              }}>
+                Buy a live on-chain planet
+              </div>
+              <div style={{ maxWidth: 680, fontSize: 11, lineHeight: 1.7, color: "var(--dim)", letterSpacing: 0.7 }}>
+                Browse player-listed planets, compare coordinates and price, then connect a wallet to buy. Initial homeworlds are filtered out.
+              </div>
+            </div>
+            <div style={{
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 8,
+              background: "rgba(7,11,22,0.72)",
+              padding: 12,
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 8,
+            }}>
+              {[
+                ["LISTED", planetMarketStats.listed.toLocaleString()],
+                ["FLOOR", planetMarketStats.floor === null ? "-" : `${formatAm(planetMarketStats.floor, 2)} AM`],
+                ["AVG PRICE", planetMarketStats.average === null ? "-" : `${formatAm(planetMarketStats.average, 2)} AM`],
+                ["YOUR LISTINGS", canTransact ? planetMarketStats.owned.toLocaleString() : "-"],
+              ].map(([label, value]) => (
+                <div key={label} style={{
+                  minWidth: 0,
+                  padding: "10px",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 6,
+                  background: "rgba(0,0,0,0.18)",
+                }}>
+                  <div style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--dim)", marginBottom: 5 }}>{label}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "var(--cyan)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
             {([
-              { id: "buy", label: "BUY" },
-              { id: "sell", label: "LIST" },
+              { id: "buy", label: "BUY PLANETS" },
+              { id: "sell", label: "LIST A PLANET" },
               { id: "myoffers", label: "MY LISTINGS" },
             ] as const).map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setPlanetView(tab.id)}
                 style={{
-                  flex: 1, padding: "10px 8px",
+                  padding: "10px 14px",
                   fontFamily: "'Share Tech Mono', monospace",
                   fontSize: 10, letterSpacing: 1.5,
                   textTransform: "uppercase",
-                  background: "transparent",
-                  border: "none",
-                  borderBottom: `2px solid ${planetView === tab.id ? "var(--cyan)" : "transparent"}`,
+                  borderRadius: 3,
+                  background: planetView === tab.id ? "rgba(0,245,212,0.1)" : "rgba(7,11,22,0.5)",
+                  border: `1px solid ${planetView === tab.id ? "var(--cyan)" : "var(--border)"}`,
                   color: planetView === tab.id ? "var(--cyan)" : "var(--dim)",
                   cursor: "pointer",
                 }}
@@ -1447,6 +1545,9 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 {tab.label}
               </button>
             ))}
+            <span style={{ marginLeft: "auto", fontSize: 9, color: "var(--dim)" }}>
+              {loading ? "Refreshing..." : `${displayedPlanetListings.length} shown - ${Math.round((Date.now() - lastRefresh) / 1000)}s ago`}
+            </span>
           </div>
 
           {planetView === "sell" && (
@@ -1461,7 +1562,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
               </div>
               <button
                 onClick={() => setShowCreatePlanetModal(true)}
-                disabled={txBusy || !state || !marketUnlocked || activePlanetIsHomeworld}
+                disabled={txBusy || !canTransact || !state || !marketUnlocked || activePlanetIsHomeworld}
                 style={{
                   fontFamily: "'Orbitron', sans-serif",
                   fontSize: 12, fontWeight: 700, letterSpacing: 2,
@@ -1474,6 +1575,11 @@ const MarketTab: React.FC<MarketTabProps> = ({
               >
                 LIST ACTIVE PLANET
               </button>
+              {!canTransact && (
+                <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
+                  Connect a wallet in the top bar to list a planet.
+                </div>
+              )}
               {activePlanetIsHomeworld && state && (
                 <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
                   The initial homeworld planet cannot be sold.
@@ -1494,11 +1600,6 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
           {(planetView === "buy" || planetView === "myoffers") && (
             <>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-                <span style={{ fontSize: 9, color: "var(--dim)" }}>
-                  {loading ? "Refreshing..." : `${displayedPlanetListings.length} listings - ${Math.round((Date.now() - lastRefresh) / 1000)}s ago`}
-                </span>
-              </div>
               {displayedPlanetListings.length === 0 ? (
                 <div style={{
                   textAlign: "center", padding: "48px 20px",
@@ -1514,14 +1615,14 @@ const MarketTab: React.FC<MarketTabProps> = ({
                   )}
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10 }}>
                   {displayedPlanetListings.map(listing => (
                     <PlanetListingCard
                       key={listing.pubkey}
                       listing={listing}
                       antimatterBalance={antimatterBalance}
                       txBusy={txBusy}
-                      marketUnlocked={marketUnlocked}
+                      marketUnlocked={canTransact && marketUnlocked}
                       onBuy={l => setPlanetBuyTarget(l)}
                       onCancel={l => void handleCancelPlanetListing(l)}
                     />
@@ -1608,16 +1709,16 @@ const MarketTab: React.FC<MarketTabProps> = ({
               >CANCEL</button>
               <button
                 onClick={() => void handleBuyPlanetListing(planetBuyTarget).then(() => setPlanetBuyTarget(null))}
-                disabled={txBusy || antimatterBalance < planetBuyTarget.priceAntimatter}
+                disabled={txBusy || !canTransact || antimatterBalance < planetBuyTarget.priceAntimatter}
                 style={{
                   flex: 2, padding: "12px 16px", borderRadius: 2,
-                  border: `1px solid ${antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--border)"}`,
-                  background: antimatterBalance >= planetBuyTarget.priceAntimatter ? "rgba(0,245,212,0.1)" : "transparent",
-                  color: antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--dim)",
-                  cursor: !txBusy && antimatterBalance >= planetBuyTarget.priceAntimatter ? "pointer" : "not-allowed",
+                  border: `1px solid ${canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--border)"}`,
+                  background: canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "rgba(0,245,212,0.1)" : "transparent",
+                  color: canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--dim)",
+                  cursor: !txBusy && canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "pointer" : "not-allowed",
                   fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
                 }}
-              >CONFIRM BUY</button>
+              >{canTransact ? "CONFIRM BUY" : "CONNECT WALLET"}</button>
             </div>
           </div>
         </div>
