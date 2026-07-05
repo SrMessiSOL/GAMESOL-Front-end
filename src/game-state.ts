@@ -69,6 +69,7 @@ const VAULT_BACKUP_DISCRIMINATOR     = Buffer.from([167, 172, 2, 221, 196, 20, 1
 const GAME_CONFIG_DISCRIMINATOR      = Buffer.from([45, 146, 146, 33, 170, 69, 96, 133]);
 const QUEST_STATE_DISCRIMINATOR      = Buffer.from([91, 149, 47, 55, 121, 144, 93, 66]);
 const QUEST_PROGRESS_STATE_DISCRIMINATOR = Buffer.from([171, 27, 80, 9, 167, 242, 144, 222]);
+const QUEST_REWARD_TARGET_STATE_DISCRIMINATOR = Buffer.from([102, 104, 150, 163, 193, 213, 114, 73]);
 const STORE_CONFIG_DISCRIMINATOR     = Buffer.from([108, 23, 66, 65, 67, 124, 167, 135]);
 const STORE_PURCHASE_STATE_DISCRIMINATOR = Buffer.from([98, 26, 131, 62, 86, 147, 141, 175]);
 const ALLIANCE_STATE_DISCRIMINATOR = Buffer.from([177, 12, 51, 254, 131, 106, 170, 219]);
@@ -122,6 +123,7 @@ const IX = {
   initializePublicColony: Buffer.from([182, 254, 149, 165, 237, 174, 216, 102]),
   initializeQuestState:   Buffer.from([228, 241, 34, 120, 153, 28, 158, 130]),
   initializeQuestProgress: Buffer.from([180, 174, 237, 53, 63, 6, 200, 222]),
+  initializeQuestRewardTargets: Buffer.from([248, 232, 250, 30, 79, 249, 214, 115]),
   dailyCheckIn:           Buffer.from([98, 111, 198, 206, 70, 84, 67, 98]),
   dailyCheckInVault:      Buffer.from([19, 45, 28, 31, 198, 108, 54, 148]),
   claimQuest:             Buffer.from([38, 197, 33, 123, 0, 108, 206, 161]),
@@ -537,6 +539,33 @@ export interface QuestProgressStateAccount {
   dailySpyMissionsResolved: number;
   weeklySpyMissionsResolved: number;
   monthlySpyMissionsResolved: number;
+  lastUpdatedTs: number;
+  bump: number;
+}
+
+export interface QuestRewardTargetStateAccount {
+  authority: PublicKey;
+  dailyEpoch: number;
+  weeklyEpoch: number;
+  monthlyEpoch: number;
+  dailyStorePacksPlanet: PublicKey;
+  weeklyStorePacksPlanet: PublicKey;
+  monthlyStorePacksPlanet: PublicKey;
+  dailyAntimatterPlanet: PublicKey;
+  weeklyAntimatterPlanet: PublicKey;
+  monthlyAntimatterPlanet: PublicKey;
+  dailyColonizedPlanet: PublicKey;
+  weeklyColonizedPlanet: PublicKey;
+  monthlyColonizedPlanet: PublicKey;
+  dailyAttacksPlanet: PublicKey;
+  weeklyAttacksPlanet: PublicKey;
+  monthlyAttacksPlanet: PublicKey;
+  dailyTransportsPlanet: PublicKey;
+  weeklyTransportsPlanet: PublicKey;
+  monthlyTransportsPlanet: PublicKey;
+  dailySpyPlanet: PublicKey;
+  weeklySpyPlanet: PublicKey;
+  monthlySpyPlanet: PublicKey;
   lastUpdatedTs: number;
   bump: number;
 }
@@ -1136,6 +1165,13 @@ export function deriveQuestProgressPda(walletPubkey: PublicKey): PublicKey {
   )[0];
 }
 
+export function deriveQuestRewardTargetsPda(walletPubkey: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("quest_reward_targets"), walletPubkey.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
 export function deriveAlliancePda(founderPubkey: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("alliance"), founderPubkey.toBuffer()],
@@ -1399,6 +1435,64 @@ function deserializeQuestProgressState(data: Buffer): QuestProgressStateAccount 
     bump,
   };
 }
+
+function deserializeQuestRewardTargetState(data: Buffer): QuestRewardTargetStateAccount {
+  if (!data.slice(0, 8).equals(QUEST_REWARD_TARGET_STATE_DISCRIMINATOR)) {
+    throw new Error("Invalid quest reward target state discriminator.");
+  }
+  let o = 8;
+  const authority = readPubkeyRaw(data, o); o += 32;
+  const dailyEpoch = readI64(data, o); o += 8;
+  const weeklyEpoch = readI64(data, o); o += 8;
+  const monthlyEpoch = readI64(data, o); o += 8;
+  const dailyStorePacksPlanet = readPubkeyRaw(data, o); o += 32;
+  const weeklyStorePacksPlanet = readPubkeyRaw(data, o); o += 32;
+  const monthlyStorePacksPlanet = readPubkeyRaw(data, o); o += 32;
+  const dailyAntimatterPlanet = readPubkeyRaw(data, o); o += 32;
+  const weeklyAntimatterPlanet = readPubkeyRaw(data, o); o += 32;
+  const monthlyAntimatterPlanet = readPubkeyRaw(data, o); o += 32;
+  const dailyColonizedPlanet = readPubkeyRaw(data, o); o += 32;
+  const weeklyColonizedPlanet = readPubkeyRaw(data, o); o += 32;
+  const monthlyColonizedPlanet = readPubkeyRaw(data, o); o += 32;
+  const dailyAttacksPlanet = readPubkeyRaw(data, o); o += 32;
+  const weeklyAttacksPlanet = readPubkeyRaw(data, o); o += 32;
+  const monthlyAttacksPlanet = readPubkeyRaw(data, o); o += 32;
+  const dailyTransportsPlanet = readPubkeyRaw(data, o); o += 32;
+  const weeklyTransportsPlanet = readPubkeyRaw(data, o); o += 32;
+  const monthlyTransportsPlanet = readPubkeyRaw(data, o); o += 32;
+  const dailySpyPlanet = readPubkeyRaw(data, o); o += 32;
+  const weeklySpyPlanet = readPubkeyRaw(data, o); o += 32;
+  const monthlySpyPlanet = readPubkeyRaw(data, o); o += 32;
+  const lastUpdatedTs = readI64(data, o); o += 8;
+  const bump = readU8(data, o);
+  return {
+    authority,
+    dailyEpoch,
+    weeklyEpoch,
+    monthlyEpoch,
+    dailyStorePacksPlanet,
+    weeklyStorePacksPlanet,
+    monthlyStorePacksPlanet,
+    dailyAntimatterPlanet,
+    weeklyAntimatterPlanet,
+    monthlyAntimatterPlanet,
+    dailyColonizedPlanet,
+    weeklyColonizedPlanet,
+    monthlyColonizedPlanet,
+    dailyAttacksPlanet,
+    weeklyAttacksPlanet,
+    monthlyAttacksPlanet,
+    dailyTransportsPlanet,
+    weeklyTransportsPlanet,
+    monthlyTransportsPlanet,
+    dailySpyPlanet,
+    weeklySpyPlanet,
+    monthlySpyPlanet,
+    lastUpdatedTs,
+    bump,
+  };
+}
+
 function deserializeStoreConfig(data: Buffer): StoreConfigState {
   if (!data.slice(0, 8).equals(STORE_CONFIG_DISCRIMINATOR)) {
     throw new Error("Invalid store config discriminator.");
@@ -2444,7 +2538,11 @@ function mapSendTransactionError(message: string, logs: string[]): string {
   }
   if (details.includes("AllianceMissionRequirementsNotMet") || details.includes("custom program error: 0x17b9")) {
     return "Alliance mission requirements are not completed yet.";
-  }  if (details.includes("ResourceCapExceeded") || details.includes("storage cap") || details.includes("custom program error: 0x17b2")) {
+  }
+  if (details.includes("WrongQuestRewardPlanet") || details.includes("custom program error: 0x17c3")) {
+    return "Claim this recurring quest from the planet that completed its progress.";
+  }
+  if (details.includes("ResourceCapExceeded") || details.includes("storage cap") || details.includes("custom program error: 0x17b2")) {
     return "This reward or transfer would exceed your planet storage cap. Spend resources or upgrade storage first.";
   }
   if (details.includes("NewPlayerProtected") || details.includes("new-player protection") || details.includes("custom program error: 0x17a3")) {
@@ -3149,6 +3247,7 @@ export class GameClient {
   ): Promise<string> {
     const authority = this.provider.wallet.publicKey;
     await this.ensureQuestProgress();
+    await this.ensureQuestRewardTargets(authority);
     const gameConfigPda = deriveGameConfigPda();
     const config = await this.getGameConfig();
     if (!config) {
@@ -3167,6 +3266,7 @@ export class GameClient {
         { pubkey: userAntimatterAccount, isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
+        { pubkey: deriveQuestRewardTargetsPda(authority), isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(discriminator),
     });
@@ -3193,6 +3293,7 @@ export class GameClient {
   async accelerateMissionWithAntimatter(entityPda: PublicKey, slot: number, leg: number): Promise<string> {
     const authority = this.provider.wallet.publicKey;
     await this.ensureQuestProgress();
+    await this.ensureQuestRewardTargets(authority);
     const gameConfigPda = deriveGameConfigPda();
     const config = await this.getGameConfig();
     if (!config) throw new Error("Game config is not initialized.");
@@ -3211,6 +3312,7 @@ export class GameClient {
         { pubkey: userAntimatterAccount, isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
+        { pubkey: deriveQuestRewardTargetsPda(authority), isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.accelerateMissionWithAntimatter, writer.toBuffer()),
     });
@@ -3220,6 +3322,7 @@ export class GameClient {
   async purchaseStorePack(entityPda: PublicKey, period: number, packId: number): Promise<string> {
     const authority = this.provider.wallet.publicKey;
     await this.ensureQuestProgress();
+    await this.ensureQuestRewardTargets(authority);
     const config = await this.getStoreConfig();
     if (!config) throw new Error("Store is not initialized yet.");
     if (!config.enabled) throw new Error("Store is currently disabled.");
@@ -3245,6 +3348,7 @@ export class GameClient {
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
+        { pubkey: deriveQuestRewardTargetsPda(authority), isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.purchaseStorePack, writer.toBuffer()),
     });
@@ -3333,6 +3437,14 @@ export class GameClient {
     const account = await this.connection.getAccountInfo(progressPda, "confirmed");
     if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
     try { return deserializeQuestProgressState(Buffer.from(account.data)); }
+    catch { return null; }
+  }
+
+  async getQuestRewardTargets(authority: PublicKey = this.provider.wallet.publicKey): Promise<QuestRewardTargetStateAccount | null> {
+    const targetsPda = deriveQuestRewardTargetsPda(authority);
+    const account = await this.connection.getAccountInfo(targetsPda, "confirmed");
+    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    try { return deserializeQuestRewardTargetState(Buffer.from(account.data)); }
     catch { return null; }
   }
 
@@ -3846,6 +3958,24 @@ export class GameClient {
     return this.sendInstruction([ix]);
   }
 
+  async initializeQuestRewardTargets(): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    const existing = await this.getQuestRewardTargets(authority);
+    if (existing) return "";
+
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
+        { pubkey: deriveQuestRewardTargetsPda(authority), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.initializeQuestRewardTargets),
+    });
+    return this.sendInstruction([ix]);
+  }
+
   private async ensureQuestState(): Promise<void> {
     if (!(await this.getQuestState())) {
       await this.initializeQuestState();
@@ -3855,6 +3985,12 @@ export class GameClient {
   private async ensureQuestProgress(): Promise<void> {
     if (!(await this.getQuestProgress())) {
       await this.initializeQuestProgress();
+    }
+  }
+
+  private async ensureQuestRewardTargets(authority: PublicKey = this.provider.wallet.publicKey): Promise<void> {
+    if (!(await this.getQuestRewardTargets(authority))) {
+      await this.initializeQuestRewardTargets();
     }
   }
 
@@ -4194,6 +4330,7 @@ export class GameClient {
     args: Buffer,
   ): TransactionInstruction {
     const questProgressPda = deriveQuestProgressPda(planetAuthority);
+    const questRewardTargetsPda = deriveQuestRewardTargetsPda(planetAuthority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
       return new TransactionInstruction({
@@ -4223,33 +4360,39 @@ export class GameClient {
     planetPda: PublicKey,
     authority: PublicKey,
     args?: Buffer,
+    includeRewardTargets = false,
   ): TransactionInstruction {
     const questPda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
+    const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(authority);
+      const keys = [
+        { pubkey: this.vaultKeypair.publicKey, isSigner: true,  isWritable: true  },
+        { pubkey: authority,                   isSigner: false, isWritable: false },
+        { pubkey: authorizedVaultPda,           isSigner: false, isWritable: false },
+        { pubkey: questPda,                     isSigner: false, isWritable: true  },
+        { pubkey: planetPda,                    isSigner: false, isWritable: true  },
+        { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
+      ];
+      if (includeRewardTargets) keys.push({ pubkey: questRewardTargetsPda, isSigner: false, isWritable: true });
       return new TransactionInstruction({
         programId: GAME_STATE_PROGRAM_ID,
-        keys: [
-          { pubkey: this.vaultKeypair.publicKey, isSigner: true,  isWritable: true  },
-          { pubkey: authority,                   isSigner: false, isWritable: false },
-          { pubkey: authorizedVaultPda,           isSigner: false, isWritable: false },
-          { pubkey: questPda,                     isSigner: false, isWritable: true  },
-          { pubkey: planetPda,                    isSigner: false, isWritable: true  },
-          { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
-        ],
+        keys,
         data: encodeInstruction(vaultDiscriminator, args),
       });
     }
 
+    const keys = [
+      { pubkey: authority,  isSigner: true,  isWritable: true  },
+      { pubkey: questPda,   isSigner: false, isWritable: true  },
+      { pubkey: planetPda,  isSigner: false, isWritable: true  },
+      { pubkey: questProgressPda, isSigner: false, isWritable: true },
+    ];
+    if (includeRewardTargets) keys.push({ pubkey: questRewardTargetsPda, isSigner: false, isWritable: true });
     return new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
-      keys: [
-        { pubkey: authority,  isSigner: true,  isWritable: true  },
-        { pubkey: questPda,   isSigner: false, isWritable: true  },
-        { pubkey: planetPda,  isSigner: false, isWritable: true  },
-        { pubkey: questProgressPda, isSigner: false, isWritable: true },
-      ],
+      keys,
       data: encodeInstruction(walletDiscriminator, args),
     });
   }
@@ -4261,6 +4404,7 @@ export class GameClient {
     args: Buffer,
   ): TransactionInstruction {
     const questProgressPda = deriveQuestProgressPda(planetAuthority);
+    const questRewardTargetsPda = deriveQuestRewardTargetsPda(planetAuthority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
       return new TransactionInstruction({
@@ -4271,6 +4415,7 @@ export class GameClient {
           { pubkey: sourcePlanetPda,              isSigner: false, isWritable: true  },
           { pubkey: destinationPlanetPda,         isSigner: false, isWritable: true  },
           { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
+          { pubkey: questRewardTargetsPda,        isSigner: false, isWritable: true  },
         ],
         data: encodeInstruction(IX.resolveTransportVault, args),
       });
@@ -4283,6 +4428,7 @@ export class GameClient {
         { pubkey: sourcePlanetPda,                isSigner: false, isWritable: true  },
         { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
         { pubkey: questProgressPda,               isSigner: false, isWritable: true  },
+        { pubkey: questRewardTargetsPda,          isSigner: false, isWritable: true  },
       ],
       data: encodeInstruction(IX.resolveTransport, args),
     });
@@ -4296,6 +4442,7 @@ export class GameClient {
     args: Buffer,
   ): TransactionInstruction {
     const questProgressPda = deriveQuestProgressPda(planetAuthority);
+    const questRewardTargetsPda = deriveQuestRewardTargetsPda(planetAuthority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
       return new TransactionInstruction({
@@ -4307,6 +4454,7 @@ export class GameClient {
           { pubkey: destinationPlanetPda,         isSigner: false, isWritable: true  },
           { pubkey: destinationCoordsPda,         isSigner: false, isWritable: true  },
           { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
+          { pubkey: questRewardTargetsPda,        isSigner: false, isWritable: true  },
         ],
         data: encodeInstruction(IX.resolveAttackVault, args),
       });
@@ -4320,6 +4468,7 @@ export class GameClient {
         { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
         { pubkey: destinationCoordsPda,           isSigner: false, isWritable: true  },
         { pubkey: questProgressPda,               isSigner: false, isWritable: true  },
+        { pubkey: questRewardTargetsPda,          isSigner: false, isWritable: true  },
       ],
       data: encodeInstruction(IX.resolveAttack, args),
     });
@@ -4335,6 +4484,7 @@ export class GameClient {
     args: Buffer,
   ): TransactionInstruction {
     const questProgressPda = deriveQuestProgressPda(planetAuthority);
+    const questRewardTargetsPda = deriveQuestRewardTargetsPda(planetAuthority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(planetAuthority);
       return new TransactionInstruction({
@@ -4346,6 +4496,7 @@ export class GameClient {
           { pubkey: destinationPlanetPda,         isSigner: false, isWritable: true  },
           { pubkey: destinationCoordsPda,         isSigner: false, isWritable: true  },
           { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
+          { pubkey: questRewardTargetsPda,        isSigner: false, isWritable: true  },
         ],
         data: encodeInstruction(IX.resolveEspionageVault, args),
       });
@@ -4359,6 +4510,7 @@ export class GameClient {
         { pubkey: destinationPlanetPda,           isSigner: false, isWritable: true  },
         { pubkey: destinationCoordsPda,           isSigner: false, isWritable: true  },
         { pubkey: questProgressPda,               isSigner: false, isWritable: true  },
+        { pubkey: questRewardTargetsPda,          isSigner: false, isWritable: true  },
       ],
       data: encodeInstruction(IX.resolveEspionage, args),
     });
@@ -4381,12 +4533,13 @@ export class GameClient {
     await this.ensureQuestProgress();
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    if (period !== 0) await this.ensureQuestRewardTargets(authority);
     await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(period);
     writer.writeU8(questId);
     return this.sendInstruction(
-      [this.buildQuestInstruction(IX.claimQuestVault, IX.claimQuest, entityPda, authority, writer.toBuffer())],
+      [this.buildQuestInstruction(IX.claimQuestVault, IX.claimQuest, entityPda, authority, writer.toBuffer(), period !== 0)],
       this.vaultSigners(),
     );
   }
@@ -4582,6 +4735,7 @@ export class GameClient {
     const state = await this.loadPlanetStateByPda(sourceEntityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
     await this.ensureQuestProgress();
+    await this.ensureQuestRewardTargets(authority);
     await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(slot);
@@ -4594,6 +4748,7 @@ export class GameClient {
         mission.targetPosition,
       );
       const questProgressPda = deriveQuestProgressPda(authority);
+      const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
       const ix = this.buildVaultMutationInstruction(
         IX.resolveTransportEmptyVault,
         IX.resolveTransportEmpty,
@@ -4604,6 +4759,7 @@ export class GameClient {
       ix.keys.push(
         { pubkey: destinationCoordsPda, isSigner: false, isWritable: false },
         { pubkey: questProgressPda, isSigner: false, isWritable: true },
+        { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true },
       );
       return this.sendInstruction(
         [ix],
@@ -4633,6 +4789,7 @@ export class GameClient {
     const state = await this.loadPlanetStateByPda(sourceEntityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
     await this.ensureQuestProgress();
+    await this.ensureQuestRewardTargets(authority);
     await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(slot);
@@ -4666,6 +4823,7 @@ export class GameClient {
     const state = await this.loadPlanetStateByPda(sourceEntityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
     await this.ensureQuestProgress();
+    await this.ensureQuestRewardTargets(authority);
     await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(slot);
@@ -4701,6 +4859,7 @@ export class GameClient {
   ): Promise<{ entityPda: PublicKey; planetPda: PublicKey }> {
     const authority = this.provider.wallet.publicKey;
     await this.ensureQuestProgress();
+    await this.ensureQuestRewardTargets(authority);
     const vault = await this.prepareVaultSigningForAuthority(authority, reportProgress);
     if (!vault) throw new Error("Vault signing must be enabled to create a colony.");
 
@@ -4728,6 +4887,7 @@ export class GameClient {
     );
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
+    const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
 
     reportProgress?.("Vault signing: creating colony from mission");
 
@@ -4744,6 +4904,7 @@ export class GameClient {
         { pubkey: questStatePda,      isSigner: false, isWritable: true  },
         { pubkey: questProgressPda,   isSigner: false, isWritable: true  },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.initializeColony, encodeColonyArgs(now, mission, slot)),
     });

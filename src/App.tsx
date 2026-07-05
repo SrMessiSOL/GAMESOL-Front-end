@@ -10,6 +10,7 @@ import {
   type StoreConfigState,
   type StorePurchaseStateAccount,
   type QuestProgressStateAccount,
+  type QuestRewardTargetStateAccount,
   type AllianceStateAccount,
   type AllianceTreasuryStateAccount,
   type AllianceMembershipAccount,
@@ -857,6 +858,35 @@ function recurringActionRequirement(
 function recurringActionSignature(period: 1 | 2 | 3, entry: QuestCatalogUiEntry): string {
   const action = recurringActionRequirement(period, entry, null, 0);
   return `${action.label}:${action.required}`;
+}
+
+const ZERO_PUBKEY_STRING = "11111111111111111111111111111111";
+
+function questRewardTargetForRequirement(
+  period: 1 | 2 | 3,
+  label: string,
+  targets: QuestRewardTargetStateAccount | null | undefined,
+): PublicKey | null {
+  if (!targets) return null;
+  const periodPrefix = period === 1 ? "daily" : period === 2 ? "weekly" : "monthly";
+  const metric = label === "Store packs bought"
+    ? "StorePacks"
+    : label === "ANTIMATTER spent"
+      ? "Antimatter"
+      : label === "Planets colonized"
+        ? "Colonized"
+        : label === "Attacks resolved"
+          ? "Attacks"
+          : label === "Transports completed"
+            ? "Transports"
+            : label === "Spy missions completed"
+              ? "Spy"
+              : null;
+  if (!metric) return null;
+  const key = `${periodPrefix}${metric}Planet` as keyof QuestRewardTargetStateAccount;
+  const value = targets[key];
+  if (!(value instanceof PublicKey)) return null;
+  return value.toBase58() === ZERO_PUBKEY_STRING ? null : value;
 }
 
 function rotatingQuestEntry(
@@ -4122,20 +4152,37 @@ const QuestRequirementModal: React.FC<{ quest: QuestDefinition | null; state: Pl
 
 const QuestsTab: React.FC<{
   state: PlayerState;
+  planets: PlayerState[];
   questState: QuestStateAccount | null;
   questProgress: QuestProgressStateAccount | null;
+  questRewardTargets: QuestRewardTargetStateAccount | null;
   nowTs: number;
   txBusy: boolean;
   onDailyCheckIn: () => void;
   onClaimQuest: (period: QuestPeriod, questId: number) => void;
-}> = ({ state, questState, questProgress, nowTs, txBusy, onDailyCheckIn, onClaimQuest }) => {
+}> = ({ state, planets, questState, questProgress, questRewardTargets, nowTs, txBusy, onDailyCheckIn, onClaimQuest }) => {
   const [lockedQuest, setLockedQuest] = useState<QuestDefinition | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<QuestDefinition["group"], boolean>>({
+    Tutorial: false,
+    Daily: false,
+    Weekly: false,
+    Monthly: false,
+  });
   const hideTutorial = tutorialQuestsComplete(questState);
   const groups: Array<QuestDefinition["group"]> = hideTutorial ? ["Daily", "Weekly", "Monthly"] : ["Tutorial", "Daily", "Weekly", "Monthly"];
   const visibleQuests = activeQuestDefinitions(nowTs, questProgress).filter(quest => !hideTutorial || quest.group !== "Tutorial");
   const currentDay = Math.floor(nowTs / 86400);
   const checkInClaimed = questState?.dailyCheckinDay === currentDay || hasQuestBit(questClaimedMask(1, questState, nowTs), 0);
   const nextStreak = Math.min((questState?.dailyCheckinStreak ?? 0) + 1, 30);
+  const planetNameByPda = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const planet of planets) {
+      const name = planet.planet.name?.trim() || `Planet ${planet.planet.planetIndex + 1}`;
+      map.set(planet.entityPda, name);
+      map.set(planet.planetPda, name);
+    }
+    return map;
+  }, [planets]);
 
   return (
     <>
@@ -4159,12 +4206,24 @@ const QuestsTab: React.FC<{
           const groupQuests = visibleQuests.filter(q => q.group === group);
           const resetSeconds = questGroupResetSeconds(group, nowTs);
           if (groupQuests.length === 0) return null;
+          const collapsed = collapsedGroups[group];
           return (
           <div key={group} style={{marginBottom:24}}>
             <div className="section-title" style={{marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
               <span>{group}</span>
-              {resetSeconds !== null && <span style={{fontSize:9,color:"var(--warn)",letterSpacing:1}}>Ends in {fmtCountdown(resetSeconds)}</span>}
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                {resetSeconds !== null && <span style={{fontSize:9,color:"var(--warn)",letterSpacing:1}}>Ends in {fmtCountdown(resetSeconds)}</span>}
+                <button
+                  type="button"
+                  className="quest-btn"
+                  style={{width:"auto",minHeight:24,padding:"5px 12px",fontSize:9,letterSpacing:1.5}}
+                  onClick={() => setCollapsedGroups(prev => ({ ...prev, [group]: !prev[group] }))}
+                >
+                  {collapsed ? "SHOW" : "HIDE"}
+                </button>
+              </div>
             </div>
+            {!collapsed && (
             <div className="grid-3">
               {groupQuests.map(quest => {
                 const mask = questClaimedMask(quest.period, questState, nowTs);
@@ -4177,6 +4236,12 @@ const QuestsTab: React.FC<{
                 const metCount = statuses.length - missing.length;
                 const progress = statuses.length === 0 ? 100 : Math.round((metCount / statuses.length) * 100);
                 const canClaim = missing.length === 0 && !claimed;
+                const targetPlanet = quest.period === 0 || quest.checkIn
+                  ? null
+                  : questRewardTargetForRequirement(quest.period as 1 | 2 | 3, quest.requirements[0]?.label ?? "", questRewardTargets);
+                const targetPlanetKey = targetPlanet?.toBase58() ?? null;
+                const targetPlanetName = targetPlanetKey ? (planetNameByPda.get(targetPlanetKey) ?? "another planet") : null;
+                const claimOnWrongPlanet = !!targetPlanetKey && targetPlanetKey !== state.entityPda && targetPlanetKey !== state.planetPda;
                 const reward = quest.checkIn
                   ? {
                       metal: quest.reward.metal + nextStreak * 50,
@@ -4225,19 +4290,21 @@ const QuestsTab: React.FC<{
                     <div className="quest-actions">
                       <button
                         className={`quest-btn${claimed ? " claimed" : missing.length ? " locked" : ""}`}
-                        disabled={txBusy || claimed}
+                        disabled={txBusy || claimed || claimOnWrongPlanet}
                         onClick={() => {
+                          if (claimOnWrongPlanet) return;
                           if (missing.length) { setLockedQuest(quest); return; }
                           quest.checkIn ? onDailyCheckIn() : onClaimQuest(quest.period, quest.id);
                         }}
                       >
-                        {claimed ? "CLAIMED" : missing.length ? `REQUIREMENTS (${missing.length})` : "CLAIM"}
+                        {claimed ? "CLAIMED" : claimOnWrongPlanet ? `CLAIM FROM ${targetPlanetName}` : missing.length ? `REQUIREMENTS (${missing.length})` : "CLAIM"}
                       </button>
                     </div>
                   </div>
                 );
               })}
             </div>
+            )}
           </div>
         )})}
       </div>
@@ -5017,6 +5084,7 @@ const App: React.FC = () => {
   const [gameConfigMintInput, setGameConfigMintInput] = useState(DEFAULT_ANTIMATTER_MINT);
   const [questState, setQuestState] = useState<QuestStateAccount | null>(null);
   const [questProgress, setQuestProgress] = useState<QuestProgressStateAccount | null>(null);
+  const [questRewardTargets, setQuestRewardTargets] = useState<QuestRewardTargetStateAccount | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfigState | null>(null);
   const [storePurchaseState, setStorePurchaseState] = useState<StorePurchaseStateAccount | null>(null);
   const [allianceState, setAllianceState] = useState<AllianceStateAccount | null>(null);
@@ -5314,14 +5382,17 @@ const App: React.FC = () => {
     if (!clientRef.current || !publicKey) {
       setQuestState(null);
       setQuestProgress(null);
+      setQuestRewardTargets(null);
       return null;
     }
-    const [next, progress] = await Promise.all([
+    const [next, progress, targets] = await Promise.all([
       clientRef.current.getQuestState(publicKey),
       clientRef.current.getQuestProgress(publicKey),
+      clientRef.current.getQuestRewardTargets(publicKey),
     ]);
     setQuestState(next);
     setQuestProgress(progress);
+    setQuestRewardTargets(targets);
     return next;
   }, [publicKey]);
 
@@ -5332,7 +5403,7 @@ const App: React.FC = () => {
       clientRef.current = null;
       marketClientRef.current = null;
       setPlanets([]); setSelectedPlanetPda(null); setLoading(false);
-      setVaultStatus("loading"); setGameConfig(null); setQuestState(null); setQuestProgress(null); setStoreConfig(null); setStorePurchaseState(null); setAllianceState(null); setAllianceTreasury(null); setAllianceMembership(null); setAllianceDirectory([]); setAllianceJoinRequests([]); setAllianceMembers([]);
+      setVaultStatus("loading"); setGameConfig(null); setQuestState(null); setQuestProgress(null); setQuestRewardTargets(null); setStoreConfig(null); setStorePurchaseState(null); setAllianceState(null); setAllianceTreasury(null); setAllianceMembership(null); setAllianceDirectory([]); setAllianceJoinRequests([]); setAllianceMembers([]);
       setGameConfigMintInput(DEFAULT_ANTIMATTER_MINT); setAntimatterBalance(0n); setUsdcBalance(0n);
       setVaultBalance(0n);
       return;
@@ -5360,12 +5431,14 @@ const App: React.FC = () => {
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         await loadAntimatterBalance(config?.antimatterMint ?? DEFAULT_ANTIMATTER_MINT);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
-        const [loadedQuestState, loadedQuestProgress] = await Promise.all([
+        const [loadedQuestState, loadedQuestProgress, loadedQuestRewardTargets] = await Promise.all([
           gameClient.getQuestState(publicKey),
           gameClient.getQuestProgress(publicKey),
+          gameClient.getQuestRewardTargets(publicKey),
         ]);
         setQuestState(loadedQuestState);
         setQuestProgress(loadedQuestProgress);
+        setQuestRewardTargets(loadedQuestRewardTargets);
         const joinedAlliance = await gameClient.getMyAlliance();
         setAllianceState(joinedAlliance?.alliance ?? null);
         setAllianceMembership(joinedAlliance?.membership ?? null);
@@ -5916,7 +5989,7 @@ const App: React.FC = () => {
       case "overview":
         return <OverviewTab state={state} res={liveRes} nowTs={nowTs} planets={planets} alliance={allianceState} allianceTreasury={allianceTreasury} allianceMembership={allianceMembership} onSelectPlanet={setSelectedPlanetPda} onFinishBuild={handleFinishBuild} onFinishResearch={() => withTx("Finish research", () => clientRef.current!.finishResearch(new PublicKey(state.entityPda)))} onFinishShipyard={() => withTx("Finish shipyard", () => clientRef.current!.finishShipBuild(new PublicKey(state.entityPda)))} onFinishDefense={() => withTx("Finish defense", () => clientRef.current!.finishDefenseBuild(new PublicKey(state.entityPda)))} onInstantFinishBuild={handleInstantFinishBuild} onInstantFinishResearch={handleInstantFinishResearch} onInstantFinishShipyard={handleInstantFinishShipyard} onInstantFinishDefense={handleInstantFinishDefense} antimatterBalance={antimatterBalance} antimatterEnabled={antimatterEnabled} txBusy={txBusy}/>;
       case "quests":
-        return <QuestsTab state={state} questState={questState} questProgress={questProgress} nowTs={nowTs} txBusy={txBusy} onDailyCheckIn={handleDailyCheckIn} onClaimQuest={handleClaimQuest} />;
+        return <QuestsTab state={state} planets={planets} questState={questState} questProgress={questProgress} questRewardTargets={questRewardTargets} nowTs={nowTs} txBusy={txBusy} onDailyCheckIn={handleDailyCheckIn} onClaimQuest={handleClaimQuest} />;
       case "alliance":
         return <AllianceTab state={state} alliance={allianceState} allianceTreasury={allianceTreasury} membership={allianceMembership} alliances={allianceDirectory} joinRequests={allianceJoinRequests} myJoinRequests={myAllianceJoinRequests} members={allianceMembers} storeConfig={storeConfig} usdcBalance={usdcBalance} antimatterBalance={antimatterBalance} txBusy={txBusy} onCreate={handleCreateAlliance} onRequestJoin={handleRequestJoinAlliance} onApproveRequest={handleApproveJoinRequest} onRejectRequest={handleRejectJoinRequest} onExpelMember={handleExpelAllianceMember} onTransferLeadership={handleTransferAllianceLeadership} onLeave={handleLeaveAlliance} onDepositMission={handleDepositAllianceMission} onUpgradeBuilding={handleUpgradeAllianceBuilding} />;
       case "store":
