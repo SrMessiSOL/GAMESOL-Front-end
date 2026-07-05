@@ -4588,14 +4588,25 @@ export class GameClient {
     writer.writeI64(Math.floor(Date.now() / 1000));
 
     if (!destinationPlanetPda) {
+      const destinationCoordsPda = derivePlanetCoordsPda(
+        mission.targetGalaxy,
+        mission.targetSystem,
+        mission.targetPosition,
+      );
+      const questProgressPda = deriveQuestProgressPda(authority);
+      const ix = this.buildVaultMutationInstruction(
+        IX.resolveTransportEmptyVault,
+        IX.resolveTransportEmpty,
+        sourceEntityPda,
+        authority,
+        writer.toBuffer(),
+      );
+      ix.keys.push(
+        { pubkey: destinationCoordsPda, isSigner: false, isWritable: false },
+        { pubkey: questProgressPda, isSigner: false, isWritable: true },
+      );
       return this.sendInstruction(
-        [this.buildVaultMutationInstruction(
-          IX.resolveTransportEmptyVault,
-          IX.resolveTransportEmpty,
-          sourceEntityPda,
-          authority,
-          writer.toBuffer(),
-        )],
+        [ix],
         this.vaultSigners(),
       );
     }
