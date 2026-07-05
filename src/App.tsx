@@ -2504,7 +2504,7 @@ type LandingMetrics = {
   resourceOffers: number | null;
   planetListings: number | null;
   marketTotalVolume: bigint | null;
-  marketTotalListings: bigint | null;
+  marketOffersCreated: bigint | null;
   marketTx24h: number | null;
   marketVolume24h: bigint | null;
   treasuryUsdc: bigint | null;
@@ -2522,7 +2522,7 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
     resourceOffers: null,
     planetListings: null,
     marketTotalVolume: null,
-    marketTotalListings: null,
+    marketOffersCreated: null,
     marketTx24h: null,
     marketVolume24h: null,
     treasuryUsdc: null,
@@ -2543,12 +2543,12 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
     };
     const readPubkey = (data: Uint8Array, offset: number): PublicKey => new PublicKey(data.slice(offset, offset + 32));
     const parseMarketConfig = (data: Uint8Array | undefined) => {
-      if (!data || data.length < 97) return { admin: null, antimatterMint: null, totalVolume: null, totalListings: null };
+      if (!data || data.length < 97) return { admin: null, antimatterMint: null, totalVolume: null, offersCreated: null };
       return {
         admin: readPubkey(data, 8),
         antimatterMint: readPubkey(data, 8 + 32),
         totalVolume: readU128LE(data, 8 + 32 + 32),
-        totalListings: readU64LE(data, 8 + 32 + 32 + 16),
+        offersCreated: readU64LE(data, 8 + 32 + 32 + 16),
       };
     };
     const parseStoreConfig = (data: Uint8Array | undefined) => {
@@ -2624,7 +2624,7 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
           resourceOffers: resourceOffers.length,
           planetListings: planetListings.length,
           marketTotalVolume: marketConfig.totalVolume,
-          marketTotalListings: marketConfig.totalListings,
+          marketOffersCreated: marketConfig.offersCreated,
           marketTx24h: tradeCount24h,
           marketVolume24h: volume24h,
           treasuryUsdc,
@@ -2823,7 +2823,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
                   ["24H TRADES", metricLabel(metrics.marketTx24h)],
                   ["TREASURY USDC", usdcMetricLabel(metrics.treasuryUsdc)],
                   ["TREASURY AM", amMetricLabel(metrics.treasuryAntimatter)],
-                  ["TOTAL LISTINGS", bigintMetricLabel(metrics.marketTotalListings)],
+                  ["OFFERS CREATED", bigintMetricLabel(metrics.marketOffersCreated)],
                 ].map(([label, value]) => (
                   <div key={label} className="landing-metric-card">
                     <div className="landing-metric-label">{label}</div>
