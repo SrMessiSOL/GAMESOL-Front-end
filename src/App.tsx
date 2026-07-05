@@ -2492,7 +2492,6 @@ type LandingMetrics = {
   planets: number | null;
   resourceOffers: number | null;
   planetListings: number | null;
-  ownedPlanets: number;
   marketTotalVolume: bigint | null;
   marketTotalListings: bigint | null;
   marketTx24h: number | null;
@@ -2504,12 +2503,11 @@ const MARKET_CONFIG_PDA = PublicKey.findProgramAddressSync(
   MARKET_PROGRAM_ID,
 )[0];
 
-const useLandingMetrics = (connection: Connection, ownedPlanets: number): LandingMetrics => {
+const useLandingMetrics = (connection: Connection): LandingMetrics => {
   const [metrics, setMetrics] = useState<LandingMetrics>({
     planets: null,
     resourceOffers: null,
     planetListings: null,
-    ownedPlanets,
     marketTotalVolume: null,
     marketTotalListings: null,
     marketTx24h: null,
@@ -2547,49 +2545,53 @@ const useLandingMetrics = (connection: Connection, ownedPlanets: number): Landin
     const load = async () => {
       try {
         const [publicPlanets, legacyPlanets, resourceOffers, planetListings, marketConfigInfo, signatures] = await Promise.all([
-          connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 121 }] }),
-          connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 1002 }] }),
-          connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 78 }] }),
-          connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 93 }] }),
+          connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 121 }], dataSlice: { offset: 0, length: 0 } }),
+          connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 1002 }], dataSlice: { offset: 0, length: 0 } }),
+          connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 78 }], dataSlice: { offset: 0, length: 0 } }),
+          connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 93 }], dataSlice: { offset: 0, length: 0 } }),
           connection.getAccountInfo(MARKET_CONFIG_PDA, "confirmed"),
-          connection.getSignaturesForAddress(MARKET_PROGRAM_ID, { limit: 1000 }, "confirmed"),
+          connection.getSignaturesForAddress(MARKET_PROGRAM_ID, { limit: 100 }, "confirmed"),
         ]);
         const now = Math.floor(Date.now() / 1000);
         const cutoff24h = now - 86_400;
         const signatures24h = signatures.filter(sig => (sig.blockTime ?? 0) >= cutoff24h);
-        const recentTxs = signatures24h.length > 0
-          ? await connection.getParsedTransactions(
-              signatures24h.slice(0, 100).map(sig => sig.signature),
-              { commitment: "confirmed", maxSupportedTransactionVersion: 0 },
-            )
-          : [];
         const marketConfig = parseMarketConfig(marketConfigInfo?.data);
-        const tradeVolumes24h = recentTxs.map(tx => parseMarketLogVolume(tx?.meta?.logMessages));
-        const volume24h = tradeVolumes24h.reduce((sum, value) => sum + value, 0n);
+        let tradeCount24h: number | null = null;
+        let volume24h: bigint | null = null;
+        try {
+          const recentTxs = signatures24h.length > 0
+            ? await Promise.all(
+                signatures24h.slice(0, 25).map(sig =>
+                  connection.getParsedTransaction(sig.signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }),
+                ),
+              )
+            : [];
+          const tradeVolumes24h = recentTxs.map(tx => parseMarketLogVolume(tx?.meta?.logMessages));
+          volume24h = tradeVolumes24h.reduce((sum, value) => sum + value, 0n);
+          tradeCount24h = tradeVolumes24h.filter(value => value > 0n).length;
+        } catch {
+          volume24h = null;
+          tradeCount24h = null;
+        }
         if (cancelled) return;
         setMetrics({
           planets: publicPlanets.length + legacyPlanets.length,
           resourceOffers: resourceOffers.length,
           planetListings: planetListings.length,
-          ownedPlanets,
           marketTotalVolume: marketConfig.totalVolume,
           marketTotalListings: marketConfig.totalListings,
-          marketTx24h: tradeVolumes24h.filter(value => value > 0n).length,
+          marketTx24h: tradeCount24h,
           marketVolume24h: volume24h,
         });
       } catch {
         if (!cancelled) {
-          setMetrics(prev => ({ ...prev, ownedPlanets }));
+          setMetrics(prev => ({ ...prev }));
         }
       }
     };
     void load();
     return () => { cancelled = true; };
-  }, [connection, ownedPlanets]);
-
-  useEffect(() => {
-    setMetrics(prev => ({ ...prev, ownedPlanets }));
-  }, [ownedPlanets]);
+  }, [connection]);
 
   return metrics;
 };
@@ -2763,7 +2765,6 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
                   ["24H VOLUME", amMetricLabel(metrics.marketVolume24h)],
                   ["24H TRADES", metricLabel(metrics.marketTx24h)],
                   ["TOTAL LISTINGS", bigintMetricLabel(metrics.marketTotalListings)],
-                  ["YOUR PLANETS", metrics.ownedPlanets.toLocaleString()],
                 ].map(([label, value]) => (
                   <div key={label} className="landing-metric-card">
                     <div className="landing-metric-label">{label}</div>
@@ -6190,7 +6191,7 @@ const App: React.FC = () => {
     "--planet-accent": activeTheme.accent,
     "--planet-nebula": activeTheme.nebulaGradient,
   } as React.CSSProperties;
-  const landingMetrics = useLandingMetrics(connection, planets.length);
+  const landingMetrics = useLandingMetrics(connection);
 
   if (isLandingRoute) {
     return (
