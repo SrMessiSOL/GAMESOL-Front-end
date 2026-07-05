@@ -134,6 +134,10 @@ export interface PlanetListing {
   planetName?: string;
   planetIndex?: number;
   coords?: { galaxy: number; system: number; position: number };
+  diameter?: number;
+  temperature?: number;
+  maxFields?: number;
+  usedFields?: number;
 }
 
 export interface MarketConfig {
@@ -779,6 +783,10 @@ export class MarketClient {
 
         listing.planetName = planetState.planet.name;
         listing.planetIndex = planetState.planet.planetIndex;
+        listing.diameter = planetState.planet.diameter;
+        listing.temperature = planetState.planet.temperature;
+        listing.maxFields = planetState.planet.maxFields;
+        listing.usedFields = planetState.planet.usedFields;
         listing.coords = {
           galaxy: planetState.planet.galaxy,
           system: planetState.planet.system,
