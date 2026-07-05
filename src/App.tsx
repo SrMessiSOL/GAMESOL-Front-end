@@ -6250,6 +6250,7 @@ const App: React.FC = () => {
         <MarketTab
           client={marketClientRef.current}
           state={state}
+          ownedPlanets={planets}
           liveRes={liveRes}
           antimatterBalance={antimatterBalance}
           onTxStart={handleMarketTxStart}
@@ -6371,6 +6372,7 @@ const App: React.FC = () => {
             <MarketTab
               client={marketplaceClient}
               state={state}
+              ownedPlanets={planets}
               liveRes={liveRes}
               antimatterBalance={antimatterBalance}
               onTxStart={handleMarketTxStart}

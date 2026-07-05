@@ -48,6 +48,7 @@ interface MarketTabProps {
   client: MarketClient | null;
   /** Current planet state — used to show resource holdings. */
   state: PlayerState | null;
+  ownedPlanets?: PlayerState[];
   /** Live interpolated resources (from App.tsx). */
   liveRes: Resources | undefined;
   /** Raw ANTIMATTER balance of the connected wallet. */
@@ -839,6 +840,7 @@ const MarketAdminCard: React.FC<{
 const MarketTab: React.FC<MarketTabProps> = ({
   client,
   state,
+  ownedPlanets,
   liveRes,
   antimatterBalance,
   onTxStart,
@@ -857,7 +859,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   const [planetListings, setPlanetListings] = useState<PlanetListing[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCreatePlanetModal, setShowCreatePlanetModal] = useState(false);
+  const [planetListingTarget, setPlanetListingTarget] = useState<PlayerState | null>(null);
   const [buyTarget, setBuyTarget] = useState<MarketOffer | null>(null);
   const [planetBuyTarget, setPlanetBuyTarget] = useState<PlanetListing | null>(null);
   const [lastRefresh, setLastRefresh] = useState(0);
@@ -866,7 +868,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   const marketUnlockLeft = state ? Math.max(0, state.planet.marketUnlockedAt - nowTs) : 0;
   const marketUnlocked = marketUnlockLeft === 0;
   const planetBuyUnlocked = forcedSection === "planets" ? true : marketUnlocked;
-  const activePlanetIsHomeworld = (state?.planet.planetIndex ?? -1) === 0;
+  const playerPlanets = ownedPlanets ?? (state ? [state] : []);
 
   // ── Market config state ──────────────────────────────────────────────────
   // undefined = loading, null = not initialized, MarketConfig = initialized
@@ -997,6 +999,18 @@ const MarketTab: React.FC<MarketTabProps> = ({
     if (planetView === "sell") return [];
     return sellableListings.filter(l => l.seller !== walletAddress);
   }, [planetListings, planetView, walletAddress]);
+
+  const listablePlanets = useMemo(() => {
+    const alreadyListed = new Set(
+      planetListings
+        .filter(listing => listing.seller === walletAddress)
+        .map(listing => listing.planet),
+    );
+    return playerPlanets
+      .filter(planet => planet.planet.planetIndex !== 0)
+      .filter(planet => !alreadyListed.has(planet.planetPda));
+  }, [planetListings, playerPlanets, walletAddress]);
+
   const planetMarketStats = useMemo(() => {
     const sellableListings = planetListings.filter(l => l.planetIndex !== 0);
     const prices = sellableListings.map(l => l.priceAntimatter).sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
@@ -1069,22 +1083,23 @@ const MarketTab: React.FC<MarketTabProps> = ({
     }
   };
 
-  const handleCreatePlanetListing = async (priceAntimatter: bigint) => {
-    if (!client || !state) return;
+  const handleCreatePlanetListing = async (planetToList: PlayerState, priceAntimatter: bigint) => {
+    if (!client) return;
     if (!canTransact) {
       onTxEnd("Connect wallet to list a planet.");
       return;
     }
-    if (activePlanetIsHomeworld) {
+    if (planetToList.planet.planetIndex === 0) {
       onTxEnd("The initial homeworld planet cannot be sold.");
       return;
     }
-    if (state.fleet.activeMissions > 0) {
+    if (planetToList.fleet.activeMissions > 0) {
       onTxEnd("Resolve this planet's active missions before listing it.");
       return;
     }
-    if (!marketUnlocked) {
-      onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
+    const planetUnlockLeft = Math.max(0, planetToList.planet.marketUnlockedAt - Math.floor(Date.now() / 1000));
+    if (planetUnlockLeft > 0) {
+      onTxEnd(`Market unlocks for this planet in ${fmtCountdown(planetUnlockLeft)}.`);
       return;
     }
     if (!marketConfig) {
@@ -1093,7 +1108,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
     }
     onTxStart("Listing planet...");
     try {
-      await client.createPlanetListing(state, priceAntimatter);
+      await client.createPlanetListing(planetToList, priceAntimatter);
       await fetchOffers();
       onTxEnd();
     } catch (e) {
@@ -1532,41 +1547,87 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 border: "1px solid rgba(155,93,229,0.2)",
                 fontSize: 10, color: "var(--dim)", lineHeight: 1.8, letterSpacing: 0.5,
               }}>
-                <strong style={{ color: "var(--purple)" }}>Planet sales:</strong> list the active planet for ANTIMATTER. The buyer receives ownership on-chain when the purchase confirms.
+                <strong style={{ color: "var(--purple)" }}>Planet sales:</strong> choose one of your eligible planets and list it for ANTIMATTER. Initial homeworlds and already-listed planets are hidden.
               </div>
-              <button
-                onClick={() => setShowCreatePlanetModal(true)}
-                disabled={txBusy || !canTransact || !state || !marketUnlocked || activePlanetIsHomeworld}
-                style={{
-                  fontFamily: "'Orbitron', sans-serif",
-                  fontSize: 12, fontWeight: 700, letterSpacing: 2,
-                  padding: "14px 20px", borderRadius: 3,
-                  border: "2px solid var(--cyan)",
-                  background: "linear-gradient(135deg, rgba(0,245,212,0.1), rgba(155,93,229,0.05))",
-                  color: "var(--cyan)", cursor: "pointer",
-                  width: "100%", textTransform: "uppercase",
-                }}
-              >
-                LIST ACTIVE PLANET
-              </button>
               {!canTransact && (
                 <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
                   Connect a wallet in the top bar to list a planet.
                 </div>
               )}
-              {activePlanetIsHomeworld && state && (
-                <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
-                  The initial homeworld planet cannot be sold.
-                </div>
-              )}
-              {!marketUnlocked && state && (
-                <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
-                  Market unlocks for this planet in {fmtCountdown(marketUnlockLeft)}.
-                </div>
-              )}
-              {!state && (
+              {!state && listablePlanets.length === 0 && (
                 <div style={{ fontSize: 10, color: "var(--dim)", textAlign: "center" }}>
-                  No active planet loaded.
+                  Connect a wallet to load your planets.
+                </div>
+              )}
+              {state && listablePlanets.length === 0 && (
+                <div style={{
+                  textAlign: "center", padding: "36px 20px",
+                  border: "1px dashed var(--border)", borderRadius: 4,
+                  color: "var(--dim)", fontSize: 11, letterSpacing: 1,
+                }}>
+                  No planets available to list. Initial homeworlds and already-listed planets are excluded.
+                </div>
+              )}
+              {listablePlanets.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
+                  {listablePlanets.map(planetState => {
+                    const planet = planetState.planet;
+                    const unlockLeft = Math.max(0, planet.marketUnlockedAt - nowTs);
+                    const hasActiveMissions = planetState.fleet.activeMissions > 0;
+                    const disabled = txBusy || !canTransact || unlockLeft > 0 || hasActiveMissions || !marketConfig;
+                    const disabledReason = hasActiveMissions
+                      ? "Resolve active missions first"
+                      : unlockLeft > 0
+                        ? `Market unlocks in ${fmtCountdown(unlockLeft)}`
+                        : !marketConfig
+                          ? "Market config not initialized"
+                          : null;
+                    return (
+                      <div key={planetState.planetPda} style={{
+                        border: "1px solid rgba(0,245,212,0.18)",
+                        borderRadius: 6,
+                        padding: 14,
+                        background: "linear-gradient(180deg, rgba(11,14,30,0.86), rgba(6,8,18,0.72))",
+                        display: "grid",
+                        gap: 10,
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                          <div>
+                            <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "var(--cyan)", letterSpacing: 1.5 }}>
+                              {planet.name || `Planet ${planet.planetIndex + 1}`}
+                            </div>
+                            <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 4 }}>
+                              [{planet.galaxy}:{planet.system}:{planet.position}] · Fields {planet.usedFields}/{planet.maxFields}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 9, color: "var(--warn)", letterSpacing: 1.2 }}>
+                            #{planet.planetIndex + 1}
+                          </div>
+                        </div>
+                        {disabledReason && (
+                          <div style={{ fontSize: 10, color: "var(--warn)", letterSpacing: 0.5 }}>
+                            {disabledReason}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setPlanetListingTarget(planetState)}
+                          disabled={disabled}
+                          style={{
+                            fontFamily: "'Orbitron', sans-serif",
+                            fontSize: 11, fontWeight: 700, letterSpacing: 2,
+                            padding: "11px 14px", borderRadius: 3,
+                            border: disabled ? "1px solid var(--border)" : "1px solid var(--cyan)",
+                            background: disabled ? "rgba(255,255,255,0.03)" : "rgba(0,245,212,0.08)",
+                            color: disabled ? "var(--dim)" : "var(--cyan)",
+                            cursor: disabled ? "not-allowed" : "pointer",
+                            width: "100%", textTransform: "uppercase",
+                          }}
+                        >
+                          LIST PLANET
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1629,12 +1690,12 @@ const MarketTab: React.FC<MarketTabProps> = ({
         />
       )}
 
-      {showCreatePlanetModal && state && (
+      {planetListingTarget && (
         <CreatePlanetListingModal
-          planet={state}
+          planet={planetListingTarget}
           txBusy={txBusy}
-          onClose={() => setShowCreatePlanetModal(false)}
-          onSubmit={handleCreatePlanetListing}
+          onClose={() => setPlanetListingTarget(null)}
+          onSubmit={price => handleCreatePlanetListing(planetListingTarget, price)}
         />
       )}
 
