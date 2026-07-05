@@ -2111,6 +2111,12 @@ const CSS = `
   .marketplace-brand { display:inline-flex; align-items:center; gap:10px; color:var(--cyan); text-decoration:none; font-family:'Orbitron',sans-serif; font-size:15px; letter-spacing:2px; font-weight:800; }
   .marketplace-nav { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
   .marketplace-main { max-width:1180px; margin:0 auto; padding:18px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:linear-gradient(180deg, rgba(11,14,30,0.84), rgba(6,8,18,0.72)); box-shadow:var(--shell-shadow); }
+  .not-found-shell { position:relative; z-index:1; min-height:100dvh; display:grid; place-items:center; padding:24px; box-sizing:border-box; }
+  .not-found-panel { width:min(560px, 100%); padding:28px; border:1px solid rgba(0,245,212,0.18); border-radius:8px; background:linear-gradient(180deg, rgba(11,14,30,0.9), rgba(6,8,18,0.86)); box-shadow:var(--shell-shadow); text-align:center; }
+  .not-found-code { font-family:'Orbitron',sans-serif; font-size:54px; line-height:1; letter-spacing:6px; color:var(--cyan); margin:14px 0 8px; }
+  .not-found-title { font-family:'Orbitron',sans-serif; font-size:15px; letter-spacing:3px; color:var(--purple); text-transform:uppercase; margin-bottom:10px; }
+  .not-found-copy { color:var(--dim); font-size:11px; letter-spacing:1px; line-height:1.7; margin:0 auto 22px; max-width:390px; }
+  .not-found-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
   @media (max-height: 760px) and (min-width: 760px) {
     .landing-metric-card { padding:7px 10px; }
     .landing-metric-value { font-size:14px; }
@@ -2147,6 +2153,8 @@ const CSS = `
     .marketplace-header { align-items:flex-start; flex-direction:column; padding:12px; }
     .marketplace-nav { width:100%; justify-content:flex-start; }
     .marketplace-main { padding:12px; }
+    .not-found-panel { padding:22px 16px; }
+    .not-found-code { font-size:42px; }
     .tab-subtitle { font-size:10px; }
     .tab-masthead-rail { justify-content:flex-start; width:100%; }
     .status-chip { min-height:28px; padding:6px 9px; font-size:9px; }
@@ -3095,6 +3103,24 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
           </ScrollReveal>
         </div>
       </div>
+      </div>
+    </div>
+  </div>
+);
+
+const NotFoundScreen: React.FC = () => (
+  <div className="not-found-shell">
+    <div className="not-found-panel">
+      <LogoSVG size={58}/>
+      <div className="not-found-code">404</div>
+      <div className="not-found-title">Route not found</div>
+      <p className="not-found-copy">
+        This sector is not mapped yet. Use the game app or the planet marketplace routes.
+      </p>
+      <div className="not-found-actions">
+        <a href="/" className="route-nav-link">HOME</a>
+        <a href="/app" className="route-nav-link">ENTER APP</a>
+        <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
       </div>
     </div>
   </div>
@@ -5245,6 +5271,8 @@ const App: React.FC = () => {
   const routePath = typeof window !== "undefined" ? window.location.pathname : "/app";
   const isPlanetMarketplaceRoute = routePath === "/marketplace";
   const isLandingRoute = routePath === "/";
+  const isAppRoute = routePath === "/app";
+  const isKnownRoute = isLandingRoute || isAppRoute || isPlanetMarketplaceRoute;
   const [activeWalletKey, setActiveWalletKey] = useState<string | null>(walletPublicKey?.toBase58() ?? null);
   const publicKey = React.useMemo(
     () => (activeWalletKey ? new PublicKey(activeWalletKey) : null),
@@ -6264,6 +6292,16 @@ const App: React.FC = () => {
         <style>{CSS}</style>
         <Starfield/>
         <ProjectLandingScreen isMobile={isMobile} metrics={landingMetrics}/>
+      </>
+    );
+  }
+
+  if (!isKnownRoute) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <Starfield/>
+        <NotFoundScreen/>
       </>
     );
   }
