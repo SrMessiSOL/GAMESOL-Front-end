@@ -658,6 +658,7 @@ const DAILY_ROTATING_QUESTS_UI: QuestCatalogUiEntry[] = [
   qCatalog("Own 3 Ships", "Maintain a small operational fleet.", "Fleet ships", 3, totalQuestShips, { metal: 1500, crystal: 1000, deuterium: 250 }),
   qCatalog("Own 3 Defenses", "Do not leave the planet naked.", "Defense units", 3, totalQuestDefenses, { metal: 1200, crystal: 800, deuterium: 150 }),
   qCatalog("Own 2 Small Cargo", "Cargo capacity keeps logistics flexible.", "Small Cargo", 2, s => s.fleet.smallCargo, { metal: 1000, crystal: 700, deuterium: 200 }),
+  qCatalog("Own a Large Cargo", "Move a heavier payload when the route needs it.", "Large Cargo", 1, s => s.fleet.largeCargo, { metal: 1200, crystal: 900, deuterium: 250 }),
   qCatalog("Own 2 Light Fighters", "Keep a starter combat screen.", "Light Fighter", 2, s => s.fleet.lightFighter, { metal: 1100, crystal: 700, deuterium: 200 }),
   qCatalog("Own 3 Rocket Launchers", "Maintain a basic defense line.", "Rocket Launcher", 3, s => s.planet.rocketLauncher, { metal: 900, crystal: 500, deuterium: 100 }),
   qCatalog("Own a Light Laser", "Layer defenses instead of relying on one unit.", "Light Laser", 1, s => s.planet.lightLaser, { metal: 1000, crystal: 700, deuterium: 100 }),
