@@ -753,6 +753,43 @@ function rotatingQuestIndex(period: 1 | 2 | 3, slot: number, epoch: number, cata
   return Number((offset + BigInt(slot) * step) % len);
 }
 
+const SECONDS_PER_DAY = 86400;
+
+function dailyEpoch(nowTs: number): number {
+  return Math.floor(nowTs / SECONDS_PER_DAY);
+}
+
+function weeklyEpoch(nowTs: number): number {
+  return Math.floor((dailyEpoch(nowTs) + 3) / 7);
+}
+
+function monthlyEpoch(nowTs: number): number {
+  const date = new Date(nowTs * 1000);
+  return date.getUTCFullYear() * 12 + date.getUTCMonth();
+}
+
+function questPeriodEpoch(period: 1 | 2 | 3, nowTs: number): number {
+  if (period === 1) return dailyEpoch(nowTs);
+  if (period === 2) return weeklyEpoch(nowTs);
+  return monthlyEpoch(nowTs);
+}
+
+function questResetSeconds(period: 1 | 2 | 3, nowTs: number): number {
+  const nowMs = nowTs * 1000;
+  const now = new Date(nowMs);
+  let resetMs: number;
+  if (period === 1) {
+    resetMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0);
+  } else if (period === 2) {
+    const day = now.getUTCDay();
+    const daysUntilMonday = (8 - day) % 7 || 7;
+    resetMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntilMonday, 0, 0, 0);
+  } else {
+    resetMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0);
+  }
+  return Math.max(0, Math.ceil((resetMs - nowMs) / 1000));
+}
+
 function progressU32ForPeriod(
   period: 1 | 2 | 3,
   progress: QuestProgressStateAccount | null | undefined,
@@ -762,11 +799,7 @@ function progressU32ForPeriod(
   monthly: keyof QuestProgressStateAccount,
 ): number {
   if (!progress) return 0;
-  const currentEpoch = period === 1
-    ? Math.floor(nowTs / 86400)
-    : period === 2
-      ? Math.floor(nowTs / 604800)
-      : Math.floor(nowTs / 2592000);
+  const currentEpoch = questPeriodEpoch(period, nowTs);
   const progressEpoch = period === 1 ? progress.dailyEpoch : period === 2 ? progress.weeklyEpoch : progress.monthlyEpoch;
   if (progressEpoch !== currentEpoch) return 0;
   const value = period === 1 ? progress[daily] : period === 2 ? progress[weekly] : progress[monthly];
@@ -775,11 +808,7 @@ function progressU32ForPeriod(
 
 function progressAntimatterForPeriod(period: 1 | 2 | 3, progress: QuestProgressStateAccount | null | undefined, nowTs: number): number {
   if (!progress) return 0;
-  const currentEpoch = period === 1
-    ? Math.floor(nowTs / 86400)
-    : period === 2
-      ? Math.floor(nowTs / 604800)
-      : Math.floor(nowTs / 2592000);
+  const currentEpoch = questPeriodEpoch(period, nowTs);
   const progressEpoch = period === 1 ? progress.dailyEpoch : period === 2 ? progress.weeklyEpoch : progress.monthlyEpoch;
   if (progressEpoch !== currentEpoch) return 0;
   const raw = period === 1 ? progress.dailyAntimatterSpent : period === 2 ? progress.weeklyAntimatterSpent : progress.monthlyAntimatterSpent;
@@ -1065,12 +1094,12 @@ function allianceThreshold(level: number): bigint {
 }
 function activeQuestDefinitions(nowTs: number, questProgress: QuestProgressStateAccount | null | undefined): QuestDefinition[] {
   const tutorialAndCheckIn = QUEST_DEFINITIONS.filter(q => q.period === 0 || (q.period === 1 && q.id === 0));
-  const dailyEpoch = Math.floor(nowTs / 86400);
-  const weeklyEpoch = Math.floor(nowTs / 604800);
-  const monthlyEpoch = Math.floor(nowTs / 2592000);
-  const daily = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(1, slot + 1, "Daily", dailyEpoch, DAILY_ROTATING_QUESTS_UI, questProgress, nowTs));
-  const weekly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(2, slot, "Weekly", weeklyEpoch, WEEKLY_ROTATING_QUESTS_UI, questProgress, nowTs));
-  const monthly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(3, slot, "Monthly", monthlyEpoch, MONTHLY_ROTATING_QUESTS_UI, questProgress, nowTs));
+  const dailyQuestEpoch = dailyEpoch(nowTs);
+  const weeklyQuestEpoch = weeklyEpoch(nowTs);
+  const monthlyQuestEpoch = monthlyEpoch(nowTs);
+  const daily = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(1, slot + 1, "Daily", dailyQuestEpoch, DAILY_ROTATING_QUESTS_UI, questProgress, nowTs));
+  const weekly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(2, slot, "Weekly", weeklyQuestEpoch, WEEKLY_ROTATING_QUESTS_UI, questProgress, nowTs));
+  const monthly = Array.from({ length: 12 }, (_, slot) => buildRotatingQuest(3, slot, "Monthly", monthlyQuestEpoch, MONTHLY_ROTATING_QUESTS_UI, questProgress, nowTs));
   return [...tutorialAndCheckIn, ...daily, ...weekly, ...monthly];
 }
 const DEFENSE_DEFS = [
@@ -4048,9 +4077,9 @@ const hasQuestBit = (mask: bigint, id: number) => ((mask >> BigInt(id)) & 1n) ==
 function questClaimedMask(period: QuestPeriod, questState: QuestStateAccount | null, nowTs: number): bigint {
   if (!questState) return 0n;
   if (period === 0) return questState.tutorialClaimedMask;
-  if (period === 1) return questState.dailyEpoch === Math.floor(nowTs / 86400) ? questState.dailyClaimedMask : 0n;
-  if (period === 2) return questState.weeklyEpoch === Math.floor(nowTs / 604800) ? questState.weeklyClaimedMask : 0n;
-  return questState.monthlyEpoch === Math.floor(nowTs / 2592000) ? questState.monthlyClaimedMask : 0n;
+  if (period === 1) return questState.dailyEpoch === dailyEpoch(nowTs) ? questState.dailyClaimedMask : 0n;
+  if (period === 2) return questState.weeklyEpoch === weeklyEpoch(nowTs) ? questState.weeklyClaimedMask : 0n;
+  return questState.monthlyEpoch === monthlyEpoch(nowTs) ? questState.monthlyClaimedMask : 0n;
 }
 
 const tutorialQuestsComplete = (questState: QuestStateAccount | null): boolean => {
@@ -4060,18 +4089,11 @@ const tutorialQuestsComplete = (questState: QuestStateAccount | null): boolean =
     .every(quest => hasQuestBit(questState.tutorialClaimedMask, quest.id));
 };
 
-const questGroupSeconds = (group: QuestDefinition["group"]): number | null => {
-  if (group === "Daily") return 86400;
-  if (group === "Weekly") return 604800;
-  if (group === "Monthly") return 2592000;
-  return null;
-};
-
 const questGroupResetSeconds = (group: QuestDefinition["group"], nowTs: number): number | null => {
-  const period = questGroupSeconds(group);
-  if (!period) return null;
-  const elapsed = ((nowTs % period) + period) % period;
-  return elapsed === 0 ? period : period - elapsed;
+  if (group === "Daily") return questResetSeconds(1, nowTs);
+  if (group === "Weekly") return questResetSeconds(2, nowTs);
+  if (group === "Monthly") return questResetSeconds(3, nowTs);
+  return null;
 };
 
 
@@ -4124,9 +4146,9 @@ function effectiveAttackProtectionUntil(planet: Planet): number {
 
 function storePurchasedMask(period: StorePeriod, purchaseState: StorePurchaseStateAccount | null, nowTs: number): bigint {
   if (!purchaseState) return 0n;
-  if (period === 1) return purchaseState.dailyEpoch === Math.floor(nowTs / 86400) ? purchaseState.dailyPurchasedMask : 0n;
-  if (period === 2) return purchaseState.weeklyEpoch === Math.floor(nowTs / 604800) ? purchaseState.weeklyPurchasedMask : 0n;
-  return purchaseState.monthlyEpoch === Math.floor(nowTs / 2592000) ? purchaseState.monthlyPurchasedMask : 0n;
+  if (period === 1) return purchaseState.dailyEpoch === dailyEpoch(nowTs) ? purchaseState.dailyPurchasedMask : 0n;
+  if (period === 2) return purchaseState.weeklyEpoch === weeklyEpoch(nowTs) ? purchaseState.weeklyPurchasedMask : 0n;
+  return purchaseState.monthlyEpoch === monthlyEpoch(nowTs) ? purchaseState.monthlyPurchasedMask : 0n;
 }
 const QuestRequirementModal: React.FC<{ quest: QuestDefinition | null; state: PlayerState; onClose: () => void; }> = ({ quest, state, onClose }) => {
   if (!quest) return null;
@@ -4171,7 +4193,7 @@ const QuestsTab: React.FC<{
   const hideTutorial = tutorialQuestsComplete(questState);
   const groups: Array<QuestDefinition["group"]> = hideTutorial ? ["Daily", "Weekly", "Monthly"] : ["Tutorial", "Daily", "Weekly", "Monthly"];
   const visibleQuests = activeQuestDefinitions(nowTs, questProgress).filter(quest => !hideTutorial || quest.group !== "Tutorial");
-  const currentDay = Math.floor(nowTs / 86400);
+  const currentDay = dailyEpoch(nowTs);
   const checkInClaimed = questState?.dailyCheckinDay === currentDay || hasQuestBit(questClaimedMask(1, questState, nowTs), 0);
   const nextStreak = Math.min((questState?.dailyCheckinStreak ?? 0) + 1, 30);
   const planetNameByPda = useMemo(() => {
