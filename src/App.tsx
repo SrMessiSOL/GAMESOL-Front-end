@@ -952,15 +952,6 @@ function buildRotatingQuest(period: 1 | 2 | 3, id: number, group: "Daily" | "Wee
   };
 }
 
-type AllianceMissionDefinition = {
-  period: 1 | 2 | 3;
-  id: number;
-  group: "Daily" | "Weekly" | "Monthly";
-  title: string;
-  xp: number;
-  requirements: QuestRequirement[];
-};
-
 type AllianceDepositDefinition = {
   period: 1 | 2 | 3;
   id: number;
@@ -989,9 +980,9 @@ const ALLIANCE_DEPOSIT_DEFINITIONS: AllianceDepositDefinition[] = [
 ];
 
 const ALLIANCE_PERIOD_COPY: Record<AllianceDepositDefinition["group"], { title: string; note: string }> = {
-  Daily: { title: "DAILY ALLIANCE QUESTS", note: "Resets every chain day for each member." },
-  Weekly: { title: "WEEKLY ALLIANCE QUESTS", note: "Resets every chain week for each member." },
-  Monthly: { title: "MONTHLY ALLIANCE QUESTS", note: "Resets every 30-day chain period for each member." },
+  Daily: { title: "DAILY ALLIANCE QUESTS", note: "Resets every day at 00:00 UTC for each member." },
+  Weekly: { title: "WEEKLY ALLIANCE QUESTS", note: "Resets every Monday at 00:00 UTC for each member." },
+  Monthly: { title: "MONTHLY ALLIANCE QUESTS", note: "Resets on the 1st of each month at 00:00 UTC for each member." },
 };
 
 const ALLIANCE_BUILDINGS = [
@@ -1048,45 +1039,6 @@ function discountedAllianceBuildingCost(
 function boostPercentLabel(bps: number): string {
   return `${(bps / 100).toFixed(bps % 100 === 0 ? 0 : 1)}%`;
 }
-
-const ALLIANCE_MISSION_DEFINITIONS: AllianceMissionDefinition[] = [
-  { period: 1, id: 0, group: "Daily", title: "Metal Mine Lv 3", xp: 80, requirements: [questReq("Metal Mine", 3, s => s.planet.metalMine)] },
-  { period: 1, id: 1, group: "Daily", title: "Crystal Mine Lv 3", xp: 80, requirements: [questReq("Crystal Mine", 3, s => s.planet.crystalMine)] },
-  { period: 1, id: 2, group: "Daily", title: "Deuterium Synth Lv 2", xp: 90, requirements: [questReq("Deuterium Synth", 2, s => s.planet.deuteriumSynthesizer)] },
-  { period: 1, id: 3, group: "Daily", title: "Solar Plant Lv 4", xp: 80, requirements: [questReq("Solar Plant", 4, s => s.planet.solarPlant)] },
-  { period: 1, id: 4, group: "Daily", title: "Robotics Factory Lv 1", xp: 90, requirements: [questReq("Robotics Factory", 1, s => s.planet.roboticsFactory)] },
-  { period: 1, id: 5, group: "Daily", title: "Shipyard Lv 2", xp: 110, requirements: [questReq("Shipyard", 2, s => s.planet.shipyard)] },
-  { period: 1, id: 6, group: "Daily", title: "Research Lab Lv 1", xp: 100, requirements: [questReq("Research Lab", 1, s => s.planet.researchLab)] },
-  { period: 1, id: 7, group: "Daily", title: "Own 3 Ships", xp: 120, requirements: [questReq("Fleet ships", 3, totalQuestShips)] },
-  { period: 1, id: 8, group: "Daily", title: "Own 3 Defenses", xp: 110, requirements: [questReq("Defense units", 3, totalQuestDefenses)] },
-  { period: 1, id: 9, group: "Daily", title: "Small Cargo", xp: 110, requirements: [questReq("Small Cargo", 1, s => s.fleet.smallCargo)] },
-  { period: 1, id: 10, group: "Daily", title: "Energy Tech Lv 1", xp: 100, requirements: [questReq("Energy Tech", 1, s => s.research.energyTech)] },
-  { period: 1, id: 11, group: "Daily", title: "Computer Tech Lv 1", xp: 120, requirements: [questReq("Computer Tech", 1, s => s.research.computerTech)] },
-  { period: 2, id: 0, group: "Weekly", title: "Metal Mine Lv 6", xp: 350, requirements: [questReq("Metal Mine", 6, s => s.planet.metalMine)] },
-  { period: 2, id: 1, group: "Weekly", title: "Crystal Mine Lv 6", xp: 350, requirements: [questReq("Crystal Mine", 6, s => s.planet.crystalMine)] },
-  { period: 2, id: 2, group: "Weekly", title: "Deuterium Synth Lv 5", xp: 380, requirements: [questReq("Deuterium Synth", 5, s => s.planet.deuteriumSynthesizer)] },
-  { period: 2, id: 3, group: "Weekly", title: "Metal Storage Lv 2", xp: 320, requirements: [questReq("Metal Storage", 2, s => s.planet.metalStorage)] },
-  { period: 2, id: 4, group: "Weekly", title: "Crystal Storage Lv 2", xp: 320, requirements: [questReq("Crystal Storage", 2, s => s.planet.crystalStorage)] },
-  { period: 2, id: 5, group: "Weekly", title: "Deuterium Tank Lv 2", xp: 340, requirements: [questReq("Deuterium Tank", 2, s => s.planet.deuteriumTank)] },
-  { period: 2, id: 6, group: "Weekly", title: "Combustion Drive Lv 2", xp: 380, requirements: [questReq("Combustion Drive", 2, s => s.research.combustionDrive)] },
-  { period: 2, id: 7, group: "Weekly", title: "Impulse Drive Lv 1", xp: 450, requirements: [questReq("Impulse Drive", 1, s => s.research.impulseDrive)] },
-  { period: 2, id: 8, group: "Weekly", title: "Own 10 Ships", xp: 430, requirements: [questReq("Fleet ships", 10, totalQuestShips)] },
-  { period: 2, id: 9, group: "Weekly", title: "Own 10 Defenses", xp: 420, requirements: [questReq("Defense units", 10, totalQuestDefenses)] },
-  { period: 2, id: 10, group: "Weekly", title: "Espionage Probes", xp: 360, requirements: [questReq("Espionage Probe", 3, s => s.fleet.espionageProbe)] },
-  { period: 2, id: 11, group: "Weekly", title: "Build Recycler", xp: 420, requirements: [questReq("Recycler", 1, s => s.fleet.recycler)] },
-  { period: 3, id: 0, group: "Monthly", title: "Metal Mine Lv 12", xp: 1200, requirements: [questReq("Metal Mine", 12, s => s.planet.metalMine)] },
-  { period: 3, id: 1, group: "Monthly", title: "Crystal Mine Lv 12", xp: 1200, requirements: [questReq("Crystal Mine", 12, s => s.planet.crystalMine)] },
-  { period: 3, id: 2, group: "Monthly", title: "Deuterium Synth Lv 10", xp: 1300, requirements: [questReq("Deuterium Synth", 10, s => s.planet.deuteriumSynthesizer)] },
-  { period: 3, id: 3, group: "Monthly", title: "Solar Plant Lv 14", xp: 1100, requirements: [questReq("Solar Plant", 14, s => s.planet.solarPlant)] },
-  { period: 3, id: 4, group: "Monthly", title: "Research Lab Lv 5", xp: 1400, requirements: [questReq("Research Lab", 5, s => s.planet.researchLab)] },
-  { period: 3, id: 5, group: "Monthly", title: "Shipyard Lv 5", xp: 1350, requirements: [questReq("Shipyard", 5, s => s.planet.shipyard)] },
-  { period: 3, id: 6, group: "Monthly", title: "Computer Tech Lv 5", xp: 1500, requirements: [questReq("Computer Tech", 5, s => s.research.computerTech)] },
-  { period: 3, id: 7, group: "Monthly", title: "Astrophysics Lv 1", xp: 1500, requirements: [questReq("Astrophysics", 1, s => s.research.astrophysics)] },
-  { period: 3, id: 8, group: "Monthly", title: "Colony Ship", xp: 1600, requirements: [questReq("Colony Ship", 1, s => s.fleet.colonyShip)] },
-  { period: 3, id: 9, group: "Monthly", title: "Battleship", xp: 1700, requirements: [questReq("Battleship", 1, s => s.fleet.battleship)] },
-  { period: 3, id: 10, group: "Monthly", title: "Own 50 Ships", xp: 1650, requirements: [questReq("Fleet ships", 50, totalQuestShips)] },
-  { period: 3, id: 11, group: "Monthly", title: "Own 50 Defenses", xp: 1550, requirements: [questReq("Defense units", 50, totalQuestDefenses)] },
-];
 
 function allianceThreshold(level: number): bigint {
   const prev = BigInt(Math.max(0, level - 1));

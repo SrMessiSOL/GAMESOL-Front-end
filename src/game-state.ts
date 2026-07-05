@@ -137,7 +137,6 @@ const IX = {
   expelAllianceMember:    Buffer.from([169, 245, 62, 100, 232, 190, 127, 220]),
   transferAllianceLeadership: Buffer.from([189, 125, 244, 81, 135, 19, 204, 2]),
   leaveAlliance:          Buffer.from([224, 61, 93, 128, 148, 155, 98, 231]),
-  claimAllianceMission:   Buffer.from([175, 98, 163, 189, 178, 161, 219, 60]),
   initializeAllianceTreasury: Buffer.from([60, 88, 8, 162, 213, 206, 46, 178]),
   initializeAllianceTreasuryVault: Buffer.from([47, 188, 187, 250, 22, 115, 107, 127]),
   depositAllianceResources: Buffer.from([64, 70, 103, 74, 35, 162, 164, 162]),
@@ -3747,26 +3746,6 @@ export class GameClient {
         { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.leaveAlliance),
-    });
-    return this.sendInstruction([ix]);
-  }
-
-  async claimAllianceMission(entityPda: PublicKey, period: number, missionId: number): Promise<string> {
-    const authority = this.provider.wallet.publicKey;
-    const membership = await this.getAllianceMembership(authority);
-    if (!membership) throw new Error("Join or create an alliance first.");
-    const writer = new BorshWriter();
-    writer.writeU8(period);
-    writer.writeU8(missionId);
-    const ix = new TransactionInstruction({
-      programId: GAME_STATE_PROGRAM_ID,
-      keys: [
-        { pubkey: authority, isSigner: true, isWritable: true },
-        { pubkey: new PublicKey(membership.alliance), isSigner: false, isWritable: true },
-        { pubkey: deriveAllianceMembershipPda(authority), isSigner: false, isWritable: true },
-        { pubkey: entityPda, isSigner: false, isWritable: false },
-      ],
-      data: encodeInstruction(IX.claimAllianceMission, writer.toBuffer()),
     });
     return this.sendInstruction([ix]);
   }
