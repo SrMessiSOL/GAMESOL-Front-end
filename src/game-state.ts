@@ -1005,7 +1005,7 @@ function encodeHomeworldArgs(now: number, name: string, galaxy: number, system: 
   return writer.toBuffer();
 }
 
-function encodeColonyArgs(now: number, mission: Mission): Buffer {
+function encodeColonyArgs(now: number, mission: Mission, slot: number): Buffer {
   const writer = new BorshWriter();
   writer.writeI64(now);
   writer.writeString(mission.colonyName || "Colony");
@@ -1029,6 +1029,7 @@ function encodeColonyArgs(now: number, mission: Mission): Buffer {
   writer.writeU32(mission.sEspionageProbe);
   writer.writeU32(0); // colony_ship consumed
   writer.writeU32(0); // solar_satellite not transferable
+  writer.writeU8(slot);
   return writer.toBuffer();
 }
 
@@ -3884,6 +3885,11 @@ export class GameClient {
       isHomeworld, authority, vault, playerProfilePda, authorizedVaultPda,
       nextIndex, galaxy, system, position, planetName, now, reportProgress, mission,
     } = opts;
+    void mission;
+
+    if (!isHomeworld) {
+      throw new Error("Colony creation must use resolveColonize so the mission slot is proven on-chain.");
+    }
 
     await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
 
@@ -3894,11 +3900,7 @@ export class GameClient {
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
 
-    const args = isHomeworld
-      ? encodeHomeworldArgs(now, planetName.trim() || "Homeworld", galaxy, system, position)
-      : encodeColonyArgs(now, mission!);
-
-    const discriminator = isHomeworld ? IX.initializeHomeworld : IX.initializeColony;
+    const args = encodeHomeworldArgs(now, planetName.trim() || "Homeworld", galaxy, system, position);
 
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
@@ -3913,7 +3915,7 @@ export class GameClient {
         { pubkey: questProgressPda,   isSigner: false, isWritable: true  }, // quest_progress
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      data: encodeInstruction(discriminator, args),
+      data: encodeInstruction(IX.initializeHomeworld, args),
     });
 
     await this.sendInstruction([ix], [vault]);
@@ -4691,7 +4693,6 @@ export class GameClient {
     const vault = await this.prepareVaultSigningForAuthority(authority, reportProgress);
     if (!vault) throw new Error("Vault signing must be enabled to create a colony.");
 
-    // Verify the target slot is free before committing
     const occupied = await isCoordOccupied(
       this.connection,
       mission.targetGalaxy,
@@ -4717,71 +4718,29 @@ export class GameClient {
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
 
-    // ── Step 1: initialize colony planet + coords ──────────────────────────
-    reportProgress?.("Vault signing: creating colony planet");
+    reportProgress?.("Vault signing: creating colony from mission");
 
     const initIx = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
       keys: [
-        { pubkey: vault.publicKey,    isSigner: true,  isWritable: true  }, // vault_signer (payer)
-        { pubkey: authority,          isSigner: false, isWritable: false }, // authority
-        { pubkey: authorizedVaultPda, isSigner: false, isWritable: false }, // authorized_vault
-        { pubkey: playerProfilePda,   isSigner: false, isWritable: true  }, // player_profile
-        { pubkey: colonyPda,          isSigner: false, isWritable: true  }, // planet_state
-        { pubkey: colonyCoordsPda,    isSigner: false, isWritable: true  }, // planet_coords
-        { pubkey: questStatePda,      isSigner: false, isWritable: true  }, // quest_state
-        { pubkey: questProgressPda,   isSigner: false, isWritable: true  }, // quest_progress
+        { pubkey: vault.publicKey,    isSigner: true,  isWritable: true  },
+        { pubkey: authority,          isSigner: false, isWritable: false },
+        { pubkey: authorizedVaultPda, isSigner: false, isWritable: false },
+        { pubkey: playerProfilePda,   isSigner: false, isWritable: true  },
+        { pubkey: sourceEntityPda,    isSigner: false, isWritable: true  },
+        { pubkey: colonyPda,          isSigner: false, isWritable: true  },
+        { pubkey: colonyCoordsPda,    isSigner: false, isWritable: true  },
+        { pubkey: questStatePda,      isSigner: false, isWritable: true  },
+        { pubkey: questProgressPda,   isSigner: false, isWritable: true  },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      data: encodeInstruction(IX.initializeColony, encodeColonyArgs(now, mission)),
+      data: encodeInstruction(IX.initializeColony, encodeColonyArgs(now, mission, slot)),
     });
 
     await this.sendInstruction([initIx], [vault]);
 
-    // ── Step 2: resolve the colonize mission on the source planet ──────────
-    reportProgress?.("Vault signing: resolving colonize mission");
-
-    const resolveWriter = new BorshWriter();
-    resolveWriter.writeU8(slot);
-    resolveWriter.writeI64(now);
-
-    let resolveIx: TransactionInstruction;
-
-    if (this.preferVaultSigning && this.vaultKeypair) {
-      // Vault path: resolve_colonize_vault
-      resolveIx = new TransactionInstruction({
-        programId: GAME_STATE_PROGRAM_ID,
-        keys: [
-          { pubkey: vault.publicKey,    isSigner: true,  isWritable: true  }, // vault_signer
-          { pubkey: authority,          isSigner: false, isWritable: false }, // authority
-          { pubkey: authorizedVaultPda, isSigner: false, isWritable: false }, // authorized_vault
-          { pubkey: sourceEntityPda,    isSigner: false, isWritable: true  }, // source_planet
-          { pubkey: colonyPda,          isSigner: false, isWritable: false }, // colony_planet (read)
-          { pubkey: colonyCoordsPda,    isSigner: false, isWritable: false }, // colony_coords (read)
-          { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
-        ],
-        data: encodeInstruction(IX.resolveColonizeVault, resolveWriter.toBuffer()),
-      });
-    } else {
-      // Wallet fallback: resolve_colonize
-      resolveIx = new TransactionInstruction({
-        programId: GAME_STATE_PROGRAM_ID,
-        keys: [
-          { pubkey: authority,       isSigner: true,  isWritable: true  }, // authority
-          { pubkey: sourceEntityPda, isSigner: false, isWritable: true  }, // source_planet
-          { pubkey: colonyPda,       isSigner: false, isWritable: false }, // colony_planet (read)
-          { pubkey: colonyCoordsPda, isSigner: false, isWritable: false }, // colony_coords (read)
-          { pubkey: deriveQuestProgressPda(authority), isSigner: false, isWritable: true },
-        ],
-        data: encodeInstruction(IX.resolveColonize, resolveWriter.toBuffer()),
-      });
-    }
-
-    await this.sendInstruction([resolveIx], this.vaultSigners());
-
     return { entityPda: colonyPda, planetPda: colonyPda };
   }
-
   /**
    * Transfer ownership of a single planet to a new wallet.
    *
