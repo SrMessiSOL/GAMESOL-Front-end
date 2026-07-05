@@ -6382,7 +6382,6 @@ const App: React.FC = () => {
             </div>
             <div className="header-right">
               <nav style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 8 }}>
-                <a href="/app" className="route-nav-link">APP</a>
                 <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
               </nav>
               <div className="header-cluster">
