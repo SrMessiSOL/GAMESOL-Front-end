@@ -29,7 +29,7 @@ import {
 } from "./game-state";
 import GalaxyTab from "./GalaxyTab";
 import MarketTab from "./Markettab";
-import { MarketClient, MARKET_PROGRAM_ID, formatResource as formatMarketResource } from "./market-client";
+import { MarketClient, MARKET_PROGRAM_ID, formatAm, formatResource as formatMarketResource } from "./market-client";
 import { BUILDING_REQUIREMENTS, RESEARCH_REQUIREMENTS, type Requirement } from "./combat-engine";
 import { getPlanetTheme } from "./art-direction";
 import { getPlanetIdentity } from "./planet-generation";
@@ -2101,9 +2101,13 @@ const CSS = `
   .landing-sub { font-size: 12px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; text-align: center; }
   .route-nav-link { display:inline-flex; align-items:center; justify-content:center; min-height:34px; padding:0 14px; border:1px solid rgba(0,245,212,0.45); color:var(--cyan); background:rgba(0,245,212,0.08); border-radius:3px; text-decoration:none; font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; }
   .route-nav-link.alt { border-color:rgba(255,214,10,0.38); color:var(--warn); background:rgba(255,214,10,0.07); }
-  .landing-metric-card { padding:12px 14px; border:1px solid rgba(255,255,255,0.09); border-radius:8px; background:rgba(7,11,22,0.68); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
-  .landing-metric-label { font-size:9px; letter-spacing:1.6px; color:var(--dim); text-transform:uppercase; margin-bottom:6px; }
-  .landing-metric-value { font-family:'Orbitron',sans-serif; font-size:18px; color:var(--cyan); letter-spacing:1px; }
+  .landing-metric-card { min-width:0; padding:9px 11px; border:1px solid rgba(255,255,255,0.09); border-radius:8px; background:rgba(7,11,22,0.68); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
+  .landing-metric-label { font-size:8px; letter-spacing:1.4px; color:var(--dim); text-transform:uppercase; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .landing-metric-value { font-family:'Orbitron',sans-serif; font-size:15px; color:var(--cyan); letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  @media (max-height: 760px) and (min-width: 760px) {
+    .landing-metric-card { padding:7px 10px; }
+    .landing-metric-value { font-size:14px; }
+  }
   .no-planet { max-width: 480px; margin: 40px auto; padding: 0 20px; text-align: center; }
   .no-planet-title { font-family:'Orbitron',sans-serif; font-size:16px; color:var(--purple); letter-spacing:3px; margin:24px 0 10px; }
   .no-planet-sub { color:var(--dim); font-size:11px; letter-spacing:1px; line-height:1.8; margin-bottom:32px; }
@@ -2489,7 +2493,16 @@ type LandingMetrics = {
   resourceOffers: number | null;
   planetListings: number | null;
   ownedPlanets: number;
+  marketTotalVolume: bigint | null;
+  marketTotalListings: bigint | null;
+  marketTx24h: number | null;
+  marketVolume24h: bigint | null;
 };
+
+const MARKET_CONFIG_PDA = PublicKey.findProgramAddressSync(
+  [new TextEncoder().encode("market_config")],
+  MARKET_PROGRAM_ID,
+)[0];
 
 const useLandingMetrics = (connection: Connection, ownedPlanets: number): LandingMetrics => {
   const [metrics, setMetrics] = useState<LandingMetrics>({
@@ -2497,24 +2510,72 @@ const useLandingMetrics = (connection: Connection, ownedPlanets: number): Landin
     resourceOffers: null,
     planetListings: null,
     ownedPlanets,
+    marketTotalVolume: null,
+    marketTotalListings: null,
+    marketTx24h: null,
+    marketVolume24h: null,
   });
 
   useEffect(() => {
     let cancelled = false;
+    const readU128LE = (data: Uint8Array, offset: number): bigint => {
+      let value = 0n;
+      for (let i = 15; i >= 0; i -= 1) value = (value << 8n) + BigInt(data[offset + i] ?? 0);
+      return value;
+    };
+    const readU64LE = (data: Uint8Array, offset: number): bigint => {
+      let value = 0n;
+      for (let i = 7; i >= 0; i -= 1) value = (value << 8n) + BigInt(data[offset + i] ?? 0);
+      return value;
+    };
+    const parseMarketConfig = (data: Uint8Array | undefined) => {
+      if (!data || data.length < 97) return { totalVolume: null, totalListings: null };
+      return {
+        totalVolume: readU128LE(data, 8 + 32 + 32),
+        totalListings: readU64LE(data, 8 + 32 + 32 + 16),
+      };
+    };
+    const parseMarketLogVolume = (logs: string[] | null | undefined): bigint => {
+      if (!logs) return 0n;
+      let total = 0n;
+      for (const log of logs) {
+        const match = log.match(/\bprice=(\d+)/);
+        if (match?.[1]) total += BigInt(match[1]);
+      }
+      return total;
+    };
     const load = async () => {
       try {
-        const [publicPlanets, legacyPlanets, resourceOffers, planetListings] = await Promise.all([
+        const [publicPlanets, legacyPlanets, resourceOffers, planetListings, marketConfigInfo, signatures] = await Promise.all([
           connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 121 }] }),
           connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 1002 }] }),
           connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 78 }] }),
           connection.getProgramAccounts(MARKET_PROGRAM_ID, { commitment: "confirmed", filters: [{ dataSize: 93 }] }),
+          connection.getAccountInfo(MARKET_CONFIG_PDA, "confirmed"),
+          connection.getSignaturesForAddress(MARKET_PROGRAM_ID, { limit: 1000 }, "confirmed"),
         ]);
+        const now = Math.floor(Date.now() / 1000);
+        const cutoff24h = now - 86_400;
+        const signatures24h = signatures.filter(sig => (sig.blockTime ?? 0) >= cutoff24h);
+        const recentTxs = signatures24h.length > 0
+          ? await connection.getParsedTransactions(
+              signatures24h.slice(0, 100).map(sig => sig.signature),
+              { commitment: "confirmed", maxSupportedTransactionVersion: 0 },
+            )
+          : [];
+        const marketConfig = parseMarketConfig(marketConfigInfo?.data);
+        const tradeVolumes24h = recentTxs.map(tx => parseMarketLogVolume(tx?.meta?.logMessages));
+        const volume24h = tradeVolumes24h.reduce((sum, value) => sum + value, 0n);
         if (cancelled) return;
         setMetrics({
           planets: publicPlanets.length + legacyPlanets.length,
           resourceOffers: resourceOffers.length,
           planetListings: planetListings.length,
           ownedPlanets,
+          marketTotalVolume: marketConfig.totalVolume,
+          marketTotalListings: marketConfig.totalListings,
+          marketTx24h: tradeVolumes24h.filter(value => value > 0n).length,
+          marketVolume24h: volume24h,
         });
       } catch {
         if (!cancelled) {
@@ -2534,6 +2595,8 @@ const useLandingMetrics = (connection: Connection, ownedPlanets: number): Landin
 };
 
 const metricLabel = (value: number | null): string => value === null ? "..." : value.toLocaleString();
+const bigintMetricLabel = (value: bigint | null): string => value === null ? "..." : value.toLocaleString();
+const amMetricLabel = (value: bigint | null): string => value === null ? "..." : `${formatAm(value, 2)} AM`;
 
 const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetrics }> = ({ isMobile, metrics }) => (
   <div
@@ -2554,7 +2617,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
     <div
       style={{
         position: "absolute",
-        top: isMobile ? 16 : 24,
+        top: isMobile ? 12 : 18,
         left: isMobile ? 16 : "auto",
         right: isMobile ? 16 : 28,
         zIndex: 5,
@@ -2631,31 +2694,31 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
             display: "grid",
             justifyItems: "center",
             textAlign: "center",
-            gap: 18,
-            padding: isMobile ? "28px 4px 24px" : "42px 24px 36px",
-            minHeight: isMobile ? "92dvh" : "100dvh",
+            gap: isMobile ? 10 : 12,
+            padding: isMobile ? "72px 4px 24px" : "74px 24px 26px",
+            minHeight: isMobile ? "auto" : "100dvh",
             alignContent: "center",
           }}
         >
           <div
             className="landing-logo"
             style={{
-              width: isMobile ? 180 : 260,
-              height: isMobile ? 180 : 260,
+              width: isMobile ? 88 : 120,
+              height: isMobile ? 88 : 120,
               display: "grid",
               placeItems: "center",
             }}
           >
-            <LogoSVG size={isMobile ? 160 : 240} />
+            <LogoSVG size={isMobile ? 76 : 104} />
           </div>
 
-          <div style={{ display: "grid", gap: 10, justifyItems: "center" }}>
+          <div style={{ display: "grid", gap: isMobile ? 8 : 9, justifyItems: "center", width: "100%" }}>
             <div
               className="landing-title"
               style={{
                 marginBottom: 0,
-                letterSpacing: isMobile ? "2px" : "8px",
-                fontSize: isMobile ? "clamp(30px, 10vw, 42px)" : "clamp(60px, 8vw, 94px)",
+                letterSpacing: isMobile ? "2px" : "7px",
+                fontSize: isMobile ? 36 : 72,
                 lineHeight: 0.95,
                 maxWidth: "100%",
                 overflowWrap: "anywhere",
@@ -2673,14 +2736,14 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
                 border: "1px solid rgba(255,214,10,0.22)",
                 background: "rgba(255,214,10,0.07)",
                 color: "var(--warn)",
-                fontSize: 11,
+                fontSize: isMobile ? 9 : 10,
                 letterSpacing: 1.2,
                 textTransform: "uppercase",
               }}
             >
               Devnet live now
             </div>
-            <div className="landing-sub" style={{ maxWidth: isMobile ? "min(100%, 300px)" : 820, margin: "0 auto", fontSize: isMobile ? 12 : 15, letterSpacing: isMobile ? 0.4 : 2.6, lineHeight: 1.8 }}>
+            <div className="landing-sub" style={{ maxWidth: isMobile ? "min(100%, 300px)" : 760, margin: "0 auto", fontSize: isMobile ? 11 : 12, letterSpacing: isMobile ? 0.4 : 2, lineHeight: 1.55 }}>
               An on-chain space strategy project on Solana where players build planets,
               expand production, research technologies, and launch fleets across a persistent galaxy.
             </div>
@@ -2688,14 +2751,18 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
               <div style={{
                 display: "grid",
                 gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
-                gap: 10,
-                width: "min(900px, 100%)",
-                marginTop: 10,
+                gap: isMobile ? 8 : 9,
+                width: "min(1040px, 100%)",
+                marginTop: 6,
               }}>
                 {[
                   ["PLANETS", metricLabel(metrics.planets)],
                   ["PLANET LISTINGS", metricLabel(metrics.planetListings)],
                   ["RESOURCE OFFERS", metricLabel(metrics.resourceOffers)],
+                  ["TOTAL VOLUME", amMetricLabel(metrics.marketTotalVolume)],
+                  ["24H VOLUME", amMetricLabel(metrics.marketVolume24h)],
+                  ["24H TRADES", metricLabel(metrics.marketTx24h)],
+                  ["TOTAL LISTINGS", bigintMetricLabel(metrics.marketTotalListings)],
                   ["YOUR PLANETS", metrics.ownedPlanets.toLocaleString()],
                 ].map(([label, value]) => (
                   <div key={label} className="landing-metric-card">
@@ -2709,9 +2776,10 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
               style={{
                 maxWidth: isMobile ? 310 : 760,
                 margin: "0 auto",
-                fontSize: isMobile ? 14 : 17,
-                lineHeight: 1.9,
+                fontSize: isMobile ? 12 : 13,
+                lineHeight: 1.55,
                 color: "rgba(203,217,230,0.82)",
+                display: isMobile ? "none" : "block",
               }}
             >
               A strategy game first, not just a wallet demo. The landing page introduces the world, the current gameplay loop, and the path toward audits, funding, and mainnet.
@@ -2724,14 +2792,14 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
               display: "grid",
               justifyItems: "center",
               gap: 8,
-              marginTop: isMobile ? 8 : 14,
+              marginTop: isMobile ? 4 : 6,
               color: "rgba(200,214,229,0.66)",
               animation: "pulse 2.2s ease-in-out infinite",
             }}
           >
             <div
               style={{
-                fontSize: 10,
+                fontSize: 9,
                 letterSpacing: 2.2,
                 textTransform: "uppercase",
               }}
@@ -2740,8 +2808,8 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
             </div>
             <div
               style={{
-                width: 28,
-                height: 28,
+                width: 22,
+                height: 22,
                 display: "grid",
                 placeItems: "center",
               }}
