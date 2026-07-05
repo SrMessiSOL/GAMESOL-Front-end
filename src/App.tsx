@@ -2831,7 +2831,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
                   ["24H TRADES", metricLabel(metrics.marketTx24h)],
                   ["TREASURY USDC", usdcMetricLabel(metrics.treasuryUsdc)],
                   ["TREASURY AM", amMetricLabel(metrics.treasuryAntimatter)],
-                  ["OFFERS CREATED", bigintMetricLabel(metrics.marketOffersCreated)],
+                  ["MARKET LISTINGS CREATED", bigintMetricLabel(metrics.marketOffersCreated)],
                 ].map(([label, value]) => (
                   <div key={label} className="landing-metric-card">
                     <div className="landing-metric-label">{label}</div>
@@ -3121,6 +3121,23 @@ const NotFoundScreen: React.FC = () => (
         <a href="/" className="route-nav-link">HOME</a>
         <a href="/app" className="route-nav-link">ENTER APP</a>
         <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
+      </div>
+    </div>
+  </div>
+);
+
+const GameEntryScreen: React.FC = () => (
+  <div className="not-found-shell">
+    <div className="not-found-panel">
+      <LogoSVG size={64}/>
+      <div className="not-found-title" style={{ marginTop: 18 }}>Game Client</div>
+      <p className="not-found-copy">
+        Connect your wallet to load your planets or initialize your first homeworld.
+      </p>
+      <div className="not-found-actions">
+        <WalletConnectControl disconnectedLabel="CONNECT WALLET" connectingLabel="CONNECTING..." />
+        <a href="/marketplace" className="route-nav-link alt">PLANET MARKET</a>
+        <a href="/" className="route-nav-link">HOME</a>
       </div>
     </div>
   </div>
@@ -6351,7 +6368,7 @@ const App: React.FC = () => {
       <Starfield/>
       <LoadingOverlay visible={(txBusy || creating || gameConfigBusy) && !vaultPrompt} message={creating ? createProgress : txProgress}/>
 
-      {!connected && <ProjectLandingScreen isMobile={isMobile}/>}
+      {!connected && <GameEntryScreen/>}
       {connected && loading && <ConnectingScreenPanel/>}
 
       {/* ── DESKTOP ── */}
