@@ -1642,6 +1642,11 @@ const CSS = `
   .token-badge-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--warn); }
   .token-badge-amount { font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700; color: var(--text); }
   .token-badge-label { font-size: 9px; color: var(--warn); letter-spacing: 1.4px; }
+  .faucet-btn { display:inline-flex; align-items:center; justify-content:center; min-height:24px; padding:4px 8px; border-radius:999px;
+    border:1px solid rgba(0,245,212,0.42); background:rgba(0,245,212,0.08); color:var(--cyan); font-size:9px; letter-spacing:1.2px;
+    font-family:'Orbitron',sans-serif; font-weight:700; cursor:pointer; white-space:nowrap; box-shadow:0 0 14px rgba(0,245,212,0.08); }
+  .faucet-btn:hover:not(:disabled) { background:rgba(0,245,212,0.16); transform:translateY(-1px); }
+  .faucet-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; }
   .asset-label, .asset-amount { display:inline-flex; align-items:center; gap:6px; min-width:0; }
   .asset-amount { font-family:'Share Tech Mono',monospace; font-weight:700; letter-spacing:0.4px; }
   .asset-amount-label { font-size:8px; letter-spacing:1px; color:rgba(200,214,229,0.58); }
@@ -1807,6 +1812,7 @@ const CSS = `
   .mobile-token-badge { max-width: 128px; padding: 3px 8px; gap: 6px; }
   .mobile-token-badge .token-badge-amount { font-size: 10px; }
   .mobile-token-badge .token-badge-label { font-size: 8px; }
+  .mobile-faucet-btn { min-height:26px; padding:3px 7px; font-size:8px; letter-spacing:1px; }
   .mobile-res-strip { flex-shrink: 0; display: flex; align-items: center; gap: 0;
     background: rgba(8,8,22,0.92); border-bottom: 1px solid var(--border);
     overflow-x: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 0; }
@@ -5596,6 +5602,32 @@ const App: React.FC = () => {
     }
   };
 
+  const handleClaimAntimatterFaucet = async () => {
+    if (txLockRef.current || !publicKey) return;
+    txLockRef.current = true;
+    setTxBusy(true);
+    setTxProgress("Claiming 10,000 devnet ANTIMATTER...");
+    setError(null);
+    try {
+      const response = await fetch("/api/antimatter-faucet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: publicKey.toBase58() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || "Devnet ANTIMATTER faucet failed.");
+      }
+      await loadAntimatterBalance();
+    } catch (e: any) {
+      setError(e?.message ?? "Devnet ANTIMATTER faucet failed.");
+    } finally {
+      txLockRef.current = false;
+      setTxBusy(false);
+      setTxProgress("Processing...");
+    }
+  };
+
   const saveBattleReport = useCallback((sourceState: PlayerState, slotIdx: number, mission: Mission, signature?: string, completed = false) => {
     if (!publicKey || mission.missionType !== 1) return;
     const report = buildBattleReport(publicKey.toBase58(), sourceState, slotIdx, mission, signature, completed);
@@ -6258,6 +6290,15 @@ const App: React.FC = () => {
                   <span className="token-badge-amount">{antimatterBalanceLabel}</span>
                   <span className="token-badge-label">ANTIMATTER</span>
                 </span>
+                <button
+                  className="faucet-btn"
+                  type="button"
+                  disabled={txBusy}
+                  title="Claim 10,000 devnet ANTIMATTER once every 24 hours."
+                  onClick={handleClaimAntimatterFaucet}
+                >
+                  FAUCET
+                </button>
               </div>
               <WalletConnectControl/>
             </div>
@@ -6344,6 +6385,15 @@ const App: React.FC = () => {
                 <span className="token-badge-icon"><AntimatterIcon size={12}/></span>
                 <span className="token-badge-amount">{antimatterBalanceLabel}</span>
               </span>
+              <button
+                className="faucet-btn mobile-faucet-btn"
+                type="button"
+                disabled={txBusy}
+                title="Claim 10,000 devnet ANTIMATTER once every 24 hours."
+                onClick={handleClaimAntimatterFaucet}
+              >
+                FAUCET
+              </button>
               <button className="vault-tag" onClick={() => setShowVaultModal(true)} type="button" style={{fontSize:9,padding:"3px 7px"}}>
                 {vaultBalance > 0n ? `⚿ ${formatSolBalance(vaultBalance)}` : "⚿"}
               </button>
