@@ -1058,7 +1058,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
     const sellableListings = planetListings.filter(l => l.planetIndex !== 0);
     if (planetView === "myoffers") return sellableListings.filter(l => l.seller === walletAddress);
     if (planetView === "sell") return [];
-    return sellableListings.filter(l => l.seller !== walletAddress);
+    return sellableListings;
   }, [planetListings, planetView, walletAddress]);
 
   const listablePlanets = useMemo(() => {
