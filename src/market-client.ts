@@ -138,6 +138,31 @@ export interface PlanetListing {
   temperature?: number;
   maxFields?: number;
   usedFields?: number;
+  metal?: bigint;
+  crystal?: bigint;
+  deuterium?: bigint;
+  metalHour?: bigint;
+  crystalHour?: bigint;
+  deuteriumHour?: bigint;
+  metalCap?: bigint;
+  crystalCap?: bigint;
+  deuteriumCap?: bigint;
+  energyProduction?: bigint;
+  energyConsumption?: bigint;
+  metalMine?: number;
+  crystalMine?: number;
+  deuteriumSynthesizer?: number;
+  solarPlant?: number;
+  fusionReactor?: number;
+  roboticsFactory?: number;
+  naniteFactory?: number;
+  shipyard?: number;
+  researchLab?: number;
+  weaponsTechnology?: number;
+  shieldingTechnology?: number;
+  armorTechnology?: number;
+  fleetUnits?: number;
+  defenseUnits?: number;
 }
 
 export interface MarketConfig {
@@ -787,6 +812,53 @@ export class MarketClient {
         listing.temperature = planetState.planet.temperature;
         listing.maxFields = planetState.planet.maxFields;
         listing.usedFields = planetState.planet.usedFields;
+        listing.metal = planetState.resources.metal;
+        listing.crystal = planetState.resources.crystal;
+        listing.deuterium = planetState.resources.deuterium;
+        listing.metalHour = planetState.resources.metalHour;
+        listing.crystalHour = planetState.resources.crystalHour;
+        listing.deuteriumHour = planetState.resources.deuteriumHour;
+        listing.metalCap = planetState.resources.metalCap;
+        listing.crystalCap = planetState.resources.crystalCap;
+        listing.deuteriumCap = planetState.resources.deuteriumCap;
+        listing.energyProduction = planetState.resources.energyProduction;
+        listing.energyConsumption = planetState.resources.energyConsumption;
+        listing.metalMine = planetState.planet.metalMine;
+        listing.crystalMine = planetState.planet.crystalMine;
+        listing.deuteriumSynthesizer = planetState.planet.deuteriumSynthesizer;
+        listing.solarPlant = planetState.planet.solarPlant;
+        listing.fusionReactor = planetState.planet.fusionReactor;
+        listing.roboticsFactory = planetState.planet.roboticsFactory;
+        listing.naniteFactory = planetState.planet.naniteFactory;
+        listing.shipyard = planetState.planet.shipyard;
+        listing.researchLab = planetState.planet.researchLab;
+        listing.weaponsTechnology = planetState.research.weaponsTechnology;
+        listing.shieldingTechnology = planetState.research.shieldingTechnology;
+        listing.armorTechnology = planetState.research.armorTechnology;
+        listing.fleetUnits =
+          planetState.fleet.smallCargo +
+          planetState.fleet.largeCargo +
+          planetState.fleet.lightFighter +
+          planetState.fleet.heavyFighter +
+          planetState.fleet.cruiser +
+          planetState.fleet.battleship +
+          planetState.fleet.battlecruiser +
+          planetState.fleet.bomber +
+          planetState.fleet.destroyer +
+          planetState.fleet.deathstar +
+          planetState.fleet.recycler +
+          planetState.fleet.espionageProbe +
+          planetState.fleet.colonyShip +
+          planetState.fleet.solarSatellite;
+        listing.defenseUnits =
+          planetState.planet.rocketLauncher +
+          planetState.planet.lightLaser +
+          planetState.planet.heavyLaser +
+          planetState.planet.gaussCannon +
+          planetState.planet.ionCannon +
+          planetState.planet.plasmaTurret +
+          planetState.planet.smallShieldDome +
+          planetState.planet.largeShieldDome;
         listing.coords = {
           galaxy: planetState.planet.galaxy,
           system: planetState.planet.system,

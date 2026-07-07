@@ -153,6 +153,56 @@ const PlanetInfoGrid: React.FC<{ items: Array<{ label: string; value: string }> 
   </div>
 );
 
+const PlanetDetailSection: React.FC<{
+  title: string;
+  items: Array<{ label: string; value: string; accent?: string }>;
+}> = ({ title, items }) => (
+  <div style={{
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 4,
+    background: "rgba(6,10,24,0.42)",
+    padding: "10px 12px",
+  }}>
+    <div style={{
+      fontFamily: "'Orbitron', sans-serif",
+      fontSize: 9,
+      letterSpacing: 1.8,
+      color: "var(--purple)",
+      marginBottom: 9,
+    }}>
+      {title}
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px 12px" }}>
+      {items.map(item => (
+        <div key={`${title}-${item.label}`} style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 8, letterSpacing: 1.2, color: "var(--dim)", marginBottom: 3 }}>
+            {item.label}
+          </div>
+          <div style={{
+            fontFamily: "'Share Tech Mono', monospace",
+            fontSize: 12,
+            color: item.accent ?? "var(--text)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}>
+            {item.value}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const listingResource = (value?: bigint) => value !== undefined ? formatResource(value) : "-";
+const listingRate = (value?: bigint) => value !== undefined ? `+${formatResource(value)}/h` : "-";
+const listingLevel = (value?: number) => value !== undefined ? `Lv ${value}` : "-";
+const listingEnergy = (listing: PlanetListing) => (
+  listing.energyProduction !== undefined && listing.energyConsumption !== undefined
+    ? `${formatResource(listing.energyProduction)}/${formatResource(listing.energyConsumption)}`
+    : "-"
+);
+
 // ─── Offer row card ────────────────────────────────────────────────────────────
 
 const OfferCard: React.FC<{
@@ -1833,7 +1883,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 CLOSE
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "180px minmax(0, 1fr)", gap: 22, alignItems: "center" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "180px minmax(0, 1fr)", gap: 22, alignItems: "start" }}>
               <MarketPlanetPreview
                 planet={{
                   name: planetDetailsTarget.planetName,
@@ -1846,10 +1896,9 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 }}
                 size={170}
               />
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{
                   display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12,
-                  marginBottom: 14,
                 }}>
                   <div>
                     <div style={{
@@ -1864,13 +1913,62 @@ const MarketTab: React.FC<MarketTabProps> = ({
                   </div>
                   <AmPill amount={planetDetailsTarget.priceAntimatter}/>
                 </div>
-                <PlanetInfoGrid items={[
-                  { label: "FIELDS", value: planetDetailsTarget.maxFields !== undefined ? `${planetDetailsTarget.usedFields ?? 0}/${planetDetailsTarget.maxFields}` : "-" },
-                  { label: "DIAMETER", value: planetDetailsTarget.diameter !== undefined ? `${planetDetailsTarget.diameter.toLocaleString()} km` : "-" },
-                  { label: "CLIMATE", value: planetDetailsTarget.temperature !== undefined ? `${planetDetailsTarget.temperature}C` : "-" },
-                  { label: "SELLER", value: `${planetDetailsTarget.seller.slice(0, 8)}...${planetDetailsTarget.seller.slice(-6)}` },
-                ]} />
-                <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+                  <PlanetDetailSection
+                    title="OVERVIEW"
+                    items={[
+                      { label: "FIELDS", value: planetDetailsTarget.maxFields !== undefined ? `${planetDetailsTarget.usedFields ?? 0}/${planetDetailsTarget.maxFields}` : "-" },
+                      { label: "DIAMETER", value: planetDetailsTarget.diameter !== undefined ? `${planetDetailsTarget.diameter.toLocaleString()} km` : "-" },
+                      { label: "CLIMATE", value: planetDetailsTarget.temperature !== undefined ? `${planetDetailsTarget.temperature}C` : "-" },
+                      { label: "SELLER", value: `${planetDetailsTarget.seller.slice(0, 8)}...${planetDetailsTarget.seller.slice(-6)}` },
+                    ]}
+                  />
+                  <PlanetDetailSection
+                    title="ECONOMY"
+                    items={[
+                      { label: "METAL", value: listingResource(planetDetailsTarget.metal), accent: "var(--metal)" },
+                      { label: "METAL RATE", value: listingRate(planetDetailsTarget.metalHour), accent: "var(--metal)" },
+                      { label: "CRYSTAL", value: listingResource(planetDetailsTarget.crystal), accent: "var(--crystal)" },
+                      { label: "CRYSTAL RATE", value: listingRate(planetDetailsTarget.crystalHour), accent: "var(--crystal)" },
+                      { label: "DEUTERIUM", value: listingResource(planetDetailsTarget.deuterium), accent: "var(--deut)" },
+                      { label: "DEUT RATE", value: listingRate(planetDetailsTarget.deuteriumHour), accent: "var(--deut)" },
+                    ]}
+                  />
+                  <PlanetDetailSection
+                    title="INFRASTRUCTURE"
+                    items={[
+                      { label: "METAL MINE", value: listingLevel(planetDetailsTarget.metalMine) },
+                      { label: "CRYSTAL MINE", value: listingLevel(planetDetailsTarget.crystalMine) },
+                      { label: "DEUT SYNTH", value: listingLevel(planetDetailsTarget.deuteriumSynthesizer) },
+                      { label: "SOLAR PLANT", value: listingLevel(planetDetailsTarget.solarPlant), accent: "var(--warn)" },
+                      { label: "SHIPYARD", value: listingLevel(planetDetailsTarget.shipyard), accent: "var(--cyan)" },
+                      { label: "RESEARCH LAB", value: listingLevel(planetDetailsTarget.researchLab), accent: "var(--purple)" },
+                    ]}
+                  />
+                  <PlanetDetailSection
+                    title="CAPACITY"
+                    items={[
+                      { label: "METAL CAP", value: listingResource(planetDetailsTarget.metalCap), accent: "var(--metal)" },
+                      { label: "CRYSTAL CAP", value: listingResource(planetDetailsTarget.crystalCap), accent: "var(--crystal)" },
+                      { label: "DEUT CAP", value: listingResource(planetDetailsTarget.deuteriumCap), accent: "var(--deut)" },
+                      { label: "ENERGY", value: listingEnergy(planetDetailsTarget), accent: "var(--warn)" },
+                      { label: "FLEET UNITS", value: planetDetailsTarget.fleetUnits !== undefined ? planetDetailsTarget.fleetUnits.toLocaleString() : "-" },
+                      { label: "DEFENSE UNITS", value: planetDetailsTarget.defenseUnits !== undefined ? planetDetailsTarget.defenseUnits.toLocaleString() : "-" },
+                    ]}
+                  />
+                  <PlanetDetailSection
+                    title="TECHNOLOGY"
+                    items={[
+                      { label: "WEAPONS", value: listingLevel(planetDetailsTarget.weaponsTechnology) },
+                      { label: "SHIELDING", value: listingLevel(planetDetailsTarget.shieldingTechnology) },
+                      { label: "ARMOR", value: listingLevel(planetDetailsTarget.armorTechnology) },
+                      { label: "ROBOTICS", value: listingLevel(planetDetailsTarget.roboticsFactory) },
+                      { label: "NANITE", value: listingLevel(planetDetailsTarget.naniteFactory) },
+                      { label: "FUSION", value: listingLevel(planetDetailsTarget.fusionReactor) },
+                    ]}
+                  />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
                   {planetDetailsTarget.isOwn ? (
                     <>
                       <button
