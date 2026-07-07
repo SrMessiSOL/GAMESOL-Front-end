@@ -253,7 +253,8 @@ const PlanetListingCard: React.FC<{
   marketUnlocked: boolean;
   onBuy: (listing: PlanetListing) => void;
   onCancel: (listing: PlanetListing) => void;
-}> = ({ listing, antimatterBalance, txBusy, marketUnlocked, onBuy, onCancel }) => {
+  onDetails: (listing: PlanetListing) => void;
+}> = ({ listing, antimatterBalance, txBusy, marketUnlocked, onBuy, onCancel, onDetails }) => {
   const canBuy = antimatterBalance >= listing.priceAntimatter;
   const shortSeller = `${listing.seller.slice(0, 4)}...${listing.seller.slice(-4)}`;
   const coords = listing.coords;
@@ -272,26 +273,30 @@ const PlanetListingCard: React.FC<{
       background: "linear-gradient(180deg, rgba(18,23,45,0.94), rgba(7,10,22,0.94))",
       border: `1px solid ${listing.isOwn ? "rgba(155,93,229,0.4)" : "var(--border)"}`,
       borderRadius: 8,
-      padding: "14px",
+      padding: "12px",
       display: "grid",
-      gap: 14,
-      minHeight: 152,
+      gap: 10,
+      minHeight: 0,
       boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
     }}>
-      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "center" }}>
-        <MarketPlanetPreview planet={visualPlanet} />
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, justifyContent: "space-between" }}>
-          <div>
+      <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", gap: 10, alignItems: "center" }}>
+        <MarketPlanetPreview planet={visualPlanet} size={72} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, justifyContent: "space-between" }}>
+          <div style={{ minWidth: 0 }}>
             <div style={{
               fontFamily: "'Orbitron', sans-serif",
-              fontSize: 13,
+              fontSize: 11,
               color: "var(--cyan)",
-              letterSpacing: 1.5,
+              letterSpacing: 1.1,
               lineHeight: 1.25,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}>
               {listing.planetName || "Planet"}
             </div>
-            <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 4 }}>
+            <div style={{ fontSize: 9, color: "var(--dim)", marginTop: 3, whiteSpace: "nowrap" }}>
               {planetCoordsLabel(listing)} {listing.planetIndex !== undefined ? `· #${listing.planetIndex + 1}` : ""}
             </div>
           </div>
@@ -300,26 +305,42 @@ const PlanetListingCard: React.FC<{
               fontSize: 9, letterSpacing: 1.5, padding: "2px 6px",
               border: "1px solid rgba(155,93,229,0.4)", borderRadius: 2,
               color: "var(--purple)", background: "rgba(155,93,229,0.08)",
-            }}>YOUR LISTING</span>
+              whiteSpace: "nowrap",
+            }}>YOURS</span>
           )}
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <AmPill amount={listing.priceAntimatter}/>
+          </div>
         </div>
       </div>
 
-      <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "grid", gap: 8 }}>
         <PlanetInfoGrid items={[
-          { label: "PRICE", value: `${formatAm(listing.priceAntimatter, 2)} AM` },
           { label: "FIELDS", value: listing.maxFields !== undefined ? `${listing.usedFields ?? 0}/${listing.maxFields}` : "-" },
-          { label: "DIAMETER", value: listing.diameter !== undefined ? `${listing.diameter.toLocaleString()} km` : "-" },
           { label: "CLIMATE", value: listing.temperature !== undefined ? `${listing.temperature}C` : "-" },
+          { label: "DIAMETER", value: listing.diameter !== undefined ? `${listing.diameter.toLocaleString()} km` : "-" },
+          { label: "SELLER", value: shortSeller },
         ]} />
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 0.5 }}>
-            seller {shortSeller}
-          </span>
-        </div>
       </div>
 
-      <div style={{ alignSelf: "end" }}>
+      <div style={{ alignSelf: "end", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <button
+          onClick={() => onDetails(listing)}
+          disabled={txBusy}
+          style={{
+            width: "100%",
+            fontFamily: "'Share Tech Mono', monospace",
+            fontSize: 10, letterSpacing: 1,
+            padding: "9px 10px", borderRadius: 3,
+            border: "1px solid rgba(155,93,229,0.34)",
+            background: "rgba(155,93,229,0.06)",
+            color: "var(--purple)",
+            cursor: txBusy ? "not-allowed" : "pointer",
+          }}
+        >
+          DETAILS
+        </button>
         {listing.isOwn ? (
           <button
             onClick={() => onCancel(listing)}
@@ -328,7 +349,7 @@ const PlanetListingCard: React.FC<{
               width: "100%",
               fontFamily: "'Share Tech Mono', monospace",
               fontSize: 10, letterSpacing: 1,
-              padding: "10px 12px", borderRadius: 3,
+              padding: "9px 10px", borderRadius: 3,
               border: "1px solid rgba(255,0,110,0.4)",
               background: "rgba(255,0,110,0.06)",
               color: "var(--danger)", cursor: "pointer",
@@ -345,7 +366,7 @@ const PlanetListingCard: React.FC<{
               width: "100%",
               fontFamily: "'Share Tech Mono', monospace",
               fontSize: 10, letterSpacing: 1,
-              padding: "10px 12px", borderRadius: 3,
+              padding: "9px 10px", borderRadius: 3,
               border: canBuy ? "1px solid var(--cyan)" : "1px solid var(--border)",
               background: canBuy ? "rgba(0,245,212,0.08)" : "transparent",
               color: canBuy ? "var(--cyan)" : "var(--dim)",
@@ -923,6 +944,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
   const [planetListingTarget, setPlanetListingTarget] = useState<PlayerState | null>(null);
   const [buyTarget, setBuyTarget] = useState<MarketOffer | null>(null);
   const [planetBuyTarget, setPlanetBuyTarget] = useState<PlanetListing | null>(null);
+  const [planetDetailsTarget, setPlanetDetailsTarget] = useState<PlanetListing | null>(null);
   const [lastRefresh, setLastRefresh] = useState(0);
   const [nowTs, setNowTs] = useState(() => Math.floor(Date.now() / 1000));
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1720,16 +1742,17 @@ const MarketTab: React.FC<MarketTabProps> = ({
                   )}
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
                   {displayedPlanetListings.map(listing => (
                     <PlanetListingCard
                       key={listing.pubkey}
                       listing={listing}
                       antimatterBalance={antimatterBalance}
                       txBusy={txBusy}
-                      marketUnlocked={canTransact && marketUnlocked}
-                      onBuy={l => setPlanetBuyTarget(l)}
+                      marketUnlocked={canTransact && planetBuyUnlocked}
+                      onBuy={l => void handleBuyPlanetListing(l)}
                       onCancel={l => void handleCancelPlanetListing(l)}
+                      onDetails={l => setPlanetDetailsTarget(l)}
                     />
                   ))}
                 </div>
@@ -1767,6 +1790,149 @@ const MarketTab: React.FC<MarketTabProps> = ({
           onClose={() => setPlanetListingTarget(null)}
           onSubmit={price => handleCreatePlanetListing(planetListingTarget, price)}
         />
+      )}
+
+      {planetDetailsTarget && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
+            zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
+            backdropFilter: "blur(6px)", padding: 18,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setPlanetDetailsTarget(null); }}
+        >
+          <div style={{
+            background: "linear-gradient(180deg, rgba(18,23,45,0.98), rgba(7,10,22,0.98))",
+            border: "1px solid rgba(0,245,212,0.25)",
+            borderRadius: 10,
+            padding: "22px 20px",
+            width: "100%",
+            maxWidth: 720,
+            boxShadow: "0 22px 70px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)",
+          }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+              marginBottom: 18, paddingBottom: 10, borderBottom: "1px solid var(--border)",
+            }}>
+              <div style={{
+                fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+                letterSpacing: 3, color: "var(--cyan)",
+              }}>
+                PLANET DETAILS
+              </div>
+              <button
+                onClick={() => setPlanetDetailsTarget(null)}
+                disabled={txBusy}
+                style={{
+                  border: "1px solid var(--border)", background: "transparent",
+                  color: "var(--dim)", borderRadius: 3, padding: "7px 10px",
+                  fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: 1,
+                  cursor: txBusy ? "not-allowed" : "pointer",
+                }}
+              >
+                CLOSE
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "180px minmax(0, 1fr)", gap: 22, alignItems: "center" }}>
+              <MarketPlanetPreview
+                planet={{
+                  name: planetDetailsTarget.planetName,
+                  galaxy: planetDetailsTarget.coords?.galaxy,
+                  system: planetDetailsTarget.coords?.system,
+                  position: planetDetailsTarget.coords?.position,
+                  temperature: planetDetailsTarget.temperature,
+                  diameter: planetDetailsTarget.diameter,
+                  maxFields: planetDetailsTarget.maxFields,
+                }}
+                size={170}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12,
+                  marginBottom: 14,
+                }}>
+                  <div>
+                    <div style={{
+                      fontFamily: "'Orbitron', sans-serif", fontSize: 18,
+                      color: "var(--cyan)", letterSpacing: 1.4, lineHeight: 1.2,
+                    }}>
+                      {planetDetailsTarget.planetName || "Planet"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 5 }}>
+                      {planetCoordsLabel(planetDetailsTarget)} {planetDetailsTarget.planetIndex !== undefined ? `· #${planetDetailsTarget.planetIndex + 1}` : ""}
+                    </div>
+                  </div>
+                  <AmPill amount={planetDetailsTarget.priceAntimatter}/>
+                </div>
+                <PlanetInfoGrid items={[
+                  { label: "FIELDS", value: planetDetailsTarget.maxFields !== undefined ? `${planetDetailsTarget.usedFields ?? 0}/${planetDetailsTarget.maxFields}` : "-" },
+                  { label: "DIAMETER", value: planetDetailsTarget.diameter !== undefined ? `${planetDetailsTarget.diameter.toLocaleString()} km` : "-" },
+                  { label: "CLIMATE", value: planetDetailsTarget.temperature !== undefined ? `${planetDetailsTarget.temperature}C` : "-" },
+                  { label: "SELLER", value: `${planetDetailsTarget.seller.slice(0, 8)}...${planetDetailsTarget.seller.slice(-6)}` },
+                ]} />
+                <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
+                  {planetDetailsTarget.isOwn ? (
+                    <>
+                      <button
+                        onClick={() => setPlanetDetailsTarget(null)}
+                        disabled={txBusy}
+                        style={{
+                          padding: "12px 16px", borderRadius: 3,
+                          border: "1px solid var(--border)", background: "transparent",
+                          color: "var(--dim)", cursor: txBusy ? "not-allowed" : "pointer",
+                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                        }}
+                      >
+                        CLOSE
+                      </button>
+                      <button
+                        onClick={() => void handleCancelPlanetListing(planetDetailsTarget).then(() => setPlanetDetailsTarget(null))}
+                        disabled={txBusy}
+                        style={{
+                          padding: "12px 16px", borderRadius: 3,
+                          border: "1px solid rgba(255,0,110,0.4)", background: "rgba(255,0,110,0.06)",
+                          color: "var(--danger)", cursor: txBusy ? "not-allowed" : "pointer",
+                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                        }}
+                      >
+                        CANCEL LISTING
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setPlanetDetailsTarget(null)}
+                        disabled={txBusy}
+                        style={{
+                          padding: "12px 16px", borderRadius: 3,
+                          border: "1px solid var(--border)", background: "transparent",
+                          color: "var(--dim)", cursor: txBusy ? "not-allowed" : "pointer",
+                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                        }}
+                      >
+                        CLOSE
+                      </button>
+                      <button
+                        onClick={() => void handleBuyPlanetListing(planetDetailsTarget).then(() => setPlanetDetailsTarget(null))}
+                        disabled={txBusy || !canTransact || !planetBuyUnlocked || antimatterBalance < planetDetailsTarget.priceAntimatter}
+                        style={{
+                          padding: "12px 16px", borderRadius: 3,
+                          border: canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "1px solid var(--cyan)" : "1px solid var(--border)",
+                          background: canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "rgba(0,245,212,0.1)" : "transparent",
+                          color: canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "var(--cyan)" : "var(--dim)",
+                          cursor: !txBusy && canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "pointer" : "not-allowed",
+                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                        }}
+                      >
+                        {canTransact ? "BUY PLANET" : "CONNECT WALLET"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {planetBuyTarget && (
