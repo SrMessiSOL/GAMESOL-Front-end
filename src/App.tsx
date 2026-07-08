@@ -1832,7 +1832,11 @@ const CSS = `
   .mobile-header-right { display: flex; align-items: center; justify-content:flex-end; gap: 5px; flex:1 1 auto; min-width:0; overflow:hidden; }
   .mobile-header-right > .vault-tag,
   .mobile-header-right > .wallet-adapter-button,
-  .mobile-header-right > .wallet-adapter-dropdown { display:none !important; }
+  .mobile-header-right > .wallet-adapter-dropdown,
+  .mobile-header-right > .wallet-menu-wrap ~ .wallet-adapter-button,
+  .mobile-header-right > .wallet-menu-wrap ~ .wallet-adapter-dropdown,
+  .mobile-header-right > .wallet-menu-wrap ~ * .wallet-adapter-button,
+  .mobile-header-right > .wallet-menu-wrap ~ * .wallet-adapter-dropdown { display:none !important; }
   .mobile-token-badge { max-width: 92px; padding: 3px 7px; gap: 5px; min-width:0; }
   .mobile-token-badge .token-badge-amount { font-size: 10px; }
   .mobile-token-badge .token-badge-label { font-size: 8px; }
@@ -6255,7 +6259,7 @@ const App: React.FC = () => {
         aria-expanded={showWalletMenu}
       >
         <span className="token-badge-icon"><AntimatterIcon size={13}/></span>
-        <span className="wallet-menu-trigger-label">{walletAddressLabel}</span>
+        <span className="wallet-menu-trigger-label">{isMobile ? "WALLET" : walletAddressLabel}</span>
       </button>
       {showWalletMenu && (
         <>
