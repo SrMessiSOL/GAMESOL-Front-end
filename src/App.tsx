@@ -1750,13 +1750,14 @@ const CSS = `
   .overview-hero::before { content:""; position:absolute; inset:0; background: var(--hero-nebula, radial-gradient(circle at 18% 18%, rgba(88,251,213,0.20), transparent 18%)); opacity:1; }
   .overview-hero::after { content:""; position:absolute; inset:0; background: linear-gradient(125deg, rgba(255,255,255,0.04), transparent 32%, transparent 70%, rgba(255,255,255,0.05)); pointer-events:none; }
   .overview-hero > * { position:relative; z-index:1; }
-  .hero-grid { display:grid; grid-template-columns: minmax(0, 1.45fr) minmax(168px, 0.55fr); gap:18px; align-items:stretch; }
+  .hero-grid { display:grid; grid-template-columns: minmax(0, 1.45fr) minmax(168px, 0.55fr); gap:18px; align-items:stretch; min-width:0; }
+  .hero-grid > * { min-width:0; }
   .hero-kicker { font-size:10px; letter-spacing:2.8px; text-transform:uppercase; color:rgba(200,214,229,0.64); margin-bottom:12px; }
   .hero-title { font-family:'Orbitron',sans-serif; font-size: clamp(22px, 4vw, 34px); line-height:1.05; color:white; letter-spacing:1.2px; max-width:10ch; }
-  .hero-subtitle { margin-top:10px; font-size:11px; line-height:1.65; color:rgba(200,214,229,0.76); max-width:56ch; }
+  .hero-subtitle { margin-top:10px; font-size:11px; line-height:1.65; color:rgba(200,214,229,0.76); max-width:56ch; overflow-wrap:anywhere; word-break:normal; }
   .hero-chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
-  .hero-chip { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; border:1px solid rgba(255,255,255,0.1); background: rgba(4,8,18,0.45); font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:rgba(200,214,229,0.84); }
-  .hero-chip strong { color:white; font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:0.8px; }
+  .hero-chip { display:inline-flex; align-items:center; gap:8px; min-width:0; max-width:100%; padding:8px 12px; border-radius:999px; border:1px solid rgba(255,255,255,0.1); background: rgba(4,8,18,0.45); font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:rgba(200,214,229,0.84); overflow:hidden; }
+  .hero-chip strong { color:white; font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:0.8px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .hero-planet-card { position:relative; overflow:hidden; border-radius:18px; min-height:116px; padding:10px; border:1px solid rgba(255,255,255,0.1); background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(8,10,19,0.88)); display:flex; align-items:center; justify-content:center; }
   .hero-planet-card::before { content:""; position:absolute; inset:0; background:
     radial-gradient(circle at 30% 22%, rgba(122,176,255,0.18), transparent 26%),
@@ -1802,17 +1803,17 @@ const CSS = `
 
   .app-mobile { position: relative; z-index: 1; height: 100dvh; width:100%; max-width:100vw; display: flex; flex-direction: column; overflow: hidden; }
   .mobile-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px; height: 52px; background: rgba(6,6,18,0.97); border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(16px); z-index: 20; }
-  .mobile-header-left { display: flex; align-items: center; gap: 10px; }
+    gap:6px; padding: 0 8px; height: 52px; background: rgba(6,6,18,0.97); border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(16px); z-index: 20; overflow:hidden; }
+  .mobile-header-left { display: flex; align-items: center; gap: 6px; flex:0 0 auto; min-width:0; }
   .mobile-game-title { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 2px;
     background: linear-gradient(135deg, var(--purple), var(--cyan));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .mobile-header-right { display: flex; align-items: center; gap: 8px; }
-  .mobile-token-badge { max-width: 128px; padding: 3px 8px; gap: 6px; }
+  .mobile-header-right { display: flex; align-items: center; justify-content:flex-end; gap: 5px; flex:1 1 auto; min-width:0; overflow:hidden; }
+  .mobile-token-badge { max-width: 92px; padding: 3px 7px; gap: 5px; min-width:0; }
   .mobile-token-badge .token-badge-amount { font-size: 10px; }
   .mobile-token-badge .token-badge-label { font-size: 8px; }
-  .mobile-faucet-btn { min-height:26px; padding:3px 7px; font-size:8px; letter-spacing:1px; }
+  .mobile-faucet-btn { min-height:26px; padding:3px 7px; font-size:8px; letter-spacing:0.7px; flex:0 0 auto; }
   .mobile-res-strip { flex-shrink: 0; display: flex; align-items: center; gap: 0;
     background: rgba(8,8,22,0.92); border-bottom: 1px solid var(--border);
     overflow-x: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 0; }
@@ -2167,6 +2168,8 @@ const CSS = `
     .hero-chip-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
     .hero-chip { justify-content:center; min-width:0; padding:8px 9px; font-size:9px; }
     .hero-chip strong { font-size:10px; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+    .mobile-main > * { width:100%; max-width:100%; min-width:0; }
+    .overview-hero, .overview-section-panel, .shell-panel, .card { max-width:100%; min-width:0; }
     .tab-masthead { align-items:flex-start; flex-direction:column; gap:12px; padding:14px; border-radius:16px; margin-bottom:14px; }
     .tab-title { font-size:15px; }
     .marketplace-page { padding:12px 12px 34px; }
@@ -2195,6 +2198,12 @@ const CSS = `
     .landing-metric-card { padding:8px 9px; min-height:52px; display:flex; flex-direction:column; justify-content:center; }
     .landing-metric-label { font-size:7px; letter-spacing:1.1px; white-space:normal; line-height:1.25; min-height:18px; }
     .landing-metric-value { font-size:14px; }
+    .hero-chip-row { grid-template-columns:1fr; }
+    .hero-chip { width:100%; }
+    .mobile-header { padding:0 6px; }
+    .mobile-token-badge { max-width:82px; }
+    .mobile-token-badge .token-badge-label { display:none; }
+    .mobile-faucet-btn { padding:3px 6px; }
   }
   @media (max-width: 1180px) {
     .desktop-resource-menu { grid-template-columns: repeat(2, minmax(0, 1fr)); }
