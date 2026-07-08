@@ -2606,22 +2606,6 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
     }}
   >
     <div
-      style={{
-        position: "absolute",
-        top: isMobile ? 12 : 18,
-        left: isMobile ? 16 : "auto",
-        right: isMobile ? 16 : 28,
-        zIndex: 5,
-        display: "flex",
-        justifyContent: "flex-end",
-      }}
-    >
-      <nav style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-        <a href="/app" className="route-nav-link">ENTER APP</a>
-        <PlanetMarketplaceLink />
-      </nav>
-    </div>
-    <div
       aria-hidden="true"
       style={{
         position: "absolute",
@@ -2680,13 +2664,28 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
       />
 
       <div style={{ position: "relative", zIndex: 1, display: "grid", gap: isMobile ? 22 : 26 }}>
+        <nav
+          style={{
+            display: "flex",
+            gap: isMobile ? 8 : 10,
+            alignItems: "center",
+            flexWrap: "wrap",
+            justifyContent: isMobile ? "center" : "flex-end",
+            padding: isMobile ? "0 0 6px" : "18px 10px 0",
+            width: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          <a href="/app" className="route-nav-link">ENTER APP</a>
+          <PlanetMarketplaceLink />
+        </nav>
         <ScrollReveal
           style={{
             display: "grid",
             justifyItems: "center",
             textAlign: "center",
             gap: isMobile ? 10 : 12,
-            padding: isMobile ? "72px 4px 24px" : "74px 24px 26px",
+            padding: isMobile ? "20px 4px 24px" : "48px 24px 26px",
             minHeight: isMobile ? "auto" : "100dvh",
             alignContent: "center",
           }}
