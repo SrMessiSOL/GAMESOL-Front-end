@@ -1647,6 +1647,26 @@ const CSS = `
     font-family:'Orbitron',sans-serif; font-weight:700; cursor:pointer; white-space:nowrap; box-shadow:0 0 14px rgba(0,245,212,0.08); }
   .faucet-btn:hover:not(:disabled) { background:rgba(0,245,212,0.16); transform:translateY(-1px); }
   .faucet-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; }
+  .wallet-menu-wrap { position:relative; flex:0 0 auto; }
+  .wallet-menu-trigger { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:34px; max-width:190px; padding:0 12px; border-radius:999px; border:1px solid rgba(155,93,229,0.48); background:linear-gradient(135deg, rgba(155,93,229,0.78), rgba(83,72,204,0.78)); color:white; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; letter-spacing:1px; cursor:pointer; box-shadow:0 0 18px rgba(155,93,229,0.22); }
+  .wallet-menu-trigger-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .wallet-menu-scrim { position:fixed; inset:0; z-index:86; background:transparent; }
+  .wallet-menu-popover { position:fixed; top:58px; right:18px; z-index:87; width:min(330px, calc(100vw - 24px)); max-height:calc(100dvh - 76px); overflow:auto; padding:12px; border:1px solid rgba(0,245,212,0.24); border-radius:10px; background:linear-gradient(180deg, rgba(14,18,38,0.98), rgba(5,8,19,0.98)); box-shadow:0 24px 70px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.05); }
+  .wallet-menu-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .wallet-menu-title { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px; color:var(--cyan); text-transform:uppercase; }
+  .wallet-menu-close { width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); color:var(--dim); font-size:14px; cursor:pointer; }
+  .wallet-menu-grid { display:grid; gap:8px; }
+  .wallet-menu-row { display:grid; grid-template-columns:minmax(92px,0.7fr) minmax(0,1fr); align-items:center; gap:10px; min-width:0; padding:9px 10px; border:1px solid rgba(255,255,255,0.07); border-radius:7px; background:rgba(6,10,24,0.48); }
+  .wallet-menu-row-label { font-size:8px; letter-spacing:1.4px; text-transform:uppercase; color:var(--dim); }
+  .wallet-menu-row-value { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text); }
+  .wallet-menu-row-value.cyan { color:var(--cyan); }
+  .wallet-menu-row-value.warn { color:var(--warn); }
+  .wallet-menu-row-value.success { color:var(--success); }
+  .wallet-menu-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+  .wallet-menu-actions .wallet-adapter-button { width:100% !important; justify-content:center !important; margin:0 !important; }
+  .wallet-menu-action { min-height:34px; padding:0 10px; border-radius:7px; border:1px solid rgba(0,245,212,0.34); background:rgba(0,245,212,0.08); color:var(--cyan); font-family:'Orbitron',sans-serif; font-size:9px; font-weight:800; letter-spacing:1px; cursor:pointer; }
+  .wallet-menu-action.alt { border-color:rgba(255,214,10,0.35); background:rgba(255,214,10,0.07); color:var(--warn); }
+  .wallet-menu-action:disabled { opacity:0.42; cursor:not-allowed; }
   .asset-label, .asset-amount { display:inline-flex; align-items:center; gap:6px; min-width:0; }
   .asset-amount { font-family:'Share Tech Mono',monospace; font-weight:700; letter-spacing:0.4px; }
   .asset-amount-label { font-size:8px; letter-spacing:1px; color:rgba(200,214,229,0.58); }
@@ -1810,6 +1830,9 @@ const CSS = `
     background: linear-gradient(135deg, var(--purple), var(--cyan));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .mobile-header-right { display: flex; align-items: center; justify-content:flex-end; gap: 5px; flex:1 1 auto; min-width:0; overflow:hidden; }
+  .mobile-header-right > .vault-tag,
+  .mobile-header-right > .wallet-adapter-button,
+  .mobile-header-right > .wallet-adapter-dropdown { display:none !important; }
   .mobile-token-badge { max-width: 92px; padding: 3px 7px; gap: 5px; min-width:0; }
   .mobile-token-badge .token-badge-amount { font-size: 10px; }
   .mobile-token-badge .token-badge-label { font-size: 8px; }
@@ -2204,6 +2227,10 @@ const CSS = `
     .mobile-token-badge { max-width:82px; }
     .mobile-token-badge .token-badge-label { display:none; }
     .mobile-faucet-btn { padding:3px 6px; }
+    .wallet-menu-trigger { max-width:106px; min-height:28px; padding:0 9px; font-size:9px; letter-spacing:0.7px; }
+    .wallet-menu-popover { top:54px; right:8px; width:calc(100vw - 16px); max-height:calc(100dvh - 66px); }
+    .wallet-menu-row { grid-template-columns:minmax(82px,0.65fr) minmax(0,1fr); padding:8px; }
+    .wallet-menu-actions { grid-template-columns:1fr; }
   }
   @media (max-width: 1180px) {
     .desktop-resource-menu { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -5208,6 +5235,7 @@ const App: React.FC = () => {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [vaultStatus, setVaultStatus] = useState<import("./game-state").VaultStatus>("loading");
   const [gameConfig, setGameConfig] = useState<GameConfigState | null>(null);
   const [gameConfigBusy, setGameConfigBusy] = useState(false);
@@ -6080,6 +6108,10 @@ const App: React.FC = () => {
       setShowVaultModal(false);
       return;
     }
+    if (showWalletMenu) {
+      setShowWalletMenu(false);
+      return;
+    }
     if (showMoreDrawer) {
       setShowMoreDrawer(false);
       return;
@@ -6087,7 +6119,7 @@ const App: React.FC = () => {
     if (tab !== "overview") {
       setTab("overview");
     }
-  }, [confirmation, handleVaultPromptCancel, showLaunchModal, showMoreDrawer, showVaultModal, tab, vaultPrompt]);
+  }, [confirmation, handleVaultPromptCancel, showLaunchModal, showMoreDrawer, showVaultModal, showWalletMenu, tab, vaultPrompt]);
 
   const handleControllerMenu = useCallback(() => {
     if (showLaunchModal || confirmation || vaultPrompt) return;
@@ -6210,6 +6242,88 @@ const App: React.FC = () => {
   const shieldProtectionLeft = state
     ? Math.max(0, effectiveAttackProtectionUntil(state.planet) - nowTs)
     : 0;
+  const walletAddressLabel = publicKey
+    ? `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`
+    : "Wallet";
+  const walletMenuShieldLabel = shieldProtectionLeft > 0 ? fmtCountdown(shieldProtectionLeft) : "OFF";
+  const WalletStatusMenu = () => (
+    <div className="wallet-menu-wrap">
+      <button
+        type="button"
+        className="wallet-menu-trigger"
+        onClick={() => setShowWalletMenu(v => !v)}
+        aria-expanded={showWalletMenu}
+      >
+        <span className="token-badge-icon"><AntimatterIcon size={13}/></span>
+        <span className="wallet-menu-trigger-label">{walletAddressLabel}</span>
+      </button>
+      {showWalletMenu && (
+        <>
+          <div className="wallet-menu-scrim" onClick={() => setShowWalletMenu(false)} />
+          <div className="wallet-menu-popover">
+            <div className="wallet-menu-head">
+              <div className="wallet-menu-title">Wallet</div>
+              <button className="wallet-menu-close" type="button" onClick={() => setShowWalletMenu(false)}>×</button>
+            </div>
+            <div className="wallet-menu-grid">
+              <div className="wallet-menu-row">
+                <div className="wallet-menu-row-label">Network</div>
+                <div className="wallet-menu-row-value cyan">DEVNET</div>
+              </div>
+              <div className="wallet-menu-row">
+                <div className="wallet-menu-row-label">Wallet</div>
+                <div className="wallet-menu-row-value">{walletAddressLabel}</div>
+              </div>
+              <div className="wallet-menu-row">
+                <div className="wallet-menu-row-label">Shield</div>
+                <div className={`wallet-menu-row-value ${shieldProtectionLeft > 0 ? "success" : ""}`}>{walletMenuShieldLabel}</div>
+              </div>
+              <div className="wallet-menu-row">
+                <div className="wallet-menu-row-label">Vault SOL</div>
+                <div className="wallet-menu-row-value success">{vaultButtonLabel}</div>
+              </div>
+              <div className="wallet-menu-row">
+                <div className="wallet-menu-row-label">Antimatter</div>
+                <div className="wallet-menu-row-value warn">{antimatterBalanceLabel}</div>
+              </div>
+              <div className="wallet-menu-row">
+                <div className="wallet-menu-row-label">USDC</div>
+                <div className="wallet-menu-row-value cyan">{formatUsdcAmount(usdcBalance)} USDC</div>
+              </div>
+            </div>
+            <div className="wallet-menu-actions">
+              <button
+                className="wallet-menu-action"
+                type="button"
+                disabled={txBusy}
+                onClick={() => {
+                  setShowWalletMenu(false);
+                  setShowVaultModal(true);
+                }}
+              >
+                VAULT
+              </button>
+              <button
+                className="wallet-menu-action alt"
+                type="button"
+                disabled={txBusy}
+                title="Claim 10,000 devnet ANTIMATTER once every 24 hours."
+                onClick={() => {
+                  setShowWalletMenu(false);
+                  void handleClaimAntimatterFaucet();
+                }}
+              >
+                FAUCET
+              </button>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <WalletConnectControl/>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
   const activeTheme = getPlanetTheme(state?.planet);
   const shellStyle = {
     "--planet-accent": activeTheme.accent,
@@ -6299,34 +6413,7 @@ const App: React.FC = () => {
               <nav style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 8 }}>
                 <PlanetMarketplaceLink />
               </nav>
-              <div className="header-cluster">
-                <span className="chain-tag">DEVNET</span>
-                <span
-                  className={`shield-tag${shieldProtectionLeft > 0 ? "" : " off"}`}
-                  title={shieldProtectionLeft > 0 ? "Attack protection active" : "No active attack protection"}
-                >
-                  <span className="shield-tag-label">SHIELD</span>
-                  <span className="shield-tag-value">{shieldProtectionLeft > 0 ? fmtCountdown(shieldProtectionLeft) : "OFF"}</span>
-                </span>
-                <button className="vault-tag" onClick={() => setShowVaultModal(true)} type="button">
-                  {vaultButtonLabel}
-                </button>
-                <span className="token-badge">
-                  <span className="token-badge-icon"><AntimatterIcon size={14}/></span>
-                  <span className="token-badge-amount">{antimatterBalanceLabel}</span>
-                  <span className="token-badge-label">ANTIMATTER</span>
-                </span>
-                <button
-                  className="faucet-btn"
-                  type="button"
-                  disabled={txBusy}
-                  title="Claim 10,000 devnet ANTIMATTER once every 24 hours."
-                  onClick={handleClaimAntimatterFaucet}
-                >
-                  FAUCET
-                </button>
-              </div>
-              <WalletConnectControl/>
+              <WalletStatusMenu/>
             </div>
           </header>
           <aside className="sidebar sidebar-shell" style={{ ...shellStyle, background: activeTheme.sidebarGradient }}>
@@ -6407,19 +6494,7 @@ const App: React.FC = () => {
             </div>
             <div className="mobile-header-right">
               <a href="/marketplace" className="route-nav-link alt" style={{ minHeight: 28, padding: "0 8px", fontSize: 9 }}>MARKET</a>
-              <span className="token-badge mobile-token-badge">
-                <span className="token-badge-icon"><AntimatterIcon size={12}/></span>
-                <span className="token-badge-amount">{antimatterBalanceLabel}</span>
-              </span>
-              <button
-                className="faucet-btn mobile-faucet-btn"
-                type="button"
-                disabled={txBusy}
-                title="Claim 10,000 devnet ANTIMATTER once every 24 hours."
-                onClick={handleClaimAntimatterFaucet}
-              >
-                FAUCET
-              </button>
+              <WalletStatusMenu/>
               <button className="vault-tag" onClick={() => setShowVaultModal(true)} type="button" style={{fontSize:9,padding:"3px 7px"}}>
                 {vaultBalance > 0n ? `⚿ ${formatSolBalance(vaultBalance)}` : "⚿"}
               </button>
