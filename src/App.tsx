@@ -1650,8 +1650,8 @@ const CSS = `
   .wallet-menu-wrap { position:relative; flex:0 0 auto; }
   .wallet-menu-trigger { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:34px; max-width:190px; padding:0 12px; border-radius:999px; border:1px solid rgba(155,93,229,0.48); background:linear-gradient(135deg, rgba(155,93,229,0.78), rgba(83,72,204,0.78)); color:white; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; letter-spacing:1px; cursor:pointer; box-shadow:0 0 18px rgba(155,93,229,0.22); }
   .wallet-menu-trigger-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .wallet-menu-scrim { position:fixed; inset:0; z-index:86; background:transparent; }
-  .wallet-menu-popover { position:fixed; top:58px; right:18px; z-index:87; width:min(330px, calc(100vw - 24px)); max-height:calc(100dvh - 76px); overflow:auto; padding:12px; border:1px solid rgba(0,245,212,0.24); border-radius:10px; background:linear-gradient(180deg, rgba(14,18,38,0.98), rgba(5,8,19,0.98)); box-shadow:0 24px 70px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.05); }
+  .wallet-menu-scrim { position:fixed; inset:0; z-index:998; background:transparent; }
+  .wallet-menu-popover { position:fixed; top:58px; right:18px; z-index:999; width:min(330px, calc(100vw - 24px)); max-height:calc(100dvh - 76px); overflow:auto; padding:12px; border:1px solid rgba(0,245,212,0.24); border-radius:10px; background:linear-gradient(180deg, rgba(14,18,38,0.98), rgba(5,8,19,0.98)); box-shadow:0 24px 70px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.05); }
   .wallet-menu-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); }
   .wallet-menu-title { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px; color:var(--cyan); text-transform:uppercase; }
   .wallet-menu-close { width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); color:var(--dim); font-size:14px; cursor:pointer; }
@@ -1824,12 +1824,12 @@ const CSS = `
   .app-mobile { position: relative; z-index: 1; height: 100dvh; width:100%; max-width:100vw; display: flex; flex-direction: column; overflow: hidden; }
   .mobile-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
     gap:6px; padding: 0 8px; height: 52px; background: rgba(6,6,18,0.97); border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(16px); z-index: 20; overflow:hidden; }
+    backdrop-filter: blur(16px); z-index: 120; overflow:visible; }
   .mobile-header-left { display: flex; align-items: center; gap: 6px; flex:0 0 auto; min-width:0; }
   .mobile-game-title { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 2px;
     background: linear-gradient(135deg, var(--purple), var(--cyan));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .mobile-header-right { display: flex; align-items: center; justify-content:flex-end; gap: 5px; flex:1 1 auto; min-width:0; overflow:hidden; }
+  .mobile-header-right { display: flex; align-items: center; justify-content:flex-end; gap: 5px; flex:1 1 auto; min-width:0; overflow:visible; }
   .mobile-header-right > .vault-tag,
   .mobile-header-right > .wallet-adapter-button,
   .mobile-header-right > .wallet-adapter-dropdown,
@@ -5133,7 +5133,6 @@ const MobileResStrip: React.FC<{ res: Resources; planet: Planet }> = ({ res, pla
       {kind:"deuterium" as const,value:res.deuterium,rate:res.deuteriumHour},
     ].map(r=>(<div key={r.kind} className="mobile-res-item"><div className="mobile-res-label"><ResourceLabel kind={r.kind} short /></div><div className="mobile-res-value" style={{color:RESOURCE_UI[r.kind].color}}>{formatCompactResource(r.value)}</div><div className="mobile-res-rate">+{formatCompactResource(r.rate)}/h</div></div>))}
     <div className="mobile-res-item" style={{minWidth:90}}><div className="mobile-res-label">⚡ PWR</div><div className="mobile-res-value" style={{color:energyEfficiency(res)>=100?"var(--success)":energyEfficiency(res)>=36?"var(--warn)":"var(--danger)",fontSize:11}}>{energyEfficiency(res)}%</div><div className="mobile-res-rate">{fmt(res.energyProduction)}/{fmt(res.energyConsumption)}</div></div>
-    <div className="mobile-res-item" style={{minWidth:80}}><div className="mobile-res-label">FIELDS</div><div className="mobile-res-value" style={{fontSize:11}}>{planet.usedFields}/{planet.maxFields}</div><div className="mobile-res-rate">{planet.name.slice(0,8)}</div></div>
   </div>
 );
 
