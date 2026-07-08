@@ -6072,10 +6072,15 @@ const App: React.FC = () => {
   const visibleSecondaryTabs = (hasCreatedWorld
     ? SECONDARY_TABS
     : SECONDARY_TABS.filter(t => t.id !== "market" && t.id !== "store")).concat([{ id: "activity" as Tab, icon: "ACT", label: "Activity" }]);
+  const mobilePrimaryTabs = PRIMARY_TABS.filter(t => ["overview", "quests", "alliance", "resources"].includes(t.id));
+  const mobileMoreTabs = [
+    ...PRIMARY_TABS.filter(t => !mobilePrimaryTabs.some(primary => primary.id === t.id)),
+    ...visibleSecondaryTabs,
+  ];
   const visibleDesktopTabs: Tab[] = ["overview","quests","alliance","store","resources","buildings","research","shipyard","defense","fleet","missions","activity","galaxy","market"]
     .filter(t => hasCreatedWorld || (t !== "market" && t !== "store")) as Tab[];
   const controllerTabs = isMobile
-    ? [...PRIMARY_TABS.map(entry => entry.id), ...visibleSecondaryTabs.map(entry => entry.id)]
+    ? [...mobilePrimaryTabs.map(entry => entry.id), ...mobileMoreTabs.map(entry => entry.id)]
     : visibleDesktopTabs;
 
   const cycleTab = useCallback((direction: 1 | -1) => {
@@ -6255,7 +6260,11 @@ const App: React.FC = () => {
       <button
         type="button"
         className="wallet-menu-trigger"
-        onClick={() => setShowWalletMenu(v => !v)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setShowWalletMenu(v => !v);
+        }}
         aria-expanded={showWalletMenu}
       >
         <span className="token-badge-icon"><AntimatterIcon size={13}/></span>
@@ -6516,7 +6525,7 @@ const App: React.FC = () => {
               <div style={{position:"fixed",inset:0,zIndex:44,background:"rgba(0,0,0,0.4)"}} onClick={() => setShowMoreDrawer(false)}/>
               <div className="mobile-more-drawer">
                 <div className="mobile-more-grid">
-                  {visibleSecondaryTabs.map(t => (
+                  {mobileMoreTabs.map(t => (
                     <div
                       key={t.id}
                       className={`mobile-more-item${tab===t.id?" active":""}`}
@@ -6550,14 +6559,14 @@ const App: React.FC = () => {
             </>
           )}
           <div className="mobile-bottom-bar">
-            {PRIMARY_TABS.map(t => (
+            {mobilePrimaryTabs.map(t => (
               <button key={t.id} className={`mobile-nav-btn${tab===t.id?" active":""}`} onClick={() => handleMobileTabClick(t.id)}>
                 {t.id==="missions"&&activeMissionCount>0&&<span className="mobile-nav-badge">{activeMissionCount}</span>}
                 <span className="mobile-nav-icon">{t.icon}</span>
                 <span className="mobile-nav-label">{t.label}</span>
               </button>
             ))}
-            <button className={`mobile-nav-btn${visibleSecondaryTabs.some(t=>t.id===tab)||showMoreDrawer?" active":""}`} onClick={() => setShowMoreDrawer(v => !v)}>
+            <button className={`mobile-nav-btn${mobileMoreTabs.some(t=>t.id===tab)||showMoreDrawer?" active":""}`} onClick={() => setShowMoreDrawer(v => !v)}>
               <span className="mobile-nav-icon">···</span>
               <span className="mobile-nav-label">More</span>
             </button>
