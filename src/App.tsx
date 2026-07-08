@@ -1745,7 +1745,7 @@ const CSS = `
   .nav.shell-panel { margin:0 16px 16px; border-radius:18px; padding:10px 0; background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(8,10,22,0.92)); }
   .nav-item { border-left:none; margin:0 10px; border-radius:12px; }
   .nav-item.active { border-left-color: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
-  .overview-shell { display:grid; gap:18px; }
+  .overview-shell { display:grid; gap:18px; min-width:0; }
   .overview-hero { position:relative; overflow:hidden; border-radius:24px; padding:18px; border:1px solid rgba(255,255,255,0.1); min-height:206px; box-shadow: var(--shell-shadow); background: var(--hero-gradient, linear-gradient(135deg, rgba(10,56,64,0.95), rgba(11,14,31,0.94))); }
   .overview-hero::before { content:""; position:absolute; inset:0; background: var(--hero-nebula, radial-gradient(circle at 18% 18%, rgba(88,251,213,0.20), transparent 18%)); opacity:1; }
   .overview-hero::after { content:""; position:absolute; inset:0; background: linear-gradient(125deg, rgba(255,255,255,0.04), transparent 32%, transparent 70%, rgba(255,255,255,0.05)); pointer-events:none; }
@@ -1800,7 +1800,7 @@ const CSS = `
   .command-empty-step-num { font-family:'Orbitron',sans-serif; color:var(--cyan); font-size:12px; margin-bottom:8px; }
   .command-empty-step-copy { font-size:11px; color:rgba(200,214,229,0.75); line-height:1.7; }
 
-  .app-mobile { position: relative; z-index: 1; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  .app-mobile { position: relative; z-index: 1; height: 100dvh; width:100%; max-width:100vw; display: flex; flex-direction: column; overflow: hidden; }
   .mobile-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
     padding: 0 16px; height: 52px; background: rgba(6,6,18,0.97); border-bottom: 1px solid var(--border);
     backdrop-filter: blur(16px); z-index: 20; }
@@ -1828,7 +1828,7 @@ const CSS = `
   .mobile-planet-coords { font-size: 9px; color: var(--dim); letter-spacing: 1px; }
   .mobile-planet-name { font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; color: white; }
   .mobile-planet-meta { font-size: 9px; color: var(--dim); }
-  .mobile-main { flex: 1; overflow-y: auto; padding: 16px 14px;
+  .mobile-main { flex: 1; overflow-y: auto; overflow-x:hidden; width:100%; max-width:100vw; box-sizing:border-box; padding: 16px 14px;
     padding-bottom: calc(var(--bottom-bar) + 16px);
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -2110,9 +2110,15 @@ const CSS = `
   .route-nav-link { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:34px; padding:0 14px; border:1px solid rgba(0,245,212,0.45); color:var(--cyan); background:rgba(0,245,212,0.08); border-radius:3px; text-decoration:none; font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; }
   .route-nav-link.alt { border-color:rgba(255,214,10,0.38); color:var(--warn); background:rgba(255,214,10,0.07); }
   .route-nav-icon { flex:0 0 auto; filter:drop-shadow(0 0 5px rgba(255,214,10,0.24)); }
+  .landing-metrics-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; width:min(960px,100%); margin-top:6px; }
   .landing-metric-card { min-width:0; padding:9px 11px; border:1px solid rgba(255,255,255,0.09); border-radius:8px; background:rgba(7,11,22,0.68); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
   .landing-metric-label { font-size:8px; letter-spacing:1.4px; color:var(--dim); text-transform:uppercase; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .landing-metric-value { font-family:'Orbitron',sans-serif; font-size:15px; color:var(--cyan); letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .planet-details-dialog { max-height:calc(100dvh - 24px); overflow:auto; overscroll-behavior:contain; }
+  .planet-details-body { display:grid; grid-template-columns:minmax(120px,150px) minmax(0,1fr); gap:clamp(14px,2vw,22px); align-items:start; }
+  .planet-details-visual { position:sticky; top:58px; align-self:start; display:grid; place-items:center; }
+  .planet-details-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; }
+  .planet-details-actions { display:grid; grid-template-columns:minmax(120px,1fr) minmax(160px,1.5fr); gap:10px; position:sticky; bottom:-1px; z-index:2; padding-top:10px; background:linear-gradient(180deg, rgba(7,10,22,0), rgba(7,10,22,0.98) 28%); }
   .marketplace-page { position:relative; z-index:1; min-height:100dvh; width:100%; padding:18px 22px 48px; box-sizing:border-box; }
   .marketplace-header { max-width:1180px; margin:0 auto 18px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 14px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(7,11,22,0.74); box-shadow:var(--shell-shadow); }
   .marketplace-brand { display:inline-flex; align-items:center; gap:10px; color:var(--cyan); text-decoration:none; font-family:'Orbitron',sans-serif; font-size:15px; letter-spacing:2px; font-weight:800; }
@@ -2148,13 +2154,19 @@ const CSS = `
     border-radius: 18px; padding: 14px 16px; font-size: 10px; color: var(--dim); letter-spacing: 1px; margin-bottom: 16px; box-shadow: var(--shell-shadow); }
   .wallet-adapter-button { font-family:'Share Tech Mono',monospace !important; font-size:11px !important; letter-spacing:1px !important; border-radius:14px !important; margin-right: 0 !important; min-height: 34px !important; height: 34px !important; padding: 0 12px !important; }
   @media (max-width: 767px) {
+    .landing-metrics-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; width:min(100%,360px); }
+    .landing-metrics-grid .landing-metric-card:last-child:nth-child(odd) { grid-column:1 / -1; }
     .grid-2 { grid-template-columns: 1fr; }
     .grid-3 { grid-template-columns: 1fr 1fr; gap: 10px; }
     .grid-4 { grid-template-columns: 1fr 1fr; gap: 8px; }
     .hero-grid, .overview-panel-grid, .overview-card-grid, .command-empty-grid { grid-template-columns: 1fr; }
     .overview-hero { padding:18px; border-radius:20px; min-height:unset; }
     .command-section-head { padding:16px; border-radius:16px; }
-    .hero-title { max-width:none; }
+    .hero-title { max-width:none; font-size:clamp(20px,7vw,28px); overflow-wrap:anywhere; }
+    .hero-subtitle { max-width:100%; font-size:10px; line-height:1.6; overflow-wrap:anywhere; }
+    .hero-chip-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .hero-chip { justify-content:center; min-width:0; padding:8px 9px; font-size:9px; }
+    .hero-chip strong { font-size:10px; min-width:0; overflow:hidden; text-overflow:ellipsis; }
     .tab-masthead { align-items:flex-start; flex-direction:column; gap:12px; padding:14px; border-radius:16px; margin-bottom:14px; }
     .tab-title { font-size:15px; }
     .marketplace-page { padding:12px 12px 34px; }
@@ -2172,6 +2184,17 @@ const CSS = `
     .build-queue-banner { flex-direction: column; gap: 10px; align-items: flex-start; }
     .build-queue-right { width: 100%; display: flex; align-items: center; justify-content: space-between; }
     .mission-header { flex-wrap: wrap; gap: 6px; }
+    .planet-details-dialog { max-height:calc(100dvh - 14px); padding:12px !important; }
+    .planet-details-body { grid-template-columns:1fr; gap:12px; }
+    .planet-details-visual { position:relative; top:auto; justify-self:center; margin:-4px 0 2px; transform:scale(0.86); transform-origin:center; }
+    .planet-details-grid { grid-template-columns:1fr; gap:8px; }
+    .planet-details-actions { grid-template-columns:1fr; position:sticky; bottom:-1px; }
+  }
+  @media (max-width: 420px) {
+    .landing-metrics-grid { width:100%; }
+    .landing-metric-card { padding:8px 9px; min-height:52px; display:flex; flex-direction:column; justify-content:center; }
+    .landing-metric-label { font-size:7px; letter-spacing:1.1px; white-space:normal; line-height:1.25; min-height:18px; }
+    .landing-metric-value { font-size:14px; }
   }
   @media (max-width: 1180px) {
     .desktop-resource-menu { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2676,13 +2699,7 @@ const ProjectLandingScreen: React.FC<{ isMobile: boolean; metrics?: LandingMetri
               expand production, research technologies, and launch fleets across a persistent galaxy.
             </div>
             {metrics && (
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))",
-                gap: isMobile ? 8 : 9,
-                width: "min(960px, 100%)",
-                marginTop: 6,
-              }}>
+              <div className="landing-metrics-grid">
                 {[
                   ["ACTIVE PLANETS", metricLabel(metrics.planets)],
                   ["PLANETS FOR SALE", metricLabel(metrics.planetListings)],

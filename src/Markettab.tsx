@@ -161,18 +161,19 @@ const PlanetDetailSection: React.FC<{
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: 4,
     background: "rgba(6,10,24,0.42)",
-    padding: "10px 12px",
+    padding: "9px 11px",
+    minWidth: 0,
   }}>
     <div style={{
       fontFamily: "'Orbitron', sans-serif",
       fontSize: 9,
       letterSpacing: 1.8,
       color: "var(--purple)",
-      marginBottom: 9,
+      marginBottom: 8,
     }}>
       {title}
     </div>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px 12px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(86px, 1fr))", gap: "7px 12px" }}>
       {items.map(item => (
         <div key={`${title}-${item.label}`} style={{ minWidth: 0 }}>
           <div style={{ fontSize: 8, letterSpacing: 1.2, color: "var(--dim)", marginBottom: 3 }}>
@@ -180,7 +181,7 @@ const PlanetDetailSection: React.FC<{
           </div>
           <div style={{
             fontFamily: "'Share Tech Mono', monospace",
-            fontSize: 12,
+            fontSize: 11,
             color: item.accent ?? "var(--text)",
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -1847,22 +1848,24 @@ const MarketTab: React.FC<MarketTabProps> = ({
           style={{
             position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
             zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
-            backdropFilter: "blur(6px)", padding: 18,
+            backdropFilter: "blur(6px)", padding: "clamp(8px, 2vw, 18px)",
           }}
           onClick={e => { if (e.target === e.currentTarget) setPlanetDetailsTarget(null); }}
         >
-          <div style={{
+          <div className="planet-details-dialog" style={{
             background: "linear-gradient(180deg, rgba(18,23,45,0.98), rgba(7,10,22,0.98))",
             border: "1px solid rgba(0,245,212,0.25)",
             borderRadius: 10,
-            padding: "22px 20px",
+            padding: "clamp(14px, 2vw, 20px)",
             width: "100%",
-            maxWidth: 720,
+            maxWidth: 980,
             boxShadow: "0 22px 70px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)",
           }}>
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-              marginBottom: 18, paddingBottom: 10, borderBottom: "1px solid var(--border)",
+              marginBottom: 14, paddingBottom: 9, borderBottom: "1px solid var(--border)",
+              position: "sticky", top: 0, zIndex: 3,
+              background: "linear-gradient(180deg, rgba(18,23,45,0.98), rgba(18,23,45,0.92))",
             }}>
               <div style={{
                 fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
@@ -1883,19 +1886,21 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 CLOSE
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "180px minmax(0, 1fr)", gap: 22, alignItems: "start" }}>
-              <MarketPlanetPreview
-                planet={{
-                  name: planetDetailsTarget.planetName,
-                  galaxy: planetDetailsTarget.coords?.galaxy,
-                  system: planetDetailsTarget.coords?.system,
-                  position: planetDetailsTarget.coords?.position,
-                  temperature: planetDetailsTarget.temperature,
-                  diameter: planetDetailsTarget.diameter,
-                  maxFields: planetDetailsTarget.maxFields,
-                }}
-                size={170}
-              />
+            <div className="planet-details-body">
+              <div className="planet-details-visual">
+                <MarketPlanetPreview
+                  planet={{
+                    name: planetDetailsTarget.planetName,
+                    galaxy: planetDetailsTarget.coords?.galaxy,
+                    system: planetDetailsTarget.coords?.system,
+                    position: planetDetailsTarget.coords?.position,
+                    temperature: planetDetailsTarget.temperature,
+                    diameter: planetDetailsTarget.diameter,
+                    maxFields: planetDetailsTarget.maxFields,
+                  }}
+                  size={132}
+                />
+              </div>
               <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{
                   display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12,
@@ -1913,7 +1918,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                   </div>
                   <AmPill amount={planetDetailsTarget.priceAntimatter}/>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+                <div className="planet-details-grid">
                   <PlanetDetailSection
                     title="OVERVIEW"
                     items={[
@@ -1968,7 +1973,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                     ]}
                   />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
+                <div className="planet-details-actions">
                   {planetDetailsTarget.isOwn ? (
                     <>
                       <button
