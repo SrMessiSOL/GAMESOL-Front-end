@@ -40,6 +40,11 @@ export const GAME_STATE_PROGRAM_ID = envPublicKey(
   "VITE_GAME_STATE_PROGRAM_ID",
   "FJGxh6SKgNoTVzHj98oBsC2oaEy8ovadVJf8rDUNaEHb",
 );
+
+export const MARKET_PROGRAM_ID = envPublicKey(
+  "VITE_MARKET_PROGRAM_ID",
+  "Dow7f1UqLGKyvs1D2uNR5c6bmAdnKRy2ZDtnsa4UhApp",
+);
 export const RPC_ENDPOINT = env.VITE_SOLANA_RPC_ENDPOINT?.trim() || DEFAULT_RPC_ENDPOINT;
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
@@ -1153,6 +1158,20 @@ export function derivePlanetOwnerIndexPda(walletPubkey: PublicKey, slot: number)
   return PublicKey.findProgramAddressSync(
     [Buffer.from("planet_owner_index"), walletPubkey.toBuffer(), slotSeed],
     GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
+function derivePlanetListingIndexPda(planet: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("planet_listing_index"), planet.toBuffer()],
+    MARKET_PROGRAM_ID,
+  )[0];
+}
+
+function derivePlanetMarketObligationPda(planet: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("planet_market_obligation"), planet.toBuffer()],
+    MARKET_PROGRAM_ID,
   )[0];
 }
 
@@ -5000,6 +5019,8 @@ export class GameClient {
     }
     const newOwnerIndexPda = derivePlanetOwnerIndexPda(newAuthority, newProfile.planetCount);
     const oldOwnerIndexPda = derivePlanetOwnerIndexPda(authority, state.planet.planetIndex);
+    const listingIndexPda = derivePlanetListingIndexPda(planetPda);
+    const marketObligationPda = derivePlanetMarketObligationPda(planetPda);
 
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
@@ -5012,6 +5033,8 @@ export class GameClient {
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // system_program
         { pubkey: newOwnerIndexPda,    isSigner: false, isWritable: true  }, // new owner index
         { pubkey: oldOwnerIndexPda,    isSigner: false, isWritable: true  }, // old owner index
+        { pubkey: listingIndexPda,     isSigner: false, isWritable: false }, // market listing index
+        { pubkey: marketObligationPda, isSigner: false, isWritable: false }, // market resource obligations
       ],
       data: encodeInstruction(IX.transferPlanet),
     });
