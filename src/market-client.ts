@@ -557,6 +557,7 @@ export class MarketClient {
 
     const offerPda = deriveOfferPda(seller, nextOfferId);
     const marketObligationPda = derivePlanetMarketObligationPda(sellerPlanetPda);
+    const listingIndexPda = derivePlanetListingIndexPda(sellerPlanetPda);
 
     const ix = new TransactionInstruction({
       programId: MARKET_PROGRAM_ID,
@@ -566,6 +567,7 @@ export class MarketClient {
         { pubkey: sellerCounterPda, isSigner: false, isWritable: true  },
         { pubkey: offerPda,         isSigner: false, isWritable: true  },
         { pubkey: marketObligationPda, isSigner: false, isWritable: true },
+        { pubkey: listingIndexPda,  isSigner: false, isWritable: false },
         { pubkey: GAME_STATE_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: sellerPlanetPda,  isSigner: false, isWritable: true  },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
