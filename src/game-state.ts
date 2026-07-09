@@ -4994,6 +4994,12 @@ export class GameClient {
     );
 
     const newPlayerProfilePda = derivePlayerProfilePda(newAuthority);
+    const newProfile = await this.fetchPlayerProfile(newAuthority);
+    if (!newProfile) {
+      throw new Error("Destination wallet must initialize the game client before receiving planets.");
+    }
+    const newOwnerIndexPda = derivePlanetOwnerIndexPda(newAuthority, newProfile.planetCount);
+    const oldOwnerIndexPda = derivePlanetOwnerIndexPda(authority, state.planet.planetIndex);
 
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
@@ -5003,6 +5009,9 @@ export class GameClient {
         { pubkey: newPlayerProfilePda, isSigner: false, isWritable: true  }, // new_player_profile (verified on-chain)
         { pubkey: planetPda,           isSigner: false, isWritable: true  }, // planet_state
         { pubkey: coordsPda,           isSigner: false, isWritable: true  }, // planet_coords
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // system_program
+        { pubkey: newOwnerIndexPda,    isSigner: false, isWritable: true  }, // new owner index
+        { pubkey: oldOwnerIndexPda,    isSigner: false, isWritable: true  }, // old owner index
       ],
       data: encodeInstruction(IX.transferPlanet),
     });
