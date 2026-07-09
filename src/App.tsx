@@ -1618,6 +1618,8 @@ const CSS = `
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .header-right { display: flex; align-items: center; gap: 12px; }
   .header-cluster { display:flex; align-items:center; gap:10px; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:18px; background: rgba(4,7,17,0.45); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+  .logo-home-link { color:inherit; text-decoration:none; transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease; }
+  .logo-home-link:hover, .logo-home-link:focus-visible { border-color:rgba(0,245,212,0.35); background:rgba(0,245,212,0.08); box-shadow:0 0 18px rgba(0,245,212,0.12), inset 0 1px 0 rgba(255,255,255,0.06); outline:none; transform:translateY(-1px); }
   .desktop-planet-chip { display:flex; align-items:center; gap:10px; min-width:0; padding:7px 12px; border:1px solid rgba(255,255,255,0.08); border-radius:999px; background:rgba(4,7,17,0.38); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
   .desktop-planet-orbit { width:9px; height:9px; border-radius:50%; background:var(--planet-accent, var(--cyan)); box-shadow:0 0 14px var(--planet-accent, var(--cyan)); flex:0 0 auto; }
   .desktop-planet-copy { min-width:0; display:grid; gap:1px; }
@@ -6416,9 +6418,9 @@ const App: React.FC = () => {
         <div className="app">
           <header className="header" style={{ background: activeTheme.headerGradient, position: "relative" }}>
             <div className="logo-area">
-              <div className="header-cluster">
+              <a href="/" className="header-cluster logo-home-link" aria-label="Go to GAMESOL landing page">
                 <LogoSVG size={28}/>
-              </div>
+              </a>
             </div>
             <div className="header-right">
               <nav style={{ display: "flex", gap: 8, alignItems: "center", marginRight: 8 }}>
@@ -6500,9 +6502,9 @@ const App: React.FC = () => {
       {connected && !loading && isMobile && (
         <div className="app-mobile">
           <div className="mobile-header" style={{ background: activeTheme.headerGradient }}>
-            <div className="mobile-header-left">
+            <a href="/" className="mobile-header-left logo-home-link" aria-label="Go to GAMESOL landing page">
               <LogoSVG size={22}/>
-            </div>
+            </a>
             <div className="mobile-header-right">
               <a href="/marketplace" className="route-nav-link alt" style={{ minHeight: 28, padding: "0 8px", fontSize: 9 }}>MARKET</a>
               <WalletStatusMenu/>
