@@ -671,6 +671,7 @@ const DAILY_ROTATING_QUESTS_UI: QuestCatalogUiEntry[] = [
   qCatalog("Metal Storage Lv 1", "Protect production from caps.", "Metal Storage", 1, s => s.planet.metalStorage, { metal: 700, crystal: 500, deuterium: 100 }),
   qCatalog("Crystal Storage Lv 1", "Protect crystal from caps.", "Crystal Storage", 1, s => s.planet.crystalStorage, { metal: 500, crystal: 700, deuterium: 100 }),
   qCatalog("Deuterium Tank Lv 1", "Protect fuel from caps.", "Deuterium Tank", 1, s => s.planet.deuteriumTank, { metal: 600, crystal: 500, deuterium: 250 }),
+  qCatalog("Own a Colony Ship", "Keep expansion capacity ready.", "Colony Ship", 1, s => s.fleet.colonyShip, { metal: 1400, crystal: 1200, deuterium: 400 }),
   qCatalog("Own a Heavy Fighter", "Begin heavier combat production.", "Heavy Fighter", 1, s => s.fleet.heavyFighter, { metal: 1400, crystal: 1000, deuterium: 350 }),
   qCatalog("Shielding Technology Lv 1", "Start defensive research.", "Shielding Technology", 1, s => s.research.shieldingTechnology, { metal: 900, crystal: 1100, deuterium: 250 }),
   qCatalog("Armor Technology Lv 1", "Improve fleet durability.", "Armor Technology", 1, s => s.research.armorTechnology, { metal: 1100, crystal: 800, deuterium: 250 }),
