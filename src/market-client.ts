@@ -236,6 +236,20 @@ export function derivePlanetListingPda(seller: PublicKey, listingId: number): Pu
   )[0];
 }
 
+export function derivePlanetListingIndexPda(planet: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("planet_listing_index"), planet.toBuffer()],
+    MARKET_PROGRAM_ID,
+  )[0];
+}
+
+export function derivePlanetMarketObligationPda(planet: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("planet_market_obligation"), planet.toBuffer()],
+    MARKET_PROGRAM_ID,
+  )[0];
+}
+
 export function deriveMarketEscrowPda(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("market_escrow")],
@@ -542,6 +556,7 @@ export class MarketClient {
       : 0;
 
     const offerPda = deriveOfferPda(seller, nextOfferId);
+    const marketObligationPda = derivePlanetMarketObligationPda(sellerPlanetPda);
 
     const ix = new TransactionInstruction({
       programId: MARKET_PROGRAM_ID,
@@ -550,6 +565,7 @@ export class MarketClient {
         { pubkey: marketConfigPda,  isSigner: false, isWritable: true  },
         { pubkey: sellerCounterPda, isSigner: false, isWritable: true  },
         { pubkey: offerPda,         isSigner: false, isWritable: true  },
+        { pubkey: marketObligationPda, isSigner: false, isWritable: true },
         { pubkey: GAME_STATE_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: sellerPlanetPda,  isSigner: false, isWritable: true  },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
@@ -564,6 +580,7 @@ export class MarketClient {
     const offerPda = new PublicKey(offer.pubkey);
     const sellerCounterPda = deriveSellerCounterPda(seller);
     const sellerPlanetPda = new PublicKey(offer.sellerPlanet);
+    const marketObligationPda = derivePlanetMarketObligationPda(sellerPlanetPda);
     const [marketAuthority] = deriveMarketAuthorityPda();
 
     const ix = new TransactionInstruction({
@@ -574,6 +591,7 @@ export class MarketClient {
         { pubkey: sellerCounterPda, isSigner: false, isWritable: true  },
         { pubkey: GAME_STATE_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: sellerPlanetPda,  isSigner: false, isWritable: true  },
+        { pubkey: marketObligationPda, isSigner: false, isWritable: true },
         { pubkey: marketAuthority,  isSigner: false, isWritable: false },
       ],
       data: encodeInstruction(IX.cancelOffer),
@@ -592,6 +610,7 @@ export class MarketClient {
     const sellerPubkey = new PublicKey(offer.seller);
     const offerPda = new PublicKey(offer.pubkey);
     const sellerPlanetPda = new PublicKey(offer.sellerPlanet);
+    const marketObligationPda = derivePlanetMarketObligationPda(sellerPlanetPda);
     const sellerCounterPda = deriveSellerCounterPda(sellerPubkey);
     const marketConfigPda = deriveMarketConfigPda();
     const [marketEscrow] = deriveMarketEscrowPda();
@@ -628,7 +647,8 @@ export class MarketClient {
         { pubkey: SystemProgram.programId,  isSigner: false, isWritable: false }, // 12 system_program
         { pubkey: GAME_STATE_PROGRAM_ID,    isSigner: false, isWritable: false }, // 13 game_program
         { pubkey: sellerPlanetPda,          isSigner: false, isWritable: true },  // 14 seller_planet
-        { pubkey: buyerPlanetPda,           isSigner: false, isWritable: true },  // 15 buyer_planet
+        { pubkey: marketObligationPda,      isSigner: false, isWritable: true },  // 15 obligation
+        { pubkey: buyerPlanetPda,           isSigner: false, isWritable: true },  // 16 buyer_planet
       ],
       data: encodeInstruction(IX.acceptOffer),
     });
@@ -654,6 +674,8 @@ export class MarketClient {
       ? deserializeSellerCounter(Buffer.from(counterInfo.data)).nextOfferId
       : 0;
     const listingPda = derivePlanetListingPda(seller, nextOfferId);
+    const listingIndexPda = derivePlanetListingIndexPda(planetPda);
+    const marketObligationPda = derivePlanetMarketObligationPda(planetPda);
 
     const ix = new TransactionInstruction({
       programId: MARKET_PROGRAM_ID,
@@ -662,6 +684,8 @@ export class MarketClient {
         { pubkey: marketConfigPda,  isSigner: false, isWritable: true },
         { pubkey: sellerCounterPda, isSigner: false, isWritable: true },
         { pubkey: listingPda,       isSigner: false, isWritable: true },
+        { pubkey: listingIndexPda,  isSigner: false, isWritable: true },
+        { pubkey: marketObligationPda, isSigner: false, isWritable: false },
         { pubkey: planetPda,        isSigner: false, isWritable: true },
         { pubkey: planetCoordsPda,  isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
@@ -676,6 +700,7 @@ export class MarketClient {
     const seller = this.provider.wallet.publicKey;
     const listingPda = new PublicKey(listing.pubkey);
     const sellerCounterPda = deriveSellerCounterPda(seller);
+    const listingIndexPda = derivePlanetListingIndexPda(new PublicKey(listing.planet));
 
     const ix = new TransactionInstruction({
       programId: MARKET_PROGRAM_ID,
@@ -683,6 +708,7 @@ export class MarketClient {
         { pubkey: seller,           isSigner: true,  isWritable: true },
         { pubkey: listingPda,       isSigner: false, isWritable: true },
         { pubkey: sellerCounterPda, isSigner: false, isWritable: true },
+        { pubkey: listingIndexPda,  isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.cancelPlanetListing),
     });
@@ -699,6 +725,7 @@ export class MarketClient {
     const listingPda = new PublicKey(listing.pubkey);
     const planetPda = new PublicKey(listing.planet);
     const planetCoordsPda = new PublicKey(listing.planetCoords);
+    const listingIndexPda = derivePlanetListingIndexPda(planetPda);
     const sellerCounterPda = deriveSellerCounterPda(sellerPubkey);
     const marketConfigPda = deriveMarketConfigPda();
     const [marketEscrow] = deriveMarketEscrowPda();
@@ -730,6 +757,7 @@ export class MarketClient {
         { pubkey: sellerPubkey,          isSigner: false, isWritable: true },
         { pubkey: marketConfigPda,       isSigner: false, isWritable: true },
         { pubkey: listingPda,            isSigner: false, isWritable: true },
+        { pubkey: listingIndexPda,       isSigner: false, isWritable: true },
         { pubkey: sellerCounterPda,      isSigner: false, isWritable: true },
         { pubkey: antimatterMint,        isSigner: false, isWritable: true },
         { pubkey: buyerAta,              isSigner: false, isWritable: true },
