@@ -19,6 +19,7 @@ import { AnchorProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
 import {
   derivePlanetCoordsPda,
+  derivePlanetOwnerIndexPda,
   derivePlayerProfilePda,
   type GameClient,
   type PlayerState,
@@ -704,6 +705,11 @@ export class MarketClient {
     const treasuryAntimatterAccount = new PublicKey(config.treasuryAntimatterAccount);
     const [marketEscrowAuthority] = deriveMarketAuthorityPda();
     const buyerProfilePda = derivePlayerProfilePda(buyer);
+    const buyerOwnerIndexPda = derivePlanetOwnerIndexPda(
+      buyer,
+      await this.gameClient.getPlayerPlanetCount(buyer),
+    );
+    const sellerOwnerIndexPda = await this.gameClient.findPlanetOwnerIndexPda(sellerPubkey, planetPda);
 
     const buyerAtaResponse = await this.connection.getParsedTokenAccountsByOwner(
       buyer, { mint: antimatterMint, programId: TOKEN_PROGRAM_ID }, "confirmed"
@@ -737,6 +743,8 @@ export class MarketClient {
         { pubkey: planetCoordsPda,       isSigner: false, isWritable: true },
         { pubkey: buyerProfilePda,       isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: buyerOwnerIndexPda,    isSigner: false, isWritable: true },
+        ...(sellerOwnerIndexPda ? [{ pubkey: sellerOwnerIndexPda, isSigner: false, isWritable: true }] : []),
       ],
       data: encodeInstruction(IX.buyPlanetListing),
     });

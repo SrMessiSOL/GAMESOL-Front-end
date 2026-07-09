@@ -62,6 +62,7 @@ const HOMEWORLD_MAX_COORD_ATTEMPTS = 20;
 const PLAYER_PROFILE_DISCRIMINATOR = Buffer.from([82, 226, 99, 87, 164, 130, 181, 80]);
 const PLANET_STATE_DISCRIMINATOR   = Buffer.from([1, 25, 230, 69, 194, 252, 152, 240]);
 const PLANET_COORDS_DISCRIMINATOR  = Buffer.from([227, 189, 46, 7, 82, 27, 239, 25]);
+const PLANET_OWNER_INDEX_DISCRIMINATOR = Buffer.from([103, 123, 167, 42, 197, 211, 167, 19]);
 const PUBLIC_PLANET_STATE_DISCRIMINATOR = Buffer.from([61, 168, 213, 170, 12, 18, 66, 158]);
 const AUTHORIZED_VAULT_DISCRIMINATOR = Buffer.from([224, 162, 234, 3, 170, 103, 243, 244]);
 const VAULT_BACKUP_DISCRIMINATOR     = Buffer.from([167, 172, 2, 221, 196, 20, 199, 27]);
@@ -118,6 +119,7 @@ const IX = {
   extendVault:            Buffer.from([176, 167, 130, 249, 196, 63, 158, 200]),
   initializeHomeworld:    Buffer.from([124, 7, 81, 167, 80, 191, 227, 173]),
   initializeColony:       Buffer.from([91, 184, 105, 243, 90, 175, 137, 217]),
+  syncPlanetOwnerIndexVault: Buffer.from([92, 123, 38, 77, 103, 248, 235, 73]),
   initializeQuestState:   Buffer.from([228, 241, 34, 120, 153, 28, 158, 130]),
   initializeQuestProgress: Buffer.from([180, 174, 237, 53, 63, 6, 200, 222]),
   initializeQuestRewardTargets: Buffer.from([248, 232, 250, 30, 79, 249, 214, 115]),
@@ -753,6 +755,14 @@ interface PublicPlanetStateAccount {
   createdAt: number;
 }
 
+interface PlanetOwnerIndexAccount {
+  authority: PublicKey;
+  slot: number;
+  planet: PublicKey;
+  active: boolean;
+  bump: number;
+}
+
 interface AuthorizedVaultAccount {
   authority: PublicKey;
   vault: PublicKey;
@@ -1134,6 +1144,14 @@ export function derivePlanetStatePda(walletPubkey: PublicKey, index: number): Pu
   indexSeed.writeUInt32LE(index, 0);
   return PublicKey.findProgramAddressSync(
     [Buffer.from("planet_state"), walletPubkey.toBuffer(), indexSeed],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+export function derivePlanetOwnerIndexPda(walletPubkey: PublicKey, slot: number): PublicKey {
+  const slotSeed = Buffer.alloc(4);
+  slotSeed.writeUInt32LE(slot, 0);
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("planet_owner_index"), walletPubkey.toBuffer(), slotSeed],
     GAME_STATE_PROGRAM_ID,
   )[0];
 }
@@ -1828,6 +1846,19 @@ function deserializePlanetState(data: Buffer): PlanetStateAccount {
     activeMissions, missions,
     defenseBuildItem, defenseBuildQty, defenseBuildFinishTs,
   };
+}
+function deserializePlanetOwnerIndex(data: Buffer): PlanetOwnerIndexAccount {
+  if (!data.slice(0, 8).equals(PLANET_OWNER_INDEX_DISCRIMINATOR)) {
+    throw new Error("Invalid planet owner index discriminator.");
+  }
+
+  let o = 8;
+  const authority = readPubkeyRaw(data, o); o += 32;
+  const slot = readU32(data, o); o += 4;
+  const planet = readPubkeyRaw(data, o); o += 32;
+  const active = readU8(data, o) !== 0; o += 1;
+  const bump = readU8(data, o); o += 1;
+  return { authority, slot, planet, active, bump };
 }
 
 function deserializePublicPlanetState(data: Buffer): PublicPlanetStateAccount {
@@ -3408,6 +3439,28 @@ export class GameClient {
     catch { return null; }
   }
 
+  async getPlayerPlanetCount(walletPubkey: PublicKey = this.provider.wallet.publicKey): Promise<number> {
+    return (await this.fetchPlayerProfile(walletPubkey))?.planetCount ?? 0;
+  }
+
+  async findPlanetOwnerIndexPda(authority: PublicKey, planetPda: PublicKey): Promise<PublicKey | null> {
+    const count = await this.getPlayerPlanetCount(authority);
+    if (count <= 0) return null;
+    const indexPdas = Array.from({ length: count }, (_, i) => derivePlanetOwnerIndexPda(authority, i));
+    const accounts = await this.connection.getMultipleAccountsInfo(indexPdas, "confirmed");
+    for (let i = 0; i < accounts.length; i++) {
+      const account = accounts[i];
+      if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) continue;
+      try {
+        const index = deserializePlanetOwnerIndex(Buffer.from(account.data));
+        if (index.active && index.authority.equals(authority) && index.planet.equals(planetPda)) {
+          return indexPdas[i];
+        }
+      } catch { /* skip malformed */ }
+    }
+    return null;
+  }
+
   async getQuestState(authority: PublicKey = this.provider.wallet.publicKey): Promise<QuestStateAccount | null> {
     const questPda = deriveQuestStatePda(authority);
     const account = await this.connection.getAccountInfo(questPda, "confirmed");
@@ -3997,6 +4050,7 @@ export class GameClient {
     const currentIndex = latestProfile?.planetCount ?? nextIndex ?? 0;
     const planetStatePda = derivePlanetStatePda(authority, currentIndex);
     const planetCoordsPda = derivePlanetCoordsPda(galaxy, system, position);
+    const ownerIndexPda = derivePlanetOwnerIndexPda(authority, currentIndex);
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
 
@@ -4014,6 +4068,7 @@ export class GameClient {
         { pubkey: questStatePda,      isSigner: false, isWritable: true  }, // quest_state
         { pubkey: questProgressPda,   isSigner: false, isWritable: true  }, // quest_progress
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.initializeHomeworld, args),
     });
@@ -4109,17 +4164,31 @@ export class GameClient {
   }
 
   // ── Planet loading ───────────────────────────────────────────────────────────
-  private async loadPlanetStateByPda(planetPda: PublicKey): Promise<PlayerState | null> {
-    const account = await this.connection.getAccountInfo(planetPda, "confirmed");
-    if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
-    const discriminator = account.data.slice(0, 8);
+  private stateFromOwnedPlanetAccount(
+    planetPda: PublicKey,
+    account: { owner: PublicKey; data: Buffer | Uint8Array },
+    authority?: PublicKey,
+  ): PlayerState | null {
+    if (!account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
+    const data = Buffer.from(account.data);
+    const discriminator = data.slice(0, 8);
     if (discriminator.equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
-      return stateFromPublicPlanet(planetPda, deserializePublicPlanetState(Buffer.from(account.data)));
+      const planet = deserializePublicPlanetState(data);
+      if (authority && !planet.authority.equals(authority)) return null;
+      return stateFromPublicPlanet(planetPda, planet);
     }
     if (discriminator.equals(PLANET_STATE_DISCRIMINATOR)) {
-      return adaptPlanetState(planetPda, deserializePlanetState(Buffer.from(account.data)));
+      const planet = deserializePlanetState(data);
+      if (authority && !planet.authority.equals(authority)) return null;
+      return adaptPlanetState(planetPda, planet);
     }
     return null;
+  }
+
+  private async loadPlanetStateByPda(planetPda: PublicKey): Promise<PlayerState | null> {
+    const account = await this.connection.getAccountInfo(planetPda, "confirmed");
+    if (!account) return null;
+    return this.stateFromOwnedPlanetAccount(planetPda, account);
   }
 
   async getPlanetStateByPda(planetPda: PublicKey): Promise<PlayerState | null> {
@@ -4135,6 +4204,29 @@ export class GameClient {
     const profile = await this.fetchPlayerProfile(walletPubkey);
     if (!profile) return [];
     const byPda = new Map<string, PlayerState>();
+
+    const ownerIndexPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePlanetOwnerIndexPda(walletPubkey, i));
+    const ownerIndexAccounts = await this.connection.getMultipleAccountsInfo(ownerIndexPdas, "confirmed");
+    const indexedPlanetPdas: PublicKey[] = [];
+    for (const account of ownerIndexAccounts) {
+      if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) continue;
+      try {
+        const ownerIndex = deserializePlanetOwnerIndex(Buffer.from(account.data));
+        if (!ownerIndex.active || !ownerIndex.authority.equals(walletPubkey)) continue;
+        indexedPlanetPdas.push(ownerIndex.planet);
+      } catch { /* skip malformed */ }
+    }
+    const indexedPlanetAccounts = indexedPlanetPdas.length
+      ? await this.connection.getMultipleAccountsInfo(indexedPlanetPdas, "confirmed")
+      : [];
+    indexedPlanetAccounts.forEach((account, idx) => {
+      if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return;
+      try {
+        const state = this.stateFromOwnedPlanetAccount(indexedPlanetPdas[idx], account, walletPubkey);
+        if (state) byPda.set(state.planetPda, state);
+      } catch { /* skip malformed */ }
+    });
+
     const legacyPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePlanetStatePda(walletPubkey, i));
     const legacyAccounts = await this.connection.getMultipleAccountsInfo(legacyPdas, "confirmed");
     const states = legacyAccounts.map((account, idx) => {
@@ -4843,6 +4935,7 @@ export class GameClient {
       mission.targetSystem,
       mission.targetPosition,
     );
+    const ownerIndexPda = derivePlanetOwnerIndexPda(authority, nextIndex);
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
     const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
@@ -4863,6 +4956,7 @@ export class GameClient {
         { pubkey: questProgressPda,   isSigner: false, isWritable: true  },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true },
+        { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.initializeColony, encodeColonyArgs(now, mission, slot)),
     });
