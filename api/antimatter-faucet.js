@@ -47,6 +47,13 @@ function createAssociatedTokenAccountInstruction(payer, ata, owner, mint) {
   });
 }
 
+function derivePlayerProfile(wallet) {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("player_profile"), wallet.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
 function claimFaucetInstruction(faucetAuthority, recipient, recipientAta) {
   const discriminator = crypto
     .createHash("sha256")
@@ -100,6 +107,11 @@ module.exports = async function handler(req, res) {
     const faucetAuthority = faucetAuthorityFromEnv();
     const rpcUrl = process.env.SOLANA_RPC_URL || process.env.VITE_SOLANA_RPC_ENDPOINT || DEFAULT_RPC_URL;
     const connection = new Connection(rpcUrl, "confirmed");
+    const playerProfile = derivePlayerProfile(recipient);
+    const profileInfo = await connection.getAccountInfo(playerProfile, "confirmed");
+    if (!profileInfo) {
+      return res.status(403).json({ error: "Initialize your game profile before claiming devnet ANTIMATTER." });
+    }
     const recipientAta = deriveAssociatedTokenAccount(recipient, ANTIMATTER_MINT);
     const instructions = [];
 
