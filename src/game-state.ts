@@ -119,6 +119,7 @@ function storePackPriceUsdc(period: number, packId: number): bigint {
 // Run: cat target/idl/game_state.json | jq '.instructions[] | {name, discriminator}'
 const IX = {
   initializePlayer:       Buffer.from([79, 249, 88, 177, 220, 62, 56, 128]),
+  initializeVaultForExistingPlayer: Buffer.from([46, 80, 37, 158, 31, 200, 162, 11]),
   rotateVault:            Buffer.from([192, 205, 175, 133, 189, 211, 141, 109]),
   revokeVault:            Buffer.from([199, 172, 226, 172, 196, 244, 179, 103]),
   extendVault:            Buffer.from([176, 167, 130, 249, 196, 63, 158, 200]),
@@ -3135,6 +3136,41 @@ export class GameClient {
   }
 
   // ── Player / vault initialization ────────────────────────────────────────────
+  private async initializeVaultForExistingPlayer(reportProgress?: ProgressReporter): Promise<Keypair> {
+    const authority = this.provider.wallet.publicKey;
+    const vault = await this.ensureVault(reportProgress);
+    const encrypted = await this.encryptVaultSecretKey(vault);
+
+    reportProgress?.("Signing with wallet: creating vault authorization for your marketplace planet");
+
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: authority, isSigner: true, isWritable: true },
+        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
+        { pubkey: deriveAuthorizedVaultPda(authority), isSigner: false, isWritable: true },
+        { pubkey: deriveVaultBackupPda(authority), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(
+        IX.initializeVaultForExistingPlayer,
+        encodeInitializePlayerArgs(
+          vault.publicKey,
+          0,
+          VAULT_BACKUP_VERSION,
+          encrypted.ciphertext,
+          encrypted.iv,
+          encrypted.salt,
+          encrypted.kdfSalt,
+        ),
+      ),
+    });
+
+    await this.sendInstruction([ix]);
+    this.vaultKeypair = vault;
+    return vault;
+  }
+
   async initializePlayer(reportProgress?: ProgressReporter): Promise<void> {
     const authority = this.provider.wallet.publicKey;
     const profilePda = derivePlayerProfilePda(authority);
@@ -3143,6 +3179,11 @@ export class GameClient {
 
     const existing = await this.connection.getAccountInfo(profilePda, "confirmed");
     if (existing) {
+      const authorizedVault = await this.fetchAuthorizedVault(authority);
+      if (!authorizedVault) {
+        await this.initializeVaultForExistingPlayer(reportProgress);
+        return;
+      }
       const restored = await this.restoreAuthorizedVaultForExistingProfile(authority, reportProgress);
       this.vaultKeypair = restored;
       return;
