@@ -15,6 +15,12 @@ const ANTIMATTER_MINT = new PublicKey(process.env.ANTIMATTER_MINT || process.env
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 const DEFAULT_RPC_URL = "https://api.devnet.solana.com";
+const PLAYER_PROFILE_ACCOUNT_SIZE = 8 + 32 + 4 + 1;
+const PLAYER_PROFILE_DISCRIMINATOR = crypto
+  .createHash("sha256")
+  .update("account:PlayerProfile")
+  .digest()
+  .subarray(0, 8);
 
 function faucetAuthorityFromEnv() {
   const raw = process.env.ANTIMATTER_FAUCET_SECRET_KEY || process.env.FAUCET_SECRET_KEY;
@@ -52,6 +58,15 @@ function derivePlayerProfile(wallet) {
     [Buffer.from("player_profile"), wallet.toBuffer()],
     GAME_STATE_PROGRAM_ID,
   )[0];
+}
+
+function isInitializedPlayerProfile(accountInfo, wallet) {
+  if (!accountInfo || !accountInfo.owner.equals(GAME_STATE_PROGRAM_ID)) return false;
+
+  const data = Buffer.from(accountInfo.data);
+  return data.length >= PLAYER_PROFILE_ACCOUNT_SIZE
+    && data.subarray(0, 8).equals(PLAYER_PROFILE_DISCRIMINATOR)
+    && data.subarray(8, 40).equals(wallet.toBuffer());
 }
 
 function claimFaucetInstruction(faucetAuthority, recipient, recipientAta) {
@@ -109,7 +124,7 @@ module.exports = async function handler(req, res) {
     const connection = new Connection(rpcUrl, "confirmed");
     const playerProfile = derivePlayerProfile(recipient);
     const profileInfo = await connection.getAccountInfo(playerProfile, "confirmed");
-    if (!profileInfo) {
+    if (!isInitializedPlayerProfile(profileInfo, recipient)) {
       return res.status(403).json({ error: "Initialize your game profile before claiming devnet ANTIMATTER." });
     }
     const recipientAta = deriveAssociatedTokenAccount(recipient, ANTIMATTER_MINT);
