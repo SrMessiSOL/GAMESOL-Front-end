@@ -4113,6 +4113,7 @@ export class GameClient {
     const ownerIndexPda = derivePlanetOwnerIndexPda(authority, currentIndex);
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
+    const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
 
     const args = encodeHomeworldArgs(now, planetName.trim() || "Homeworld", galaxy, system, position);
 
@@ -4127,6 +4128,7 @@ export class GameClient {
         { pubkey: planetCoordsPda,    isSigner: false, isWritable: true  }, // planet_coords
         { pubkey: questStatePda,      isSigner: false, isWritable: true  }, // quest_state
         { pubkey: questProgressPda,   isSigner: false, isWritable: true  }, // quest_progress
+        { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true }, // quest_reward_targets
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
       ],
@@ -5014,8 +5016,8 @@ export class GameClient {
         { pubkey: colonyCoordsPda,    isSigner: false, isWritable: true  },
         { pubkey: questStatePda,      isSigner: false, isWritable: true  },
         { pubkey: questProgressPda,   isSigner: false, isWritable: true  },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.initializeColony, encodeColonyArgs(now, mission, slot)),
