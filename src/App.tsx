@@ -3410,6 +3410,8 @@ type CoordStatus = "idle" | "checking" | "free" | "occupied";
 
 type PublicTargetInfo = Pick<PublicPlanetInfo, "owner" | "protectionUntilTs" | "lastAttackedTs" | "galaxy" | "system" | "position" | "name">;
 
+const INITIAL_COLONY_STORAGE_CAP = 10_000;
+
 const SHIP_COMBAT_POINTS: Record<string, number> = {
   lightFighter: 50,
   heavyFighter: 150,
@@ -3564,6 +3566,7 @@ const LaunchModal: React.FC<{ planet: Planet; research: Research; fleet: Fleet; 
     const totalSent = Object.values(shipQty).reduce((a, b) => a + b, 0);
     const cargoCap = getQty("smallCargo")*5000+getQty("largeCargo")*25000+getQty("recycler")*20000+getQty("cruiser")*800+getQty("battleship")*1500;
     const cargoUsed = cargoM + cargoC + cargoD;
+    const colonyCargoOverCap = missionType === 5 && (cargoM > INITIAL_COLONY_STORAGE_CAP || cargoC > INITIAL_COLONY_STORAGE_CAP || cargoD > INITIAL_COLONY_STORAGE_CAP);
     const launchFuel = launchFuelCost(shipQty, speed) * (missionType === 5 ? 1 : 2);
     const deuteriumNeeded = cargoD + launchFuel;
     const hasLaunchDeuterium = BigInt(deuteriumNeeded) <= res.deuterium;
@@ -3603,6 +3606,12 @@ const LaunchModal: React.FC<{ planet: Planet; research: Research; fleet: Fleet; 
         if (coordCheckTimer.current) clearTimeout(coordCheckTimer.current);
       };
     }, [missionType, transportMode, targetGalaxy, targetSystem, targetPosition, scheduleCoordCheck]);
+    useEffect(() => {
+      if (missionType !== 5) return;
+      setCargoM(value => Math.min(value, INITIAL_COLONY_STORAGE_CAP));
+      setCargoC(value => Math.min(value, INITIAL_COLONY_STORAGE_CAP));
+      setCargoD(value => Math.min(value, INITIAL_COLONY_STORAGE_CAP));
+    }, [missionType, cargoM, cargoC, cargoD]);
     const handleColonyCoordChange = (galaxy: number, system: number, position: number, setterG: (v: number) => void, setterS: (v: number) => void, setterP: (v: number) => void, changedField: "g" | "s" | "p", value: number) => { const ng=changedField==="g"?value:galaxy; const ns=changedField==="s"?value:system; const np=changedField==="p"?value:position; if(changedField==="g")setterG(ng); if(changedField==="s")setterS(ns); if(changedField==="p")setterP(np); };
     const coordStatusConfig: Record<CoordStatus, { color: string; text: string }> = { idle:{color:"var(--dim)",text:""}, checking:{color:"var(--warn)",text:"CHECKING..."}, free:{color:"var(--success)",text:"✓ SLOT FREE"}, occupied:{color:"var(--danger)",text:"✗ ALREADY OCCUPIED"} };
     const handleSubmit = async () => { try { setLocalErr(null); if(totalSent<=0)throw new Error("Select at least one ship."); if(cargoUsed>cargoCap)throw new Error("Cargo exceeds fleet capacity."); if(!hasLaunchDeuterium)throw new Error(`Not enough deuterium. Need ${fmt(deuteriumNeeded)} including ${fmt(launchFuel)} launch fuel.`); if(!hasFreeMissionSlot)throw new Error("No mission slots available. Resolve an existing mission first."); if(missionType===1){if(attackUnlockLeft>0)throw new Error(`Attack launches unlock in ${fmtCountdown(attackUnlockLeft)}.`); if(attackLaunchCooldownLeft>0)throw new Error(`Attack launch cooldown: ${fmtCountdown(attackLaunchCooldownLeft)} remaining.`); if(attackPoints<MIN_ATTACK_COMBAT_POINTS)throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`); if(targetProtectionLeft>0)throw new Error(`Target is protected for ${fmtCountdown(targetProtectionLeft)}.`); if(targetCooldownLeft>0)throw new Error(`Target cooldown: ${fmtCountdown(targetCooldownLeft)} remaining.`);} if(missionType===6){if(getQty("espionageProbe")<=0)throw new Error("Espionage requires at least 1 espionage probe."); if(totalSent!==getQty("espionageProbe"))throw new Error("Espionage missions can only send espionage probes."); if(cargoUsed>0)throw new Error("Espionage missions cannot carry cargo."); if(coordStatus==="free")throw new Error("Espionage missions can only target occupied planets.");} if(missionType===5&&getQty("colonyShip")<=0)throw new Error("Colonize requires at least 1 colony ship."); if(missionType===5&&coordStatus==="occupied")throw new Error("That coordinate slot is already occupied."); if((missionType===1||(missionType===2&&transportMode==="coords"))&&coordStatus==="free")throw new Error(missionType===1?"Attack missions can only target occupied planets.":"Transport missions can only target occupied planets."); let target: LaunchTargetInput; if(missionType===1){target={kind:"attack",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}else if(missionType===6){target={kind:"espionage",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}else if(missionType===2){if(transportMode==="owned"){if(!targetEntity)throw new Error("Select a destination planet."); target={kind:"transport",mode:"owned",destinationEntity:targetEntity};}else{target={kind:"transport",mode:"coords",galaxy:targetGalaxy,system:targetSystem,position:targetPosition};}}else{target={kind:"colonize",galaxy:targetGalaxy,system:targetSystem,position:targetPosition,colonyName:colonyName.trim()||"Colony"};} setLaunching(true); await onLaunch(shipQty,{metal:BigInt(cargoM),crystal:BigInt(cargoC),deuterium:BigInt(cargoD)},missionType,speed,target); onClose(); }catch(e:any){setLocalErr(e?.message||String(e));}finally{setLaunching(false);}};
@@ -3621,8 +3630,9 @@ const LaunchModal: React.FC<{ planet: Planet; research: Research; fleet: Fleet; 
           <div className="modal-section"><div className="modal-label">Flight Parameters</div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Speed (10–100%)</span><input className="modal-input" type="number" min={10} max={100} step={10} value={speed} onChange={e=>setSpeed(Math.max(10,Math.min(100,parseInt(e.target.value)||100)))}/></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Launch fuel</span><span style={{fontSize:11,color:hasLaunchDeuterium?"var(--text)":"var(--danger)"}}>{fmt(launchFuel)} deuterium</span></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Mission Slots</span><span style={{fontSize:11,color:hasFreeMissionSlot?"var(--text)":"var(--danger)"}}>{freeMissionSlots} free / {usableMissionSlots} usable ({activeMissionSlots} active)</span></div>{selectedTargetCoords&&<div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Route</span><span style={{fontSize:11,color:"var(--text)"}}>[{planet.galaxy}:{planet.system}:{planet.position}] → [{selectedTargetCoords.galaxy}:{selectedTargetCoords.system}:{selectedTargetCoords.position}]</span></div>}<div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Slowest ship speed</span><span style={{fontSize:11,color:slowestSpeed>0?"var(--text)":"var(--dim)"}}>{slowestSpeed>0?slowestSpeed.toLocaleString():"Select ships"}</span></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Outbound ETA</span><span style={{fontSize:11,color:estimatedOutboundSecs>0?"var(--cyan)":"var(--dim)"}}>{estimatedOutboundSecs>0?fmtCountdown(estimatedOutboundSecs):"Select ships and target"}</span></div><div className="modal-row"><span style={{fontSize:11,color:"var(--dim)"}}>Outbound + return</span><span style={{fontSize:11,color:estimatedRoundTripSecs>0?"var(--purple)":"var(--dim)"}}>{estimatedRoundTripSecs>0?fmtCountdown(estimatedRoundTripSecs):"Select ships and target"}</span></div></div>
           {!hasFreeMissionSlot&&<div className="error-msg" style={{marginBottom:8}}>No mission slots available. Resolve an existing mission first.</div>}
           {!hasLaunchDeuterium&&<div className="error-msg" style={{marginBottom:8}}>Not enough deuterium for cargo plus launch fuel.</div>}
+          {missionType===5&&<div className={colonyCargoOverCap?"error-msg":"coord-status-badge"} style={{marginBottom:8,color:colonyCargoOverCap?"var(--danger)":"var(--success)"}}>Initial colony storage: up to {INITIAL_COLONY_STORAGE_CAP.toLocaleString()} of each resource.</div>}
           {localErr&&<div className="error-msg" style={{marginBottom:8}}>{localErr}</div>}
-          <div className="modal-footer"><button className="modal-btn secondary" onClick={onClose} disabled={launching||txBusy}>CANCEL</button><button className="modal-btn primary" onClick={handleSubmit} disabled={launching||txBusy||totalSent===0||!hasFreeMissionSlot||!hasLaunchDeuterium||cargoUsed>cargoCap||attackBlocked||(missionType===6&&(totalSent!==getQty("espionageProbe")||cargoUsed>0||coordStatus==="checking"||coordStatus==="free"))||(missionType===5&&coordStatus==="occupied")||(missionType===2&&transportMode==="coords"&&(coordStatus==="checking"||coordStatus==="free"))}>{launching?"LAUNCHING...":"⊹ LAUNCH"}</button></div>
+          <div className="modal-footer"><button className="modal-btn secondary" onClick={onClose} disabled={launching||txBusy}>CANCEL</button><button className="modal-btn primary" onClick={handleSubmit} disabled={launching||txBusy||totalSent===0||!hasFreeMissionSlot||!hasLaunchDeuterium||cargoUsed>cargoCap||colonyCargoOverCap||attackBlocked||(missionType===6&&(totalSent!==getQty("espionageProbe")||cargoUsed>0||coordStatus==="checking"||coordStatus==="free"))||(missionType===5&&coordStatus==="occupied")||(missionType===2&&transportMode==="coords"&&(coordStatus==="checking"||coordStatus==="free"))}>{launching?"LAUNCHING...":"⊹ LAUNCH"}</button></div>
         </div>
       </div>
     );
@@ -5953,6 +5963,13 @@ const App: React.FC = () => {
 
   const handleLaunch = async (ships: Record<string, number>, cargo: { metal: bigint; crystal: bigint; deuterium: bigint }, missionType: number, speedFactor: number, target: LaunchTargetInput) => {
     if (!clientRef.current || !state) return;
+    if (missionType === 5 && (
+      cargo.metal > BigInt(INITIAL_COLONY_STORAGE_CAP)
+      || cargo.crystal > BigInt(INITIAL_COLONY_STORAGE_CAP)
+      || cargo.deuterium > BigInt(INITIAL_COLONY_STORAGE_CAP)
+    )) {
+      throw new Error(`New colonies can carry at most ${INITIAL_COLONY_STORAGE_CAP.toLocaleString()} of each resource.`);
+    }
     const latestState = await refreshSelectedPlanetState();
     const launchState = latestState ?? state;
     if (getFreeMissionSlotCount(launchState.fleet, launchState.research.computerTech) <= 0) {
