@@ -4931,6 +4931,7 @@ const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; 
             .filter(s => s.n > 0);
           const artShips = ships;
           const hasCargo = m.cargoMetal > 0n || m.cargoCrystal > 0n || m.cargoDeuterium > 0n;
+          const returningTransportOverflow = m.missionType === 2 && m.applied && hasCargo;
           const accelerationLeg: 0 | 1 = returning ? 1 : 0;
           const accelerationCost = BigInt(Math.max(0, etaSecs)) * 1_000_000n;
           const canAccelerate = antimatterEnabled && etaSecs > 0 && antimatterBalance >= accelerationCost;
@@ -4987,6 +4988,11 @@ const CommandMissionsTab: React.FC<{ fleet:Fleet; nowTs:number; txBusy:boolean; 
                   {m.cargoMetal > 0n && <span style={{ color: "var(--metal)" }}>Metal {fmt(m.cargoMetal)}</span>}
                   {m.cargoCrystal > 0n && <span style={{ color: "var(--crystal)" }}>Crystal {fmt(m.cargoCrystal)}</span>}
                   {m.cargoDeuterium > 0n && <span style={{ color: "var(--deut)" }}>Deuterium {fmt(m.cargoDeuterium)}</span>}
+                </div>
+              )}
+              {returningTransportOverflow && (
+                <div style={{ marginTop: 8, fontSize: 10, color: "var(--warn)", letterSpacing: 0.6 }}>
+                  DESTINATION STORAGE FILLED: OVERFLOW RETURNING. KEEP ENOUGH SOURCE STORAGE FREE TO COMPLETE THE RETURN.
                 </div>
               )}
               {m.missionType === 1 && m.applied && (
