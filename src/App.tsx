@@ -3265,10 +3265,12 @@ const VaultManagerModal: React.FC<{
   withdrawAmount: string; onWithdrawAmountChange: (v: string) => void; onWithdraw: () => Promise<void>;
   onRetryPassword: () => Promise<void>; onForceRotate: () => Promise<void>;
   onTransferAllPlanets: (newAuthority: string) => Promise<void>; busy: boolean;
+  currentAuthority: string | null;
   onRefreshBalance: () => Promise<void>;
-}> = ({ open, onClose, vaultReady, vaultStatus, vaultAddress, vaultBalance, useVaultSigning, onToggleSigning, depositAmount, onDepositAmountChange, onDeposit, withdrawAmount, onWithdrawAmountChange, onWithdraw, onRetryPassword, onForceRotate, onTransferAllPlanets, busy, onRefreshBalance }) => {
+}> = ({ open, onClose, vaultReady, vaultStatus, vaultAddress, vaultBalance, useVaultSigning, onToggleSigning, depositAmount, onDepositAmountChange, onDeposit, withdrawAmount, onWithdrawAmountChange, onWithdraw, onRetryPassword, onForceRotate, onTransferAllPlanets, busy, currentAuthority, onRefreshBalance }) => {
   const [transferDest, setTransferDest] = useState("");
   const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+  const isSelfTransfer = Boolean(currentAuthority && transferDest === currentAuthority);
 
   // Load balance immediately when modal opens
   useEffect(() => {
@@ -3333,14 +3335,15 @@ const VaultManagerModal: React.FC<{
             <span style={{ fontSize:11, color:"var(--dim)", flexShrink:0, marginRight:8 }}>Destination</span>
             <input style={{ flex:1, padding:"6px 8px", fontSize:11, borderRadius:2, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,0,110,0.4)", color:"var(--text)", fontFamily:"'Share Tech Mono',monospace" }} type="text" placeholder="New wallet pubkey" value={transferDest} onChange={e => setTransferDest(e.target.value.trim())} disabled={busy}/>
           </div>
+          {isSelfTransfer && <div style={{ marginTop:6, fontSize:10, color:"var(--danger)" }}>Destination must be a different wallet.</div>}
           {!showTransferConfirm ? (
-            <button className="modal-btn" style={{ marginTop:8, fontSize:10, border:"1px solid var(--danger)", color:"var(--danger)", background:"rgba(255,0,110,0.06)" }} disabled={busy || !transferDest} onClick={() => setShowTransferConfirm(true)}>TRANSFER ALL PLANETS</button>
+            <button className="modal-btn" style={{ marginTop:8, fontSize:10, border:"1px solid var(--danger)", color:"var(--danger)", background:"rgba(255,0,110,0.06)" }} disabled={busy || !transferDest || isSelfTransfer} onClick={() => setShowTransferConfirm(true)}>TRANSFER ALL PLANETS</button>
           ) : (
             <div style={{ marginTop:8, padding:"12px 14px", background:"rgba(255,0,110,0.08)", border:"1px solid rgba(255,0,110,0.3)", borderRadius:4 }}>
               <div style={{ fontSize:11, color:"var(--danger)", marginBottom:10 }}>Transfer all planets to {transferDest.slice(0,6)}…{transferDest.slice(-4)}?</div>
               <div style={{ display:"flex", gap:8 }}>
                 <button className="modal-btn secondary" onClick={() => setShowTransferConfirm(false)} disabled={busy}>CANCEL</button>
-                <button className="modal-btn" style={{ border:"1px solid var(--danger)", color:"var(--danger)", background:"rgba(255,0,110,0.1)" }} disabled={busy} onClick={async () => { setShowTransferConfirm(false); await onTransferAllPlanets(transferDest); }}>CONFIRM TRANSFER</button>
+                <button className="modal-btn" style={{ border:"1px solid var(--danger)", color:"var(--danger)", background:"rgba(255,0,110,0.1)" }} disabled={busy || isSelfTransfer} onClick={async () => { setShowTransferConfirm(false); await onTransferAllPlanets(transferDest); }}>CONFIRM TRANSFER</button>
               </div>
             </div>
           )}
@@ -5764,6 +5767,7 @@ const App: React.FC = () => {
     if (!clientRef.current) return;
     let dest: PublicKey;
     try { dest = new PublicKey(newAuthority); } catch { setError("Invalid destination wallet address."); return; }
+    if (publicKey && dest.equals(publicKey)) { setError("Destination wallet must be different from the connected wallet."); return; }
     setTxBusy(true); setTxProgress("Transferring planets..."); setError(null);
     try { await clientRef.current.transferAllPlanets(dest, setTxProgress); if (publicKey) await loadAllPlanets(publicKey); }
     catch (e: any) { setError(e?.message ?? "Transfer failed"); }
@@ -6617,6 +6621,7 @@ const App: React.FC = () => {
         onRetryPassword={handleRetryVaultPassword}
         onForceRotate={handleForceRotateVault}
         onTransferAllPlanets={handleTransferAllPlanets}
+        currentAuthority={publicKey?.toBase58() ?? null}
         busy={vaultActionBusy || txBusy}
         onRefreshBalance={refreshVaultBalance}
       />
