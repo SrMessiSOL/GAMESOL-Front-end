@@ -20,6 +20,7 @@ import bs58 from "bs58";
 import {
   derivePlanetCoordsPda,
   derivePlanetOwnerIndexPda,
+  derivePlanetOwnershipRegistryPda,
   derivePlayerProfilePda,
   type GameClient,
   type PlayerState,
@@ -665,6 +666,7 @@ export class MarketClient {
     const marketConfigPda = deriveMarketConfigPda();
     const sellerCounterPda = deriveSellerCounterPda(seller);
     const planetPda = new PublicKey(planet.planetPda);
+    await this.gameClient.ensurePlanetOwnershipRegistry(planetPda);
     const planetCoordsPda = derivePlanetCoordsPda(
       planet.planet.galaxy,
       planet.planet.system,
@@ -678,6 +680,7 @@ export class MarketClient {
     const listingPda = derivePlanetListingPda(seller, nextOfferId);
     const listingIndexPda = derivePlanetListingIndexPda(planetPda);
     const marketObligationPda = derivePlanetMarketObligationPda(planetPda);
+    const ownershipRegistryPda = derivePlanetOwnershipRegistryPda(planetPda);
 
     const ix = new TransactionInstruction({
       programId: MARKET_PROGRAM_ID,
@@ -690,6 +693,7 @@ export class MarketClient {
         { pubkey: marketObligationPda, isSigner: false, isWritable: false },
         { pubkey: planetPda,        isSigner: false, isWritable: true },
         { pubkey: planetCoordsPda,  isSigner: false, isWritable: true },
+        { pubkey: ownershipRegistryPda, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       data: encodeInstruction(IX.createPlanetListing, encodeCreatePlanetListing(priceAntimatter)),
@@ -734,11 +738,16 @@ export class MarketClient {
     const treasuryAntimatterAccount = new PublicKey(config.treasuryAntimatterAccount);
     const [marketEscrowAuthority] = deriveMarketAuthorityPda();
     const buyerProfilePda = derivePlayerProfilePda(buyer);
+    const ownershipRegistryPda = derivePlanetOwnershipRegistryPda(planetPda);
+    if (!(await this.connection.getAccountInfo(ownershipRegistryPda, "confirmed"))) {
+      throw new Error("This listing must be refreshed by the seller before it can be purchased.");
+    }
     const buyerOwnerIndexPda = derivePlanetOwnerIndexPda(
       buyer,
       await this.gameClient.getPlayerPlanetCount(buyer),
     );
     const sellerOwnerIndexPda = await this.gameClient.findPlanetOwnerIndexPda(sellerPubkey, planetPda);
+    if (!sellerOwnerIndexPda) throw new Error("Seller ownership index is missing. The listing must be refreshed.");
 
     const buyerAtaResponse = await this.connection.getParsedTokenAccountsByOwner(
       buyer, { mint: antimatterMint, programId: TOKEN_PROGRAM_ID }, "confirmed"
@@ -771,10 +780,11 @@ export class MarketClient {
         { pubkey: GAME_STATE_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: planetPda,             isSigner: false, isWritable: true },
         { pubkey: planetCoordsPda,       isSigner: false, isWritable: true },
+        { pubkey: ownershipRegistryPda,  isSigner: false, isWritable: true },
         { pubkey: buyerProfilePda,       isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: buyerOwnerIndexPda,    isSigner: false, isWritable: true },
-        ...(sellerOwnerIndexPda ? [{ pubkey: sellerOwnerIndexPda, isSigner: false, isWritable: true }] : []),
+        { pubkey: sellerOwnerIndexPda, isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.buyPlanetListing),
     });

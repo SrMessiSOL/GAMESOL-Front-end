@@ -1163,6 +1163,12 @@ export function derivePlanetOwnerIndexPda(walletPubkey: PublicKey, slot: number)
     GAME_STATE_PROGRAM_ID,
   )[0];
 }
+export function derivePlanetOwnershipRegistryPda(planet: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("planet_ownership"), planet.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
 
 function derivePlanetListingIndexPda(planet: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
@@ -4138,6 +4144,7 @@ export class GameClient {
     const planetStatePda = derivePlanetStatePda(authority, currentIndex);
     const planetCoordsPda = derivePlanetCoordsPda(galaxy, system, position);
     const ownerIndexPda = derivePlanetOwnerIndexPda(authority, currentIndex);
+    const ownershipRegistryPda = derivePlanetOwnershipRegistryPda(planetStatePda);
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
     const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
@@ -4160,6 +4167,7 @@ export class GameClient {
         { pubkey: tutorialQuestRewardTargetsPda, isSigner: false, isWritable: true }, // tutorial_quest_reward_targets
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
+        { pubkey: ownershipRegistryPda, isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.initializeHomeworld, args),
     });
@@ -5034,6 +5042,7 @@ export class GameClient {
       mission.targetPosition,
     );
     const ownerIndexPda = derivePlanetOwnerIndexPda(authority, nextIndex);
+    const ownershipRegistryPda = derivePlanetOwnershipRegistryPda(colonyPda);
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
     const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
@@ -5057,6 +5066,7 @@ export class GameClient {
         { pubkey: tutorialQuestRewardTargetsPda, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
+        { pubkey: ownershipRegistryPda, isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.initializeColony, encodeColonyArgs(now, mission, slot)),
     });
@@ -5092,6 +5102,7 @@ export class GameClient {
       state.planet.system,
       state.planet.position,
     );
+    await this.ensurePlanetOwnershipRegistry(planetPda);
 
     const newPlayerProfilePda = derivePlayerProfilePda(newAuthority);
     const newProfile = await this.fetchPlayerProfile(newAuthority);
@@ -5104,6 +5115,7 @@ export class GameClient {
       ?? derivePlanetOwnerIndexPda(authority, state.planet.planetIndex);
     const listingIndexPda = derivePlanetListingIndexPda(planetPda);
     const marketObligationPda = derivePlanetMarketObligationPda(planetPda);
+    const ownershipRegistryPda = derivePlanetOwnershipRegistryPda(planetPda);
 
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
@@ -5113,6 +5125,7 @@ export class GameClient {
         { pubkey: newPlayerProfilePda, isSigner: false, isWritable: true  }, // new_player_profile (verified on-chain)
         { pubkey: planetPda,           isSigner: false, isWritable: true  }, // planet_state
         { pubkey: coordsPda,           isSigner: false, isWritable: true  }, // planet_coords
+        { pubkey: ownershipRegistryPda, isSigner: false, isWritable: true }, // canonical ownership
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // system_program
         { pubkey: newOwnerIndexPda,    isSigner: false, isWritable: true  }, // new owner index
         { pubkey: oldOwnerIndexPda,    isSigner: false, isWritable: true  }, // old owner index
@@ -5124,6 +5137,52 @@ export class GameClient {
 
     // Transfer is wallet-signed — use provider path directly
     return this.sendInstruction([ix]);
+  }
+
+  async ensurePlanetOwnershipRegistry(
+    planetPda: PublicKey,
+    reportProgress?: ProgressReporter,
+  ): Promise<PublicKey> {
+    const authority = this.provider.wallet.publicKey;
+    const registryPda = derivePlanetOwnershipRegistryPda(planetPda);
+    if (await this.connection.getAccountInfo(registryPda, "confirmed")) return registryPda;
+
+    const profile = await this.fetchPlayerProfile(authority);
+    if (!profile) throw new Error("Player profile is not initialized.");
+    const ownerIndexPda = await this.findPlanetOwnerIndexPda(authority, planetPda);
+    if (!ownerIndexPda) throw new Error("Planet owner index is missing. Refresh the planet index before listing it.");
+
+    let ownerSlot = -1;
+    for (let slot = 0; slot < profile.planetCount; slot += 1) {
+      if (derivePlanetOwnerIndexPda(authority, slot).equals(ownerIndexPda)) {
+        ownerSlot = slot;
+        break;
+      }
+    }
+    if (ownerSlot < 0) throw new Error("Planet owner index slot could not be verified.");
+
+    const vault = await this.prepareVaultSigningForAuthority(authority, reportProgress);
+    if (!vault) throw new Error("Vault signing must be enabled to migrate planet ownership.");
+    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
+
+    const slotArg = Buffer.alloc(4);
+    slotArg.writeUInt32LE(ownerSlot, 0);
+    const ix = new TransactionInstruction({
+      programId: GAME_STATE_PROGRAM_ID,
+      keys: [
+        { pubkey: vault.publicKey, isSigner: true, isWritable: true },
+        { pubkey: authority, isSigner: false, isWritable: false },
+        { pubkey: deriveAuthorizedVaultPda(authority), isSigner: false, isWritable: false },
+        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: true },
+        { pubkey: planetPda, isSigner: false, isWritable: false },
+        { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
+        { pubkey: registryPda, isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeInstruction(IX.syncPlanetOwnerIndexVault, slotArg),
+    });
+    await this.sendInstruction([ix], [vault]);
+    return registryPda;
   }
 
   /**
