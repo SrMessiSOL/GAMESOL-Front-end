@@ -15,6 +15,8 @@ const ANTIMATTER_MINT = new PublicKey(process.env.ANTIMATTER_MINT || process.env
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 const DEFAULT_RPC_URL = "https://api.devnet.solana.com";
+const SOLANA_CLUSTER = (process.env.SOLANA_CLUSTER || process.env.VITE_SOLANA_CLUSTER || "devnet").trim().toLowerCase();
+const IS_MAINNET = SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta";
 const PLAYER_PROFILE_ACCOUNT_SIZE = 8 + 32 + 4 + 1;
 const PLAYER_PROFILE_DISCRIMINATOR = crypto
   .createHash("sha256")
@@ -114,6 +116,9 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed." });
+  }
+  if (IS_MAINNET) {
+    return res.status(404).json({ error: "Not found." });
   }
 
   try {
