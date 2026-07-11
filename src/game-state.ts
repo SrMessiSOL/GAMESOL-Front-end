@@ -3603,7 +3603,7 @@ export class GameClient {
 
   async getMyAlliance(): Promise<{ alliance: AllianceStateAccount; membership: AllianceMembershipAccount } | null> {
     const membership = await this.getAllianceMembership();
-    if (!membership) return null;
+    if (!membership || membership.role === 0) return null;
     const alliance = await this.getAlliance(new PublicKey(membership.alliance));
     if (!alliance) return null;
     return { alliance, membership };
@@ -3639,7 +3639,7 @@ export class GameClient {
     for (const { account } of accounts) {
       try {
         const member = deserializeAllianceMembership(Buffer.from(account.data));
-        if (member.alliance === allianceKey) members.push(member);
+        if (member.alliance === allianceKey && member.role > 0) members.push(member);
       } catch {
         /* skip non-membership accounts */
       }
