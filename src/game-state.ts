@@ -57,6 +57,7 @@ const VAULT_MIN_BALANCE_LAMPORTS = 10_000_000;
 const VAULT_TARGET_BALANCE_LAMPORTS = 20_000_000;
 const DEFAULT_TX_COMPUTE_UNITS = 250_000;
 const DEFAULT_PRIORITY_FEE_MICROLAMPORTS = 0;
+const RPC_ACCOUNT_BATCH_SIZE = 100;
 const VAULT_BACKUP_VERSION = 1;
 const VAULT_RECOVERY_MESSAGE_PREFIX = "GAMESOL vault recovery v1";
 
@@ -3499,6 +3500,15 @@ export class GameClient {
     catch { return null; }
   }
 
+  private async getMultipleAccountsInfoBatched(pubkeys: PublicKey[]) {
+    const accounts: Array<Awaited<ReturnType<Connection["getAccountInfo"]>>> = [];
+    for (let offset = 0; offset < pubkeys.length; offset += RPC_ACCOUNT_BATCH_SIZE) {
+      const batch = pubkeys.slice(offset, offset + RPC_ACCOUNT_BATCH_SIZE);
+      accounts.push(...await this.connection.getMultipleAccountsInfo(batch, "confirmed"));
+    }
+    return accounts;
+  }
+
   async getPlayerPlanetCount(walletPubkey: PublicKey = this.provider.wallet.publicKey): Promise<number> {
     return (await this.fetchPlayerProfile(walletPubkey))?.planetCount ?? 0;
   }
@@ -3507,7 +3517,7 @@ export class GameClient {
     const count = await this.getPlayerPlanetCount(authority);
     if (count <= 0) return null;
     const indexPdas = Array.from({ length: count }, (_, i) => derivePlanetOwnerIndexPda(authority, i));
-    const accounts = await this.connection.getMultipleAccountsInfo(indexPdas, "confirmed");
+    const accounts = await this.getMultipleAccountsInfoBatched(indexPdas);
     for (let i = 0; i < accounts.length; i++) {
       const account = accounts[i];
       if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) continue;
@@ -4268,7 +4278,7 @@ export class GameClient {
     const byPda = new Map<string, PlayerState>();
 
     const ownerIndexPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePlanetOwnerIndexPda(walletPubkey, i));
-    const ownerIndexAccounts = await this.connection.getMultipleAccountsInfo(ownerIndexPdas, "confirmed");
+    const ownerIndexAccounts = await this.getMultipleAccountsInfoBatched(ownerIndexPdas);
     const indexedPlanetPdas: PublicKey[] = [];
     for (const account of ownerIndexAccounts) {
       if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) continue;
@@ -4279,7 +4289,7 @@ export class GameClient {
       } catch { /* skip malformed */ }
     }
     const indexedPlanetAccounts = indexedPlanetPdas.length
-      ? await this.connection.getMultipleAccountsInfo(indexedPlanetPdas, "confirmed")
+      ? await this.getMultipleAccountsInfoBatched(indexedPlanetPdas)
       : [];
     indexedPlanetAccounts.forEach((account, idx) => {
       if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return;
@@ -4290,7 +4300,7 @@ export class GameClient {
     });
 
     const legacyPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePlanetStatePda(walletPubkey, i));
-    const legacyAccounts = await this.connection.getMultipleAccountsInfo(legacyPdas, "confirmed");
+    const legacyAccounts = await this.getMultipleAccountsInfoBatched(legacyPdas);
     const states = legacyAccounts.map((account, idx) => {
       if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
       const discriminator = account.data.slice(0, 8);
@@ -4304,7 +4314,7 @@ export class GameClient {
     states.filter((s): s is PlayerState => !!s).forEach(s => byPda.set(s.planetPda, s));
 
     const publicPdas = Array.from({ length: profile.planetCount }, (_, i) => derivePublicPlanetStatePda(walletPubkey, i));
-    const publicAccounts = await this.connection.getMultipleAccountsInfo(publicPdas, "confirmed");
+    const publicAccounts = await this.getMultipleAccountsInfoBatched(publicPdas);
     const publicStates = publicAccounts.map((account, idx) => {
       if (!account || !account.owner.equals(GAME_STATE_PROGRAM_ID)) return null;
       if (account.data.slice(0, 8).equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
