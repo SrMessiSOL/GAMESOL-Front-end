@@ -5061,7 +5061,9 @@ export class GameClient {
       throw new Error("Destination wallet must initialize the game client before receiving planets.");
     }
     const newOwnerIndexPda = derivePlanetOwnerIndexPda(newAuthority, newProfile.planetCount);
-    const oldOwnerIndexPda = derivePlanetOwnerIndexPda(authority, state.planet.planetIndex);
+    const oldOwnerIndexPda =
+      await this.findPlanetOwnerIndexPda(authority, planetPda)
+      ?? derivePlanetOwnerIndexPda(authority, state.planet.planetIndex);
     const listingIndexPda = derivePlanetListingIndexPda(planetPda);
     const marketObligationPda = derivePlanetMarketObligationPda(planetPda);
 
