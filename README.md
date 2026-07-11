@@ -83,7 +83,7 @@ npm run build
 Run the same production checks used by GitHub Actions:
 
 ```bash
-npm ci
+npm ci --legacy-peer-deps
 npm run verify
 ```
 
