@@ -23,7 +23,7 @@ import {
   Planet, Resources, Fleet, Mission, PlayerState, PublicPlanetInfo, Research,
   BUILDINGS, SHIPS, SHIP_TYPE_IDX, MISSION_LABELS,
   ALLIANCE_CREATE_USDC_COST, ALLIANCE_CREATE_ANTIMATTER_COST,
-  GAME_STATE_PROGRAM_ID,
+  GAME_STATE_PROGRAM_ID, IS_DEVNET,
   deriveAssociatedTokenAccount,
   deriveStoreConfigPda,
   upgradeCost, buildTimeSecs,
@@ -5664,7 +5664,7 @@ const App: React.FC = () => {
   };
 
   const handleClaimAntimatterFaucet = async () => {
-    if (txLockRef.current || !publicKey) return;
+    if (!IS_DEVNET || txLockRef.current || !publicKey) return;
     txLockRef.current = true;
     setTxBusy(true);
     setTxProgress("Claiming 10,000 devnet ANTIMATTER...");
@@ -6319,7 +6319,7 @@ const App: React.FC = () => {
               >
                 VAULT
               </button>
-              <button
+              {IS_DEVNET && <button
                 className="wallet-menu-action alt"
                 type="button"
                 disabled={txBusy}
@@ -6330,7 +6330,7 @@ const App: React.FC = () => {
                 }}
               >
                 FAUCET
-              </button>
+              </button>}
             </div>
             <div style={{ marginTop: 8 }}>
               <WalletConnectControl/>
