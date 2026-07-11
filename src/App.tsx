@@ -3438,10 +3438,12 @@ function launchFuelCost(ships: Record<string, number>, speedFactor: number): num
     (ships.battlecruiser ?? 0) * 250 +
     (ships.bomber ?? 0) * 1000 +
     (ships.destroyer ?? 0) * 1000 +
+    (ships.deathstar ?? 0) +
     (ships.recycler ?? 0) * 300 +
     (ships.espionageProbe ?? 0) +
     (ships.colonyShip ?? 0) * 1000;
-  return Math.floor((fuel * Math.max(10, Math.min(100, speedFactor)) ** 2) / 10_000);
+  if (fuel <= 0) return 0;
+  return Math.max(1, Math.floor((fuel * Math.max(10, Math.min(100, speedFactor)) ** 2) / 10_000));
 }
 
 function shipFlightSpeed(shipKey: string, research: Research): number {
@@ -3559,7 +3561,7 @@ const LaunchModal: React.FC<{ planet: Planet; research: Research; fleet: Fleet; 
     const totalSent = Object.values(shipQty).reduce((a, b) => a + b, 0);
     const cargoCap = getQty("smallCargo")*5000+getQty("largeCargo")*25000+getQty("recycler")*20000+getQty("cruiser")*800+getQty("battleship")*1500;
     const cargoUsed = cargoM + cargoC + cargoD;
-    const launchFuel = launchFuelCost(shipQty, speed);
+    const launchFuel = launchFuelCost(shipQty, speed) * (missionType === 5 ? 1 : 2);
     const deuteriumNeeded = cargoD + launchFuel;
     const hasLaunchDeuterium = BigInt(deuteriumNeeded) <= res.deuterium;
     const attackPoints = fleetCombatPoints(shipQty);
@@ -5986,9 +5988,9 @@ const App: React.FC = () => {
     if (launchState.resources.metal < cargo.metal || launchState.resources.crystal < cargo.crystal) {
       throw new Error("Not enough resources are available for this mission cargo.");
     }
-    const launchFuel = BigInt(launchFuelCost(ships, speedFactor));
-    if (launchState.resources.deuterium < cargo.deuterium + launchFuel) {
-      throw new Error(`Not enough deuterium. Need ${fmt(cargo.deuterium + launchFuel)} including ${fmt(launchFuel)} launch fuel.`);
+    const missionFuel = BigInt(launchFuelCost(ships, speedFactor) * (missionType === 5 ? 1 : 2));
+    if (launchState.resources.deuterium < cargo.deuterium + missionFuel) {
+      throw new Error(`Not enough deuterium. Need ${fmt(cargo.deuterium + missionFuel)} including ${fmt(missionFuel)} mission fuel.`);
     }
     const now = Math.floor(Date.now() / 1000);
     if (missionType === 1) {
