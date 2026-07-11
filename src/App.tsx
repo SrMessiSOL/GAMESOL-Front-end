@@ -5301,6 +5301,8 @@ const App: React.FC = () => {
   const hasCreatedWorld = planets.length > 0;
   const isDevConfigAdmin = publicKey?.toBase58() === DEV_CONFIG_ADMIN_WALLET;
   const confirmResourceCapWarning = useCallback((action: string, delta: ResourceDelta, res: Resources | undefined = liveRes): boolean => {
+    // Outbound transport capacity belongs to the destination; the program delivers what fits.
+    if (action === "Resolve transport cargo") return true;
     const message = resourceCapWarningMessage(action, res, delta);
     return !message || window.confirm(message);
   }, [liveRes]);
