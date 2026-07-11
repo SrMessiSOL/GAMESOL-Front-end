@@ -78,6 +78,19 @@ http://localhost:5173
 npm run build
 ```
 
+## Verification
+
+Run the same production checks used by GitHub Actions:
+
+```bash
+npm ci
+npm run verify
+```
+
+This compiles TypeScript, builds the production bundle, and fails on high or
+critical production dependency advisories. It runs automatically on every pull
+request and every push to `main`.
+
 ## Configuration Checklist
 
 Before deploying to a new cluster, verify:
