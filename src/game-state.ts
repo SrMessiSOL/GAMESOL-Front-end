@@ -1208,6 +1208,13 @@ export function deriveQuestRewardTargetsPda(walletPubkey: PublicKey): PublicKey 
   )[0];
 }
 
+export function deriveQuestTutorialRewardTargetsPda(walletPubkey: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("quest_tutorial_reward_targets"), walletPubkey.toBuffer()],
+    GAME_STATE_PROGRAM_ID,
+  )[0];
+}
+
 export function deriveAlliancePda(founderPubkey: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("alliance"), founderPubkey.toBuffer()],
@@ -3556,6 +3563,12 @@ export class GameClient {
     catch { return null; }
   }
 
+  async hasTutorialQuestRewardTargets(authority: PublicKey = this.provider.wallet.publicKey): Promise<boolean> {
+    const tutorialQuestRewardTargetsPda = deriveQuestTutorialRewardTargetsPda(authority);
+    const account = await this.connection.getAccountInfo(tutorialQuestRewardTargetsPda, "confirmed");
+    return !!account && account.owner.equals(GAME_STATE_PROGRAM_ID);
+  }
+
   async getAllianceMembership(authority: PublicKey = this.provider.wallet.publicKey): Promise<AllianceMembershipAccount | null> {
     const membershipPda = deriveAllianceMembershipPda(authority);
     const account = await this.connection.getAccountInfo(membershipPda, "confirmed");
@@ -4054,13 +4067,14 @@ export class GameClient {
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
       keys: [
-        { pubkey: authority, isSigner: true, isWritable: true },
-        { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
-        { pubkey: deriveQuestRewardTargetsPda(authority), isSigner: false, isWritable: true },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-      ],
-      data: encodeInstruction(IX.initializeQuestRewardTargets),
-    });
+      { pubkey: authority, isSigner: true, isWritable: true },
+      { pubkey: derivePlayerProfilePda(authority), isSigner: false, isWritable: false },
+      { pubkey: deriveQuestRewardTargetsPda(authority), isSigner: false, isWritable: true },
+      { pubkey: deriveQuestTutorialRewardTargetsPda(authority), isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: encodeInstruction(IX.initializeQuestRewardTargets),
+  });
     return this.sendInstruction([ix]);
   }
 
@@ -4077,7 +4091,9 @@ export class GameClient {
   }
 
   private async ensureQuestRewardTargets(authority: PublicKey = this.provider.wallet.publicKey): Promise<void> {
-    if (!(await this.getQuestRewardTargets(authority))) {
+    const hasTargets = !!(await this.getQuestRewardTargets(authority));
+    const hasTutorialTargets = await this.hasTutorialQuestRewardTargets(authority);
+    if (!hasTargets || !hasTutorialTargets) {
       await this.initializeQuestRewardTargets();
     }
   }
@@ -4125,6 +4141,7 @@ export class GameClient {
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
     const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
+    const tutorialQuestRewardTargetsPda = deriveQuestTutorialRewardTargetsPda(authority);
 
     const args = encodeHomeworldArgs(now, planetName.trim() || "Homeworld", galaxy, system, position);
 
@@ -4140,6 +4157,7 @@ export class GameClient {
         { pubkey: questStatePda,      isSigner: false, isWritable: true  }, // quest_state
         { pubkey: questProgressPda,   isSigner: false, isWritable: true  }, // quest_progress
         { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true }, // quest_reward_targets
+        { pubkey: tutorialQuestRewardTargetsPda, isSigner: false, isWritable: true }, // tutorial_quest_reward_targets
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
       ],
@@ -4496,6 +4514,7 @@ export class GameClient {
     const questPda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
     const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
+    const tutorialQuestRewardTargetsPda = deriveQuestTutorialRewardTargetsPda(authority);
     if (this.preferVaultSigning && this.vaultKeypair) {
       const authorizedVaultPda = deriveAuthorizedVaultPda(authority);
       const keys = [
@@ -4506,7 +4525,10 @@ export class GameClient {
         { pubkey: planetPda,                    isSigner: false, isWritable: true  },
         { pubkey: questProgressPda,             isSigner: false, isWritable: true  },
       ];
-      if (includeRewardTargets) keys.push({ pubkey: questRewardTargetsPda, isSigner: false, isWritable: true });
+      if (includeRewardTargets) {
+        keys.push({ pubkey: questRewardTargetsPda, isSigner: false, isWritable: true });
+        keys.push({ pubkey: tutorialQuestRewardTargetsPda, isSigner: false, isWritable: true });
+      }
       return new TransactionInstruction({
         programId: GAME_STATE_PROGRAM_ID,
         keys,
@@ -4520,7 +4542,10 @@ export class GameClient {
       { pubkey: planetPda,  isSigner: false, isWritable: true  },
       { pubkey: questProgressPda, isSigner: false, isWritable: true },
     ];
-    if (includeRewardTargets) keys.push({ pubkey: questRewardTargetsPda, isSigner: false, isWritable: true });
+    if (includeRewardTargets) {
+      keys.push({ pubkey: questRewardTargetsPda, isSigner: false, isWritable: true });
+      keys.push({ pubkey: tutorialQuestRewardTargetsPda, isSigner: false, isWritable: true });
+    }
     return new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
       keys,
@@ -4664,13 +4689,13 @@ export class GameClient {
     await this.ensureQuestProgress();
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
-    if (period !== 0) await this.ensureQuestRewardTargets(authority);
+    await this.ensureQuestRewardTargets(authority);
     await this.prepareVaultSigningForAuthority(authority);
     const writer = new BorshWriter();
     writer.writeU8(period);
     writer.writeU8(questId);
     return this.sendInstruction(
-      [this.buildQuestInstruction(IX.claimQuestVault, IX.claimQuest, entityPda, authority, writer.toBuffer(), period !== 0)],
+      [this.buildQuestInstruction(IX.claimQuestVault, IX.claimQuest, entityPda, authority, writer.toBuffer(), true)],
       this.vaultSigners(),
     );
   }
@@ -5012,6 +5037,7 @@ export class GameClient {
     const questStatePda = deriveQuestStatePda(authority);
     const questProgressPda = deriveQuestProgressPda(authority);
     const questRewardTargetsPda = deriveQuestRewardTargetsPda(authority);
+    const tutorialQuestRewardTargetsPda = deriveQuestTutorialRewardTargetsPda(authority);
 
     reportProgress?.("Vault signing: creating colony from mission");
 
@@ -5028,6 +5054,7 @@ export class GameClient {
         { pubkey: questStatePda,      isSigner: false, isWritable: true  },
         { pubkey: questProgressPda,   isSigner: false, isWritable: true  },
         { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true },
+        { pubkey: tutorialQuestRewardTargetsPda, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
       ],
