@@ -13,7 +13,7 @@ import {
   useWallet,
 } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { WalletDisconnectButton, WalletModalButton, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { BarChart3, Building2, ChevronLeft, ChevronRight, Crosshair, FlaskConical, Gem, Pickaxe, Rocket, Shield, ShoppingCart, Store, Trophy, Users, Zap } from "lucide-react";
 import UniverseLab from "./UniverseLab";
 import {
@@ -790,9 +790,19 @@ export default function UniverseGame() {
     useState<VaultRecoveryPromptRequest | null>(null);
   const [vaultPasswordError, setVaultPasswordError] = useState("");
   const [vaultStatus, setVaultStatus] = useState<VaultStatus>("loading");
+  const [vaultBalance, setVaultBalance] = useState(0n);
+  const [vaultDeposit, setVaultDeposit] = useState("0.05");
+  const [vaultWithdraw, setVaultWithdraw] = useState("");
+  const [vaultActionBusy, setVaultActionBusy] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [antimatterBalance, setAntimatterBalance] = useState(0n);
   const [usdcBalance, setUsdcBalance] = useState(0n);
+
+  useEffect(() => {
+    if (!status) return;
+    const timer = window.setTimeout(() => setStatus(""), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [status]);
   const resolveVault = useRef<((value: string) => void) | null>(null);
   const requestVault = useCallback(
     (request: VaultRecoveryPromptRequest) =>
@@ -932,8 +942,11 @@ export default function UniverseGame() {
     setBusy(true);
     setStatus("Creating homeworld...");
     try {
-      await client.initializePlanet(homeworldName);
+      await client.ensureVaultFunding((message) => setStatus(message));
+      await refreshVaultBalance();
+      await client.initializePlanet(homeworldName, (message) => setStatus(message));
       await refresh();
+      await refreshVaultBalance();
       setStatus("Homeworld created.");
     } catch (error) {
       setStatus(
@@ -974,6 +987,50 @@ export default function UniverseGame() {
       setBusy(false);
     }
   };
+  const refreshVaultBalance = useCallback(async () => {
+    if (!client) {
+      setVaultBalance(0n);
+      return;
+    }
+    try {
+      setVaultBalance(BigInt(await client.getVaultBalanceLamports()));
+    } catch {
+      setVaultBalance(0n);
+    }
+  }, [client]);
+  const parseSolAmount = (value: string) => {
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Enter a SOL amount greater than zero.");
+    }
+    return Math.floor(amount * 1_000_000_000);
+  };
+  const depositVault = async () => {
+    if (!client) return;
+    setVaultActionBusy(true);
+    try {
+      await client.depositToVaultLamports(parseSolAmount(vaultDeposit));
+      await refreshVaultBalance();
+      setStatus("Vault funded.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Vault funding failed.");
+    } finally {
+      setVaultActionBusy(false);
+    }
+  };
+  const withdrawVault = async () => {
+    if (!client) return;
+    setVaultActionBusy(true);
+    try {
+      await client.withdrawVaultLamports(parseSolAmount(vaultWithdraw));
+      await refreshVaultBalance();
+      setStatus("Vault withdrawal submitted.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Vault withdrawal failed.");
+    } finally {
+      setVaultActionBusy(false);
+    }
+  };
   useEffect(() => {
     if (!client || !publicKey) {
       setVaultStatus("loading");
@@ -981,6 +1038,9 @@ export default function UniverseGame() {
     }
     void unlockVault();
   }, [client, publicKey]);
+  useEffect(() => {
+    void refreshVaultBalance();
+  }, [refreshVaultBalance, vaultStatus]);
   const shieldActive = Boolean(
     selectedState &&
     selectedState.planet.protectionUntilTs > Math.floor(Date.now() / 1000),
@@ -1060,6 +1120,10 @@ export default function UniverseGame() {
                     </b>
                   </div>
                   <div className="ug-wallet-row">
+                    <span>Vault SOL</span>
+                    <b>{(Number(vaultBalance) / 1_000_000_000).toFixed(4)} SOL</b>
+                  </div>
+                  <div className="ug-wallet-row">
                     <span>Antimatter</span>
                     <b>{tokenLabel(antimatterBalance)} AM</b>
                   </div>
@@ -1067,18 +1131,40 @@ export default function UniverseGame() {
                     <span>USDC</span>
                     <b>{tokenLabel(usdcBalance)} USDC</b>
                   </div>
-                  {vaultStatus !== "ready" && (
-                    <button
-                      className="ug-unlock-vault"
-                      disabled={busy}
-                      onClick={() => void unlockVault()}
-                    >
-                      UNLOCK VAULT
-                    </button>
-                  )}
-                  <div className="ug-wallet-connect">
-                    <WalletMultiButton />
+                  <div className="ug-wallet-actions">
+                    <WalletModalButton>CHANGE WALLET</WalletModalButton>
+                    <WalletDisconnectButton>DISCONNECT</WalletDisconnectButton>
                   </div>
+                  {vaultStatus === "ready" && (
+                    <section className="ug-vault-controls">
+                      <p>Keep at least 0.05 SOL in the vault for game account rent.</p>
+                      <label>
+                        <span>DEPOSIT SOL</span>
+                        <input
+                          type="number"
+                          min="0.001"
+                          step="0.001"
+                          value={vaultDeposit}
+                          onChange={(event) => setVaultDeposit(event.target.value)}
+                          disabled={vaultActionBusy}
+                        />
+                        <button disabled={vaultActionBusy} onClick={() => void depositVault()}>DEPOSIT</button>
+                      </label>
+                      <label>
+                        <span>WITHDRAW SOL</span>
+                        <input
+                          type="number"
+                          min="0.001"
+                          step="0.001"
+                          placeholder="0.00"
+                          value={vaultWithdraw}
+                          onChange={(event) => setVaultWithdraw(event.target.value)}
+                          disabled={vaultActionBusy}
+                        />
+                        <button disabled={vaultActionBusy} onClick={() => void withdrawVault()}>WITHDRAW</button>
+                      </label>
+                    </section>
+                  )}
                 </section>
               </>,
               document.body,
