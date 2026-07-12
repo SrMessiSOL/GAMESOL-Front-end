@@ -402,6 +402,36 @@ export interface PublicPlanetInfo {
   lastAttackedTs: number;
 }
 
+export interface UniverseMapPlanetInfo {
+  entity: string;
+  owner: string;
+  name: string;
+  galaxy: number;
+  system: number;
+  position: number;
+  planetIndex: number;
+  diameter: number;
+  temperature: number;
+  maxFields: number;
+  createdAt: number;
+  protectionUntilTs: number;
+  lastAttackedTs: number;
+  metal: bigint;
+  crystal: bigint;
+  deuterium: bigint;
+  smallCargo: number;
+  largeCargo: number;
+  lightFighter: number;
+  heavyFighter: number;
+  cruiser: number;
+  battleship: number;
+  battlecruiser: number;
+  bomber: number;
+  destroyer: number;
+  deathstar: number;
+  missions: Mission[];
+}
+
 export interface Research {
   creator: string;
   energyTech: number;
@@ -4451,6 +4481,10 @@ export class GameClient {
     return Array.from(bySlot.values()).sort((a, b) => a.position - b.position);
   }
 
+  async getAllPublicPlanets(): Promise<PublicPlanetInfo[]> {
+    return fetchAllPublicPlanets(this.connection);
+  }
+
   async getPublicPlanetInfoByCoordinates(
     galaxy: number,
     system: number,
@@ -5214,6 +5248,159 @@ export class GameClient {
     if (!state) return null;
     return { entityPda: state.entityPda };
   }
+}
+
+const PUBLIC_PLANET_CACHE_MS = 60_000;
+const publicPlanetCache = new Map<string, { expiresAt: number; planets: PublicPlanetInfo[] }>();
+const publicPlanetRequests = new Map<string, Promise<PublicPlanetInfo[]>>();
+
+const UNIVERSE_PLANET_CACHE_MS = 30_000;
+const universePlanetCache = new Map<string, { expiresAt: number; planets: UniverseMapPlanetInfo[] }>();
+const universePlanetRequests = new Map<string, Promise<UniverseMapPlanetInfo[]>>();
+
+const emptyMissionFleet = {
+  smallCargo: 0, largeCargo: 0, lightFighter: 0, heavyFighter: 0,
+  cruiser: 0, battleship: 0, battlecruiser: 0, bomber: 0, destroyer: 0,
+  deathstar: 0,
+};
+
+function planetSnapshotFromState(planetPda: PublicKey, account: PlanetStateAccount): UniverseMapPlanetInfo {
+  const base = {
+    entity: planetPda.toBase58(),
+    owner: account.authority.toBase58(),
+    name: account.name,
+    galaxy: account.galaxy,
+    system: account.system,
+    position: account.position,
+    planetIndex: account.planetIndex,
+    diameter: account.diameter,
+    temperature: account.temperature,
+    maxFields: account.maxFields,
+    createdAt: account.createdAt,
+    protectionUntilTs: account.protectionUntilTs,
+    lastAttackedTs: account.lastAttackedTs,
+    metal: account.metal,
+    crystal: account.crystal,
+    deuterium: account.deuterium,
+    smallCargo: account.smallCargo,
+    largeCargo: account.largeCargo,
+    lightFighter: account.lightFighter,
+    heavyFighter: account.heavyFighter,
+    cruiser: account.cruiser,
+    battleship: account.battleship,
+    battlecruiser: account.battlecruiser,
+    bomber: account.bomber,
+    destroyer: account.destroyer,
+    deathstar: account.deathstar,
+    missions: account.missions,
+  };
+  return base;
+}
+
+function planetSnapshotFromPublicState(planetPda: PublicKey, account: PublicPlanetStateAccount): UniverseMapPlanetInfo {
+  const meta = derivePrivatePlanetDisplayMeta(account);
+  return {
+    entity: planetPda.toBase58(),
+    owner: account.authority.toBase58(),
+    name: account.name,
+    galaxy: account.galaxy,
+    system: account.system,
+    position: account.position,
+    planetIndex: account.planetIndex,
+    diameter: meta.diameter,
+    temperature: meta.temperature,
+    maxFields: meta.maxFields,
+    createdAt: account.createdAt,
+    protectionUntilTs: 0,
+    lastAttackedTs: 0,
+    metal: 0n,
+    crystal: 0n,
+    deuterium: 0n,
+    ...emptyMissionFleet,
+    missions: [],
+  };
+}
+
+export function fetchAllPublicPlanets(connection: Connection): Promise<PublicPlanetInfo[]> {
+  const endpoint = connection.rpcEndpoint;
+  const cached = publicPlanetCache.get(endpoint);
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.planets);
+
+  const inFlight = publicPlanetRequests.get(endpoint);
+  if (inFlight) return inFlight;
+
+  const request = (async () => {
+    const accounts = await connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed" });
+    const planets = new Map<string, PublicPlanetInfo>();
+    for (const account of accounts) {
+      const discriminator = account.account.data.slice(0, 8);
+      try {
+        let planet: PublicPlanetInfo | null = null;
+        let authoritative = false;
+        if (discriminator.equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
+          planet = publicPlanetInfoFromPublicState(account.pubkey, deserializePublicPlanetState(Buffer.from(account.account.data)));
+        } else if (discriminator.equals(PLANET_STATE_DISCRIMINATOR)) {
+          planet = publicPlanetInfoFromState(account.pubkey, deserializePlanetState(Buffer.from(account.account.data)));
+          authoritative = true;
+        }
+        if (!planet) continue;
+        const key = `${planet.galaxy}:${planet.system}:${planet.position}`;
+        const current = planets.get(key);
+        if (!current || authoritative) planets.set(key, planet);
+      } catch { /* skip unrelated or malformed program accounts */ }
+    }
+    const result = Array.from(planets.values()).sort((a, b) => a.galaxy - b.galaxy || a.system - b.system || a.position - b.position);
+    publicPlanetCache.set(endpoint, { planets: result, expiresAt: Date.now() + PUBLIC_PLANET_CACHE_MS });
+    return result;
+  })();
+
+  publicPlanetRequests.set(endpoint, request);
+  void request.then(
+    () => publicPlanetRequests.delete(endpoint),
+    () => publicPlanetRequests.delete(endpoint),
+  );
+  return request;
+}
+
+export function fetchUniverseMapData(connection: Connection): Promise<UniverseMapPlanetInfo[]> {
+  const endpoint = connection.rpcEndpoint;
+  const cached = universePlanetCache.get(endpoint);
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.planets);
+
+  const inFlight = universePlanetRequests.get(endpoint);
+  if (inFlight) return inFlight;
+
+  const request = (async () => {
+    const accounts = await connection.getProgramAccounts(GAME_STATE_PROGRAM_ID, { commitment: "confirmed" });
+    const planets = new Map<string, UniverseMapPlanetInfo>();
+    for (const account of accounts) {
+      const discriminator = account.account.data.slice(0, 8);
+      try {
+        let planet: UniverseMapPlanetInfo | null = null;
+        let authoritative = false;
+        if (discriminator.equals(PLANET_STATE_DISCRIMINATOR)) {
+          planet = planetSnapshotFromState(account.pubkey, deserializePlanetState(Buffer.from(account.account.data)));
+          authoritative = true;
+        } else if (discriminator.equals(PUBLIC_PLANET_STATE_DISCRIMINATOR)) {
+          planet = planetSnapshotFromPublicState(account.pubkey, deserializePublicPlanetState(Buffer.from(account.account.data)));
+        }
+        if (!planet) continue;
+        const key = `${planet.galaxy}:${planet.system}:${planet.position}`;
+        const existing = planets.get(key);
+        if (!existing || authoritative) planets.set(key, planet);
+      } catch { /* skip unrelated or malformed program accounts */ }
+    }
+    const result = Array.from(planets.values()).sort((a, b) => a.galaxy - b.galaxy || a.system - b.system || a.position - b.position);
+    universePlanetCache.set(endpoint, { planets: result, expiresAt: Date.now() + UNIVERSE_PLANET_CACHE_MS });
+    return result;
+  })();
+
+  universePlanetRequests.set(endpoint, request);
+  void request.then(
+    () => universePlanetRequests.delete(endpoint),
+    () => universePlanetRequests.delete(endpoint),
+  );
+  return request;
 }
 
 // ─── Game Data Constants ──────────────────────────────────────────────────────
