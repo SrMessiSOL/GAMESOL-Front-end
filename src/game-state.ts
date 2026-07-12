@@ -54,8 +54,10 @@ export const ALLIANCE_CREATE_ANTIMATTER_COST = 100_000_000_000n;
 export const ALLIANCE_CREATE_ANTIMATTER_BURN = 50_000_000_000n;
 export const ALLIANCE_CREATE_ANTIMATTER_TREASURY = 50_000_000_000n;
 
-const VAULT_MIN_BALANCE_LAMPORTS = 10_000_000;
-const VAULT_TARGET_BALANCE_LAMPORTS = 20_000_000;
+// The vault pays rent for the player profile, homeworld, coordinate and quest
+// accounts. A 0.02 SOL float can be exhausted during first-world creation.
+const VAULT_MIN_BALANCE_LAMPORTS = 50_000_000;
+const VAULT_TARGET_BALANCE_LAMPORTS = 100_000_000;
 const DEFAULT_TX_COMPUTE_UNITS = 250_000;
 const DEFAULT_PRIORITY_FEE_MICROLAMPORTS = 0;
 const RPC_ACCOUNT_BATCH_SIZE = 100;
@@ -2694,6 +2696,17 @@ export class GameClient {
     return this.vaultKeypair !== null;
   }
 
+  async getVaultBalanceLamports(): Promise<number> {
+    if (!this.vaultKeypair) return 0;
+    return this.connection.getBalance(this.vaultKeypair.publicKey, "confirmed");
+  }
+
+  async ensureVaultFunding(reportProgress?: ProgressReporter): Promise<Keypair> {
+    const vault = await this.ensureVault(reportProgress);
+    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
+    return vault;
+  }
+
   async fetchBattleResolvedEvent(signature: string): Promise<BattleResolvedEvent | null> {
     const tx = await this.connection.getTransaction(signature, {
       commitment: "confirmed",
@@ -3089,7 +3102,8 @@ export class GameClient {
       return null;
     }
     this.vaultBackupDecryptFailed = false;
-    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
+    // Recovery must remain read-only. Funding here forces an unexpected wallet
+    // signature and can hide an otherwise valid vault when the top-up fails.
     this.vaultKeypair = vault;
     console.log("[GAME_STATE:vault_backup] restored", { vault: vault.publicKey.toBase58() });
     return vault;
