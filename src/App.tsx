@@ -139,6 +139,9 @@ const MIN_ATTACK_COMBAT_POINTS = 1_000;
 const VAULT_PASSWORD_STORAGE_PREFIX = "gamesol:vault-password";
 const APK_DOWNLOAD_URL = import.meta.env.VITE_APK_DOWNLOAD_URL?.trim() || "https://we.tl/t-4k38OiGWCzoEn7jU";
 const IS_NATIVE_ANDROID_APP = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+const RPC_LOAD_STAGGER_MS = 150;
+
+const delayMs = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function vaultPasswordStorageKey(wallet: string): string {
   return `${VAULT_PASSWORD_STORAGE_PREFIX}:${wallet}`;
@@ -2531,7 +2534,7 @@ const useLandingMetrics = (connection: Connection): LandingMetrics => {
         try {
           const recentTxs = signatures24h.length > 0
             ? await Promise.all(
-                signatures24h.slice(0, 25).map(sig =>
+                signatures24h.slice(0, 8).map(sig =>
                   connection.getParsedTransaction(sig.signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }),
                 ),
               )
@@ -5616,16 +5619,21 @@ const App: React.FC = () => {
     marketClientRef.current = marketClient;
 
     setLoading(true); setError(null); setVaultStatus("loading");
-    Promise.all([
-      loadAllPlanets(publicKey),
-      loadGameConfig(),
-      gameClient.restoreExistingVault(),
-    ])
-      .then(async ([loadedPlanets, config]) => {
+    void (async () => {
+      try {
+        const loadedPlanets = await loadAllPlanets(publicKey);
+        if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
+        await delayMs(RPC_LOAD_STAGGER_MS);
+        const config = await loadGameConfig();
+        if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
+        await delayMs(RPC_LOAD_STAGGER_MS);
+        await gameClient.restoreExistingVault();
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         await loadActivityFromChain(publicKey, loadedPlanets);
+        await delayMs(RPC_LOAD_STAGGER_MS);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         await loadAntimatterBalance(config?.antimatterMint ?? DEFAULT_ANTIMATTER_MINT);
+        await delayMs(RPC_LOAD_STAGGER_MS);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         const [loadedQuestState, loadedQuestProgress, loadedQuestRewardTargets] = await Promise.all([
           gameClient.getQuestState(publicKey),
@@ -5635,23 +5643,25 @@ const App: React.FC = () => {
         setQuestState(loadedQuestState);
         setQuestProgress(loadedQuestProgress);
         setQuestRewardTargets(loadedQuestRewardTargets);
+        await delayMs(RPC_LOAD_STAGGER_MS);
+        if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         const joinedAlliance = await gameClient.getMyAlliance();
         setAllianceState(joinedAlliance?.alliance ?? null);
         setAllianceMembership(joinedAlliance?.membership ?? null);
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
+        await delayMs(RPC_LOAD_STAGGER_MS);
         const status = await gameClient.getVaultStatus();
         if (walletSessionRef.current !== sessionId || clientRef.current !== gameClient) return;
         setVaultStatus(status);
         await refreshVaultBalance();
-      })
-      .catch(e => {
+      } catch (e) {
         if (walletSessionRef.current !== sessionId) return;
-        setError(e?.message ?? "Failed to load.");
-      })
-      .finally(() => {
+        setError(e instanceof Error ? e.message : "Failed to load.");
+      } finally {
         if (walletSessionRef.current !== sessionId) return;
         setLoading(false);
-      });
+      }
+    })();
     return () => {
       if (walletSessionRef.current === sessionId) {
         walletSessionRef.current += 1;
@@ -6104,7 +6114,7 @@ const App: React.FC = () => {
   const visibleSecondaryTabs = (hasCreatedWorld
     ? SECONDARY_TABS
     : SECONDARY_TABS.filter(t => t.id !== "market" && t.id !== "store")).concat([{ id: "activity" as Tab, icon: "ACT", label: "Activity" }]);
-  const mobilePrimaryTabs = PRIMARY_TABS.filter(t => ["overview", "quests", "alliance", "resources"].includes(t.id));
+  const mobilePrimaryTabs = PRIMARY_TABS.filter(t => ["overview", "quests", "resources"].includes(t.id));
   const mobileMoreTabs = [
     ...PRIMARY_TABS.filter(t => !mobilePrimaryTabs.some(primary => primary.id === t.id)),
     ...visibleSecondaryTabs,

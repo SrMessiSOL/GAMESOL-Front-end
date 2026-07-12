@@ -10,14 +10,17 @@ if (!(globalThis as any).Buffer) (globalThis as any).Buffer = Buffer;
 if (!(globalThis as any).process) (globalThis as any).process = process;
 
 async function bootstrap() {
-  const { default: App } = await import("./App");
+  const pathname = window.location.pathname;
+  const { default: App } = pathname === "/universe-game"
+    ? await import("./UniverseGame")
+    : pathname === "/universe-lab"
+      ? await import("./UniverseLab")
+      : await import("./App");
 
   ReactDOM.createRoot(document.getElementById("root")!).render(
-    <React.StrictMode>
-      <WalletConnectionProvider>
-        <App />
-      </WalletConnectionProvider>
-    </React.StrictMode>
+    <WalletConnectionProvider>
+      <App />
+    </WalletConnectionProvider>
   );
 }
 

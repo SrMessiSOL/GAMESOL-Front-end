@@ -12,6 +12,8 @@
     "@capacitor/android": "^8.3.0",
     "@capacitor/core": "^8.3.0",
     "@coral-xyz/anchor": "^0.30.1",
+    "@react-three/drei": "^9.114.3",
+    "@react-three/fiber": "^8.17.10",
     "@solana-mobile/wallet-standard-mobile": "^0.5.2",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-phantom": "^0.9.24",
@@ -21,9 +23,11 @@
     "@solana/web3.js": "^1.91.8",
     "bs58": "^4.0.1",
     "buffer": "^6.0.3",
+    "lucide-react": "^1.24.0",
     "process": "^0.11.10",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.0",
