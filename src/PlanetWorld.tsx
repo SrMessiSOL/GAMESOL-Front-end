@@ -41,10 +41,17 @@ export default function PlanetWorld({ state, busy, run, onExit }: { state: Playe
   const level = Number((state.planet as unknown as Record<string, number>)[building.key] ?? 0);
   const queueBusy = state.planet.buildQueueItem !== 255;
   const resource = state.resources;
+  const queues = [
+    { label: "Construction", active: state.planet.buildQueueItem !== 255, finish: (client: GameClient, entity: PublicKey) => client.finishBuild(entity) },
+    { label: "Research", active: state.research.queueItem !== 255, finish: (client: GameClient, entity: PublicKey) => client.finishResearch(entity) },
+    { label: "Shipyard", active: state.planet.shipBuildItem !== 255, finish: (client: GameClient, entity: PublicKey) => client.finishShipBuild(entity) },
+    { label: "Defense", active: state.planet.defenseBuildItem !== 255, finish: (client: GameClient, entity: PublicKey) => client.finishDefenseBuild(entity) },
+  ];
   return <main className="planet-world">
     <section className="planet-world-scene"><Canvas camera={{ position: [0, 7, 19], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true }}><color attach="background" args={["#020711"]} /><Stars radius={80} depth={40} count={2600} factor={2.2} saturation={0.2} fade /><WorldStructures state={state} onSelect={setSelected} /><OrbitControls enablePan={false} minDistance={12} maxDistance={28} maxPolarAngle={Math.PI * 0.7} minPolarAngle={Math.PI * 0.2} /></Canvas></section>
     <header className="pw-top"><button onClick={onExit} aria-label="Return to system"><ChevronLeft /> SYSTEM</button><div><span>ACTIVE PLANET</span><h1>{state.planet.name}</h1><small>{`G ${state.planet.galaxy} - S ${state.planet.system} - P ${state.planet.position}`}</small></div><div className="pw-resources"><b>METAL {resource.metal.toLocaleString()}</b><b>CRYSTAL {resource.crystal.toLocaleString()}</b><b>DEUTERIUM {resource.deuterium.toLocaleString()}</b></div></header>
     <aside className="pw-building"><div className="pw-kicker"><Building2 /> BUILDING COMPLEX</div><h2>{building.name}</h2><p>Level {level}</p><p className="pw-copy">Select structures on the planet to inspect and upgrade them.</p><button disabled={busy || queueBusy} onClick={() => run(`Upgrade ${building.name}`, (client, entity) => client.startBuild(entity, selected))}><Hammer /> {queueBusy ? "CONSTRUCTION ACTIVE" : "UPGRADE"}</button></aside>
+    <section className="pw-queues">{queues.map((queue) => <article key={queue.label} className={queue.active ? "active" : ""}><span>{queue.label}</span><b>{queue.active ? "IN PROGRESS" : "IDLE"}</b>{queue.active && <button disabled={busy} onClick={() => run(`Finish ${queue.label.toLowerCase()}`, queue.finish)}>FINISH</button>}</article>)}</section>
     <nav className="pw-operations" aria-label="Planet operations"><button title="Buildings"><Building2 /></button><button title="Research"><FlaskConical /></button><button title="Fleet"><Rocket /></button><button title="Defenses"><Shield /></button></nav>
   </main>;
 }
