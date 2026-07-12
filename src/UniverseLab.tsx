@@ -306,12 +306,12 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
     <Stars radius={170} depth={90} count={10500} factor={3.6} saturation={0.14} fade speed={0.25} />
     {level === "universe" && <>
       {fullUniverse ? <FullUniverseOverview populations={galaxyPopulations} onSelect={onFullGalaxySelect} /> : galaxies.map((galaxy) => <GalaxyNode key={galaxy.id} galaxy={galaxy} selected={galaxy.id === `g-${selectedGalaxy}`} onSelect={() => { onGalaxySelect(Number(galaxy.label)); onLevelChange("galaxy"); }} />)}
-      <Text position={[0, -12, 0]} fontSize={0.7} color="#8be5ff" anchorX="center">PUBLIC UNIVERSE Â· ALL KNOWN GALAXIES</Text>
+      <Text position={[0, -12, 0]} fontSize={0.7} color="#8be5ff" anchorX="center">PUBLIC UNIVERSE - ALL KNOWN GALAXIES</Text>
     </>}
     {level === "galaxy" && <>
       <GalaxyBlackHole />
       {systems.map((system) => <SystemNode key={system.id} system={system} onSelect={() => { onSystemSelect(Number(system.label)); onLevelChange("system"); }} />)}
-      <Text position={[0, -6.1, 0]} fontSize={0.42} color="#8be5ff" anchorX="center">{`GALAXY ${selectedGalaxy} Â· ${SYSTEMS_PER_GALAXY} SYSTEMS · ${systems.filter((system) => system.occupied).length} OCCUPIED`}</Text>
+      <Text position={[0, -6.1, 0]} fontSize={0.42} color="#8be5ff" anchorX="center">{`GALAXY ${selectedGalaxy} - ${SYSTEMS_PER_GALAXY} SYSTEMS - ${systems.filter((system) => system.occupied).length} OCCUPIED`}</Text>
     </>}
     {level === "system" && <>
       <HeroStar star={starForSystem(selectedGalaxy, selectedSystem)} />
