@@ -16,6 +16,7 @@ import { PublicKey } from "@solana/web3.js";
 import { WalletDisconnectButton, WalletModalButton, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { BarChart3, Building2, ChevronLeft, ChevronRight, Crosshair, FlaskConical, Gem, Pickaxe, Rocket, Shield, ShoppingCart, Store, Trophy, Users, Zap } from "lucide-react";
 import UniverseLab from "./UniverseLab";
+import PlanetWorld from "./PlanetWorld";
 import {
   BUILDINGS,
   GameClient,
@@ -781,6 +782,7 @@ export default function UniverseGame() {
   const anchorWallet = useAnchorWallet();
   const [planets, setPlanets] = useState<PlayerState[]>([]);
   const [target, setTarget] = useState<MissionTarget | null>(null);
+  const [planetWorldEntity, setPlanetWorldEntity] = useState<string | null>(null);
   const [sourceEntity, setSourceEntity] = useState("");
   const [loadingPlanets, setLoadingPlanets] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -915,6 +917,7 @@ export default function UniverseGame() {
   latestAntimatterBalance = antimatterBalance;
   const selectedState =
     planets.find((planet) => planet.entityPda === sourceEntity) ?? null;
+  const planetWorldState = planets.find((planet) => planet.entityPda === planetWorldEntity) ?? null;
   // Selecting a source planet is not a command. Keep the universe visible
   // until the player explicitly opens a planet or target from the map/roster.
   const commandTarget: MissionTarget | null = target;
@@ -1043,9 +1046,17 @@ export default function UniverseGame() {
   );
   return (
     <main className="universe-game-root">
-      <UniverseLab
+      {!planetWorldState && <UniverseLab
         embedded
-        onOpenCommand={setTarget}
+        onOpenCommand={(planet) => {
+          const ownedPlanet = planets.find((candidate) => candidate.entityPda === planet.id);
+          if (ownedPlanet) {
+            setSourceEntity(ownedPlanet.entityPda);
+            setPlanetWorldEntity(ownedPlanet.entityPda);
+            return;
+          }
+          setTarget(planet);
+        }}
         onOpenEmptyTarget={(empty) =>
           setTarget({
             id: `empty:${empty.galaxy}:${empty.system}:${empty.position}`,
@@ -1063,14 +1074,18 @@ export default function UniverseGame() {
         activeOwnedPlanet={sourceEntity}
         onOperatePlanet={(planet) => {
           setSourceEntity(planet.entity);
-          setTarget({
-            id: planet.entity,
-            name: planet.name,
-            system: `${planet.galaxy}:${planet.system}:${planet.position}`,
-          });
+          setPlanetWorldEntity(planet.entity);
         }}
-      />
-      <header className="ug-top">
+      />}
+      {planetWorldState && (
+        <PlanetWorld
+          state={planetWorldState}
+          busy={busy}
+          run={run}
+          onExit={() => setPlanetWorldEntity(null)}
+        />
+      )}
+      {!planetWorldState && <header className="ug-top">
         {publicKey ? (
           <>
             <button
@@ -1169,15 +1184,15 @@ export default function UniverseGame() {
         ) : (
           <WalletMultiButton />
         )}
-      </header>
-      {publicKey && loadingPlanets && (
+      </header>}
+      {!planetWorldState && publicKey && loadingPlanets && (
         <section className="ug-connecting" role="status">
           <div className="ug-loader" />
           <strong>CONNECTING TO COMMAND NETWORK</strong>
           <span>Loading your on-chain planets and vault status</span>
         </section>
       )}
-      {publicKey && !loadingPlanets && planets.length === 0 && (
+      {!planetWorldState && publicKey && !loadingPlanets && planets.length === 0 && (
         <section className="ug-homeworld">
           <h1>Establish your homeworld</h1>
           <p>
@@ -1194,7 +1209,7 @@ export default function UniverseGame() {
           </button>
         </section>
       )}
-      {!publicKey && (
+      {!planetWorldState && !publicKey && (
         <section className="ug-homeworld">
           <h1>Enter the universe</h1>
           <p>Connect a wallet to load owned planets and create a homeworld.</p>
