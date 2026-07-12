@@ -306,12 +306,12 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
     <Stars radius={170} depth={90} count={10500} factor={3.6} saturation={0.14} fade speed={0.25} />
     {level === "universe" && <>
       {fullUniverse ? <FullUniverseOverview populations={galaxyPopulations} onSelect={onFullGalaxySelect} /> : galaxies.map((galaxy) => <GalaxyNode key={galaxy.id} galaxy={galaxy} selected={galaxy.id === `g-${selectedGalaxy}`} onSelect={() => { onGalaxySelect(Number(galaxy.label)); onLevelChange("galaxy"); }} />)}
-      <Text position={[0, -12, 0]} fontSize={0.7} color="#8be5ff" anchorX="center">PUBLIC UNIVERSE Â· ALL KNOWN GALAXIES</Text>
+      <Text position={[0, -12, 0]} fontSize={0.7} color="#8be5ff" anchorX="center">PUBLIC UNIVERSE - ALL KNOWN GALAXIES</Text>
     </>}
     {level === "galaxy" && <>
       <GalaxyBlackHole />
       {systems.map((system) => <SystemNode key={system.id} system={system} onSelect={() => { onSystemSelect(Number(system.label)); onLevelChange("system"); }} />)}
-      <Text position={[0, -6.1, 0]} fontSize={0.42} color="#8be5ff" anchorX="center">{`GALAXY ${selectedGalaxy} Â· ${SYSTEMS_PER_GALAXY} SYSTEMS · ${systems.filter((system) => system.occupied).length} OCCUPIED`}</Text>
+      <Text position={[0, -6.1, 0]} fontSize={0.42} color="#8be5ff" anchorX="center">{`GALAXY ${selectedGalaxy} - ${SYSTEMS_PER_GALAXY} SYSTEMS - ${systems.filter((system) => system.occupied).length} OCCUPIED`}</Text>
     </>}
     {level === "system" && <>
       <HeroStar star={starForSystem(selectedGalaxy, selectedSystem)} />
@@ -320,7 +320,7 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
         return planet ? <React.Fragment key={planet.id}><OrbitPath planet={planet} /><PlanetNode planet={planet} active={selected.id === planet.id} onSelect={() => onSelect(planet)} /></React.Fragment> : <EmptyPlanetSlot key={`empty-${position}`} position={position} onSelect={() => onEmptySlotSelect({ galaxy: selectedGalaxy, system: selectedSystem, position })} />;
       })}
       {snapshot.missions.map((mission) => <FleetRoute key={mission.id} mission={mission} planets={snapshot.planets} />)}
-      <Text position={[0, -3.1, 0]} fontSize={0.34} color="#8be5ff" anchorX="center">{`GALAXY ${selectedGalaxy} · SYSTEM ${selectedSystem} · ${starForSystem(selectedGalaxy, selectedSystem).label.toUpperCase()} · ${PLANETS_PER_SYSTEM} PLANET SLOTS`}</Text>
+      <Text position={[0, -3.1, 0]} fontSize={0.34} color="#8be5ff" anchorX="center">{`GALAXY ${selectedGalaxy} - SYSTEM ${selectedSystem} - ${starForSystem(selectedGalaxy, selectedSystem).label.toUpperCase()} - ${PLANETS_PER_SYSTEM} PLANET SLOTS`}</Text>
     </>}
     <OrbitControls ref={controls} enablePan enableDamping dampingFactor={0.08} minDistance={cameraMinDistance} maxDistance={cameraMaxDistance} maxPolarAngle={Math.PI * 0.82} minPolarAngle={Math.PI * 0.22} autoRotate={false} />
     <CenteredUniverseCamera controls={controls} enabled={level === "universe" && fullUniverse} />
