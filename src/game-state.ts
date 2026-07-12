@@ -3102,7 +3102,8 @@ export class GameClient {
       return null;
     }
     this.vaultBackupDecryptFailed = false;
-    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
+    // Recovery must remain read-only. Funding here forces an unexpected wallet
+    // signature and can hide an otherwise valid vault when the top-up fails.
     this.vaultKeypair = vault;
     console.log("[GAME_STATE:vault_backup] restored", { vault: vault.publicKey.toBase58() });
     return vault;
