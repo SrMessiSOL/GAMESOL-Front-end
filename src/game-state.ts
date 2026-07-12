@@ -2701,12 +2701,6 @@ export class GameClient {
     return this.connection.getBalance(this.vaultKeypair.publicKey, "confirmed");
   }
 
-  async ensureVaultFunding(reportProgress?: ProgressReporter): Promise<Keypair> {
-    const vault = await this.ensureVault(reportProgress);
-    await this.ensureVaultLamports(vault, VAULT_MIN_BALANCE_LAMPORTS, reportProgress);
-    return vault;
-  }
-
   async fetchBattleResolvedEvent(signature: string): Promise<BattleResolvedEvent | null> {
     const tx = await this.connection.getTransaction(signature, {
       commitment: "confirmed",

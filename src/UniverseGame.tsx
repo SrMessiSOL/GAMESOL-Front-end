@@ -942,8 +942,6 @@ export default function UniverseGame() {
     setBusy(true);
     setStatus("Creating homeworld...");
     try {
-      await client.ensureVaultFunding((message) => setStatus(message));
-      await refreshVaultBalance();
       await client.initializePlanet(homeworldName, (message) => setStatus(message));
       await refresh();
       await refreshVaultBalance();
