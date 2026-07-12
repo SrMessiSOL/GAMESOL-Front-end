@@ -915,11 +915,9 @@ export default function UniverseGame() {
   latestAntimatterBalance = antimatterBalance;
   const selectedState =
     planets.find((planet) => planet.entityPda === sourceEntity) ?? null;
-  const commandTarget: MissionTarget | null = target ?? (selectedState ? {
-    id: selectedState.entityPda,
-    name: selectedState.planet.name,
-    system: `${selectedState.planet.galaxy}:${selectedState.planet.system}:${selectedState.planet.position}`,
-  } : null);
+  // Selecting a source planet is not a command. Keep the universe visible
+  // until the player explicitly opens a planet or target from the map/roster.
+  const commandTarget: MissionTarget | null = target;
   const run = async (
     label: string,
     action: (game: GameClient, entity: PublicKey) => Promise<unknown>,
