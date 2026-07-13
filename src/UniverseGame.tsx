@@ -17,6 +17,7 @@ import { WalletDisconnectButton, WalletModalButton, WalletMultiButton } from "@s
 import { BarChart3, Building2, ChevronLeft, ChevronRight, Crosshair, FlaskConical, Gem, Pickaxe, Rocket, Shield, ShoppingCart, Store, Trophy, Users, Zap } from "lucide-react";
 import UniverseLab from "./UniverseLab";
 import PlanetWorld from "./PlanetWorld";
+import { MarketClient } from "./market-client";
 import {
   BUILDINGS,
   GameClient,
@@ -30,6 +31,26 @@ import {
 } from "./game-state";
 import type { UniversePlanet } from "./universe-data";
 import { resolveGameArt } from "./ui-art";
+
+type OperationState = {
+  label: string;
+  detail: string;
+  phase: "processing" | "success" | "error";
+};
+
+function OperationModal({ operation, onClose }: { operation: OperationState | null; onClose: () => void }) {
+  if (!operation) return null;
+  const active = operation.phase === "processing";
+  return <div className="ug-operation-backdrop" role="status" aria-live="polite">
+    <section className={`ug-operation-modal ${operation.phase}`}>
+      <div className="ug-operation-mark">{active ? <i /> : operation.phase === "success" ? "OK" : "!"}</div>
+      <span>{active ? "COMMAND PROCESSING" : operation.phase === "success" ? "COMMAND CONFIRMED" : "COMMAND FAILED"}</span>
+      <h2>{operation.label}</h2>
+      <p>{operation.detail}</p>
+      {active ? <div className="ug-operation-steps"><b>1</b><i /><b>2</b><i /><b>3</b></div> : <button onClick={onClose}>CLOSE</button>}
+    </section>
+  </div>;
+}
 import "./universe-game.css";
 
 const RESEARCH = [
@@ -783,10 +804,12 @@ export default function UniverseGame() {
   const [planets, setPlanets] = useState<PlayerState[]>([]);
   const [target, setTarget] = useState<MissionTarget | null>(null);
   const [planetWorldEntity, setPlanetWorldEntity] = useState<string | null>(null);
+  const [returnSystem, setReturnSystem] = useState<{ galaxy: number; system: number } | null>(null);
   const [sourceEntity, setSourceEntity] = useState("");
   const [loadingPlanets, setLoadingPlanets] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const [operation, setOperation] = useState<OperationState | null>(null);
   const [homeworldName, setHomeworldName] = useState("Homeworld");
   const [vaultRequest, setVaultRequest] =
     useState<VaultRecoveryPromptRequest | null>(null);
@@ -805,6 +828,11 @@ export default function UniverseGame() {
     const timer = window.setTimeout(() => setStatus(""), 5_000);
     return () => window.clearTimeout(timer);
   }, [status]);
+  useEffect(() => {
+    if (!operation || operation.phase === "processing") return;
+    const timer = window.setTimeout(() => setOperation(null), 4_500);
+    return () => window.clearTimeout(timer);
+  }, [operation]);
   const resolveVault = useRef<((value: string) => void) | null>(null);
   const requestVault = useCallback(
     (request: VaultRecoveryPromptRequest) =>
@@ -837,6 +865,12 @@ export default function UniverseGame() {
           )
         : null,
     [anchorWallet, connection, requestVault],
+  );
+  const marketClient = useMemo(
+    () => client && anchorWallet
+      ? new MarketClient(connection, new AnchorProvider(connection, anchorWallet, { commitment: "confirmed" }), client)
+      : null,
+    [anchorWallet, client, connection],
   );
   const refresh = useCallback(async () => {
     if (!client || !publicKey) {
@@ -921,36 +955,50 @@ export default function UniverseGame() {
   // Selecting a source planet is not a command. Keep the universe visible
   // until the player explicitly opens a planet or target from the map/roster.
   const commandTarget: MissionTarget | null = target;
-  const run = async (
+  const runForEntity = async (
     label: string,
+    entityPda: string,
     action: (game: GameClient, entity: PublicKey) => Promise<unknown>,
   ) => {
-    if (!client || !selectedState) return;
+    if (!client || !entityPda) return;
     setBusy(true);
     setStatus(`${label}...`);
+    setOperation({ label, detail: "Preparing your command and verifying the active world.", phase: "processing" });
     try {
-      await action(client, new PublicKey(selectedState.entityPda));
+      await action(client, new PublicKey(entityPda));
       await refresh();
       setStatus(`${label} submitted.`);
+      setOperation({ label, detail: "The transaction was confirmed and your command state has been refreshed.", phase: "success" });
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : `${label} failed.`);
+      const detail = error instanceof Error ? error.message : `${label} failed.`;
+      setStatus(detail);
+      setOperation({ label, detail, phase: "error" });
     } finally {
       setBusy(false);
     }
   };
+  const run = async (
+    label: string,
+    action: (game: GameClient, entity: PublicKey) => Promise<unknown>,
+  ) => runForEntity(label, selectedState?.entityPda ?? "", action);
   const createHomeworld = async () => {
     if (!client) return;
     setBusy(true);
     setStatus("Creating homeworld...");
+    setOperation({ label: "Establish homeworld", detail: "Preparing your command vault and reserving an empty world.", phase: "processing" });
     try {
-      await client.initializePlanet(homeworldName, (message) => setStatus(message));
+      await client.initializePlanet(homeworldName, (message) => {
+        setStatus(message);
+        setOperation({ label: "Establish homeworld", detail: message, phase: "processing" });
+      });
       await refresh();
       await refreshVaultBalance();
       setStatus("Homeworld created.");
+      setOperation({ label: "Establish homeworld", detail: "Your homeworld is live and ready for command.", phase: "success" });
     } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Homeworld creation failed.",
-      );
+      const detail = error instanceof Error ? error.message : "Homeworld creation failed.";
+      setStatus(detail);
+      setOperation({ label: "Establish homeworld", detail, phase: "error" });
     } finally {
       setBusy(false);
     }
@@ -1007,12 +1055,16 @@ export default function UniverseGame() {
   const depositVault = async () => {
     if (!client) return;
     setVaultActionBusy(true);
+    setOperation({ label: "Fund vault", detail: "Requesting your wallet signature to move SOL into the game vault.", phase: "processing" });
     try {
       await client.depositToVaultLamports(parseSolAmount(vaultDeposit));
       await refreshVaultBalance();
       setStatus("Vault funded.");
+      setOperation({ label: "Fund vault", detail: "SOL is available for game account rent and vault-signed commands.", phase: "success" });
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Vault funding failed.");
+      const detail = error instanceof Error ? error.message : "Vault funding failed.";
+      setStatus(detail);
+      setOperation({ label: "Fund vault", detail, phase: "error" });
     } finally {
       setVaultActionBusy(false);
     }
@@ -1020,12 +1072,16 @@ export default function UniverseGame() {
   const withdrawVault = async () => {
     if (!client) return;
     setVaultActionBusy(true);
+    setOperation({ label: "Withdraw from vault", detail: "Moving SOL from your game vault back to the connected wallet.", phase: "processing" });
     try {
       await client.withdrawVaultLamports(parseSolAmount(vaultWithdraw));
       await refreshVaultBalance();
       setStatus("Vault withdrawal submitted.");
+      setOperation({ label: "Withdraw from vault", detail: "The vault balance has been refreshed.", phase: "success" });
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Vault withdrawal failed.");
+      const detail = error instanceof Error ? error.message : "Vault withdrawal failed.";
+      setStatus(detail);
+      setOperation({ label: "Withdraw from vault", detail, phase: "error" });
     } finally {
       setVaultActionBusy(false);
     }
@@ -1072,6 +1128,8 @@ export default function UniverseGame() {
           position: planet.planet.position,
         }))}
         activeOwnedPlanet={sourceEntity}
+        initialGalaxy={returnSystem?.galaxy}
+        initialSystem={returnSystem?.system}
         onOperatePlanet={(planet) => {
           setSourceEntity(planet.entity);
           setPlanetWorldEntity(planet.entity);
@@ -1081,8 +1139,33 @@ export default function UniverseGame() {
         <PlanetWorld
           state={planetWorldState}
           busy={busy}
-          run={run}
-          onExit={() => setPlanetWorldEntity(null)}
+          run={(label, action) => runForEntity(label, planetWorldState.entityPda, action)}
+          game={client}
+          market={marketClient}
+          worlds={planets.map((planet) => ({ entity: planet.entityPda, name: planet.planet.name || `Planet ${planet.planet.planetIndex + 1}` }))}
+          onExit={() => {
+            setReturnSystem({ galaxy: planetWorldState.planet.galaxy, system: planetWorldState.planet.system });
+            setPlanetWorldEntity(null);
+          }}
+          wallet={publicKey ? {
+            label: walletLabel,
+            worlds: planets.length,
+            shieldActive,
+            vaultStatus,
+            vaultSol: (Number(vaultBalance) / 1_000_000_000).toFixed(4),
+            antimatter: tokenLabel(antimatterBalance),
+            usdc: tokenLabel(usdcBalance),
+          } : null}
+          vaultControls={{
+            depositAmount: vaultDeposit,
+            withdrawAmount: vaultWithdraw,
+            onDepositAmountChange: setVaultDeposit,
+            onWithdrawAmountChange: setVaultWithdraw,
+            onDeposit: depositVault,
+            onWithdraw: withdrawVault,
+            busy: vaultActionBusy,
+          }}
+          allianceBalances={{ usdc: usdcBalance, antimatter: antimatterBalance }}
         />
       )}
       {!planetWorldState && <header className="ug-top">
@@ -1216,6 +1299,7 @@ export default function UniverseGame() {
         </section>
       )}
       {status && <div className="ug-status">{status}</div>}
+      <OperationModal operation={operation} onClose={() => setOperation(null)} />
       {commandTarget && (
         <PlanetDashboard
           state={selectedState}

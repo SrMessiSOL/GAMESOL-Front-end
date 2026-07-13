@@ -329,20 +329,20 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
   </Canvas>;
 }
 
-export default function UniverseLab({ embedded = false, onOpenCommand, onOpenEmptyTarget, ownedPlanets = [], activeOwnedPlanet, onOperatePlanet }: { embedded?: boolean; onOpenCommand?: (planet: UniversePlanet) => void; onOpenEmptyTarget?: (target: { galaxy: number; system: number; position: number }) => void; ownedPlanets?: UniverseOwnedPlanet[]; activeOwnedPlanet?: string; onOperatePlanet?: (planet: UniverseOwnedPlanet) => void }) {
+export default function UniverseLab({ embedded = false, onOpenCommand, onOpenEmptyTarget, ownedPlanets = [], activeOwnedPlanet, onOperatePlanet, initialGalaxy, initialSystem }: { embedded?: boolean; onOpenCommand?: (planet: UniversePlanet) => void; onOpenEmptyTarget?: (target: { galaxy: number; system: number; position: number }) => void; ownedPlanets?: UniverseOwnedPlanet[]; activeOwnedPlanet?: string; onOperatePlanet?: (planet: UniverseOwnedPlanet) => void; initialGalaxy?: number; initialSystem?: number }) {
   const { connection } = useConnection();
   const { publicKey } = useWallet();
   const [snapshot, setSnapshot] = useState<UniverseSnapshot | null>(null);
   const [selected, setSelected] = useState<UniversePlanet | null>(null);
   const [hudOpen, setHudOpen] = useState(true);
-  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("universe");
+  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(initialGalaxy && initialSystem ? "system" : "universe");
   const fullUniverse = true;
   const [galaxyPopulations, setGalaxyPopulations] = useState<Map<number, number>>(() => new Map());
-  const [selectedGalaxy, setSelectedGalaxy] = useState(1);
-  const [selectedSystem, setSelectedSystem] = useState(1);
+  const [selectedGalaxy, setSelectedGalaxy] = useState(initialGalaxy ?? 1);
+  const [selectedSystem, setSelectedSystem] = useState(initialSystem ?? 1);
   const [cameraZoom, setCameraZoom] = useState<{ id: number; direction: "in" | "out" }>({ id: 0, direction: "in" });
-  const [galaxyInput, setGalaxyInput] = useState("1");
-  const [systemInput, setSystemInput] = useState("1");
+  const [galaxyInput, setGalaxyInput] = useState(String(initialGalaxy ?? 1));
+  const [systemInput, setSystemInput] = useState(String(initialSystem ?? 1));
 
   const mapToSnapshot = (chainPlanets: Array<{
     entity: string;

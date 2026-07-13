@@ -537,9 +537,9 @@ interface ShipRequirementsCheck { shipName: string; shipIcon: string; requiremen
 interface DefenseRequirementsCheck { defenseName: string; defenseIcon: string; requirements: ShipRequirement[]; allMet: boolean; }
 interface RequirementStatus { label: string; met: boolean; current: number; required: number; type: "building" | "research"; }
 interface RequirementCheck { title: string; icon: string; categoryLabel: string; subtitle: string; hint: string; requirements: RequirementStatus[]; allMet: boolean; }
-type QuestPeriod = 0 | 1 | 2 | 3;
+export type QuestPeriod = 0 | 1 | 2 | 3;
 type QuestRequirement = { label: string; current: (state: PlayerState) => number; required: number };
-type QuestDefinition = {
+export type QuestDefinition = {
   period: QuestPeriod;
   id: number;
   title: string;
@@ -898,7 +898,7 @@ function recurringActionSignature(period: 1 | 2 | 3, entry: QuestCatalogUiEntry)
 
 const ZERO_PUBKEY_STRING = "11111111111111111111111111111111";
 
-function questRewardTargetForRequirement(
+export function questRewardTargetForRequirement(
   period: 1 | 2 | 3,
   label: string,
   targets: QuestRewardTargetStateAccount | null | undefined,
@@ -959,7 +959,7 @@ function buildRotatingQuest(period: 1 | 2 | 3, id: number, group: "Daily" | "Wee
   };
 }
 
-type AllianceDepositDefinition = {
+export type AllianceDepositDefinition = {
   period: 1 | 2 | 3;
   id: number;
   group: "Daily" | "Weekly" | "Monthly";
@@ -971,7 +971,7 @@ type AllianceDepositDefinition = {
   antimatter: bigint;
 };
 
-const ALLIANCE_DEPOSIT_DEFINITIONS: AllianceDepositDefinition[] = [
+export const ALLIANCE_DEPOSIT_DEFINITIONS: AllianceDepositDefinition[] = [
   { period: 1, id: 0, group: "Daily", title: "Deposit Metal", xp: 80, metal: 1_000n, crystal: 0n, deuterium: 0n, antimatter: 0n },
   { period: 1, id: 1, group: "Daily", title: "Deposit Crystal", xp: 80, metal: 0n, crystal: 1_000n, deuterium: 0n, antimatter: 0n },
   { period: 1, id: 2, group: "Daily", title: "Deposit Deuterium", xp: 90, metal: 0n, crystal: 0n, deuterium: 500n, antimatter: 0n },
@@ -992,14 +992,14 @@ const ALLIANCE_PERIOD_COPY: Record<AllianceDepositDefinition["group"], { title: 
   Monthly: { title: "MONTHLY ALLIANCE QUESTS", note: "Resets on the 1st of each month at 00:00 UTC for each member." },
 };
 
-const ALLIANCE_BUILDINGS = [
+export const ALLIANCE_BUILDINGS = [
   { id: 0, key: "logisticsHub", title: "Logistics Hub", hint: "Shared shipping and contribution capacity." },
   { id: 1, key: "researchGrid", title: "Research Grid", hint: "Shared scientific coordination." },
   { id: 2, key: "defenseCoordination", title: "Defense Coordination", hint: "Alliance-wide defensive organization." },
   { id: 3, key: "tradeNetwork", title: "Trade Network", hint: "Shared market and treasury infrastructure." },
 ] as const;
 
-function allianceBuildingCost(buildingId: number, nextLevel: number): { metal: bigint; crystal: bigint; deuterium: bigint; antimatter: bigint } {
+export function allianceBuildingCost(buildingId: number, nextLevel: number): { metal: bigint; crystal: bigint; deuterium: bigint; antimatter: bigint } {
   const level = BigInt(Math.max(1, nextLevel));
   const scale = level * level;
   if (buildingId === 0) return { metal: 5_000n * scale, crystal: 2_000n * scale, deuterium: 1_000n * scale, antimatter: 50_000_000n * level };
@@ -1051,7 +1051,7 @@ function allianceThreshold(level: number): bigint {
   const prev = BigInt(Math.max(0, level - 1));
   return (prev * BigInt(level) * 1000n) / 2n;
 }
-function activeQuestDefinitions(nowTs: number, questProgress: QuestProgressStateAccount | null | undefined): QuestDefinition[] {
+export function activeQuestDefinitions(nowTs: number, questProgress: QuestProgressStateAccount | null | undefined): QuestDefinition[] {
   const tutorialAndCheckIn = QUEST_DEFINITIONS.filter(q => q.period === 0 || (q.period === 1 && q.id === 0));
   const dailyQuestEpoch = dailyEpoch(nowTs);
   const weeklyQuestEpoch = weeklyEpoch(nowTs);
@@ -4226,9 +4226,9 @@ const DefenseTab: React.FC<{ state: PlayerState; res?: Resources; nowTs: number;
     return (<><div><div className="section-title">DEFENSE SYSTEMS</div><div style={{fontSize:10,color:"var(--dim)",letterSpacing:1,marginBottom:20}}>Shipyard Lv {planet.shipyard} · Planetary batteries, shield domes, and turrets.</div>{defenseInProgress&&(<div className="build-queue-banner" style={{marginBottom:20}}><div><div className="build-queue-label">🛡 DEFENSE YARD</div><div className="build-queue-item-name">{currentDefense?.name ?? `Defense #${planet.defenseBuildItem}`} × {planet.defenseBuildQty}</div></div><div className="build-queue-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}><div className="build-queue-eta">{fmtCountdown(defenseSecsLeft)}</div>{defenseSecsLeft===0&&<button className="build-btn finish-btn" disabled={txBusy} onClick={onFinishDefense}>FINISH DEFENSE</button>}<InstantFinishButton secondsLeft={defenseSecsLeft} balance={antimatterBalance} enabled={antimatterEnabled} txBusy={txBusy} onClick={onInstantFinishDefense}/></div></div>)}<div className="grid-3">{DEFENSE_DEFS.map(defense=>{const qty=Math.max(1,defenseQuantities[defense.key]??1); const affordable=canAfford(defense.cost,qty); const current=((planet as any)[defense.key]as number)??0; const check=checkDefenseRequirements(defense.key,research,planet); const reqsMet=check?.allMet??true; const missingCount=check?.requirements.filter(r=>!r.met).length??0; const disabled=txBusy||shipyardBusy||(!reqsMet?false:!affordable); return(<div key={defense.key} className={`ship-build-card${!reqsMet?" locked":""}`}><div className="ship-card-art" style={{ backgroundImage: getDefenseArt(defense.key) }} /><div className="ship-build-header"><div className="ship-build-icon-name"><div><div className="ship-build-name">{defense.icon} {defense.name}</div><div style={{fontSize:9,color:reqsMet?"var(--success)":"var(--danger)",letterSpacing:0.5,marginTop:2}}>{reqsMet?"unlocked":`requirements (${missingCount})`}</div></div></div><div className={`ship-build-count${current===0?" zero":""}`}>{current.toLocaleString()}</div></div><div style={{fontSize:10,color:"var(--dim)",margin:"8px 0"}}>{defense.cost.m>0&&<div style={{color:!res||res.metal>=BigInt(defense.cost.m*qty)?"var(--text)":"var(--danger)"}}>Metal: {fmt(defense.cost.m*qty)}</div>}{defense.cost.c>0&&<div style={{color:!res||res.crystal>=BigInt(defense.cost.c*qty)?"var(--text)":"var(--danger)"}}>Crystal: {fmt(defense.cost.c*qty)}</div>}{defense.cost.d>0&&<div style={{color:!res||res.deuterium>=BigInt(defense.cost.d*qty)?"var(--text)":"var(--danger)"}}>Deuterium: {fmt(defense.cost.d*qty)}</div>}</div><div className="ship-qty-row"><input className="qty-input" type="number" min={1} value={qty} onChange={e=>setDefenseQuantities(prev=>({...prev,[defense.key]:Math.max(1,parseInt(e.target.value)||1)}))} disabled={txBusy||shipyardBusy}/><button className={`ship-build-btn${!reqsMet?" locked-btn":""}`} disabled={disabled} onClick={()=>{if(!reqsMet&&check){setDefenseReqCheck(check);return;}onBuildDefense(defense.idx,qty);}}>{shipyardBusy?shipyardBlockLabel:!reqsMet?`REQUIREMENTS (${missingCount})`:`BUILD ×${qty}`}</button></div></div>);})}</div></div>{defenseReqCheck&&<ShipRequirementsModal check={{shipName:defenseReqCheck.defenseName,shipIcon:defenseReqCheck.defenseIcon,requirements:defenseReqCheck.requirements,allMet:defenseReqCheck.allMet}} onClose={()=>setDefenseReqCheck(null)} onGoBuildings={onGoBuildings} onGoResearch={onGoResearch}/>}</>);
   };
 
-const hasQuestBit = (mask: bigint, id: number) => ((mask >> BigInt(id)) & 1n) === 1n;
+export const hasQuestBit = (mask: bigint, id: number) => ((mask >> BigInt(id)) & 1n) === 1n;
 
-function questClaimedMask(period: QuestPeriod, questState: QuestStateAccount | null, nowTs: number): bigint {
+export function questClaimedMask(period: QuestPeriod, questState: QuestStateAccount | null, nowTs: number): bigint {
   if (!questState) return 0n;
   if (period === 0) return questState.tutorialClaimedMask;
   if (period === 1) return questState.dailyEpoch === dailyEpoch(nowTs) ? questState.dailyClaimedMask : 0n;
@@ -4236,14 +4236,14 @@ function questClaimedMask(period: QuestPeriod, questState: QuestStateAccount | n
   return questState.monthlyEpoch === monthlyEpoch(nowTs) ? questState.monthlyClaimedMask : 0n;
 }
 
-const tutorialQuestsComplete = (questState: QuestStateAccount | null): boolean => {
+export const tutorialQuestsComplete = (questState: QuestStateAccount | null): boolean => {
   if (!questState) return false;
   return QUEST_DEFINITIONS
     .filter(quest => quest.period === 0)
     .every(quest => hasQuestBit(questState.tutorialClaimedMask, quest.id));
 };
 
-const questGroupResetSeconds = (group: QuestDefinition["group"], nowTs: number): number | null => {
+export const questGroupResetSeconds = (group: QuestDefinition["group"], nowTs: number): number | null => {
   if (group === "Daily") return questResetSeconds(1, nowTs);
   if (group === "Weekly") return questResetSeconds(2, nowTs);
   if (group === "Monthly") return questResetSeconds(3, nowTs);
@@ -4252,7 +4252,7 @@ const questGroupResetSeconds = (group: QuestDefinition["group"], nowTs: number):
 
 
 type StorePeriod = 1 | 2 | 3;
-type StorePack = {
+export type StorePack = {
   period: StorePeriod;
   id: number;
   group: "Daily" | "Weekly" | "Monthly";
@@ -4263,7 +4263,7 @@ type StorePack = {
   shieldSeconds?: number;
 };
 
-const STORE_PACKS: StorePack[] = [
+export const STORE_PACKS: StorePack[] = [
   { period: 1, id: 0, group: "Daily", title: "Daily Metal Cache", hint: "Focused metal refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 3000, crystal: 0, deuterium: 0 } },
   { period: 1, id: 1, group: "Daily", title: "Daily Crystal Cache", hint: "Focused crystal refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 2000, deuterium: 0 } },
   { period: 1, id: 2, group: "Daily", title: "Daily Deuterium Cache", hint: "Focused fuel refill for one active session.", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 0, deuterium: 750 } },
@@ -4298,7 +4298,7 @@ function effectiveAttackProtectionUntil(planet: Planet): number {
   return Math.max(planet.protectionUntilTs, beginnerUntil);
 }
 
-function storePurchasedMask(period: StorePeriod, purchaseState: StorePurchaseStateAccount | null, nowTs: number): bigint {
+export function storePurchasedMask(period: StorePeriod, purchaseState: StorePurchaseStateAccount | null, nowTs: number): bigint {
   if (!purchaseState) return 0n;
   if (period === 1) return purchaseState.dailyEpoch === dailyEpoch(nowTs) ? purchaseState.dailyPurchasedMask : 0n;
   if (period === 2) return purchaseState.weeklyEpoch === weeklyEpoch(nowTs) ? purchaseState.weeklyPurchasedMask : 0n;
