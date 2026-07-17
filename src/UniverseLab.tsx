@@ -347,7 +347,7 @@ export default function UniverseLab({ embedded = false, onOpenCommand, onOpenEmp
   const { publicKey } = useWallet();
   const [snapshot, setSnapshot] = useState<UniverseSnapshot | null>(null);
   const [selected, setSelected] = useState<UniversePlanet | null>(null);
-  const [hudOpen, setHudOpen] = useState(true);
+  const [hudOpen, setHudOpen] = useState(() => typeof window === "undefined" || !window.matchMedia("(max-width: 700px)").matches);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(initialGalaxy && initialSystem ? "system" : "universe");
   const fullUniverse = true;
   const [galaxyPopulations, setGalaxyPopulations] = useState<Map<number, number>>(() => new Map());
