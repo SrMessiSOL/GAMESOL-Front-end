@@ -5,6 +5,9 @@ dist
 android
 test
 tmp
+src/assets/planet-models
+src/assets/universe-lab/planet-command-surface.png
+src/glb.d.ts
 docs
 *.log
 .tmp_research.txt
