@@ -3,17 +3,15 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, Line, OrbitControls, PerspectiveCamera, Stars, Text, useTexture } from "@react-three/drei";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import * as THREE from "three";
-import { createUniverseSnapshotFromChainData, snapshotFromPublicPlanets, type UniverseMission, type UniversePlanet, type UniverseSnapshot } from "./universe-data";
+import { createUniverseSnapshotFromChainData, orbitForSystemPosition, pointOnUniverseOrbit, snapshotFromPublicPlanets, type UniverseMission, type UniverseOrbit, type UniversePlanet, type UniverseSnapshot } from "./universe-data";
 import { fetchAllPublicPlanets, fetchUniverseMapData } from "./game-state";
+import { planetSurfaceStyle } from "./planet-style";
 import "./universe-lab.css";
 import oceanWorldAlbedo from "./assets/universe-lab/ocean-world-albedo.png";
 import gasGiantAlbedo from "./assets/universe-lab/gas-giant-albedo.png";
 import stellarCorona from "./assets/universe-lab/stellar-corona.png";
 import gamesolMark from "./assets/ui/logobg.png";
 
-const PLANET_COLORS: Record<UniversePlanet["className"], [string, string]> = {
-  ocean: ["#1cc6ff", "#00628e"], volcanic: ["#ff6e32", "#54140e"], ice: ["#d7fbff", "#5f8bb5"], gas: ["#c88cff", "#442368"], terran: ["#51e3a8", "#165b54"],
-};
 const FACTION_COLORS: Record<UniversePlanet["faction"], string> = { owned: "#44f7c3", allied: "#5fa9ff", unknown: "#a8b5c9", hostile: "#ff586d" };
 type ZoomLevel = "universe" | "galaxy" | "system";
 const MAX_GALAXY = 999;
@@ -184,12 +182,21 @@ function SystemNode({ system, onSelect }: { system: GalaxySystem; onSelect: () =
 }
 
 function PlanetNode({ planet, active, onSelect }: { planet: UniversePlanet; active: boolean; onSelect: () => void }) {
+  const orbiter = React.useRef<THREE.Group>(null!);
   const mesh = React.useRef<THREE.Mesh>(null!);
-  const [a, b] = PLANET_COLORS[planet.className];
+  const position = Number(planet.system.split(":")[2]) || 1;
+  const style = planetSurfaceStyle(position);
+  const radius = (planet.faction === "owned" ? 1.2 : 0.96) * (style.className === "gas" ? 1.12 : 1);
+  const orbit = planet.orbit ?? orbitForSystemPosition(position);
   useFrame(({ clock }) => {
+    const elapsed = clock.getElapsedTime();
+    if (orbiter.current) {
+      const [x, y, z] = pointOnUniverseOrbit(orbit, orbit.phase + elapsed * orbit.angularVelocity);
+      orbiter.current.position.set(x, y, z);
+    }
     if (!mesh.current) return;
-    mesh.current.rotation.y = clock.getElapsedTime() * (planet.faction === "hostile" ? -0.22 : 0.15);
-    const pulse = active ? 1 + Math.sin(clock.getElapsedTime() * 3) * 0.055 : 1;
+    mesh.current.rotation.y = elapsed * (planet.faction === "hostile" ? -0.22 : 0.15);
+    const pulse = active ? 1 + Math.sin(elapsed * 3) * 0.055 : 1;
     mesh.current.scale.setScalar(pulse);
   });
   const oceanTexture = useTexture(oceanWorldAlbedo);
@@ -197,12 +204,14 @@ function PlanetNode({ planet, active, onSelect }: { planet: UniversePlanet; acti
   oceanTexture.colorSpace = THREE.SRGBColorSpace;
   gasTexture.colorSpace = THREE.SRGBColorSpace;
   oceanTexture.wrapS = THREE.RepeatWrapping;
-  return <group position={planet.coordinates}>
+  gasTexture.wrapS = THREE.RepeatWrapping;
+  return <group ref={orbiter} position={planet.coordinates}>
     <mesh ref={mesh} onClick={(event) => { event.stopPropagation(); onSelect(); }}>
-      <sphereGeometry args={[planet.faction === "owned" ? 1.2 : 0.96, 64, 64]} />
-      <meshStandardMaterial map={planet.className === "gas" || planet.className === "volcanic" ? gasTexture : oceanTexture} color={planet.className === "terran" || planet.className === "ocean" ? "#b3f6ff" : planet.className === "ice" ? "#b9dcff" : planet.className === "gas" ? "#d9d4ff" : "#ff7956"} emissive={b} emissiveIntensity={0.48} roughness={planet.className === "gas" ? 0.52 : 0.36} metalness={0.12} />
+      <sphereGeometry args={[radius, 64, 64]} />
+      <meshStandardMaterial map={style.texture === "gas" ? gasTexture : oceanTexture} color={style.previewColor} emissive={style.emissive} emissiveIntensity={0.48} roughness={style.roughness} metalness={style.metalness} />
     </mesh>
-    {(planet.className === "terran" || planet.className === "ocean") && <mesh scale={1.025}><sphereGeometry args={[planet.faction === "owned" ? 1.2 : 0.96, 64, 64]} /><meshBasicMaterial color="#b9f5ff" transparent opacity={0.16} side={THREE.BackSide} /></mesh>}
+    <mesh scale={1.025}><sphereGeometry args={[radius, 64, 64]} /><meshBasicMaterial color={style.atmosphere} transparent opacity={style.className === "gas" ? 0.09 : 0.16} side={THREE.BackSide} /></mesh>
+    {style.rings && <mesh rotation={[Math.PI / 2.35, 0.18, 0]}><ringGeometry args={[radius * 1.32, radius * 1.82, 96]} /><meshBasicMaterial color={style.atmosphere} transparent opacity={0.38} side={THREE.DoubleSide} depthWrite={false} /></mesh>}
     <mesh scale={1.2}>
       <sphereGeometry args={[1, 32, 32]} />
       <meshBasicMaterial color={FACTION_COLORS[planet.faction]} transparent opacity={active ? 0.26 : 0.09} side={THREE.BackSide} />
@@ -210,32 +219,35 @@ function PlanetNode({ planet, active, onSelect }: { planet: UniversePlanet; acti
     {planet.shielded && <mesh rotation={[Math.PI / 2, 0, 0]}>
       <torusGeometry args={[1.4, 0.032, 8, 64]} /><meshBasicMaterial color="#8deaff" transparent opacity={0.78} />
     </mesh>}
-    <pointLight color={b} intensity={planet.faction === "owned" ? 1.6 : 0.85} distance={8} />
+    <pointLight color={style.atmosphere} intensity={planet.faction === "owned" ? 1.6 : 0.85} distance={8} />
     <Html center distanceFactor={15} style={{ pointerEvents: "none" }}><div className={`universe-label ${active ? "is-active" : ""}`}><b>{planet.name}</b><span>{planet.system}</span></div></Html>
   </group>;
 }
 
-function EmptyPlanetSlot({ position, onSelect }: { position: number; onSelect: () => void }) {
-  const phase = (position / PLANETS_PER_SYSTEM) * Math.PI * 2;
-  const radius = 8 + ((position + 1) % 12) * 2.5;
-  const orbitRadius = radius * (1.3 + ((position % 3) * 0.22));
-  const coordinates: [number, number, number] = [Math.cos(phase) * radius, Math.sin(phase * 0.72) * 0.9, Math.cos(phase * 0.54) * orbitRadius];
-  return <group position={coordinates}>
+function EmptyPlanetSlot({ position, orbit, onSelect }: { position: number; orbit: UniverseOrbit; onSelect: () => void }) {
+  const orbiter = React.useRef<THREE.Group>(null!);
+  const style = planetSurfaceStyle(position);
+  useFrame(({ clock }) => {
+    if (!orbiter.current) return;
+    const [x, y, z] = pointOnUniverseOrbit(orbit, orbit.phase + clock.getElapsedTime() * orbit.angularVelocity);
+    orbiter.current.position.set(x, y, z);
+  });
+  return <group ref={orbiter} position={pointOnUniverseOrbit(orbit)}>
     <mesh onClick={(event) => { event.stopPropagation(); onSelect(); }}>
       <sphereGeometry args={[0.32, 24, 24]} />
-      <meshBasicMaterial color="#40516a" transparent opacity={0.5} />
+      <meshStandardMaterial color={style.previewColor} emissive={style.emissive} emissiveIntensity={0.32} transparent opacity={0.55} roughness={style.roughness} metalness={style.metalness} />
     </mesh>
+    {style.rings && <mesh rotation={[Math.PI / 2.35, 0.18, 0]}><ringGeometry args={[0.43, 0.6, 48]} /><meshBasicMaterial color={style.atmosphere} transparent opacity={0.28} side={THREE.DoubleSide} /></mesh>}
     <Html center distanceFactor={15} style={{ pointerEvents: "none" }}>
       <div className="universe-label empty-slot"><b>EMPTY</b><span>POSITION {position}</span></div>
     </Html>
   </group>;
 }
 
-function OrbitPath({ planet }: { planet: UniversePlanet }) {
-  const orbit = planet.orbit ?? { radius: Math.max(7, Math.hypot(planet.coordinates[0], planet.coordinates[2])), ellipse: 0.72, inclination: 0.04 };
+function OrbitPath({ orbit }: { orbit: UniverseOrbit }) {
   const points = useMemo(() => Array.from({ length: 73 }, (_, index) => {
     const angle = (index / 72) * Math.PI * 2;
-    return [Math.cos(angle) * orbit.radius, Math.sin(angle) * orbit.radius * orbit.inclination, Math.sin(angle) * orbit.radius * orbit.ellipse] as [number, number, number];
+    return pointOnUniverseOrbit(orbit, angle);
   }), [orbit.ellipse, orbit.inclination, orbit.radius]);
   return <Line points={points} color="#3f607a" transparent opacity={0.32} lineWidth={0.55} />;
 }
@@ -317,10 +329,11 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
       <HeroStar star={starForSystem(selectedGalaxy, selectedSystem)} />
       {Array.from({ length: PLANETS_PER_SYSTEM }, (_, index) => index + 1).map((position) => {
         const planet = snapshot.planets.find((candidate) => Number(candidate.system.split(":")[2]) === position);
-        return planet ? <React.Fragment key={planet.id}><OrbitPath planet={planet} /><PlanetNode planet={planet} active={selected.id === planet.id} onSelect={() => onSelect(planet)} /></React.Fragment> : <EmptyPlanetSlot key={`empty-${position}`} position={position} onSelect={() => onEmptySlotSelect({ galaxy: selectedGalaxy, system: selectedSystem, position })} />;
+        const orbit = planet?.orbit ?? orbitForSystemPosition(position, selectedGalaxy * 1000 + selectedSystem);
+        return <React.Fragment key={planet?.id ?? `empty-${position}`}><OrbitPath orbit={orbit} />{planet ? <PlanetNode planet={planet} active={selected.id === planet.id} onSelect={() => onSelect(planet)} /> : <EmptyPlanetSlot position={position} orbit={orbit} onSelect={() => onEmptySlotSelect({ galaxy: selectedGalaxy, system: selectedSystem, position })} />}</React.Fragment>;
       })}
       {snapshot.missions.map((mission) => <FleetRoute key={mission.id} mission={mission} planets={snapshot.planets} />)}
-      <Text position={[0, -3.1, 0]} fontSize={0.34} color="#8be5ff" anchorX="center">{`GALAXY ${selectedGalaxy} - SYSTEM ${selectedSystem} - ${starForSystem(selectedGalaxy, selectedSystem).label.toUpperCase()} - ${PLANETS_PER_SYSTEM} PLANET SLOTS`}</Text>
+      <Text position={[0, -3.1, 0]} fontSize={0.34} color="#8be5ff" anchorX="center">{`GALAXY ${selectedGalaxy} - SYSTEM ${selectedSystem} - ${starForSystem(selectedGalaxy, selectedSystem).label.toUpperCase()}`}</Text>
     </>}
     <OrbitControls ref={controls} enablePan enableDamping dampingFactor={0.08} minDistance={cameraMinDistance} maxDistance={cameraMaxDistance} maxPolarAngle={Math.PI * 0.82} minPolarAngle={Math.PI * 0.22} autoRotate={false} />
     <CenteredUniverseCamera controls={controls} enabled={level === "universe" && fullUniverse} />
@@ -501,7 +514,10 @@ export default function UniverseLab({ embedded = false, onOpenCommand, onOpenEmp
           cameraZoom={cameraZoom}
           galaxyPopulations={galaxyPopulations}
           systems={galaxySystems}
-          onSelect={setSelected}
+          onSelect={(planet) => {
+            setSelected(planet);
+            onOpenCommand?.(planet);
+          }}
           onEmptySlotSelect={(target) => onOpenEmptyTarget?.(target)}
           onLevelChange={setZoomLevel}
           onGalaxySelect={setSelectedGalaxy}

@@ -1,12 +1,14 @@
+import { planetClassForPosition, type PlanetClass } from "./planet-style";
+
 export type UniversePlanet = {
   id: string;
   name: string;
   ownerLabel: string;
   coordinates: [number, number, number];
   seedLabel: string;
-  orbit?: { radius: number; ellipse: number; inclination: number };
+  orbit?: UniverseOrbit;
   system: string;
-  className: "ocean" | "volcanic" | "ice" | "gas" | "terran";
+  className: PlanetClass;
   faction: "owned" | "allied" | "unknown" | "hostile";
   shielded: boolean;
   metal: number;
@@ -14,6 +16,36 @@ export type UniversePlanet = {
   deuterium: number;
   fleetPower: number;
 };
+
+export type UniverseOrbit = {
+  radius: number;
+  ellipse: number;
+  inclination: number;
+  phase: number;
+  angularVelocity: number;
+};
+
+export function orbitForSystemPosition(position: number, seed = 0): UniverseOrbit {
+  const slot = Math.max(1, Math.min(15, Math.trunc(position) || 1));
+  const radius = 5.5 + slot * 2.55;
+  return {
+    radius,
+    // Every orbit is a scaled copy of the same ellipse in the same plane.
+    // Strictly increasing radii therefore cannot intersect.
+    ellipse: 0.78,
+    inclination: 0.045,
+    phase: (((seed * 97) + (slot * 137)) % 360) * (Math.PI / 180),
+    angularVelocity: 0.009 / Math.sqrt(radius / 8),
+  };
+}
+
+export function pointOnUniverseOrbit(orbit: UniverseOrbit, angle = orbit.phase): [number, number, number] {
+  return [
+    Math.cos(angle) * orbit.radius,
+    Math.sin(angle) * orbit.radius * orbit.inclination,
+    Math.sin(angle) * orbit.radius * orbit.ellipse,
+  ];
+}
 
 export type UniverseMission = {
   id: string;
@@ -140,7 +172,6 @@ export function createUniverseSnapshotFromChainData(
   options: { viewer?: string | null } = {},
 ): UniverseSnapshot {
   const now = Math.floor(Date.now() / 1000);
-  const classes: UniversePlanet["className"][] = ["ocean", "volcanic", "ice", "gas", "terran"];
   const coordinateMap = new Map<string, string>();
   for (const planet of planets) {
     coordinateMap.set(`${planet.galaxy}:${planet.system}:${planet.position}`, planet.entity);
@@ -148,21 +179,17 @@ export function createUniverseSnapshotFromChainData(
 
   const mappedPlanets: UniversePlanet[] = planets.map((planet) => {
     const baseSeed = (planet.galaxy * 1000000) + (planet.system * 1000) + planet.position;
-    const phase = ((planet.galaxy * 73 + planet.system * 27 + planet.position * 11 + planet.planetIndex) % 360) * (Math.PI / 180);
-    const radius = 8 + ((planet.position + 1) % 12) * 2.5;
-    const orbitRadius = radius * (1.3 + ((planet.planetIndex % 3) * 0.22));
-    const ellipse = 0.5 + (planet.system % 9) * 0.045;
-    const inclination = 0.05 + (planet.position % 7) * 0.014;
+    const orbit = orbitForSystemPosition(planet.position, baseSeed + planet.planetIndex);
 
     return {
       id: planet.entity,
       name: planet.name || `Planet ${planet.galaxy}:${planet.system}:${planet.position}`,
       ownerLabel: planet.owner.slice(0, 4).toUpperCase(),
       seedLabel: `#${planet.planetIndex}`,
-      coordinates: [Math.cos(phase) * radius, Math.sin(phase * 0.72) * 0.9, Math.cos(phase * 0.54 + planet.system) * orbitRadius] as [number, number, number],
-      orbit: { radius: orbitRadius, ellipse, inclination },
+      coordinates: pointOnUniverseOrbit(orbit),
+      orbit,
       system: `${planet.galaxy}:${planet.system}:${planet.position}`,
-      className: classes[Math.abs(planet.galaxy + planet.system + planet.position + planet.planetIndex) % classes.length],
+      className: planetClassForPosition(planet.position),
       faction: deriveFaction(planet, options.viewer ?? null, now),
       shielded: planet.protectionUntilTs > now,
       metal: safeBigIntToNumber(planet.metal),

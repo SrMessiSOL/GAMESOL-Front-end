@@ -5231,7 +5231,7 @@ const App: React.FC = () => {
   const routePath = typeof window !== "undefined" ? window.location.pathname : "/app";
   const isPlanetMarketplaceRoute = routePath === "/marketplace";
   const isLandingRoute = routePath === "/";
-  const isAppRoute = routePath === "/app";
+  const isAppRoute = routePath === "/app" || routePath === "/legacy";
   const isKnownRoute = isLandingRoute || isAppRoute || isPlanetMarketplaceRoute;
   const [activeWalletKey, setActiveWalletKey] = useState<string | null>(walletPublicKey?.toBase58() ?? null);
   const publicKey = React.useMemo(

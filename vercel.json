@@ -11,6 +11,9 @@
       ]
     }
   ],
+  "redirects": [
+    { "source": "/universe-game", "destination": "/app", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]

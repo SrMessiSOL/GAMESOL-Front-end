@@ -11,7 +11,7 @@ if (!(globalThis as any).process) (globalThis as any).process = process;
 
 async function bootstrap() {
   const pathname = window.location.pathname;
-  const { default: App } = pathname === "/universe-game"
+  const { default: App } = pathname === "/app" || pathname === "/universe-game"
     ? await import("./UniverseGame")
     : pathname === "/universe-lab"
       ? await import("./UniverseLab")

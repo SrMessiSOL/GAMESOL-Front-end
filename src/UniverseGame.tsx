@@ -135,7 +135,7 @@ type Tab =
   | "alliance"
   | "market"
   | "store";
-type MissionTarget = Pick<UniversePlanet, "id" | "name" | "system">;
+type MissionTarget = Pick<UniversePlanet, "id" | "name" | "system" | "shielded" | "faction" | "ownerLabel">;
 const TAB_ICONS: Record<Tab, React.ReactNode> = { overview: <BarChart3 />, buildings: <Building2 />, research: <FlaskConical />, ships: <Rocket />, defense: <Shield />, missions: <Crosshair />, quests: <Trophy />, alliance: <Users />, market: <ShoppingCart />, store: <Store /> };
 const fmt = (value: bigint | number) =>
   typeof value === "bigint"
@@ -394,6 +394,7 @@ function PlanetDashboard({
     const emptyTarget = target.id.startsWith("empty:");
     if (missionType === 5 && !emptyTarget) return;
     if ((missionType === 1 || missionType === 2 || missionType === 6) && emptyTarget) return;
+    if (missionType === 1 && target.shielded) return;
     const shipCount = (key: string) => Math.max(0, Math.min(Number((state.fleet as any)[key] ?? 0), Math.floor(missionShips[key] ?? 0)));
     const ships = {
       sc: shipCount("smallCargo"), lc: shipCount("largeCargo"), lf: shipCount("lightFighter"), hf: shipCount("heavyFighter"), cr: shipCount("cruiser"), bs: shipCount("battleship"), bc: shipCount("battlecruiser"), bm: shipCount("bomber"), ds: shipCount("destroyer"), de: shipCount("deathstar"), rec: shipCount("recycler"), ep: shipCount("espionageProbe"), col: shipCount("colonyShip"),
@@ -474,6 +475,11 @@ function PlanetDashboard({
         <p className="ug-target-note">
           Choose a source planet above to open its operations and launch toward
           this target.
+        </p>
+      )}
+      {!owned && target.shielded && (
+        <p className="ug-target-note ug-target-protected">
+          Attack unavailable: this planet is protected by an active shield or beginner protection. Espionage and transport remain available where the program permits them.
         </p>
       )}
       {owned && resource && (
@@ -987,14 +993,19 @@ export default function UniverseGame() {
     setStatus("Creating homeworld...");
     setOperation({ label: "Establish homeworld", detail: "Preparing your command vault and reserving an empty world.", phase: "processing" });
     try {
-      await client.initializePlanet(homeworldName, (message) => {
+      const createdPlanet = await client.initializePlanet(homeworldName, (message) => {
         setStatus(message);
         setOperation({ label: "Establish homeworld", detail: message, phase: "processing" });
       });
-      await refresh();
-      await refreshVaultBalance();
+      setPlanets((current) => [createdPlanet, ...current.filter((planet) => planet.entityPda !== createdPlanet.entityPda)]);
+      setSourceEntity(createdPlanet.entityPda);
+      setPlanetWorldEntity(createdPlanet.entityPda);
       setStatus("Homeworld created.");
-      setOperation({ label: "Establish homeworld", detail: "Your homeworld is live and ready for command.", phase: "success" });
+      setOperation(null);
+      void refresh().catch((error) =>
+        setStatus(error instanceof Error ? error.message : "Homeworld created, but refresh failed."),
+      );
+      void refreshVaultBalance().catch(() => undefined);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Homeworld creation failed.";
       setStatus(detail);
@@ -1118,6 +1129,9 @@ export default function UniverseGame() {
             id: `empty:${empty.galaxy}:${empty.system}:${empty.position}`,
             name: `Empty position ${empty.position}`,
             system: `${empty.galaxy}:${empty.system}:${empty.position}`,
+            shielded: false,
+            faction: "unknown",
+            ownerLabel: "",
           })
         }
         ownedPlanets={planets.map((planet) => ({
@@ -1143,6 +1157,25 @@ export default function UniverseGame() {
           game={client}
           market={marketClient}
           worlds={planets.map((planet) => ({ entity: planet.entityPda, name: planet.planet.name || `Planet ${planet.planet.planetIndex + 1}` }))}
+          ownedWorlds={planets}
+          marketControls={{
+            onTxStart: (label) => {
+              setBusy(true);
+              setStatus(`${label}...`);
+              setOperation({ label, detail: "Preparing the marketplace transaction for the active world.", phase: "processing" });
+            },
+            onTxEnd: (error) => {
+              setBusy(false);
+              if (error) {
+                setStatus(error);
+                setOperation({ label: "Marketplace command", detail: error, phase: "error" });
+                return;
+              }
+              setStatus("Marketplace transaction confirmed.");
+              setOperation({ label: "Marketplace command", detail: "The transaction was confirmed and market state is refreshing.", phase: "success" });
+              void refresh().catch(() => undefined);
+            },
+          }}
           onExit={() => {
             setReturnSystem({ galaxy: planetWorldState.planet.galaxy, system: planetWorldState.planet.system });
             setPlanetWorldEntity(null);
@@ -1299,7 +1332,10 @@ export default function UniverseGame() {
         </section>
       )}
       {status && <div className="ug-status">{status}</div>}
-      <OperationModal operation={operation} onClose={() => setOperation(null)} />
+      <OperationModal
+        operation={vaultRequest ? null : operation}
+        onClose={() => setOperation(null)}
+      />
       {commandTarget && (
         <PlanetDashboard
           state={selectedState}
