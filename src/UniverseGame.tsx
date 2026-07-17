@@ -26,6 +26,8 @@ import {
   upgradeCost,
   type PlayerState,
   type Mission,
+  type BattleResolvedEventRecord,
+  type EspionageReportEventRecord,
   type VaultRecoveryPromptRequest,
   type VaultStatus,
 } from "./game-state";
@@ -828,6 +830,9 @@ export default function UniverseGame() {
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [antimatterBalance, setAntimatterBalance] = useState(0n);
   const [usdcBalance, setUsdcBalance] = useState(0n);
+  const [battleReports, setBattleReports] = useState<BattleResolvedEventRecord[]>([]);
+  const [spyReports, setSpyReports] = useState<EspionageReportEventRecord[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   useEffect(() => {
     if (!status) return;
@@ -897,6 +902,31 @@ export default function UniverseGame() {
       setLoadingPlanets(false);
     }
   }, [client, publicKey]);
+  const refreshActivity = useCallback(async () => {
+    if (!client || !publicKey || planets.length === 0) {
+      setBattleReports([]);
+      setSpyReports([]);
+      return;
+    }
+    setActivityLoading(true);
+    try {
+      const planetPdas = planets.map((planet) => planet.planetPda);
+      const [battles, espionage] = await Promise.all([
+        client.fetchBattleResolvedEventsForPlanets(planetPdas),
+        client.fetchEspionageReportEventsForPlanets(planetPdas),
+      ]);
+      setBattleReports(battles);
+      setSpyReports(espionage);
+    } catch {
+      setBattleReports([]);
+      setSpyReports([]);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [client, planets, publicKey]);
+  useEffect(() => {
+    void refreshActivity();
+  }, [refreshActivity]);
   useEffect(() => {
     void refresh().catch((error) =>
       setStatus(
@@ -1158,6 +1188,7 @@ export default function UniverseGame() {
           market={marketClient}
           worlds={planets.map((planet) => ({ entity: planet.entityPda, name: planet.planet.name || `Planet ${planet.planet.planetIndex + 1}` }))}
           ownedWorlds={planets}
+          activity={{ battleReports, spyReports, loading: activityLoading, refresh: refreshActivity }}
           marketControls={{
             onTxStart: (label) => {
               setBusy(true);
