@@ -34,3 +34,63 @@
 .pw-alliance-onboarding{position:absolute;z-index:14;top:50%;left:50%;width:min(760px,calc(100vw - 48px));max-height:min(620px,calc(100vh - 60px));overflow:auto;transform:translate(-50%,-50%);border:1px solid rgba(104,219,255,.65);background:linear-gradient(145deg,rgba(5,24,40,.995),rgba(2,10,21,.995));box-shadow:0 28px 100px rgba(0,0,0,.75);padding:22px}.pw-alliance-onboarding header{display:flex;justify-content:space-between;padding-bottom:11px;border-bottom:1px solid rgba(104,213,248,.2)}.pw-alliance-onboarding header span{color:#72dcff;font:700 11px 'DM Mono',monospace;letter-spacing:1.1px}.pw-alliance-onboarding header b{color:#ffc85a;font:700 9px 'DM Mono',monospace}.pw-alliance-intro{padding:16px 0}.pw-alliance-intro h3{margin:0 0 6px;font:600 19px Outfit,system-ui,sans-serif}.pw-alliance-intro p{margin:0;color:#a9c8d8;font:11px/1.55 'DM Mono',monospace}.pw-alliance-create{display:grid;gap:11px;padding:15px;border:1px solid rgba(101,205,241,.28);background:rgba(5,22,37,.78)}.pw-alliance-create>div:first-child{display:flex;justify-content:space-between;gap:12px}.pw-alliance-create b{color:#e9f9ff;font:700 11px 'DM Mono',monospace}.pw-alliance-create span{color:#ffc85a;font:700 10px 'DM Mono',monospace}.pw-alliance-balance{display:flex;gap:12px;flex-wrap:wrap}.pw-alliance-balance span{display:flex;align-items:center;gap:5px}.pw-alliance-balance img{width:15px;height:15px}.pw-alliance-balance .met{color:#70e4aa}.pw-alliance-balance .missing{color:#ffad83}.pw-alliance-inputs{display:grid;grid-template-columns:1.2fr .55fr 1.4fr;gap:8px}.pw-alliance-inputs input{min-width:0;border:1px solid rgba(103,214,247,.35);background:#041321;color:#e9f9ff;padding:9px;font:10px 'DM Mono',monospace}.pw-alliance-create button{min-height:36px;border:1px solid rgba(104,219,255,.62);background:#0a314d;color:#e8faff;font:700 9px 'DM Mono',monospace;letter-spacing:.65px;cursor:pointer}.pw-alliance-create button:disabled{opacity:.45;cursor:not-allowed}
 .pw-activity-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:10px 12px;border:1px solid rgba(100,219,255,.18);background:rgba(2,12,23,.54);color:#8aaaba;font:9px 'DM Mono',monospace;letter-spacing:.7px}.pw-activity-toolbar button{padding:8px 10px;border:1px solid rgba(99,213,255,.48);background:#0a2940;color:#eafaff;font:700 8px 'DM Mono',monospace;letter-spacing:.8px;cursor:pointer}.pw-activity-grid{display:grid;gap:14px}.pw-activity-grid>article{padding:15px;border:1px solid rgba(100,219,255,.24);background:linear-gradient(145deg,rgba(5,25,41,.86),rgba(2,10,20,.92))}.pw-activity-grid>article.spy{border-color:rgba(153,112,255,.34)}.pw-activity-grid>article>header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.pw-activity-grid header span{color:#72d8ff;font:700 8px 'DM Mono',monospace;letter-spacing:1px}.pw-activity-grid header h3{margin:5px 0 0;font:600 16px Outfit,system-ui,sans-serif}.pw-activity-grid header>b{font:700 8px 'DM Mono',monospace;letter-spacing:.8px}.pw-activity-grid .good{color:#62e9b1}.pw-activity-grid .danger{color:#ff8aa0}.pw-activity-grid>article>section{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:13px 0}.pw-activity-grid>article>section>div{display:grid;gap:4px;padding:9px;border:1px solid rgba(100,219,255,.12);background:rgba(3,15,28,.64)}.pw-activity-grid section span{color:#7895a4;font:8px 'DM Mono',monospace;text-transform:uppercase}.pw-activity-grid section b{color:#dff7ff;font:700 9px 'DM Mono',monospace;overflow-wrap:anywhere}.pw-activity-grid footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:#7895a4;font:8px 'DM Mono',monospace}.pw-activity-grid footer a{margin-left:auto;color:#72d8ff;text-decoration:none}
 @media(max-width:720px){.pw-modal-backdrop{align-items:end;padding:0}.pw-command-modal{width:100%;max-height:82vh;padding:18px;border-bottom:0}.pw-command-art{height:126px;margin:-18px -18px 18px}.pw-command-head h2{font-size:22px}.pw-command-list article{grid-template-columns:64px minmax(0,1fr);gap:10px}.pw-command-list article>button{grid-column:1/-1;width:100%}.pw-row-art{min-height:64px}.pw-command-list h3{font-size:13px}.pw-command-list p{font-size:9px}.pw-inline-queue{align-items:flex-start;flex-direction:column}.pw-inline-queue>div:last-child{width:100%;justify-items:stretch}.pw-inline-queue button{width:100%}.pw-quest-grid,.pw-store-groups>section>div,.pw-alliance-buildings,.pw-alliance-missions section>div{grid-template-columns:1fr}.pw-alliance-treasury{grid-template-columns:repeat(2,minmax(0,1fr))}.pw-quest-groups>section>header>div{align-items:flex-start;flex-direction:column;gap:4px}.pw-queues{left:10px;bottom:62px;width:calc(100vw - 72px);max-height:184px;overflow:auto}.pw-queues article{padding:8px 10px}.pw-launch-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pw-fleet-grid{grid-template-columns:1fr}.pw-activity-grid>article>header{flex-direction:column}.pw-activity-grid>article>section{grid-template-columns:1fr}.pw-activity-grid footer a{margin-left:0}}
+
+/* Final mobile HUD layout: a compact top status area, one-row queues, and a
+   two-row operation dock. This deliberately wins over the earlier base media
+   queries so a 320px-wide phone never clips a command. */
+@media (max-width:720px){
+  .planet-world{overflow:hidden}
+  .pw-brand{position:fixed;top:9px;left:10px}.pw-brand img{width:30px;height:30px}
+  .pw-wallet-trigger{
+    position:fixed;top:8px;right:8px;max-width:112px;min-height:32px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px;font-size:8px;
+  }
+  .pw-top{
+    position:fixed;top:0;right:0;left:0;display:block;padding:48px 8px 0;
+    background:linear-gradient(180deg,rgba(2,10,21,.98) 0,rgba(2,10,21,.8) 76%,transparent 100%);
+  }
+  .pw-top>button:first-child{
+    position:absolute;top:8px;left:48px;width:auto;height:32px;margin:0;padding:0 9px;font-size:9px;
+  }
+  .pw-resources{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;width:100%;margin:0;padding:0 0 10px;
+  }
+  .pw-resources b,.pw-resources .energy{
+    min-width:0;min-height:38px;padding:5px 7px;grid-template-columns:13px minmax(0,1fr) auto;
+    column-gap:5px;text-align:left;overflow:hidden;font-size:10px;
+  }
+  .pw-resources b svg{width:13px;height:13px}.pw-resources b span{font-size:7px}
+  .pw-resources b:not(.energy){grid-template-columns:13px minmax(0,1fr)}
+  .pw-resources .energy em{font-size:8px}
+  .pw-queues{
+    position:fixed;z-index:4;right:8px;bottom:94px;left:8px;display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:auto;max-height:none;overflow:visible;
+  }
+  .pw-queues article,.pw-queues article.active{
+    min-width:0;min-height:38px;padding:6px;background:rgba(3,15,27,.92);overflow:hidden;
+  }
+  .pw-queue-title{display:grid;gap:3px}.pw-queue-title span{font-size:7px;white-space:nowrap}.pw-queue-title b{font-size:8px}
+  .pw-queues article>strong,.pw-queues .pw-queue-progress,.pw-queues .pw-queue-actions{display:none}
+  .pw-operations{
+    position:fixed;z-index:5;right:8px;bottom:max(8px,env(safe-area-inset-bottom));left:8px;
+    display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:4px;
+    border:1px solid rgba(104,213,249,.28);background:rgba(2,12,23,.94);
+    box-shadow:0 -12px 38px rgba(0,0,0,.48);
+  }
+  .pw-operations button{
+    width:100%;height:35px;min-width:0;border-color:rgba(112,213,255,.32);box-shadow:none;
+  }
+  .pw-operations button svg{width:16px;height:16px}
+  .planet-world-scene{inset:102px 0 88px}
+  .pw-modal-backdrop{position:fixed;padding-top:max(8px,env(safe-area-inset-top))}
+  .pw-command-modal{max-height:calc(100dvh - max(8px,env(safe-area-inset-top)));padding-bottom:max(20px,env(safe-area-inset-bottom))}
+}
+@media (max-width:360px){
+  .pw-resources b,.pw-resources .energy{padding:4px 5px;font-size:9px}
+  .pw-wallet-trigger{max-width:100px}
+}
+@media (min-width:721px) and (max-height:690px){
+  .pw-operations{grid-template-columns:repeat(2,40px);right:14px;bottom:14px;gap:5px}
+  .pw-operations button{width:40px;height:40px}
+  .pw-queues{left:14px;bottom:14px}
+}

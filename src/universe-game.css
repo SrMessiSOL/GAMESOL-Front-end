@@ -137,3 +137,42 @@
 .ug-content.ug-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:720px){.ug-content.ug-cards{grid-template-columns:1fr}}
 .ug-modal{z-index:180;background:rgba(0,4,11,.78);backdrop-filter:blur(12px)}.ug-modal form{width:min(440px,calc(100vw - 32px));padding:0;border-color:rgba(103,216,255,.65);background:linear-gradient(150deg,#0a2338,#04111f);box-shadow:0 30px 110px rgba(0,0,0,.78)}.ug-modal h2{margin:0;padding:20px 22px 12px;color:#e9faff;font-size:19px}.ug-modal p{margin:0;padding:0 22px;color:#9ab7c8;font:12px/1.55 system-ui,sans-serif}.ug-vault-notice{margin:16px 22px;padding:11px 12px;border-left:2px solid #62d4ff;background:rgba(58,157,198,.12);color:#c7e6f2;font:11px/1.55 'DM Mono',monospace}.ug-modal input[type="password"]{display:block;width:calc(100% - 44px);height:42px;margin:0 22px;border-color:rgba(100,204,244,.5);background:#030d18;font:12px 'DM Mono',monospace}.ug-remember-password{display:flex;align-items:flex-start;gap:10px;margin:15px 22px 2px;color:#9ab8c9;cursor:pointer}.ug-remember-password input{width:15px;height:15px;margin:2px 0 0;accent-color:#55cfff}.ug-remember-password span{display:grid;gap:3px}.ug-remember-password b{color:#e4f8ff;font:600 12px system-ui,sans-serif}.ug-remember-password small{font:10px/1.45 system-ui,sans-serif}.ug-modal form>div:last-child{margin:18px 22px 22px;padding-top:14px;border-top:1px solid rgba(103,205,244,.18)}.ug-modal form>div:last-child button{min-height:36px}.ug-modal form>div:last-child button[type="submit"]{border-color:#67d9ff;background:#1c6e95;color:white}.ug-modal form>div:last-child button[type="button"]{background:transparent;border-color:rgba(129,172,195,.44);color:#b4cfde}.ug-modal .ug-password-error{margin:14px 22px 0!important;padding:9px 10px!important}
+/* Authoritative responsive command dock. Keep every operation reachable without
+   allowing the desktop rail overrides below to push controls off-screen. */
+@media (max-width:720px){
+  .ug-command-rail,.ug-command-rail.collapsed{
+    position:fixed!important;z-index:290!important;top:auto!important;
+    right:8px!important;bottom:max(8px,env(safe-area-inset-bottom))!important;left:8px!important;
+    width:auto!important;height:82px!important;max-height:none!important;overflow:visible!important;
+    border:1px solid rgba(104,213,249,.28)!important;background:rgba(2,12,23,.94)!important;
+    box-shadow:0 -12px 38px rgba(0,0,0,.48)!important;
+  }
+  .ug-command-rail nav,.ug-command-rail:not(.collapsed) nav{
+    display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    gap:4px!important;width:100%!important;height:100%!important;min-width:0!important;
+    max-height:none!important;overflow:visible!important;padding:4px!important;
+  }
+  .ug-command-rail nav button{
+    width:100%!important;height:35px!important;min-width:0!important;min-height:35px!important;
+    border-color:rgba(112,213,255,.32)!important;box-shadow:none!important;
+  }
+  .ug-command-rail nav button svg{width:16px!important;height:16px!important}
+  .ug-command-rail nav button::after{display:none!important}
+  .ug-rail-toggle,.ug-command-rail.collapsed .ug-rail-toggle{
+    top:-26px!important;right:0!important;left:auto!important;width:34px!important;height:24px!important;
+    min-width:34px!important;min-height:24px!important;transform:none!important;margin:0!important;
+    background:rgba(4,20,35,.96)!important;
+  }
+  .ug-command-rail.collapsed{height:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+  .ug-command-shell .ug-dashboard{
+    top:54px!important;right:8px!important;bottom:100px!important;left:8px!important;
+    width:auto!important;height:auto!important;max-height:none!important;transform:none!important;
+  }
+  .ug-status{bottom:100px!important}
+}
+@media (min-width:721px) and (max-height:690px){
+  .ug-command-rail{top:78px!important}
+  .ug-command-rail nav{grid-template-columns:repeat(2,32px)!important;gap:5px!important}
+  .ug-command-rail,.ug-command-rail.collapsed{width:69px!important;max-height:calc(100dvh - 92px)!important}
+  .ug-rail-toggle{top:50%!important;left:-18px!important;transform:translateY(-50%)!important}
+}
