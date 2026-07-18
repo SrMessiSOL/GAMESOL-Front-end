@@ -20,8 +20,11 @@ type PrivateSnapshot = {
 };
 
 const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {};
-const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
+export const SOLANA_CLUSTER = (env.VITE_SOLANA_CLUSTER?.trim() || "devnet").toLowerCase();
 export const IS_DEVNET = SOLANA_CLUSTER !== "mainnet" && SOLANA_CLUSTER !== "mainnet-beta";
+export const IS_MAINNET = !IS_DEVNET;
+export const NETWORK_LABEL = IS_MAINNET ? "MAINNET" : "DEVNET";
+export const EXPLORER_CLUSTER = IS_MAINNET ? "mainnet-beta" : "devnet";
 const DEFAULT_RPC_ENDPOINT =
   SOLANA_CLUSTER === "mainnet" || SOLANA_CLUSTER === "mainnet-beta"
     ? "https://api.mainnet-beta.solana.com"

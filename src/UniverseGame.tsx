@@ -30,6 +30,8 @@ import {
   type EspionageReportEventRecord,
   type VaultRecoveryPromptRequest,
   type VaultStatus,
+  IS_DEVNET,
+  NETWORK_LABEL,
 } from "./game-state";
 import type { UniversePlanet } from "./universe-data";
 import { resolveGameArt } from "./ui-art";
@@ -1295,7 +1297,7 @@ export default function UniverseGame() {
                   </header>
                   <div className="ug-wallet-row">
                     <span>Network</span>
-                    <b>DEVNET</b>
+                    <b>{NETWORK_LABEL}</b>
                   </div>
                   <div className="ug-wallet-row">
                     <span>Wallet</span>
@@ -1329,14 +1331,14 @@ export default function UniverseGame() {
                     <span>USDC</span>
                     <b>{tokenLabel(usdcBalance)} USDC</b>
                   </div>
-                  <section className="ug-devnet-tools">
-                    <header><span>DEVNET TOOLS</span><b>SOLANA DEVNET</b></header>
+                  {IS_DEVNET && <section className="ug-devnet-tools">
+                    <header><span>{NETWORK_LABEL} TOOLS</span><b>SOLANA {NETWORK_LABEL}</b></header>
                     <p>Request test SOL for wallet fees and game setup.</p>
                     <div>
                       <a href="https://faucet.solana.com/" target="_blank" rel="noreferrer">OPEN SOL FAUCET</a>
                       <button onClick={() => void copyWalletAddress()}>{walletCopyStatus}</button>
                     </div>
-                  </section>
+                  </section>}
                   <div className="ug-wallet-actions">
                     <WalletModalButton>CHANGE WALLET</WalletModalButton>
                     <WalletDisconnectButton>DISCONNECT</WalletDisconnectButton>

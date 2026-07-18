@@ -23,7 +23,7 @@ import {
   Planet, Resources, Fleet, Mission, PlayerState, PublicPlanetInfo, Research,
   BUILDINGS, SHIPS, SHIP_TYPE_IDX, MISSION_LABELS,
   ALLIANCE_CREATE_USDC_COST, ALLIANCE_CREATE_ANTIMATTER_COST,
-  GAME_STATE_PROGRAM_ID, IS_DEVNET,
+  GAME_STATE_PROGRAM_ID, IS_DEVNET, NETWORK_LABEL,
   deriveAssociatedTokenAccount,
   deriveStoreConfigPda,
   upgradeCost, buildTimeSecs,
@@ -6333,7 +6333,7 @@ const App: React.FC = () => {
             <div className="wallet-menu-grid">
               <div className="wallet-menu-row">
                 <div className="wallet-menu-row-label">Network</div>
-                <div className="wallet-menu-row-value cyan">DEVNET</div>
+                <div className="wallet-menu-row-value cyan">{NETWORK_LABEL}</div>
               </div>
               <div className="wallet-menu-row">
                 <div className="wallet-menu-row-label">Wallet</div>
