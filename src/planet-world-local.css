@@ -86,6 +86,8 @@
   .pw-operations button svg{width:16px;height:16px}
   .planet-world-scene{inset:102px 0 88px}
   .pw-modal-backdrop{position:fixed;padding-top:max(8px,env(safe-area-inset-top))}
+  .pw-wallet-backdrop{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))}
+  .pw-wallet-menu{position:relative;top:auto;left:auto;transform:none;width:min(360px,100%);max-height:calc(100dvh - max(20px,env(safe-area-inset-top) + env(safe-area-inset-bottom)));overflow-y:auto;margin:auto 0}
   .pw-command-modal{max-height:calc(100dvh - max(8px,env(safe-area-inset-top)));padding-bottom:max(20px,env(safe-area-inset-bottom))}
 }
 @media (max-width:360px){
