@@ -90,6 +90,27 @@ function GalaxyNode({ galaxy, selected, onSelect }: { galaxy: GalaxyDefinition; 
   </group>;
 }
 
+function DeepUniverseStarfield() {
+  const { positions, colors } = useMemo(() => {
+    const random = seeded(918_273);
+    const starPositions: number[] = [];
+    const starColors: number[] = [];
+    const palette = [new THREE.Color("#dff7ff"), new THREE.Color("#87bdff"), new THREE.Color("#ffe5b0"), new THREE.Color("#d8c7ff")];
+    for (let index = 0; index < 14_000; index += 1) {
+      const radius = 380 + Math.pow(random(), .72) * 2_050;
+      const longitude = random() * Math.PI * 2;
+      const latitude = Math.acos(2 * random() - 1);
+      const flatten = .7 + random() * .55;
+      starPositions.push(Math.sin(latitude) * Math.cos(longitude) * radius, Math.cos(latitude) * radius * flatten, Math.sin(latitude) * Math.sin(longitude) * radius);
+      const tint = palette[Math.floor(random() * palette.length)].clone().lerp(new THREE.Color("#ffffff"), random() * .38);
+      const intensity = .58 + random() * .42;
+      starColors.push(tint.r * intensity, tint.g * intensity, tint.b * intensity);
+    }
+    return { positions: new Float32Array(starPositions), colors: new Float32Array(starColors) };
+  }, []);
+  return <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[positions, 3]} /><bufferAttribute attach="attributes-color" args={[colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={1.05} sizeAttenuation transparent opacity={.76} blending={THREE.AdditiveBlending} depthWrite={false} /></points>;
+}
+
 function FullUniverseOverview({ populations, onSelect }: { populations: Map<number, number>; onSelect: (galaxy: number) => void }) {
   const hitTargets = useRef<THREE.InstancedMesh>(null!);
   const blackHoles = useRef<THREE.InstancedMesh>(null!);
@@ -110,15 +131,17 @@ function FullUniverseOverview({ populations, onSelect }: { populations: Map<numb
       const tint = new THREE.Color(GALAXY_COLORS[galaxy % GALAXY_COLORS.length]);
       const random = seeded(galaxy * 541);
       const kind = GALAXY_KINDS[galaxy % GALAXY_KINDS.length];
-      const particles = populations.has(galaxy) ? 320 : 190;
+      const particles = populations.has(galaxy) ? 440 : 270;
       for (let index = 0; index < particles; index += 1) {
         const arm = index % (kind === "spiral" ? 4 : kind === "barred" ? 2 : 6);
-        const radius = Math.pow(random(), 0.56) * 10.5 + 0.7;
-        const base = arm * (Math.PI * 2 / (kind === "barred" ? 2 : kind === "elliptical" ? 6 : 4)) + radius * 1.62;
-        const angle = base + (random() - 0.5) * (kind === "elliptical" ? 2.9 : 0.7);
+        const coreParticle = index < particles * .28;
+        const radius = coreParticle ? Math.pow(random(), 2.35) * 6.2 + .35 : Math.pow(random(), .58) * 16.5 + 1.2;
+        const base = arm * (Math.PI * 2 / (kind === "barred" ? 2 : kind === "elliptical" ? 6 : 4)) + radius * .92;
+        const angle = base + (random() - 0.5) * (kind === "elliptical" ? 2.7 : coreParticle ? 1.25 : .48);
         const ellipse = kind === "elliptical" ? 0.57 : kind === "barred" ? 0.7 : 0.88;
-        starPositions.push(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius * ellipse, centerZ + (random() - 0.5) * (kind === "elliptical" ? 0.72 : 0.15));
-        starColors.push(tint.r, tint.g, tint.b);
+        starPositions.push(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius * ellipse, centerZ + (random() - 0.5) * (kind === "elliptical" ? 2.2 : .7));
+        const particleTint = tint.clone().lerp(new THREE.Color("#fff7dc"), coreParticle ? .72 : random() * .16);
+        starColors.push(particleTint.r, particleTint.g, particleTint.b);
       }
       centerPositions.push(centerX, centerY, centerZ);
     }
@@ -138,10 +161,10 @@ function FullUniverseOverview({ populations, onSelect }: { populations: Map<numb
   }, [centers]);
   return <group rotation={[-0.23, 0.4, -0.08]}>
     <UniverseCoreBlackHole />
-    <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[stars, 3]} /><bufferAttribute attach="attributes-color" args={[colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={0.3} sizeAttenuation transparent opacity={0.98} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
-    <instancedMesh ref={blackHoleHalos} args={[undefined, undefined, MAX_GALAXY]}><sphereGeometry args={[2.55, 20, 20]} /><meshBasicMaterial color="#362d58" transparent opacity={0.18} side={THREE.BackSide} depthWrite={false} /></instancedMesh>
-    <instancedMesh ref={blackHoles} args={[undefined, undefined, MAX_GALAXY]}><sphereGeometry args={[1.95, 20, 20]} /><meshBasicMaterial color="#000000" /></instancedMesh>
-    <instancedMesh ref={hitTargets} args={[undefined, undefined, MAX_GALAXY]} onClick={(event) => { event.stopPropagation(); if (typeof event.instanceId === "number") onSelect(event.instanceId + 1); }}><sphereGeometry args={[14, 10, 10]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} /></instancedMesh>
+    <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[stars, 3]} /><bufferAttribute attach="attributes-color" args={[colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={0.46} sizeAttenuation transparent opacity={0.98} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+    <instancedMesh ref={blackHoleHalos} args={[undefined, undefined, MAX_GALAXY]}><sphereGeometry args={[5.8, 20, 20]} /><meshBasicMaterial color="#5b4d91" transparent opacity={0.12} side={THREE.BackSide} depthWrite={false} /></instancedMesh>
+    <instancedMesh ref={blackHoles} args={[undefined, undefined, MAX_GALAXY]}><sphereGeometry args={[2.5, 20, 20]} /><meshBasicMaterial color="#000000" /></instancedMesh>
+    <instancedMesh ref={hitTargets} args={[undefined, undefined, MAX_GALAXY]} onClick={(event) => { event.stopPropagation(); if (typeof event.instanceId === "number") onSelect(event.instanceId + 1); }}><sphereGeometry args={[22, 10, 10]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} /></instancedMesh>
   </group>;
 }
 
@@ -315,7 +338,7 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
     <PerspectiveCamera makeDefault position={cameraPosition} fov={fullUniverse ? 46 : level === "universe" ? 44 : 42} />
     <ambientLight intensity={0.42} /><pointLight position={[0, 0, 0]} color="#51bfff" intensity={22} distance={26} />
     <pointLight position={[-8, 4, 6]} color="#ff6a38" intensity={6} distance={16} />
-    <Stars radius={170} depth={90} count={10500} factor={3.6} saturation={0.14} fade speed={0.25} />
+    {level === "universe" && fullUniverse ? <DeepUniverseStarfield /> : <Stars radius={170} depth={90} count={10500} factor={3.6} saturation={0.14} fade speed={0.25} />}
     {level === "universe" && <>
       {fullUniverse ? <FullUniverseOverview populations={galaxyPopulations} onSelect={onFullGalaxySelect} /> : galaxies.map((galaxy) => <GalaxyNode key={galaxy.id} galaxy={galaxy} selected={galaxy.id === `g-${selectedGalaxy}`} onSelect={() => { onGalaxySelect(Number(galaxy.label)); onLevelChange("galaxy"); }} />)}
       <Text position={[0, -12, 0]} fontSize={0.7} color="#8be5ff" anchorX="center">PUBLIC UNIVERSE - ALL KNOWN GALAXIES</Text>
