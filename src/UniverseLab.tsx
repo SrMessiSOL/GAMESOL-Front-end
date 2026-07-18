@@ -129,6 +129,22 @@ function DeepUniverseStarfield() {
   return <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[positions, 3]} /><bufferAttribute attach="attributes-color" args={[colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={1.05} sizeAttenuation transparent opacity={.76} blending={THREE.AdditiveBlending} depthWrite={false} /></points>;
 }
 
+function GalaxyGlowField({ centers, populations }: { centers: Float32Array; populations: Map<number, number> }) {
+  const galaxyTexture = useTexture(stellarCorona);
+  galaxyTexture.colorSpace = THREE.SRGBColorSpace;
+  return <group>
+    {Array.from({ length: MAX_GALAXY }, (_, index) => {
+      const galaxy = index + 1;
+      const liveWorlds = populations.get(galaxy) ?? 0;
+      const tint = GALAXY_COLORS[galaxy % GALAXY_COLORS.length];
+      const size = liveWorlds > 0 ? 34 : 25;
+      return <sprite key={galaxy} position={[centers[index * 3], centers[index * 3 + 1], centers[index * 3 + 2]]} scale={[size, size, 1]}>
+        <spriteMaterial map={galaxyTexture} color={tint} transparent opacity={liveWorlds > 0 ? 0.2 : 0.105} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </sprite>;
+    })}
+  </group>;
+}
+
 function FullUniverseOverview({ populations, onSelect }: { populations: Map<number, number>; onSelect: (galaxy: number) => void }) {
   const hitTargets = useRef<THREE.InstancedMesh>(null!);
   const blackHoles = useRef<THREE.InstancedMesh>(null!);
@@ -200,6 +216,7 @@ function FullUniverseOverview({ populations, onSelect }: { populations: Map<numb
   }, [centers]);
   return <group rotation={[-0.23, 0.4, -0.08]}>
     <UniverseCoreBlackHole />
+    <GalaxyGlowField centers={centers} populations={populations} />
     <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[dustStars, 3]} /><bufferAttribute attach="attributes-color" args={[dustColors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={1.35} sizeAttenuation transparent opacity={0.13} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
     <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[stars, 3]} /><bufferAttribute attach="attributes-color" args={[colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={0.46} sizeAttenuation transparent opacity={0.98} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
     <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[coreStars, 3]} /><bufferAttribute attach="attributes-color" args={[coreColors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={0.82} sizeAttenuation transparent opacity={0.88} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
