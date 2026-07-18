@@ -563,15 +563,18 @@ export default function PlanetWorld({ state, busy, run, onExit, wallet, game, ma
     if (mission.missionType === 1 || mission.missionType === 6) await activity.refresh();
   };
   const queueCommand = (queue: typeof queues[number]) => {
-    if (!queue.active) return null;
-    const seconds = Math.max(0, queue.finishAt - nowTs);
-    const ready = seconds === 0;
-    const baseline = queueBaselines[`${queue.label}:${queue.finishAt}`] ?? 0;
-    const progress = ready ? 100 : baseline > 0 ? Math.min(99, Math.max(0, ((baseline - seconds) / baseline) * 100)) : 0;
-    return <section className="pw-inline-queue">
-      <div><span>{queue.label} queue</span><strong>{queue.item}</strong><div className={`pw-inline-queue-progress${ready ? " ready" : ""}`}><i style={{ width: `${progress}%` }} /></div></div>
-      <div className="pw-inline-queue-control"><div className="pw-inline-queue-meta"><b>{ready ? "READY" : queueTime(seconds)}</b><em>{Math.round(progress)}%</em></div><div className="pw-inline-queue-actions"><button className="accelerate" disabled={busy || ready} onClick={() => run(`Accelerate ${queue.label.toLowerCase()}`, queue.accelerate)}>ACCELERATE</button><button className="resolve" disabled={busy || !ready} onClick={() => run(`Finish ${queue.label.toLowerCase()}`, queue.finish)}>RESOLVE</button></div></div>
-    </section>;
+    const relatedQueues = queue.label === "Research" || queue.label === "Shipyard" ? [queues[0], queue] : [queue];
+    return <>{relatedQueues.map((activeQueue) => {
+      if (!activeQueue.active) return null;
+      const seconds = Math.max(0, activeQueue.finishAt - nowTs);
+      const ready = seconds === 0;
+      const baseline = queueBaselines[`${activeQueue.label}:${activeQueue.finishAt}`] ?? 0;
+      const progress = ready ? 100 : baseline > 0 ? Math.min(99, Math.max(0, ((baseline - seconds) / baseline) * 100)) : 0;
+      return <section key={`${activeQueue.label}:${activeQueue.finishAt}`} className="pw-inline-queue">
+        <div><span>{activeQueue.label} queue</span><strong>{activeQueue.item}</strong><div className={`pw-inline-queue-progress${ready ? " ready" : ""}`}><i style={{ width: `${progress}%` }} /></div></div>
+        <div className="pw-inline-queue-control"><div className="pw-inline-queue-meta"><b>{ready ? "READY" : queueTime(seconds)}</b><em>{Math.round(progress)}%</em></div><div className="pw-inline-queue-actions"><button className="accelerate" disabled={busy || ready} onClick={() => run(`Accelerate ${activeQueue.label.toLowerCase()}`, activeQueue.accelerate)}>ACCELERATE</button><button className="resolve" disabled={busy || !ready} onClick={() => run(`Finish ${activeQueue.label.toLowerCase()}`, activeQueue.finish)}>RESOLVE</button></div></div>
+      </section>;
+    })}</>;
   };
   const questDefinitions = activeQuestDefinitions(nowTs, questProgress);
   const questsHideTutorial = tutorialQuestsComplete(questState);
