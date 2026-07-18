@@ -97,3 +97,8 @@
   .pw-operations button{width:40px;height:40px}
   .pw-queues{left:14px;bottom:14px}
 }
+
+/* Alliance directory/onboarding overlays sit above the command modal while
+   remaining below the wallet layer inside the planet surface. */
+.pw-alliance-directory,.pw-alliance-onboarding{z-index:24}
+.pw-wallet-backdrop{z-index:30}

@@ -160,8 +160,12 @@ function VaultPrompt({
   onCancel: () => void;
 }) {
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [remember, setRemember] = useState(false);
-  useEffect(() => { setPassword(""); setRemember(false); }, [request.mode, request.wallet]);
+  useEffect(() => { setPassword(""); setConfirmPassword(""); setRemember(false); }, [request.mode, request.wallet]);
+  const isCreating = request.mode === "create";
+  const confirmationMismatch = isCreating && confirmPassword.length > 0 && password !== confirmPassword;
+  const canSubmit = password.trim().length > 0 && (!isCreating || (confirmPassword.length > 0 && password === confirmPassword));
   return (
     <div className="ug-modal">
       <form
@@ -184,13 +188,24 @@ function VaultPrompt({
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Recovery password"
+          autoComplete={isCreating ? "new-password" : "current-password"}
         />
+        {isCreating && <>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            placeholder="Confirm recovery password"
+            autoComplete="new-password"
+          />
+          {confirmationMismatch && <p className="ug-password-error">Passwords do not match.</p>}
+        </>}
         <label className="ug-remember-password"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span><b>Remember on this device</b><small>Stores the recovery password in this browser for this wallet.</small></span></label>
         <div>
           <button type="button" onClick={onCancel}>
             Cancel
           </button>
-          <button type="submit">Continue</button>
+          <button type="submit" disabled={!canSubmit}>Continue</button>
         </div>
       </form>
     </div>
