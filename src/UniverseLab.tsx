@@ -115,10 +115,15 @@ function FullUniverseOverview({ populations, onSelect }: { populations: Map<numb
   const hitTargets = useRef<THREE.InstancedMesh>(null!);
   const blackHoles = useRef<THREE.InstancedMesh>(null!);
   const blackHoleHalos = useRef<THREE.InstancedMesh>(null!);
-  const { stars, colors, centers } = useMemo(() => {
+  const { stars, colors, dustStars, dustColors, coreStars, coreColors, centers } = useMemo(() => {
     const starPositions: number[] = [];
     const starColors: number[] = [];
+    const dustPositions: number[] = [];
+    const dustColorValues: number[] = [];
+    const corePositions: number[] = [];
+    const coreColorValues: number[] = [];
     const centerPositions: number[] = [];
+    const localPosition = new THREE.Vector3();
     for (let galaxy = 1; galaxy <= MAX_GALAXY; galaxy += 1) {
       const index = galaxy - 1;
       const column = index % 10;
@@ -132,20 +137,36 @@ function FullUniverseOverview({ populations, onSelect }: { populations: Map<numb
       const random = seeded(galaxy * 541);
       const kind = GALAXY_KINDS[galaxy % GALAXY_KINDS.length];
       const particles = populations.has(galaxy) ? 440 : 270;
+      const orientation = new THREE.Quaternion().setFromEuler(new THREE.Euler((spatial() - .5) * 1.35, spatial() * Math.PI * 2, (spatial() - .5) * 1.1));
       for (let index = 0; index < particles; index += 1) {
         const arm = index % (kind === "spiral" ? 4 : kind === "barred" ? 2 : 6);
         const coreParticle = index < particles * .28;
         const radius = coreParticle ? Math.pow(random(), 2.35) * 6.2 + .35 : Math.pow(random(), .58) * 16.5 + 1.2;
         const base = arm * (Math.PI * 2 / (kind === "barred" ? 2 : kind === "elliptical" ? 6 : 4)) + radius * .92;
-        const angle = base + (random() - 0.5) * (kind === "elliptical" ? 2.7 : coreParticle ? 1.25 : .48);
+        const angle = kind === "elliptical" ? random() * Math.PI * 2 : base + (random() - 0.5) * (coreParticle ? 1.25 : .48);
         const ellipse = kind === "elliptical" ? 0.57 : kind === "barred" ? 0.7 : 0.88;
-        starPositions.push(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius * ellipse, centerZ + (random() - 0.5) * (kind === "elliptical" ? 2.2 : .7));
+        const barredCore = kind === "barred" && !coreParticle && index % 4 === 0;
+        const localX = barredCore ? (random() - .5) * 25 : Math.cos(angle) * radius;
+        const localY = barredCore ? (random() - .5) * 2.4 : Math.sin(angle) * radius * ellipse;
+        const localZ = (random() - 0.5) * (kind === "elliptical" ? 2.2 : .7);
+        localPosition.set(localX, localY, localZ).applyQuaternion(orientation);
+        starPositions.push(centerX + localPosition.x, centerY + localPosition.y, centerZ + localPosition.z);
         const particleTint = tint.clone().lerp(new THREE.Color("#fff7dc"), coreParticle ? .72 : random() * .16);
         starColors.push(particleTint.r, particleTint.g, particleTint.b);
+        if (index % 3 === 0) {
+          dustPositions.push(centerX + localPosition.x * 1.08, centerY + localPosition.y * 1.08, centerZ + localPosition.z * 1.08);
+          const dustTint = tint.clone().lerp(new THREE.Color("#b7d8ff"), .22);
+          dustColorValues.push(dustTint.r, dustTint.g, dustTint.b);
+        }
+        if (coreParticle && index % 2 === 0) {
+          corePositions.push(centerX + localPosition.x * .72, centerY + localPosition.y * .72, centerZ + localPosition.z * .72);
+          const coreTint = tint.clone().lerp(new THREE.Color("#fffbe8"), .86);
+          coreColorValues.push(coreTint.r, coreTint.g, coreTint.b);
+        }
       }
       centerPositions.push(centerX, centerY, centerZ);
     }
-    return { stars: new Float32Array(starPositions), colors: new Float32Array(starColors), centers: new Float32Array(centerPositions) };
+    return { stars: new Float32Array(starPositions), colors: new Float32Array(starColors), dustStars: new Float32Array(dustPositions), dustColors: new Float32Array(dustColorValues), coreStars: new Float32Array(corePositions), coreColors: new Float32Array(coreColorValues), centers: new Float32Array(centerPositions) };
   }, [populations]);
   useEffect(() => {
     const matrix = new THREE.Matrix4();
@@ -161,7 +182,9 @@ function FullUniverseOverview({ populations, onSelect }: { populations: Map<numb
   }, [centers]);
   return <group rotation={[-0.23, 0.4, -0.08]}>
     <UniverseCoreBlackHole />
+    <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[dustStars, 3]} /><bufferAttribute attach="attributes-color" args={[dustColors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={1.35} sizeAttenuation transparent opacity={0.13} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
     <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[stars, 3]} /><bufferAttribute attach="attributes-color" args={[colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={0.46} sizeAttenuation transparent opacity={0.98} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+    <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[coreStars, 3]} /><bufferAttribute attach="attributes-color" args={[coreColors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={0.82} sizeAttenuation transparent opacity={0.88} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
     <instancedMesh ref={blackHoleHalos} args={[undefined, undefined, MAX_GALAXY]}><sphereGeometry args={[5.8, 20, 20]} /><meshBasicMaterial color="#5b4d91" transparent opacity={0.12} side={THREE.BackSide} depthWrite={false} /></instancedMesh>
     <instancedMesh ref={blackHoles} args={[undefined, undefined, MAX_GALAXY]}><sphereGeometry args={[2.5, 20, 20]} /><meshBasicMaterial color="#000000" /></instancedMesh>
     <instancedMesh ref={hitTargets} args={[undefined, undefined, MAX_GALAXY]} onClick={(event) => { event.stopPropagation(); if (typeof event.instanceId === "number") onSelect(event.instanceId + 1); }}><sphereGeometry args={[22, 10, 10]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} /></instancedMesh>
