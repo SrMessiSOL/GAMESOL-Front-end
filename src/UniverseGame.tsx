@@ -33,6 +33,7 @@ import {
 } from "./game-state";
 import type { UniversePlanet } from "./universe-data";
 import { resolveGameArt } from "./ui-art";
+import { BUILDING_REQUIREMENTS } from "./combat-engine";
 
 type OperationState = {
   label: string;
@@ -635,6 +636,17 @@ function PlanetDashboard({
           {BUILDINGS.map((building) => {
             const level = (activeState.planet as any)[building.key] as number;
             const [metal, crystal, deuterium] = upgradeCost(building.idx, level);
+            const requirements = (BUILDING_REQUIREMENTS[building.key] ?? []).map((requirement: any) => {
+              const current = requirement.type === "building"
+                ? Number((activeState.planet as any)[requirement.key] ?? 0)
+                : Number((activeState.research as any)[requirement.key] ?? 0);
+              const source = requirement.type === "building"
+                ? BUILDINGS.find((entry) => entry.key === requirement.key)?.name ?? requirement.key
+                : RESEARCH[RESEARCH_KEYS.indexOf(requirement.key as (typeof RESEARCH_KEYS)[number])] ?? requirement.key;
+              return { source, current, required: requirement.level, met: current >= requirement.level };
+            });
+            const missingRequirements = requirements.filter((requirement) => !requirement.met);
+            const requirementsMet = missingRequirements.length === 0;
             return <article key={building.key} className="ug-unit-card">
               <div className="ug-unit-art" style={{ backgroundImage: resolveGameArt(building.key, "none") }} />
               <div className="ug-unit-copy">
@@ -642,16 +654,17 @@ function PlanetDashboard({
                 <p>{nextBuildingEffect(building.key, level)}</p>
                 <b>Level {level} <span>to {level + 1}</span></b>
                 <div className="ug-cost-row">{metal > 0 && <span className="cost-metal" title="Metal"><Pickaxe />{fmt(metal)}</span>}{crystal > 0 && <span className="cost-crystal" title="Crystal"><Gem />{fmt(crystal)}</span>}{deuterium > 0 && <span className="cost-deuterium" title="Deuterium"><FlaskConical />{fmt(deuterium)}</span>}</div>
+                {missingRequirements.length > 0 && <div style={{ marginTop: 8, color: "var(--danger)", fontSize: 11 }}><b>Requirements missing</b>{missingRequirements.map((requirement) => <div key={`${building.key}-${requirement.source}`}>• {requirement.source} Lv {requirement.required} <span style={{ opacity: 0.75 }}>(now {requirement.current})</span></div>)}</div>}
               </div>
               <button
-                disabled={busy || constructionBusy}
+                disabled={busy || constructionBusy || !requirementsMet}
                 onClick={() =>
                   run(`Upgrade ${building.name}`, (client, source) =>
                     client.startBuild(source, building.idx),
                   )
                 }
               >
-                {constructionBusy ? "Queue active" : "Upgrade"}
+                {constructionBusy ? "Queue active" : !requirementsMet ? "Requirements missing" : "Upgrade"}
               </button>
             </article>;
           })}
