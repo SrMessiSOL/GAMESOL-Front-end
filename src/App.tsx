@@ -255,6 +255,13 @@ const ResourceAmount: React.FC<{ kind: ResourceKind; value: bigint | number; com
   </span>
 );
 
+const AntimatterLabel: React.FC = () => (
+  <span className="asset-label" style={{ color: "var(--warn)" }}>
+    <AntimatterIcon size={12} />
+    <span>AM</span>
+  </span>
+);
+
 const UsdcAmount: React.FC<{ raw: bigint; className?: string; icon?: boolean }> = ({ raw, className, icon = true }) => (
   <span className={`asset-amount usdc-amount${className ? ` ${className}` : ""}`}>
     {icon && <UsdcIcon size="sm" />}
@@ -3720,9 +3727,9 @@ const ResearchTab: React.FC<{ research: Research; res?: Resources; planet: Plane
                     </div>
                   )}
                   <div className="building-costs">
-                    {cm > 0 && <div className="building-cost-row"><span>Metal</span><span className={res && res.metal < BigInt(cm) ? "cost-bad" : "cost-ok"}>{fmt(cm)}</span></div>}
-                    {cc > 0 && <div className="building-cost-row"><span>Crystal</span><span className={res && res.crystal < BigInt(cc) ? "cost-bad" : "cost-ok"}>{fmt(cc)}</span></div>}
-                    {cd > 0 && <div className="building-cost-row"><span>Deuterium</span><span className={res && res.deuterium < BigInt(cd) ? "cost-bad" : "cost-ok"}>{fmt(cd)}</span></div>}
+                    {cm > 0 && <div className="building-cost-row"><ResourceLabel kind="metal" /><span className={res && res.metal < BigInt(cm) ? "cost-bad" : "cost-ok"}>{fmt(cm)}</span></div>}
+                    {cc > 0 && <div className="building-cost-row"><ResourceLabel kind="crystal" /><span className={res && res.crystal < BigInt(cc) ? "cost-bad" : "cost-ok"}>{fmt(cc)}</span></div>}
+                    {cd > 0 && <div className="building-cost-row"><ResourceLabel kind="deuterium" /><span className={res && res.deuterium < BigInt(cd) ? "cost-bad" : "cost-ok"}>{fmt(cd)}</span></div>}
                   </div>
                   <button
                     className={btnClass}
@@ -4017,9 +4024,9 @@ const ResourcesTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
                     </div>
                   )}
                   <div className="building-costs">
-                    {cm > 0 && <div className="building-cost-row"><span>Metal</span><span className={hasMetal ? "cost-ok" : "cost-bad"}>{fmt(cm)}</span></div>}
-                    {cc > 0 && <div className="building-cost-row"><span>Crystal</span><span className={hasCrystal ? "cost-ok" : "cost-bad"}>{fmt(cc)}</span></div>}
-                    {cd > 0 && <div className="building-cost-row"><span>Deuterium</span><span className={hasDeut ? "cost-ok" : "cost-bad"}>{fmt(cd)}</span></div>}
+                    {cm > 0 && <div className="building-cost-row"><ResourceLabel kind="metal" /><span className={hasMetal ? "cost-ok" : "cost-bad"}>{fmt(cm)}</span></div>}
+                    {cc > 0 && <div className="building-cost-row"><ResourceLabel kind="crystal" /><span className={hasCrystal ? "cost-ok" : "cost-bad"}>{fmt(cc)}</span></div>}
+                    {cd > 0 && <div className="building-cost-row"><ResourceLabel kind="deuterium" /><span className={hasDeut ? "cost-ok" : "cost-bad"}>{fmt(cd)}</span></div>}
                   </div>
                   <button
                     className={btnClass}
@@ -4139,9 +4146,9 @@ const BuildingsTab: React.FC<{ state:PlayerState; res?:Resources; nowTs:number; 
                     </div>
                   )}
                   <div className="building-costs">
-                    {cm > 0 && <div className="building-cost-row"><span>Metal</span><span className={hasMetal ? "cost-ok" : "cost-bad"}>{fmt(cm)}</span></div>}
-                    {cc > 0 && <div className="building-cost-row"><span>Crystal</span><span className={hasCrystal ? "cost-ok" : "cost-bad"}>{fmt(cc)}</span></div>}
-                    {cd > 0 && <div className="building-cost-row"><span>Deuterium</span><span className={hasDeut ? "cost-ok" : "cost-bad"}>{fmt(cd)}</span></div>}
+                    {cm > 0 && <div className="building-cost-row"><ResourceLabel kind="metal" /><span className={hasMetal ? "cost-ok" : "cost-bad"}>{fmt(cm)}</span></div>}
+                    {cc > 0 && <div className="building-cost-row"><ResourceLabel kind="crystal" /><span className={hasCrystal ? "cost-ok" : "cost-bad"}>{fmt(cc)}</span></div>}
+                    {cd > 0 && <div className="building-cost-row"><ResourceLabel kind="deuterium" /><span className={hasDeut ? "cost-ok" : "cost-bad"}>{fmt(cd)}</span></div>}
                   </div>
                   <button
                     className={btnClass}
@@ -4550,7 +4557,7 @@ const AllianceTab: React.FC<{
           <div className="section-title" style={{marginBottom:24}}>CREATE ALLIANCE</div>
           <div className="quest-req-list" style={{marginBottom:24,gap:14}}>
             <div className={`quest-req-row ${hasUsdc ? "met" : "missing"}`}><span>USDC</span><strong>{formatTokenAmount(usdcBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_USDC_COST, 6)}</strong></div>
-            <div className={`quest-req-row ${hasAntimatter ? "met" : "missing"}`}><span>ANTIMATTER</span><strong>{formatTokenAmount(antimatterBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)}</strong></div>
+            <div className={`quest-req-row ${hasAntimatter ? "met" : "missing"}`}><AntimatterLabel /><strong>{formatTokenAmount(antimatterBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)}</strong></div>
           </div>
           <button className="modal-btn primary" style={{width:"min(280px,100%)"}} disabled={txBusy} onClick={() => setShowCreateModal(true)}>CREATE ALLIANCE</button>
         </div>
@@ -4567,7 +4574,7 @@ const AllianceTab: React.FC<{
             <div className="modal-section">
               <div className="quest-req-list">
                 <div className={`quest-req-row ${hasUsdc ? "met" : "missing"}`}><span>USDC</span><strong>{formatTokenAmount(usdcBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_USDC_COST, 6)}</strong></div>
-                <div className={`quest-req-row ${hasAntimatter ? "met" : "missing"}`}><span>ANTIMATTER</span><strong>{formatTokenAmount(antimatterBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)}</strong></div>
+                <div className={`quest-req-row ${hasAntimatter ? "met" : "missing"}`}><AntimatterLabel /><strong>{formatTokenAmount(antimatterBalance, 6)}/{formatTokenAmount(ALLIANCE_CREATE_ANTIMATTER_COST, 6)}</strong></div>
               </div>
             </div>
             <div className="modal-section">
@@ -4711,10 +4718,10 @@ const AllianceTab: React.FC<{
                   <span>Current effect</span><strong>{effect}</strong>
                 </div>
                 <div className="quest-req-list">
-                  <div className={`quest-req-row ${(allianceTreasury?.metal ?? 0n) >= cost.metal ? "met" : "missing"}`}><span>Metal</span><strong>{fmt(allianceTreasury?.metal ?? 0n)}/{fmt(cost.metal)}</strong></div>
-                  <div className={`quest-req-row ${(allianceTreasury?.crystal ?? 0n) >= cost.crystal ? "met" : "missing"}`}><span>Crystal</span><strong>{fmt(allianceTreasury?.crystal ?? 0n)}/{fmt(cost.crystal)}</strong></div>
-                  <div className={`quest-req-row ${(allianceTreasury?.deuterium ?? 0n) >= cost.deuterium ? "met" : "missing"}`}><span>Deuterium</span><strong>{fmt(allianceTreasury?.deuterium ?? 0n)}/{fmt(cost.deuterium)}</strong></div>
-                  <div className={`quest-req-row ${(allianceTreasury?.antimatter ?? 0n) >= cost.antimatter ? "met" : "missing"}`}><span>ANTIMATTER</span><strong>{formatTokenAmount(allianceTreasury?.antimatter ?? 0n, 6)}/{formatTokenAmount(cost.antimatter, 6)}</strong></div>
+                  <div className={`quest-req-row ${(allianceTreasury?.metal ?? 0n) >= cost.metal ? "met" : "missing"}`}><ResourceLabel kind="metal" /><strong>{fmt(allianceTreasury?.metal ?? 0n)}/{fmt(cost.metal)}</strong></div>
+                  <div className={`quest-req-row ${(allianceTreasury?.crystal ?? 0n) >= cost.crystal ? "met" : "missing"}`}><ResourceLabel kind="crystal" /><strong>{fmt(allianceTreasury?.crystal ?? 0n)}/{fmt(cost.crystal)}</strong></div>
+                  <div className={`quest-req-row ${(allianceTreasury?.deuterium ?? 0n) >= cost.deuterium ? "met" : "missing"}`}><ResourceLabel kind="deuterium" /><strong>{fmt(allianceTreasury?.deuterium ?? 0n)}/{fmt(cost.deuterium)}</strong></div>
+                  <div className={`quest-req-row ${(allianceTreasury?.antimatter ?? 0n) >= cost.antimatter ? "met" : "missing"}`}><AntimatterLabel /><strong>{formatTokenAmount(allianceTreasury?.antimatter ?? 0n, 6)}/{formatTokenAmount(cost.antimatter, 6)}</strong></div>
                 </div>
                 <button className="modal-btn primary" disabled={txBusy || !canUpgrade} onClick={() => onUpgradeBuilding(building.id)}>{isLeader ? "LEVEL UP" : "LEADER ONLY"}</button>
               </div>
@@ -5958,7 +5965,10 @@ const App: React.FC = () => {
   const handlePurchaseStorePack = async (period: StorePeriod, packId: number) => {
     if (!clientRef.current || !state) return;
     const pack = STORE_PACKS.find(entry => entry.period === period && entry.id === packId);
-    if (pack && !confirmResourceCapWarning(`Buy ${pack.title}`, pack.reward)) return;
+    // Use the interpolated balance when available, but always fall back to the
+    // selected planet account so the same cap warning as quests is shown even
+    // during the first render after opening the Store.
+    if (pack && !confirmResourceCapWarning(`Buy ${pack.title}`, pack.reward, liveRes ?? state.resources)) return;
     await withTx("Purchase store pack", () => clientRef.current!.purchaseStorePack(new PublicKey(state.entityPda), period, packId), async () => { await refreshSelectedPlanetState(); await refreshStoreState(); await refreshQuestState(); });
   };
 
