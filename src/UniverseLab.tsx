@@ -69,22 +69,40 @@ function seeded(seed: number) {
 }
 
 function GalaxyNode({ galaxy, selected, onSelect }: { galaxy: GalaxyDefinition; selected: boolean; onSelect: () => void }) {
-  const stars = useMemo(() => {
+  const visual = useRef<THREE.Group>(null!);
+  const galaxyTexture = useTexture(stellarCorona);
+  galaxyTexture.colorSpace = THREE.SRGBColorSpace;
+  const { stars, dust, core } = useMemo(() => {
     const random = seeded(Number(galaxy.label) * 971);
     const positions: number[] = [];
-    const count = 1900;
+    const dustPositions: number[] = [];
+    const corePositions: number[] = [];
+    const count = 2600;
     for (let index = 0; index < count; index += 1) {
       const arm = index % (galaxy.kind === "spiral" ? 4 : galaxy.kind === "barred" ? 2 : 6);
       const radius = Math.pow(random(), 0.56) * 6.3 + 0.58;
       const base = arm * (Math.PI * 2 / (galaxy.kind === "barred" ? 2 : galaxy.kind === "elliptical" ? 6 : 4)) + radius * 1.62;
       const angle = base + (random() - 0.5) * (galaxy.kind === "elliptical" ? 2.9 : 0.7);
       const ellipse = galaxy.kind === "elliptical" ? 0.57 : galaxy.kind === "barred" ? 0.7 : 0.88;
-      positions.push(Math.cos(angle) * radius, (random() - 0.5) * (galaxy.kind === "elliptical" ? 0.72 : 0.15), Math.sin(angle) * radius * ellipse);
+      const x = Math.cos(angle) * radius;
+      const y = (random() - 0.5) * (galaxy.kind === "elliptical" ? 0.72 : 0.15);
+      const z = Math.sin(angle) * radius * ellipse;
+      positions.push(x, y, z);
+      if (index % 3 === 0) dustPositions.push(x * 1.04, y * 1.9, z * 1.04);
+      if (index < 520 && index % 2 === 0) corePositions.push(x * 0.48, y * 0.7, z * 0.48);
     }
-    return new Float32Array(positions);
+    return { stars: new Float32Array(positions), dust: new Float32Array(dustPositions), core: new Float32Array(corePositions) };
   }, [galaxy]);
+  useFrame(({ clock }) => {
+    if (visual.current) visual.current.rotation.y = clock.getElapsedTime() * (selected ? 0.018 : 0.009);
+  });
   return <group position={galaxy.position} scale={2.1} onClick={(event) => { event.stopPropagation(); onSelect(); }}>
-    <points rotation={[0.18, Number(galaxy.label) * 0.12, 0]}><bufferGeometry><bufferAttribute attach="attributes-position" args={[stars, 3]} /></bufferGeometry><pointsMaterial color={galaxy.tint} size={0.15} sizeAttenuation transparent opacity={selected ? 1 : 0.94} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+    <group ref={visual} rotation={[0.18, Number(galaxy.label) * 0.12, 0]}>
+      <sprite scale={[5.8, 5.8, 1]}><spriteMaterial map={galaxyTexture} color={galaxy.tint} transparent opacity={selected ? 0.27 : 0.14} blending={THREE.AdditiveBlending} depthWrite={false} /></sprite>
+      <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[dust, 3]} /></bufferGeometry><pointsMaterial color={galaxy.tint} size={0.22} sizeAttenuation transparent opacity={selected ? 0.25 : 0.13} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+      <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[stars, 3]} /></bufferGeometry><pointsMaterial color={galaxy.tint} size={0.13} sizeAttenuation transparent opacity={selected ? 1 : 0.82} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+      <points><bufferGeometry><bufferAttribute attach="attributes-position" args={[core, 3]} /></bufferGeometry><pointsMaterial color="#fff4d3" size={0.23} sizeAttenuation transparent opacity={selected ? 0.95 : 0.68} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+    </group>
     <mesh><sphereGeometry args={[0.72 + galaxy.density / 500, 48, 48]} /><meshBasicMaterial color="#000000" /></mesh>
     <Html center distanceFactor={30} style={{ pointerEvents: "none" }}><div className="galaxy-label"><b>GALAXY {galaxy.label}</b><span>{galaxy.liveWorlds} ON-CHAIN WORLDS</span></div></Html>
   </group>;
