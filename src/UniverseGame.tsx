@@ -828,11 +828,23 @@ export default function UniverseGame() {
   const [vaultWithdraw, setVaultWithdraw] = useState("");
   const [vaultActionBusy, setVaultActionBusy] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [walletCopyStatus, setWalletCopyStatus] = useState("COPY ADDRESS");
   const [antimatterBalance, setAntimatterBalance] = useState(0n);
   const [usdcBalance, setUsdcBalance] = useState(0n);
   const [battleReports, setBattleReports] = useState<BattleResolvedEventRecord[]>([]);
   const [spyReports, setSpyReports] = useState<EspionageReportEventRecord[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+
+  const copyWalletAddress = async () => {
+    if (!publicKey) return;
+    try {
+      await navigator.clipboard.writeText(publicKey.toBase58());
+      setWalletCopyStatus("COPIED");
+      window.setTimeout(() => setWalletCopyStatus("COPY ADDRESS"), 2_500);
+    } catch {
+      setWalletCopyStatus("COPY FAILED");
+    }
+  };
 
   useEffect(() => {
     if (!status) return;
@@ -1289,6 +1301,14 @@ export default function UniverseGame() {
                     <span>USDC</span>
                     <b>{tokenLabel(usdcBalance)} USDC</b>
                   </div>
+                  <section className="ug-devnet-tools">
+                    <header><span>DEVNET TOOLS</span><b>SOLANA DEVNET</b></header>
+                    <p>Request test SOL for wallet fees and game setup.</p>
+                    <div>
+                      <a href="https://faucet.solana.com/" target="_blank" rel="noreferrer">OPEN SOL FAUCET</a>
+                      <button onClick={() => void copyWalletAddress()}>{walletCopyStatus}</button>
+                    </div>
+                  </section>
                   <div className="ug-wallet-actions">
                     <WalletModalButton>CHANGE WALLET</WalletModalButton>
                     <WalletDisconnectButton>DISCONNECT</WalletDisconnectButton>
