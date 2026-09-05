@@ -163,20 +163,54 @@ type OperationState = {
   label: string;
   detail: string;
   phase: "processing" | "success" | "error";
+  nextAction?: string;
   recovery?: string;
   technicalDetail?: string;
 };
 
+function commandSuccessGuidance(label: string): Pick<OperationState, "detail" | "nextAction"> {
+  const command = label.toLowerCase();
+  if (command.startsWith("upgrade ")) return {
+    detail: "Construction confirmed. The live world queue now tracks this upgrade.",
+    nextAction: "Watch the construction timer. When it reaches READY, select FINISH.",
+  };
+  if (command.startsWith("finish ")) return {
+    detail: "The completed queue was resolved and your world state is up to date.",
+    nextAction: "Continue with the highlighted Empire Expansion objective.",
+  };
+  if (command.startsWith("research ")) return {
+    detail: "Research confirmed. The live laboratory queue is now running.",
+    nextAction: "Track the research timer, then resolve it when it reaches READY.",
+  };
+  if (command.startsWith("build ")) return {
+    detail: "Production confirmed. The live shipyard queue now reflects this order.",
+    nextAction: "Track the production timer, then resolve the completed order.",
+  };
+  if (command.startsWith("launch ")) return {
+    detail: "Fleet launch confirmed and the mission is now active on devnet.",
+    nextAction: "Open Missions to track arrival and resolve the fleet when ready.",
+  };
+  if (command.startsWith("claim ")) return {
+    detail: "Claim confirmed. The resulting world or reward has been loaded.",
+    nextAction: "Return to your command view and continue expanding the empire.",
+  };
+  return {
+    detail: "Command confirmed and the latest on-chain state has been loaded.",
+    nextAction: "Return to the active command view to continue.",
+  };
+}
+
 function OperationModal({ operation, onClose }: { operation: OperationState | null; onClose: () => void }) {
   const active = operation?.phase === "processing";
   const operationOpen = operation !== null;
+  const blocking = operation?.phase !== "success";
   const modalRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
-    if (!operationOpen) return;
+    if (!operationOpen || !blocking) return;
     const previousOverflow = document.body.style.overflow;
     openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = "hidden";
@@ -188,9 +222,9 @@ function OperationModal({ operation, onClose }: { operation: OperationState | nu
         if (opener?.isConnected) opener.focus();
       });
     };
-  }, [operationOpen]);
+  }, [blocking, operationOpen]);
   useEffect(() => {
-    if (!operationOpen) return;
+    if (!operationOpen || !blocking) return;
     const focusFrame = window.requestAnimationFrame(() => active ? modalRef.current?.focus() : closeRef.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !active) {
@@ -225,17 +259,18 @@ function OperationModal({ operation, onClose }: { operation: OperationState | nu
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [active, operationOpen]);
+  }, [active, blocking, operationOpen]);
   if (!operation) return null;
-  return <div className="ug-operation-backdrop">
-    <section ref={modalRef} className={`ug-operation-modal ${operation.phase}`} role="dialog" aria-modal="true" aria-live="polite" aria-busy={active} aria-labelledby="ug-operation-title" aria-describedby="ug-operation-detail" tabIndex={-1}>
+  return <div className={`ug-operation-backdrop ${operation.phase}`}>
+    <section ref={modalRef} className={`ug-operation-modal ${operation.phase}`} role={blocking ? "dialog" : "status"} aria-modal={blocking ? "true" : undefined} aria-live="polite" aria-busy={active} aria-labelledby="ug-operation-title" aria-describedby="ug-operation-detail" tabIndex={blocking ? -1 : undefined}>
       <div className="ug-operation-mark" aria-hidden="true">{active ? <LoaderCircle /> : operation.phase === "success" ? <CheckCircle2 /> : <TriangleAlert />}</div>
       <span>{active ? "WAITING FOR DEVNET" : operation.phase === "success" ? "COMMAND CONFIRMED" : "COMMAND NEEDS ATTENTION"}</span>
       <h2 id="ug-operation-title">{operation.label}</h2>
       <p id="ug-operation-detail">{operation.detail}</p>
+      {operation.phase === "success" && operation.nextAction && <div className="ug-operation-next"><b>NEXT MOVE</b><span>{operation.nextAction}</span></div>}
       {operation.phase === "error" && operation.recovery && <div className="ug-operation-recovery"><b>WHAT TO DO</b><span>{operation.recovery}</span></div>}
       {operation.phase === "error" && operation.technicalDetail && <details className="ug-operation-technical"><summary>Technical details</summary><code>{operation.technicalDetail}</code></details>}
-      {active ? <div className="ug-operation-progress"><i /><b>Keep GAMESOL open while Solana confirms this command.</b></div> : <button ref={closeRef} type="button" title="Close (Esc)" onClick={onClose}>{operation.phase === "success" ? "CONTINUE" : "CLOSE AND REVIEW"}</button>}
+      {active ? <div className="ug-operation-progress"><i /><b>Keep GAMESOL open while Solana confirms this command.</b></div> : <button ref={closeRef} type="button" title="Close (Esc)" onClick={onClose}>{operation.phase === "success" ? "RETURN TO WORLD" : "CLOSE AND REVIEW"}</button>}
     </section>
   </div>;
 }
@@ -1407,7 +1442,7 @@ export default function UniverseGame() {
   }, [status]);
   useEffect(() => {
     if (!operation || operation.phase !== "success") return;
-    const timer = window.setTimeout(() => setOperation(null), 4_500);
+    const timer = window.setTimeout(() => setOperation(null), 8_000);
     return () => window.clearTimeout(timer);
   }, [operation]);
   useEffect(() => {
@@ -1686,7 +1721,7 @@ export default function UniverseGame() {
       await action(client, new PublicKey(entityPda));
       await refresh();
       setStatus(`${label} submitted.`);
-      setOperation({ label, detail: "The transaction was confirmed and your command state has been refreshed.", phase: "success" });
+      setOperation({ label, ...commandSuccessGuidance(label), phase: "success" });
     } catch (error) {
       const failure = playerError(error, `${label} could not be completed.`);
       setStatus(failure.detail);
