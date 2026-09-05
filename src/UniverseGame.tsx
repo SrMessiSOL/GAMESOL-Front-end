@@ -22,6 +22,7 @@ import {
   GameClient,
   SHIPS,
   SHIP_TYPE_IDX,
+  energyEfficiency,
   upgradeCost,
   type PlayerState,
   type Mission,
@@ -1387,6 +1388,23 @@ function PlanetDashboard({
   );
 }
 
+function empireWorldSummary(state: PlayerState, nowTs: number) {
+  const queues = [
+    { active: state.planet.buildQueueItem !== 255, finishAt: state.planet.buildFinishTs },
+    { active: state.research.queueItem !== 255, finishAt: state.research.researchFinishTs },
+    { active: state.planet.shipBuildItem !== 255, finishAt: state.planet.shipBuildFinishTs },
+    { active: state.planet.defenseBuildItem !== 255, finishAt: state.planet.defenseBuildFinishTs },
+  ].filter((queue) => queue.active);
+  const missions = state.fleet.missions.filter((mission) => mission.missionType !== 0);
+  const readyQueues = queues.filter((queue) => queue.finishAt <= nowTs).length;
+  const readyMissions = missions.filter((mission) => (mission.applied ? mission.returnTs : mission.arriveTs) <= nowTs).length;
+  return {
+    activeJobs: queues.length + missions.length,
+    readyActions: readyQueues + readyMissions,
+    energyPercent: energyEfficiency(state.resources),
+  };
+}
+
 export default function UniverseGame() {
   const productionPreview = typeof window !== "undefined" && window.location.pathname === "/next";
   const { connection } = useConnection();
@@ -2042,6 +2060,7 @@ export default function UniverseGame() {
           galaxy: planet.planet.galaxy,
           system: planet.planet.system,
           position: planet.planet.position,
+          ...empireWorldSummary(planet, Math.floor(Date.now() / 1_000)),
         }))}
         activeOwnedPlanet={sourceEntity}
         initialGalaxy={returnSystem?.galaxy}
