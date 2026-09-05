@@ -527,6 +527,31 @@
   .pw-operation-menu>div>button{min-height:62px}
 }
 
+/* Command identity --------------------------------------------------------
+   Every modal keeps the same geometry while its icon and restrained accent
+   tell the player which gameplay system is currently active. */
+.production-preview .pw-command-modal{--pw-command-accent:#72ddff}
+.production-preview .pw-command-kind-research{--pw-command-accent:#ad95ff}
+.production-preview .pw-command-kind-ships,.production-preview .pw-command-kind-missions{--pw-command-accent:#79dfff}
+.production-preview .pw-command-kind-defense{--pw-command-accent:#ffb975}
+.production-preview .pw-command-kind-alliance,.production-preview .pw-command-kind-market{--pw-command-accent:#c6a4ff}
+.production-preview .pw-command-kind-quests{--pw-command-accent:#ffd27a}
+.production-preview .pw-command-kind-store{--pw-command-accent:#68e4ba}
+.production-preview .pw-command-kind-activity{--pw-command-accent:#80b7ff}
+.production-preview .pw-modal-toolbar::after{content:'';position:absolute;right:22px;bottom:-1px;left:22px;height:1px;background:linear-gradient(90deg,transparent,var(--pw-command-accent),transparent);opacity:.68;pointer-events:none}
+.production-preview .pw-modal-title-group{display:grid;grid-template-columns:46px minmax(0,1fr);align-items:center;gap:13px;min-width:0}
+.production-preview .pw-modal-command-mark{position:relative;display:grid;width:42px;height:42px;place-items:center;border:1px solid color-mix(in srgb,var(--pw-command-accent) 42%,transparent);border-radius:10px;background:radial-gradient(circle at 38% 28%,color-mix(in srgb,var(--pw-command-accent) 22%,transparent),transparent 62%),rgba(4,19,33,.78);box-shadow:inset 0 1px rgba(255,255,255,.05),0 8px 22px rgba(0,0,0,.2);color:var(--pw-command-accent)}
+.production-preview .pw-modal-command-mark::after{content:'';position:absolute;inset:5px;border:1px solid color-mix(in srgb,var(--pw-command-accent) 12%,transparent);border-radius:6px;pointer-events:none}
+.production-preview .pw-modal-command-mark svg{width:20px;height:20px;stroke-width:1.65;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--pw-command-accent) 45%,transparent))}
+.production-preview .pw-modal-context>span{color:color-mix(in srgb,var(--pw-command-accent) 72%,#7d9bac)}
+@media(max-width:720px){
+  .production-preview .pw-modal-title-group{grid-template-columns:40px minmax(0,1fr);gap:9px}
+  .production-preview .pw-modal-command-mark{width:36px;height:36px;border-radius:8px}
+  .production-preview .pw-modal-command-mark svg{width:18px;height:18px}
+  .production-preview .pw-modal-toolbar::after{right:14px;left:14px}
+}
+@media(max-width:360px){.production-preview .pw-modal-title-group{grid-template-columns:34px minmax(0,1fr);gap:7px}.production-preview .pw-modal-command-mark{width:32px;height:32px}.production-preview .pw-modal-command-mark svg{width:16px;height:16px}}
+
 /* Production management cards ----------------------------------------- */
 .production-preview .pw-facility-grid{
   grid-template-columns:repeat(3,minmax(0,1fr));

@@ -2475,6 +2475,20 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
     market: "INTERPLANETARY MARKET",
     activity: "COMMAND INTELLIGENCE",
   };
+  const modalIcon: Record<PlanetWorldModal, typeof Building2> = {
+    buildingSelect: Building2,
+    building: Building2,
+    research: FlaskConical,
+    ships: Rocket,
+    defense: Shield,
+    missions: Crosshair,
+    quests: Trophy,
+    store: ShoppingCart,
+    alliance: Users,
+    market: Scale,
+    activity: Activity,
+  };
+  const ActiveModalIcon = modal ? modalIcon[modal] : Building2;
   return <main className="planet-world">
     <section className="planet-world-scene">
       <Canvas shadows camera={{ position: [0, .9, 13.8], fov: 40 }} dpr={[1, 1.45]} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.setClearColor("#01030a"); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.04; }}>
@@ -2535,8 +2549,8 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
         <button onClick={(event) => { operationMenuLaunchingRef.current = true; setOperationMenuOpen(false); openPlanetCommand("store", event.currentTarget); }}><ShoppingCart /><span><b>Store</b><small>Commander supplies and resource packs</small></span><ChevronRight /></button>
       </div>
     </section></div>}
-    {modal && <div className="pw-modal-backdrop" onMouseDown={() => setModal(null)}><section ref={modalPanelRef} className={`pw-command-modal${modal === "market" ? " pw-market-modal" : ""}${modal === "alliance" ? ` pw-alliance-view-${alliancePanel}` : ""}`} role="dialog" aria-modal="true" aria-labelledby="pw-command-modal-title" onMouseDown={(event) => event.stopPropagation()}>
-      <header className="pw-modal-toolbar"><div className="pw-modal-context"><span>PLANET COMMAND</span><strong id="pw-command-modal-title">{modalTitle[modal]}</strong><small>{state.planet.name} · G {state.planet.galaxy} · S {state.planet.system} · P {state.planet.position}</small></div><div className="pw-modal-toolbar-actions"><span className="pw-modal-network"><i />LIVE DEVNET</span><button ref={modalCloseRef} className="pw-modal-close" aria-label={`Close ${modalTitle[modal]}`} title="Close (Esc)" onClick={() => setModal(null)}><span>CLOSE</span><X /></button></div></header>
+    {modal && <div className="pw-modal-backdrop" onMouseDown={() => setModal(null)}><section ref={modalPanelRef} className={`pw-command-modal pw-command-kind-${modal}${modal === "market" ? " pw-market-modal" : ""}${modal === "alliance" ? ` pw-alliance-view-${alliancePanel}` : ""}`} role="dialog" aria-modal="true" aria-labelledby="pw-command-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+      <header className="pw-modal-toolbar"><div className="pw-modal-title-group"><span className="pw-modal-command-mark" aria-hidden="true"><ActiveModalIcon /></span><div className="pw-modal-context"><span>PLANET COMMAND</span><strong id="pw-command-modal-title">{modalTitle[modal]}</strong><small>{state.planet.name} · G {state.planet.galaxy} · S {state.planet.system} · P {state.planet.position}</small></div></div><div className="pw-modal-toolbar-actions"><span className="pw-modal-network"><i />LIVE DEVNET</span><button ref={modalCloseRef} className="pw-modal-close" aria-label={`Close ${modalTitle[modal]}`} title="Close (Esc)" onClick={() => setModal(null)}><span>CLOSE</span><X /></button></div></header>
       {modal === "alliance" && !allianceLoading && alliance && allianceMembership && <nav className="pw-alliance-tabs" aria-label="Alliance command sections">{([['overview','COMMAND'],['members',`MEMBERS ${allianceMembers.length}`],['missions','CONTRIBUTE'],['governance',`GOVERNANCE ${allianceDecisions.length}`]] as const).map(([panel,label]) => <button key={panel} className={alliancePanel === panel ? "active" : ""} onClick={() => setAlliancePanel(panel)}>{label}{panel === "members" && allianceJoinRequests.length > 0 && <b>{allianceJoinRequests.length}</b>}</button>)}</nav>}
       <div className="pw-modal-content">
       {busy && <PlanetCommandState kind="loading" compact title="Command in progress" description="Your approved action is being processed on Solana devnet. Keep this workspace open until confirmation." />}
