@@ -807,3 +807,9 @@
 @media(max-width:700px){.system-orbit-scanner{padding:0 13px 11px}.system-orbit-scanner>header small{display:none}.system-orbit-scanner>div{gap:2px}.system-orbit-scanner button{height:25px;font-size:6.5px}.orbit-selection{padding:7px 7px 7px 9px}.orbit-selection>button{min-width:68px!important;height:29px!important}}
 .universe-lab.production-ui .empire-command-center.is-hidden{visibility:hidden}
 @media(max-width:700px){.universe-lab.production-ui .empire-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.universe-lab.production-ui .owned-planet-roster.empire-world-list .empire-world-visit{grid-template-columns:38px minmax(0,1fr)!important}.universe-lab.production-ui .empire-world-state{grid-column:2;justify-items:start}.universe-lab.production-ui .empire-world-state em{grid-column:auto!important}.universe-lab.production-ui .empire-world-state b,.universe-lab.production-ui .empire-world-state em{padding:3px 5px;font-size:5.5px}}
+
+/* Match the Empire panel close control to every production workspace. */
+.universe-lab.production-ui .empire-heading>button{width:42px;height:42px;min-width:42px;border-radius:9px}
+.universe-lab.production-ui .empire-heading>button svg{width:18px;height:18px;stroke-width:1.8}
+.universe-lab.production-ui .empire-heading>button:focus-visible{outline:2px solid var(--gds-focus);outline-offset:3px}
+@media(max-width:700px){.universe-lab.production-ui .empire-heading>button{width:46px;height:46px;min-width:46px}}

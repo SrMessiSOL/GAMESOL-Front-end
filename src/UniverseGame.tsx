@@ -13,7 +13,7 @@ import {
   useWallet,
 } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
-import { BarChart3, Building2, CheckCircle2, ChevronLeft, ChevronRight, Crosshair, FlaskConical, Gem, LoaderCircle, Pickaxe, Rocket, Shield, ShoppingCart, TriangleAlert, Trophy, Users, Zap } from "lucide-react";
+import { BarChart3, Building2, CheckCircle2, ChevronLeft, ChevronRight, Crosshair, FlaskConical, Gem, LoaderCircle, Pickaxe, Rocket, Shield, ShoppingCart, TriangleAlert, Trophy, Users, X, Zap } from "lucide-react";
 import UniverseLab from "./UniverseLab";
 import type { PlanetWorldCommandRequest, PlanetWorldModal } from "./PlanetWorld";
 import { MarketClient } from "./market-client";
@@ -40,6 +40,23 @@ import { resolveGameArt } from "./ui-art";
 import { BUILDING_REQUIREMENTS } from "./combat-engine";
 
 const PlanetWorld = React.lazy(() => import("./PlanetWorld"));
+
+function keepFocusInsideDialog(event: KeyboardEvent, dialog: HTMLElement | null) {
+  if (event.key !== "Tab" || !dialog) return;
+  const controls = Array.from(dialog.querySelectorAll<HTMLElement>(
+    'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+  )).filter((control) => control.getClientRects().length > 0);
+  if (controls.length === 0) return;
+  const first = controls[0];
+  const last = controls[controls.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
 
 function LiveCaptureControl() {
   const enabled = typeof window !== "undefined"
@@ -454,7 +471,7 @@ function FundsModal({
     <section ref={modalRef} className="ug-funds-modal" role="dialog" aria-modal="true" aria-labelledby="ug-funds-title" aria-busy={busy} onMouseDown={(event) => event.stopPropagation()}>
       <header>
         <div><span>PLAYER ACCOUNT</span><h2 id="ug-funds-title">Your assets</h2></div>
-        <button ref={closeRef} type="button" aria-label="Close funds" title="Close funds (Esc)" disabled={busy} onClick={onClose}>×</button>
+        <button ref={closeRef} type="button" aria-label="Close funds" title="Close funds (Esc)" disabled={busy} onClick={onClose}><X aria-hidden="true" /></button>
       </header>
       {success ? <section className="ug-funds-success"><i>✓</i><h3>Transfer complete</h3><p>{success}</p><button onClick={onClose}>DONE</button></section> : reviewing ? <section className="ug-funds-review">
         <span>REVIEW TRANSFER</span>
@@ -739,7 +756,7 @@ function VaultPrompt({
           if (password.trim()) onSubmit(password.trim(), remember);
         }}
       >
-        <button type="button" className="ug-modal-close" aria-label="Close account security dialog" title="Close (Esc)" onClick={onCancel}>×</button>
+        <button type="button" className="ug-modal-close" aria-label="Close account security dialog" title="Close (Esc)" onClick={onCancel}><X aria-hidden="true" /></button>
         <h2 id="ug-vault-prompt-title">
           {request.mode === "create"
             ? "Protect this device"
@@ -1438,6 +1455,7 @@ export default function UniverseGame() {
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const playerTriggerRef = useRef<HTMLButtonElement>(null);
   const accountCloseRef = useRef<HTMLButtonElement>(null);
+  const accountDrawerRef = useRef<HTMLElement>(null);
   const [fundsOpen, setFundsOpen] = useState(false);
   const fundsOpenerRef = useRef<HTMLElement | null>(null);
   const [antimatterBalance, setAntimatterBalance] = useState(0n);
@@ -1449,6 +1467,7 @@ export default function UniverseGame() {
   const [activityLoading, setActivityLoading] = useState(false);
   const commandDockRef = useRef<HTMLElement>(null);
   const commandMenuCloseRef = useRef<HTMLButtonElement>(null);
+  const commandMenuRef = useRef<HTMLElement>(null);
   const [commandDockCanScroll, setCommandDockCanScroll] = useState(false);
   const [commandDockAtEnd, setCommandDockAtEnd] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
@@ -1468,7 +1487,12 @@ export default function UniverseGame() {
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusFrame = window.requestAnimationFrame(() => accountCloseRef.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setWalletMenuOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setWalletMenuOpen(false);
+        return;
+      }
+      keepFocusInsideDialog(event, accountDrawerRef.current);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -1485,7 +1509,12 @@ export default function UniverseGame() {
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusFrame = window.requestAnimationFrame(() => commandMenuCloseRef.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setCommandMenuOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setCommandMenuOpen(false);
+        return;
+      }
+      keepFocusInsideDialog(event, commandMenuRef.current);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -2162,8 +2191,8 @@ export default function UniverseGame() {
       )}
       {commandMenuOpen && selectedState && typeof document !== "undefined" && createPortal(
         <div className="ug-command-sheet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setCommandMenuOpen(false); }}>
-          <section className="ug-command-sheet" role="dialog" aria-modal="true" aria-labelledby="ug-command-sheet-title">
-            <header><div><small>COMMAND NETWORK</small><h2 id="ug-command-sheet-title">More operations</h2><p>Alliance coordination, trading, and progression records.</p></div><button ref={commandMenuCloseRef} type="button" aria-label="Close more operations" onClick={() => setCommandMenuOpen(false)}>×</button></header>
+          <section ref={commandMenuRef} className="ug-command-sheet" role="dialog" aria-modal="true" aria-labelledby="ug-command-sheet-title">
+            <header><div><small>COMMAND NETWORK</small><h2 id="ug-command-sheet-title">More operations</h2><p>Alliance coordination, trading, and progression records.</p></div><button ref={commandMenuCloseRef} type="button" aria-label="Close more operations" title="Close (Esc)" onClick={() => setCommandMenuOpen(false)}><X aria-hidden="true" /></button></header>
             <div className="ug-command-sheet-grid">
               <button onClick={() => { setCommandMenuOpen(false); openPlanetCommand(selectedState.entityPda, "alliance"); }}><Users /><span><b>Alliance</b><small>Members, sovereignty, and joint decisions</small></span><ChevronRight /></button>
               <button onClick={() => { setCommandMenuOpen(false); openPlanetCommand(selectedState.entityPda, "market"); }}><ShoppingCart /><span><b>Market</b><small>Trade resources across the player economy</small></span><ChevronRight /></button>
@@ -2199,13 +2228,13 @@ export default function UniverseGame() {
                   aria-label="Close player account"
                   onClick={() => setWalletMenuOpen(false)}
                 />
-                <section id="production-player-account" className={`ug-account-drawer${vaultStatus !== "ready" ? " setup-mode" : ""}`} role="dialog" aria-modal="true" aria-labelledby="production-player-account-title">
+                <section ref={accountDrawerRef} id="production-player-account" className={`ug-account-drawer${vaultStatus !== "ready" ? " setup-mode" : ""}`} role="dialog" aria-modal="true" aria-labelledby="production-player-account-title">
                   <header className="ug-account-heading">
                     <div>
                       <span>PLAYER ACCOUNT</span>
                       <h2 id="production-player-account-title">{vaultStatus === "ready" ? "Commander online" : "Finish account setup"}</h2>
                     </div>
-                    <button ref={accountCloseRef} aria-label="Close player account" title="Close (Esc)" onClick={() => setWalletMenuOpen(false)}>×</button>
+                    <button ref={accountCloseRef} type="button" aria-label="Close player account" title="Close (Esc)" onClick={() => setWalletMenuOpen(false)}><X aria-hidden="true" /></button>
                   </header>
 
                   <section className="ug-account-identity">
