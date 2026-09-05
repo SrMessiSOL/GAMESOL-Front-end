@@ -348,6 +348,37 @@ function EmpireWorldPortrait({ planet, index }: { planet: UniverseOwnedPlanet; i
     aria-hidden="true"
   ><i>{String(index).padStart(2, "0")}</i></span>;
 }
+
+function empireWorldDirective(planet: UniverseOwnedPlanet) {
+  if ((planet.readyActions ?? 0) > 0) return {
+    tone: "ready",
+    eyebrow: "RESULTS READY",
+    title: `${planet.readyActions} completed ${planet.readyActions === 1 ? "order" : "orders"}`,
+    detail: "Review the result, then issue this world's next command.",
+    action: "REVIEW WORLD",
+  };
+  if ((planet.energyPercent ?? 100) < 100) return {
+    tone: "warning",
+    eyebrow: "PRODUCTION THROTTLED",
+    title: `${planet.energyPercent ?? 0}% power efficiency`,
+    detail: "Restore energy before committing more resources to expansion.",
+    action: "RESTORE POWER",
+  };
+  if ((planet.activeJobs ?? 0) > 0) return {
+    tone: "active",
+    eyebrow: "COMMANDS UNDERWAY",
+    title: `${planet.activeJobs} active ${planet.activeJobs === 1 ? "operation" : "operations"}`,
+    detail: "Track construction, research, fleet, and mission progress.",
+    action: "TRACK PROGRESS",
+  };
+  return {
+    tone: "stable",
+    eyebrow: "WORLD READY",
+    title: "Awaiting your next order",
+    detail: "Develop production, advance technology, or prepare a fleet.",
+    action: "OPEN COMMAND",
+  };
+}
 // This is one rendered sector of the backend's 1-999 galaxy range. Additional
 // sectors are generated from exactly the same deterministic coordinate seed.
 function buildGalaxySector(firstGalaxy: number, populations: Map<number, number>): GalaxyDefinition[] {
@@ -2964,6 +2995,8 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
     setZoomLevel("system");
   };
   const activePlanet = ownedPlanets.find((planet) => planet.entity === activeOwnedPlanet);
+  const activePlanetNumber = activePlanet ? ownedPlanets.findIndex((planet) => planet.entity === activePlanet.entity) + 1 : 0;
+  const activePlanetDirective = activePlanet ? empireWorldDirective(activePlanet) : null;
   const visitOwnedPlanet = (planet: UniverseOwnedPlanet) => {
     setSelectedGalaxy(planet.galaxy);
     setSelectedSystem(planet.system);
@@ -3242,7 +3275,14 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
     {ownedPlanets.length > 0 && (productionUi ? <aside id="empire-command-center" className={`universe-intel empire-command-center ${hudOpen ? "" : "is-hidden"}`} role="dialog" aria-modal="false" aria-labelledby="empire-command-title" aria-hidden={!hudOpen}>
       <header className="empire-heading"><div><span>EMPIRE COMMAND</span><h1 id="empire-command-title">Your worlds</h1><p>Navigate and operate every on-chain colony from one place.</p></div><button ref={empireCloseRef} type="button" aria-label="Close empire command" title="Close Empire Command (Esc)" onClick={() => { empireRestoreFocusRef.current = true; setHudOpen(false); }}>×</button></header>
       <section className="empire-summary" aria-label="Empire overview"><div><span>WORLDS</span><b>{ownedPlanets.length}</b></div><div className={ownedPlanetActionCount > 0 ? "needs-action" : ""}><span>NEEDS ACTION</span><b>{ownedPlanetActionCount}</b></div><div><span>ACTIVE JOBS</span><b>{ownedPlanetActiveJobs}</b></div><div><span>GALAXIES</span><b>{ownedPlanetGalaxies.length}</b><small>{ownedPlanetSystemCount} systems</small></div></section>
-      {activePlanet && <section className="empire-active-world"><span>ACTIVE COMMAND WORLD</span><div><strong>{activePlanet.name}</strong><small>G {activePlanet.galaxy} · S {activePlanet.system} · P {activePlanet.position}</small></div><nav><button onClick={() => visitOwnedPlanet(activePlanet)}>VISIT SYSTEM</button><button className="primary" onClick={() => onOperatePlanet?.(activePlanet)}>OPERATE WORLD</button></nav></section>}
+      {activePlanet && activePlanetDirective && <section className={`empire-active-world directive-${activePlanetDirective.tone}`}>
+        <header className="empire-active-identity">
+          <EmpireWorldPortrait planet={activePlanet} index={activePlanetNumber} />
+          <div><span>ACTIVE COMMAND WORLD</span><strong>{activePlanet.name}</strong><small>G {activePlanet.galaxy} · S {activePlanet.system} · P {activePlanet.position}</small></div>
+        </header>
+        <div className="empire-world-directive"><span>{activePlanetDirective.eyebrow}</span><b>{activePlanetDirective.title}</b><p>{activePlanetDirective.detail}</p></div>
+        <nav><button className="primary" onClick={() => onOperatePlanet?.(activePlanet)}>{activePlanetDirective.action}</button><button onClick={() => visitOwnedPlanet(activePlanet)}>SYSTEM MAP</button></nav>
+      </section>}
       <section className="empire-filters">
         <label className="empire-search"><span>FIND WORLD</span><input type="search" value={planetSearch} onChange={(event) => setPlanetSearch(event.target.value)} placeholder="Name or coordinates" /></label>
         <label><span>GALAXY</span><select value={String(planetGalaxyFilter)} onChange={(event) => setPlanetGalaxyFilter(event.target.value === "ALL" ? "ALL" : Number(event.target.value))}><option value="ALL">ALL</option>{ownedPlanetGalaxies.map((galaxy) => <option key={galaxy} value={galaxy}>G {galaxy}</option>)}</select></label>
