@@ -3,7 +3,7 @@ import { ArcballControls, Billboard, Environment, Lightformer, Stars, Text, useG
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Activity, Building2, ChevronLeft, ChevronRight, CircleAlert, Crosshair, FlaskConical, Gem, Hammer, Inbox, LoaderCircle, Menu, Pickaxe, Rocket, Scale, Shield, ShoppingCart, Trophy, Users, X, Zap } from "lucide-react";
-import { ALLIANCE_CREATE_ANTIMATTER_COST, ALLIANCE_CREATE_USDC_COST, BUILDINGS, EXPLORER_CLUSTER, GAMESOL_GOVERNANCE_ROOT_ENABLED, NETWORK_LABEL, SHIPS, SHIP_TYPE_IDX, SYSTEM_SOVEREIGNTY_ACTION_COSTS, energyEfficiency, upgradeCost, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceJoinRequestAccount, type AllianceMembershipAccount, type AllianceStateAccount, type AllianceTreasuryStateAccount, type BattleResolvedEventRecord, type EspionageReportEventRecord, type GameClient, type GamesolGovernanceConfigAccount, type PlayerState, type QuestProgressStateAccount, type QuestRewardTargetStateAccount, type QuestStateAccount, type StoreConfigState, type StorePurchaseStateAccount } from "./game-state";
+import { ALLIANCE_CREATE_ANTIMATTER_COST, ALLIANCE_CREATE_USDC_COST, BUILDINGS, EXPLORER_CLUSTER, GAMESOL_GOVERNANCE_ROOT_ENABLED, NETWORK_LABEL, SHIPS, SHIP_TYPE_IDX, SYSTEM_SOVEREIGNTY_ACTION_COSTS, buildTimeSecs, energyEfficiency, upgradeCost, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceJoinRequestAccount, type AllianceMembershipAccount, type AllianceStateAccount, type AllianceTreasuryStateAccount, type BattleResolvedEventRecord, type EspionageReportEventRecord, type GameClient, type GamesolGovernanceConfigAccount, type PlayerState, type QuestProgressStateAccount, type QuestRewardTargetStateAccount, type QuestStateAccount, type StoreConfigState, type StorePurchaseStateAccount } from "./game-state";
 import { PublicKey } from "@solana/web3.js";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { activeQuestDefinitions, allianceBuildingCost, ALLIANCE_BUILDINGS, ALLIANCE_DEPOSIT_DEFINITIONS, hasQuestBit, questClaimedMask, questGroupResetSeconds, questRewardTargetForRequirement, STORE_PACKS, storePurchasedMask, tutorialQuestsComplete, type QuestDefinition } from "./App";
@@ -2169,9 +2169,19 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   ];
   const activeQueues = queues.filter((queue) => queue.active);
   const coreFacilityIndices = [0, 1, 2, 3];
+  const extractionFacilityIndices = [0, 1, 2];
+  const coreExtractionLevel = Math.min(state.planet.metalMine, state.planet.crystalMine, state.planet.deuteriumSynthesizer);
   const growthFacilityIndex = energyPercent < 100
     ? 3
-    : coreFacilityIndices.reduce((lowest, index) => {
+    : coreExtractionLevel < 2
+      ? extractionFacilityIndices.reduce((lowest, index) => {
+          const lowestLevel = Number((state.planet as unknown as Record<string, number>)[BUILDINGS[lowest].key] ?? 0);
+          const candidateLevel = Number((state.planet as unknown as Record<string, number>)[BUILDINGS[index].key] ?? 0);
+          return candidateLevel < lowestLevel ? index : lowest;
+        }, extractionFacilityIndices[0])
+      : state.planet.shipyard < 1
+        ? state.planet.roboticsFactory < 2 ? 5 : 7
+        : coreFacilityIndices.reduce((lowest, index) => {
         const lowestLevel = Number((state.planet as unknown as Record<string, number>)[BUILDINGS[lowest].key] ?? 0);
         const candidateLevel = Number((state.planet as unknown as Record<string, number>)[BUILDINGS[index].key] ?? 0);
         return candidateLevel < lowestLevel ? index : lowest;
@@ -2180,6 +2190,14 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const growthFacilityLevel = Number((state.planet as unknown as Record<string, number>)[growthFacility.key] ?? 0);
   const growthFacilityCost = upgradeCost(growthFacility.idx, growthFacilityLevel);
   const growthFacilityReady = canAfford(...growthFacilityCost) && requirementsMet(buildingRequirements(growthFacility.key));
+  const growthBuildSeconds = buildTimeSecs(growthFacility.idx, growthFacilityLevel + 1, state.planet.roboticsFactory);
+  const expansionMilestones = [
+    { label: "POWER STABLE", complete: energyPercent >= 100 },
+    { label: "EXTRACTION L2", complete: coreExtractionLevel >= 2 },
+    { label: "SHIPYARD ONLINE", complete: state.planet.shipyard >= 1 },
+  ];
+  const completedExpansionMilestones = expansionMilestones.filter((milestone) => milestone.complete).length;
+  const earlyWorldGuidance = completedExpansionMilestones < expansionMilestones.length;
   const showGrowthObjective = activeQueues.length === 0 && !inspectionActive && modal === null;
   const constructedFacilityIndices = BUILDINGS.flatMap((candidate, index) => candidate.key !== "missileSilo" && Number((state.planet as unknown as Record<string, number>)[candidate.key] ?? 0) > 0 ? [index] : []);
   const selectFacility = (index: number) => {
@@ -2486,16 +2504,18 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
     <header className="pw-top"><button onClick={onExit} aria-label="Return to active planet system"><ChevronLeft /> SYSTEM</button><div className="pw-world-identity"><span>COMMAND WORLD</span><strong>{state.planet.name}</strong><small>G {state.planet.galaxy} · S {state.planet.system} · P {state.planet.position}</small></div><div className="pw-resources"><b className="metal" aria-label={`Metal ${resource.metal.toLocaleString()}`} title={`Metal · ${resource.metal.toLocaleString()}`}><Pickaxe /><span>METAL</span><strong className="pw-resource-exact">{resource.metal.toLocaleString()}</strong><strong className="pw-resource-compact">{compactHudResource(resource.metal)}</strong></b><b className="crystal" aria-label={`Crystal ${resource.crystal.toLocaleString()}`} title={`Crystal · ${resource.crystal.toLocaleString()}`}><Gem /><span>CRYSTAL</span><strong className="pw-resource-exact">{resource.crystal.toLocaleString()}</strong><strong className="pw-resource-compact">{compactHudResource(resource.crystal)}</strong></b><b className="deuterium" aria-label={`Deuterium ${resource.deuterium.toLocaleString()}`} title={`Deuterium · ${resource.deuterium.toLocaleString()}`}><FlaskConical /><span>DEUTERIUM</span><strong className="pw-resource-exact">{resource.deuterium.toLocaleString()}</strong><strong className="pw-resource-compact">{compactHudResource(resource.deuterium)}</strong></b><b className={`energy ${energyTone}`} aria-label={`Energy ${resource.energyProduction.toLocaleString()} produced, ${resource.energyConsumption.toLocaleString()} consumed, ${energyPercent} percent available`} title={`Energy · ${resource.energyProduction.toLocaleString()} / ${resource.energyConsumption.toLocaleString()} · ${energyPercent}%`}><Zap /><span>ENERGY</span><strong className="pw-resource-exact">{resource.energyProduction.toLocaleString()} / {resource.energyConsumption.toLocaleString()}</strong><strong className="pw-resource-compact">{compactHudResource(resource.energyProduction)} / {compactHudResource(resource.energyConsumption)}</strong><em>{energyPercent}%</em></b></div></header>
     {activeQueues.length > 0 && <section className="pw-queues" aria-label="Active planet work" aria-live="polite">{activeQueues.map((queue) => { const seconds = Math.max(0, queue.finishAt - nowTs); const ready = seconds === 0; const baseline = queueBaselines[`${queue.label}:${queue.finishAt}`] ?? 0; const progress = ready ? 100 : baseline > 0 ? Math.min(99, Math.max(0, ((baseline - seconds) / baseline) * 100)) : 0; return <article key={queue.label} className="active"><div className="pw-queue-title"><span>{queue.label}</span><b>{ready ? "READY" : queueTime(seconds)}</b></div><strong>{queue.item}</strong><div className={`pw-queue-progress${ready ? " ready" : ""}`}><i style={{ width: `${progress}%` }} /></div><div className="pw-queue-actions">{ready ? <button disabled={busy} onClick={() => run(`Finish ${queue.label.toLowerCase()}`, queue.finish)}>FINISH</button> : <button className="accelerate" disabled={busy} onClick={() => run(`Accelerate ${queue.label.toLowerCase()}`, queue.accelerate)}>FINISH WITH ANTIMATTER</button>}</div></article>; })}</section>}
     {showGrowthObjective && <aside className="pw-command-objective" aria-label="Recommended next planet objective">
-      <div className="pw-command-objective-signal"><span>NEXT OBJECTIVE</span><i /></div>
+      <div className="pw-command-objective-signal"><span>{earlyWorldGuidance ? "EMPIRE EXPANSION" : "NEXT OBJECTIVE"}</span><b>{earlyWorldGuidance ? `${completedExpansionMilestones} / ${expansionMilestones.length}` : "LIVE"}</b><i /></div>
+      {earlyWorldGuidance && <div className="pw-expansion-path" aria-label={`${completedExpansionMilestones} of ${expansionMilestones.length} early expansion milestones complete`}>{expansionMilestones.map((milestone, index) => <span key={milestone.label} className={milestone.complete ? "complete" : index === completedExpansionMilestones ? "current" : ""}><i>{milestone.complete ? "✓" : index + 1}</i><em>{milestone.label}</em></span>)}</div>}
       <strong>UPGRADE {growthFacility.name.toUpperCase()}</strong>
-      <p>{energyPercent < 100 ? "Restore full production efficiency before expanding the colony." : `Keep core production balanced by advancing this facility to level ${growthFacilityLevel + 1}.`}</p>
-      <div><span className={growthFacilityReady ? "ready" : "gathering"}>{growthFacilityReady ? "READY TO BUILD" : "GATHER RESOURCES"}</span><button type="button" onClick={() => selectFacility(growthFacilityIndex)}>OPEN COMMAND <ChevronRight /></button></div>
+      <p>{energyPercent < 100 ? "Restore full production efficiency before expanding the colony." : `Advance to level ${growthFacilityLevel + 1}. ${NEXT_BUILDING_EFFECT[growthFacility.key]}`}</p>
+      <div className="pw-objective-facts"><span>{growthFacilityCost[0].toLocaleString()} M</span><span>{growthFacilityCost[1].toLocaleString()} C</span>{growthFacilityCost[2] > 0 && <span>{growthFacilityCost[2].toLocaleString()} D</span>}<span>{queueTime(growthBuildSeconds)}</span></div>
+      <div className="pw-objective-action"><span className={growthFacilityReady ? "ready" : "gathering"}>{growthFacilityReady ? "READY TO BUILD" : "GATHER RESOURCES"}</span><button type="button" onClick={() => selectFacility(growthFacilityIndex)}>OPEN COMMAND <ChevronRight /></button></div>
     </aside>}
-    <nav className="pw-operations" aria-label="Planet operations">
+    <nav className={`pw-operations${earlyWorldGuidance ? " is-guided" : ""}`} aria-label="Planet operations">
       <button className={`${modal === "buildingSelect" || modal === "building" ? "active" : ""}${showGrowthObjective ? " is-recommended" : ""}`} aria-label={showGrowthObjective ? "Buildings, recommended next objective" : "Buildings"} title={showGrowthObjective ? `Next objective: upgrade ${growthFacility.name}` : "Buildings"} aria-haspopup="dialog" aria-expanded={modal === "buildingSelect" || modal === "building"} onClick={(event) => openPlanetCommand("buildingSelect", event.currentTarget)}><Building2 /><span>BUILD</span></button>
       <button className={modal === "research" ? "active" : ""} aria-label="Research" title="Research" aria-haspopup="dialog" aria-expanded={modal === "research"} onClick={(event) => openPlanetCommand("research", event.currentTarget)}><FlaskConical /><span>RESEARCH</span></button>
       <button className={modal === "ships" ? "active" : ""} aria-label="Shipyard" title="Shipyard" aria-haspopup="dialog" aria-expanded={modal === "ships"} onClick={(event) => openPlanetCommand("ships", event.currentTarget)}><Rocket /><span>SHIPYARD</span></button>
-      <button className={modal === "defense" ? "active" : ""} aria-label="Defenses" title="Defenses" aria-haspopup="dialog" aria-expanded={modal === "defense"} onClick={(event) => openPlanetCommand("defense", event.currentTarget)}><Shield /><span>DEFENSE</span></button>
+      <button className={`pw-operation-advanced${modal === "defense" ? " active" : ""}`} aria-label="Defenses" title="Defenses" aria-haspopup="dialog" aria-expanded={modal === "defense"} onClick={(event) => openPlanetCommand("defense", event.currentTarget)}><Shield /><span>DEFENSE</span></button>
       <button className={modal === "missions" ? "active" : ""} aria-label="Missions" title="Missions" aria-haspopup="dialog" aria-expanded={modal === "missions"} onClick={(event) => openPlanetCommand("missions", event.currentTarget)}><Crosshair /><span>MISSIONS</span></button>
       <button className={`pw-operation-secondary${modal === "activity" ? " active" : ""}`} aria-label="Activity reports" title="Activity reports" aria-haspopup="dialog" aria-expanded={modal === "activity"} onClick={(event) => openPlanetCommand("activity", event.currentTarget)}><Activity /><span>REPORTS</span></button>
       <button className={`pw-operation-secondary${modal === "market" ? " active" : ""}`} aria-label="Market" title="Market" aria-haspopup="dialog" aria-expanded={modal === "market"} onClick={(event) => openPlanetCommand("market", event.currentTarget)}><Scale /><span>MARKET</span></button>
@@ -2507,6 +2527,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
     {operationMenuOpen && <div className="pw-operation-menu-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOperationMenuOpen(false); }}><section ref={operationMenuPanelRef} className="pw-operation-menu" role="dialog" aria-modal="true" aria-labelledby="pw-operation-menu-title" onMouseDown={(event) => event.stopPropagation()}>
       <header><div><small>PLANET COMMAND</small><h2 id="pw-operation-menu-title">More operations</h2><p>Intelligence, economy, progression, and alliance systems.</p></div><button ref={operationMenuCloseRef} type="button" aria-label="Close more planet operations" onClick={() => setOperationMenuOpen(false)}><X /></button></header>
       <div>
+        {earlyWorldGuidance && <button onClick={(event) => { operationMenuLaunchingRef.current = true; setOperationMenuOpen(false); openPlanetCommand("defense", event.currentTarget); }}><Shield /><span><b>Defenses</b><small>Protect this world with planetary fortifications</small></span><ChevronRight /></button>}
         <button onClick={(event) => { operationMenuLaunchingRef.current = true; setOperationMenuOpen(false); openPlanetCommand("activity", event.currentTarget); }}><Activity /><span><b>Reports</b><small>Battle and espionage intelligence</small></span><ChevronRight /></button>
         <button onClick={(event) => { operationMenuLaunchingRef.current = true; setOperationMenuOpen(false); openPlanetCommand("market", event.currentTarget); }}><Scale /><span><b>Market</b><small>Trade resources across the universe</small></span><ChevronRight /></button>
         <button onClick={(event) => { operationMenuLaunchingRef.current = true; setOperationMenuOpen(false); openPlanetCommand("quests", event.currentTarget); }}><Trophy /><span><b>Quests</b><small>Objectives, rewards, and progression</small></span><ChevronRight /></button>

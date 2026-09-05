@@ -242,6 +242,31 @@
   .pw-alliance-tabs{grid-template-columns:repeat(2,minmax(0,1fr));padding:7px 9px}
 }
 
+/* Guided first-world command path -------------------------------------- */
+.production-preview .pw-command-objective{width:min(430px,calc(100vw - 590px))!important;min-width:360px!important;padding:14px 16px!important}
+.production-preview .pw-command-objective-signal b{flex:0 0 auto;color:#9bcbd8;font:800 7px 'DM Mono',monospace;letter-spacing:.7px}
+.production-preview .pw-expansion-path{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:10px 0 11px}
+.production-preview .pw-expansion-path>span{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:5px;min-height:30px;padding:5px 6px;border:1px solid rgba(105,205,239,.12);border-radius:4px;background:rgba(3,16,28,.7);color:#688b9a}
+.production-preview .pw-expansion-path i{display:grid;width:18px;height:18px;place-items:center;border:1px solid rgba(111,206,236,.2);border-radius:50%;font:800 6px 'DM Mono',monospace;font-style:normal}
+.production-preview .pw-expansion-path em{overflow:hidden;font:800 5.5px/1.25 'DM Mono',monospace;font-style:normal;letter-spacing:.35px;text-overflow:ellipsis}
+.production-preview .pw-expansion-path>span.complete{border-color:rgba(83,226,179,.19);color:#63ddb2}.production-preview .pw-expansion-path>span.complete i{border-color:rgba(83,226,179,.45);background:rgba(29,126,94,.16)}
+.production-preview .pw-expansion-path>span.current{border-color:rgba(105,224,255,.43);background:rgba(18,79,105,.28);color:#bdefff;box-shadow:inset 2px 0 #66ddf8}
+.production-preview .pw-objective-facts{display:flex;align-items:center;gap:5px;margin:-3px 0 11px!important}
+.production-preview .pw-objective-facts>span{padding:4px 6px;border:1px solid rgba(107,206,237,.13);border-radius:3px;background:rgba(3,15,26,.74);color:#86acbb!important;font:700 6px 'DM Mono',monospace!important;letter-spacing:.3px!important}
+.production-preview .pw-objective-action{display:flex;align-items:center;justify-content:space-between;gap:10px}
+@media(min-width:721px){
+  .production-preview .pw-operations.is-guided{grid-template-columns:repeat(5,minmax(0,1fr))!important;width:min(590px,calc(100vw - 48px))!important}
+  .production-preview .pw-operations.is-guided .pw-operation-advanced,.production-preview .pw-operations.is-guided .pw-operation-secondary{display:none!important}
+  .production-preview .pw-operations.is-guided .pw-operation-more{display:grid!important}
+}
+@media(max-width:720px){
+  .production-preview .pw-command-objective{display:block;right:8px!important;bottom:66px!important;left:8px!important;width:auto!important;min-width:0!important;padding:9px 10px!important}
+  .production-preview .pw-command-objective-signal,.production-preview .pw-command-objective>p,.production-preview .pw-expansion-path,.production-preview .pw-objective-facts{display:none}
+  .production-preview .pw-command-objective>strong{margin:0 0 6px;font-size:11px}
+  .production-preview .pw-objective-action>span{font-size:5.5px!important}
+  .production-preview .pw-command-objective button{min-height:34px}
+}
+
 /* Core building loop: show the essential economy first, with reliable card art. */
 .production-preview .pw-facility-section-title{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:20px 0 0;padding-bottom:10px;border-bottom:1px solid rgba(105,218,255,.13)}
 .production-preview .pw-facility-section-title>div{display:grid;gap:4px}.production-preview .pw-facility-section-title span{color:#71dcf7;font:800 8px 'DM Mono',monospace;letter-spacing:1.1px}.production-preview .pw-facility-section-title b{color:#dff8ff;font:650 13px Outfit,system-ui,sans-serif}.production-preview .pw-facility-section-title small{color:#7899a8;font:11px Outfit,system-ui,sans-serif;text-align:right}
@@ -264,7 +289,7 @@
 .production-preview .pw-command-objective>strong{display:block;margin-top:8px;color:#effbff;font:800 14px Outfit,system-ui,sans-serif;letter-spacing:.35px}.production-preview .pw-command-objective>p{margin:5px 0 12px;color:#89aeba;font:500 11px/1.4 Outfit,system-ui,sans-serif}.production-preview .pw-command-objective>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px}.production-preview .pw-command-objective>div:last-child>span{font:800 6.5px 'DM Mono',monospace;letter-spacing:.65px}.production-preview .pw-command-objective .ready{color:#64e8bc}.production-preview .pw-command-objective .gathering{color:#f4bf66}
 .production-preview .pw-command-objective button{display:flex;align-items:center;gap:5px;min-height:31px;padding:0 10px;border:1px solid rgba(105,224,255,.5);border-radius:3px;background:linear-gradient(135deg,#126d91,#0a4668);color:#f0fbff;font:800 6.5px 'DM Mono',monospace;letter-spacing:.55px;cursor:pointer}.production-preview .pw-command-objective button:hover,.production-preview .pw-command-objective button:focus-visible{border-color:#a6f2ff;background:linear-gradient(135deg,#1884aa,#0d5679);outline:0}.production-preview .pw-command-objective button svg{width:12px;height:12px}
 .production-preview .pw-operations button.is-recommended{position:relative;border-color:rgba(101,231,255,.72);background:linear-gradient(145deg,rgba(17,82,108,.98),rgba(7,40,60,.98));box-shadow:inset 2px 0 #70e5ff,0 0 20px rgba(67,210,247,.08)}
-@media(max-width:720px){.production-preview .pw-command-objective{display:none}.production-preview .pw-operations button.is-recommended::after{position:absolute;top:-5px;right:3px;padding:2px 3px;border:1px solid rgba(108,229,255,.65);border-radius:2px;background:#0b4967;color:#dffaff;font:800 4.5px 'DM Mono',monospace;letter-spacing:.35px;content:'NEXT'}}
+@media(max-width:720px){.production-preview .pw-command-objective{display:block}.production-preview .pw-operations button.is-recommended::after{position:absolute;top:-5px;right:3px;padding:2px 3px;border:1px solid rgba(108,229,255,.65);border-radius:2px;background:#0b4967;color:#dffaff;font:800 4.5px 'DM Mono',monospace;letter-spacing:.35px;content:'NEXT'}}
 
 /* Focused facility upgrade command ------------------------------------- */
 .production-preview .pw-building-command{display:grid;gap:14px}.production-preview .pw-building-command .pw-command-art{height:190px;margin-bottom:0;background-position:center 48%;background-size:cover}.production-preview .pw-building-command .pw-command-head{margin-bottom:0}.production-preview .pw-building-command .pw-command-head p{max-width:620px}
