@@ -1,0 +1,43 @@
+:root {
+  --gds-space-1: 4px;
+  --gds-space-2: 8px;
+  --gds-space-3: 12px;
+  --gds-space-4: 16px;
+  --gds-space-5: 20px;
+  --gds-space-6: 24px;
+  --gds-space-8: 32px;
+  --gds-radius-sm: 7px;
+  --gds-radius-md: 12px;
+  --gds-radius-lg: 18px;
+  --gds-control-height: 44px;
+  --gds-touch-target: 48px;
+  --gds-font-body: Inter, Outfit, system-ui, sans-serif;
+  --gds-font-display: Outfit, Inter, system-ui, sans-serif;
+  --gds-font-data: "DM Mono", "Share Tech Mono", monospace;
+  --gds-text-primary: #effaff;
+  --gds-text-secondary: #adc5d2;
+  --gds-text-muted: #7897a8;
+  --gds-surface-0: #020711;
+  --gds-surface-1: rgba(6, 20, 35, .965);
+  --gds-surface-2: rgba(11, 34, 55, .94);
+  --gds-surface-raised: rgba(15, 43, 66, .94);
+  --gds-border-soft: rgba(132, 215, 247, .13);
+  --gds-border: rgba(132, 215, 247, .24);
+  --gds-border-strong: rgba(132, 229, 255, .48);
+  --gds-action: #78e3ff;
+  --gds-accent: #78e3ff;
+  --gds-success: #67e7b6;
+  --gds-warning: #ffc977;
+  --gds-danger: #ff8796;
+  --gds-governance: #b99aff;
+  --gds-focus: #b9f3ff;
+  --gds-highlight: inset 0 1px 0 rgba(255, 255, 255, .055);
+  --gds-shadow-panel: 0 18px 54px rgba(0, 0, 0, .44), 0 1px 0 rgba(255, 255, 255, .025) inset;
+  --gds-shadow-workspace: 0 44px 140px rgba(0, 0, 0, .88), 0 0 0 1px rgba(119, 225, 255, .05), inset 0 1px 0 rgba(255, 255, 255, .045);
+}
+
+@media (max-width: 700px) {
+  :root {
+    --gds-control-height: var(--gds-touch-target);
+  }
+}

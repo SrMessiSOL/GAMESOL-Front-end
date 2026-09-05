@@ -1,0 +1,2120 @@
+/**
+ * MarketTab.tsx
+ *
+ * P2P resource-for-ANTIMATTER market tab for Chained Universe.
+ *
+ * Integration:
+ *   1. Add `MarketClient` instance next to `GameClient` in App.tsx.
+ *   2. Add `"market"` to the Tab union type and nav items.
+ *   3. Render <MarketTab ... /> in the tab switch.
+ *   4. Pass `antimatterBalance` (already tracked in App.tsx) as a prop.
+ *
+ * The component is fully self-contained: it manages its own offer list,
+ * polling, and modal state. It calls back to App via `onTxStart/onTxEnd`
+ * so the parent can show the global loading overlay.
+ */
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PublicKey } from "@solana/web3.js";
+import {
+  MarketClient,
+  MarketOffer,
+  PlanetListing,
+  ResourceType,
+  ANTIMATTER_SCALE,
+  RESOURCE_LABELS,
+  RESOURCE_COLORS,
+  RESOURCE_ICONS,
+  formatAm,
+  formatResource,
+  pricePerKDisplay,
+  amRawFromDisplay,
+  describeError,
+  CreateOfferParams,
+} from "./market-client";
+import { fmtCountdown, type PlayerState, type Resources } from "./game-state";
+import { OrbitingPlanetVisual } from "./PlanetVisual";
+
+const PROTOCOL_AUTHORITY = "EhT4UUmsHyd41bZSGzj1W72yu2EptHk8sEvnK7aaNuBu";
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+type MarketView = "buy" | "sell" | "myoffers";
+type MarketSection = "resources" | "planets";
+type PlanetMarketView = "buy" | "sell" | "myoffers";
+type ResourceCreditDelta = { metal?: bigint; crystal?: bigint; deuterium?: bigint };
+
+interface MarketTabProps {
+  /** Initialised MarketClient. Null if market program not yet deployed. */
+  client: MarketClient | null;
+  /** Current planet state — used to show resource holdings. */
+  state: PlayerState | null;
+  ownedPlanets?: PlayerState[];
+  /** Live interpolated resources (from App.tsx). */
+  liveRes: Resources | undefined;
+  /** Raw ANTIMATTER balance of the connected wallet. */
+  antimatterBalance: bigint;
+  /** Called before each tx so App can show the loading overlay. */
+  onTxStart: (label: string) => void;
+  /** Called after each tx (success or fail). */
+  onTxEnd: (error?: string) => void;
+  onResourceCreditWarning?: (action: string, delta: ResourceCreditDelta) => boolean;
+  /** Global tx busy flag — disables all buttons when true. */
+  txBusy: boolean;
+  sectionMode?: "both" | MarketSection;
+  canTransact?: boolean;
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+const AntimatterIcon: React.FC<{ size?: number }> = ({ size = 12 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"
+    style={{ display: "inline-block", verticalAlign: "middle" }}>
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" opacity="0.9"/>
+    <circle cx="12" cy="12" r="2.2" fill="currentColor"/>
+    <ellipse cx="12" cy="12" rx="8" ry="3.2" stroke="currentColor" strokeWidth="1.4" opacity="0.8"/>
+    <ellipse cx="12" cy="12" rx="3.2" ry="8" stroke="currentColor" strokeWidth="1.4" opacity="0.55" transform="rotate(35 12 12)"/>
+  </svg>
+);
+
+const ResourcePill: React.FC<{ type: ResourceType; amount?: bigint; label?: string }> = ({ type, amount, label }) => (
+  <span style={{
+    display: "inline-flex", alignItems: "center", gap: 5,
+    padding: "2px 8px", borderRadius: 12,
+    fontSize: 10, letterSpacing: 0.5,
+    background: `${RESOURCE_COLORS[type]}18`,
+    border: `1px solid ${RESOURCE_COLORS[type]}44`,
+    color: RESOURCE_COLORS[type],
+  }}>
+    {RESOURCE_ICONS[type]}
+    {label ?? RESOURCE_LABELS[type]}
+    {amount !== undefined && <strong>{formatResource(amount)}</strong>}
+  </span>
+);
+
+const AmPill: React.FC<{ amount: bigint; muted?: boolean }> = ({ amount, muted }) => (
+  <span style={{
+    display: "inline-flex", alignItems: "center", gap: 5,
+    padding: "2px 8px", borderRadius: 12,
+    fontSize: 10, letterSpacing: 0.5,
+    background: muted ? "rgba(255,214,10,0.05)" : "rgba(255,214,10,0.13)",
+    border: "1px solid rgba(255,214,10,0.35)",
+    color: "var(--warn)",
+    fontFamily: "'Orbitron', sans-serif",
+    fontWeight: 700,
+  }}>
+    <AntimatterIcon size={10}/>
+    {formatAm(amount, 2)}
+  </span>
+);
+
+type MarketPlanetVisualData = {
+  name?: string;
+  galaxy?: number;
+  system?: number;
+  position?: number;
+  temperature?: number;
+  diameter?: number;
+  maxFields?: number;
+};
+
+const MarketPlanetPreview: React.FC<{ planet: MarketPlanetVisualData; size?: number }> = ({ planet, size = 104 }) => {
+  const visualPlanet = {
+    name: planet.name ?? "Planet",
+    galaxy: planet.galaxy ?? 1,
+    system: planet.system ?? 1,
+    position: planet.position ?? 1,
+    temperature: planet.temperature ?? 20,
+    diameter: planet.diameter ?? 10_000,
+    maxFields: planet.maxFields ?? 163,
+  } as any;
+
+  return (
+    <div className="market-planet-visual" style={{
+      width: size,
+      height: size,
+      display: "grid",
+      placeItems: "center",
+      overflow: "visible",
+      flex: "0 0 auto",
+    }}>
+      <OrbitingPlanetVisual planet={visualPlanet} size={size} />
+    </div>
+  );
+};
+const PlanetInfoGrid: React.FC<{ items: Array<{ label: string; value: string }> }> = ({ items }) => (
+  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+    {items.map(item => (
+      <div key={item.label}>
+        <div style={{ fontSize: 8, letterSpacing: 1.4, color: "var(--dim)", marginBottom: 4 }}>{item.label}</div>
+        <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "var(--text)" }}>{item.value}</div>
+      </div>
+    ))}
+  </div>
+);
+
+const PlanetDetailSection: React.FC<{
+  title: string;
+  items: Array<{ label: string; value: string; accent?: string }>;
+}> = ({ title, items }) => (
+  <div style={{
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 4,
+    background: "rgba(6,10,24,0.42)",
+    padding: "9px 11px",
+    minWidth: 0,
+  }}>
+    <div style={{
+      fontFamily: "'Orbitron', sans-serif",
+      fontSize: 9,
+      letterSpacing: 1.8,
+      color: "var(--purple)",
+      marginBottom: 8,
+    }}>
+      {title}
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(86px, 1fr))", gap: "7px 12px" }}>
+      {items.map(item => (
+        <div key={`${title}-${item.label}`} style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 8, letterSpacing: 1.2, color: "var(--dim)", marginBottom: 3 }}>
+            {item.label}
+          </div>
+          <div style={{
+            fontFamily: "'Share Tech Mono', monospace",
+            fontSize: 11,
+            color: item.accent ?? "var(--text)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}>
+            {item.value}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const listingResource = (value?: bigint) => value !== undefined ? formatResource(value) : "-";
+const listingRate = (value?: bigint) => value !== undefined ? `+${formatResource(value)}/h` : "-";
+const listingLevel = (value?: number) => value !== undefined ? `Lv ${value}` : "-";
+const listingEnergy = (listing: PlanetListing) => (
+  listing.energyProduction !== undefined && listing.energyConsumption !== undefined
+    ? `${formatResource(listing.energyProduction)}/${formatResource(listing.energyConsumption)}`
+    : "-"
+);
+
+// ─── Offer row card ────────────────────────────────────────────────────────────
+
+const OfferCard: React.FC<{
+  offer: MarketOffer;
+  antimatterBalance: bigint;
+  txBusy: boolean;
+  marketUnlocked: boolean;
+  onBuy: (offer: MarketOffer) => void;
+  onCancel: (offer: MarketOffer) => void;
+}> = ({ offer, antimatterBalance, txBusy, marketUnlocked, onBuy, onCancel }) => {
+  const canBuy = antimatterBalance >= offer.priceAntimatter;
+  const shortSeller = `${offer.seller.slice(0, 4)}...${offer.seller.slice(-4)}`;
+
+  return (
+    <div className={`market-offer-card${offer.isOwn ? " is-own" : ""}${canBuy ? " can-buy" : " insufficient-am"}`} style={{
+      background: "var(--panel)",
+      border: `1px solid ${offer.isOwn ? "rgba(155,93,229,0.4)" : "var(--border)"}`,
+      borderRadius: 4,
+      padding: "12px 14px",
+      display: "grid",
+      gridTemplateColumns: "1fr auto",
+      gap: 10,
+      alignItems: "center",
+      transition: "border-color 0.15s",
+    }}>
+      {/* Left info */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <ResourcePill type={offer.resourceType} amount={offer.resourceAmount}/>
+          {offer.isOwn && (
+            <span style={{
+              fontSize: 9, letterSpacing: 1.5, padding: "2px 6px",
+              border: "1px solid rgba(155,93,229,0.4)", borderRadius: 2,
+              color: "var(--purple)", background: "rgba(155,93,229,0.08)",
+            }}>YOUR OFFER</span>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <AmPill amount={offer.priceAntimatter}/>
+          <span style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 0.5 }}>
+            {pricePerKDisplay(offer)} AM / 1k - by {shortSeller}
+          </span>
+        </div>
+      </div>
+
+      {/* Action */}
+      <div>
+        {offer.isOwn ? (
+          <button
+            onClick={() => onCancel(offer)}
+            disabled={txBusy}
+            style={{
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 10, letterSpacing: 1,
+              padding: "7px 12px", borderRadius: 2,
+              border: "1px solid rgba(255,0,110,0.4)",
+              background: "rgba(255,0,110,0.06)",
+              color: "var(--danger)", cursor: "pointer", transition: "all 0.15s",
+            }}
+          >
+            CANCEL
+          </button>
+        ) : (
+          <button
+            onClick={() => onBuy(offer)}
+            disabled={txBusy || !canBuy || !marketUnlocked}
+            title={!marketUnlocked ? "Market is still locked for this planet." : !canBuy ? `Need ${formatAm(offer.priceAntimatter)} AM` : undefined}
+            style={{
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 10, letterSpacing: 1,
+              padding: "7px 12px", borderRadius: 2,
+              border: canBuy ? "1px solid var(--cyan)" : "1px solid var(--border)",
+              background: canBuy ? "rgba(0,245,212,0.08)" : "transparent",
+              color: canBuy ? "var(--cyan)" : "var(--dim)",
+              cursor: canBuy && marketUnlocked && !txBusy ? "pointer" : "not-allowed",
+              transition: "all 0.15s",
+            }}
+          >
+            BUY
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Create Offer Modal ────────────────────────────────────────────────────────
+
+const planetCoordsLabel = (listing: PlanetListing): string => {
+  if (!listing.coords) return `${listing.planet.slice(0, 4)}...${listing.planet.slice(-4)}`;
+  return `[${listing.coords.galaxy}:${listing.coords.system}:${listing.coords.position}]`;
+};
+
+const PlanetListingCard: React.FC<{
+  listing: PlanetListing;
+  antimatterBalance: bigint;
+  txBusy: boolean;
+  marketUnlocked: boolean;
+  onBuy: (listing: PlanetListing) => void;
+  onCancel: (listing: PlanetListing) => void;
+  onDetails: (listing: PlanetListing) => void;
+}> = ({ listing, antimatterBalance, txBusy, marketUnlocked, onBuy, onCancel, onDetails }) => {
+  const canBuy = antimatterBalance >= listing.priceAntimatter;
+  const shortSeller = `${listing.seller.slice(0, 4)}...${listing.seller.slice(-4)}`;
+  const coords = listing.coords;
+  const visualPlanet = {
+    name: listing.planetName,
+    galaxy: coords?.galaxy,
+    system: coords?.system,
+    position: coords?.position,
+    temperature: listing.temperature,
+    diameter: listing.diameter,
+    maxFields: listing.maxFields,
+  };
+
+  return (
+    <div className={`market-planet-card${listing.isOwn ? " is-own" : ""}${canBuy ? " can-buy" : " insufficient-am"}`} style={{
+      background: "linear-gradient(180deg, rgba(18,23,45,0.94), rgba(7,10,22,0.94))",
+      border: `1px solid ${listing.isOwn ? "rgba(155,93,229,0.4)" : "var(--border)"}`,
+      borderRadius: 8,
+      padding: "12px",
+      display: "grid",
+      gap: 10,
+      minHeight: 0,
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+    }}>
+      <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", gap: 10, alignItems: "center" }}>
+        <MarketPlanetPreview planet={visualPlanet} size={72} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, justifyContent: "space-between" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: 11,
+              color: "var(--cyan)",
+              letterSpacing: 1.1,
+              lineHeight: 1.25,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}>
+              {listing.planetName || "Planet"}
+            </div>
+            <div style={{ fontSize: 9, color: "var(--dim)", marginTop: 3, whiteSpace: "nowrap" }}>
+              {planetCoordsLabel(listing)} {listing.planetIndex !== undefined ? `· #${listing.planetIndex + 1}` : ""}
+            </div>
+          </div>
+          {listing.isOwn && (
+            <span style={{
+              fontSize: 9, letterSpacing: 1.5, padding: "2px 6px",
+              border: "1px solid rgba(155,93,229,0.4)", borderRadius: 2,
+              color: "var(--purple)", background: "rgba(155,93,229,0.08)",
+              whiteSpace: "nowrap",
+            }}>YOURS</span>
+          )}
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <AmPill amount={listing.priceAntimatter}/>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gap: 8 }}>
+        <PlanetInfoGrid items={[
+          { label: "FIELDS", value: listing.maxFields !== undefined ? `${listing.usedFields ?? 0}/${listing.maxFields}` : "-" },
+          { label: "CLIMATE", value: listing.temperature !== undefined ? `${listing.temperature}C` : "-" },
+          { label: "DIAMETER", value: listing.diameter !== undefined ? `${listing.diameter.toLocaleString()} km` : "-" },
+          { label: "SELLER", value: shortSeller },
+        ]} />
+      </div>
+
+      <div style={{ alignSelf: "end", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <button
+          onClick={() => onDetails(listing)}
+          disabled={txBusy}
+          style={{
+            width: "100%",
+            fontFamily: "'Share Tech Mono', monospace",
+            fontSize: 10, letterSpacing: 1,
+            padding: "9px 10px", borderRadius: 3,
+            border: "1px solid rgba(155,93,229,0.34)",
+            background: "rgba(155,93,229,0.06)",
+            color: "var(--purple)",
+            cursor: txBusy ? "not-allowed" : "pointer",
+          }}
+        >
+          DETAILS
+        </button>
+        {listing.isOwn ? (
+          <button
+            onClick={() => onCancel(listing)}
+            disabled={txBusy}
+            style={{
+              width: "100%",
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 10, letterSpacing: 1,
+              padding: "9px 10px", borderRadius: 3,
+              border: "1px solid rgba(255,0,110,0.4)",
+              background: "rgba(255,0,110,0.06)",
+              color: "var(--danger)", cursor: "pointer",
+            }}
+          >
+            CANCEL
+          </button>
+        ) : (
+          <button
+            onClick={() => onBuy(listing)}
+            disabled={txBusy || !canBuy || !marketUnlocked}
+            title={!marketUnlocked ? "Connect a wallet to buy this planet." : !canBuy ? `Need ${formatAm(listing.priceAntimatter)} AM` : undefined}
+            style={{
+              width: "100%",
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 10, letterSpacing: 1,
+              padding: "9px 10px", borderRadius: 3,
+              border: canBuy ? "1px solid var(--cyan)" : "1px solid var(--border)",
+              background: canBuy ? "rgba(0,245,212,0.08)" : "transparent",
+              color: canBuy ? "var(--cyan)" : "var(--dim)",
+              cursor: canBuy && marketUnlocked && !txBusy ? "pointer" : "not-allowed",
+            }}
+          >
+            BUY
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const CreatePlanetListingModal: React.FC<{
+  planet: PlayerState;
+  txBusy: boolean;
+  onClose: () => void;
+  onSubmit: (priceAntimatter: bigint) => Promise<void>;
+}> = ({ planet, txBusy, onClose, onSubmit }) => {
+  const [priceStr, setPriceStr] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [localErr, setLocalErr] = useState<string | null>(null);
+  const parsedPrice = amRawFromDisplay(parseFloat(priceStr) || 0);
+  const hasActiveMissions = planet.fleet.activeMissions > 0;
+  const canSubmit = parsedPrice >= ANTIMATTER_SCALE && !hasActiveMissions && !submitting && !txBusy;
+
+  const handleSubmit = async () => {
+    setLocalErr(null);
+    if (hasActiveMissions) { setLocalErr("Resolve this planet's active missions before listing it."); return; }
+    if (parsedPrice < ANTIMATTER_SCALE) { setLocalErr("Minimum price is 1.00 ANTIMATTER."); return; }
+    setSubmitting(true);
+    try {
+      await onSubmit(parsedPrice);
+      onClose();
+    } catch (e) {
+      setLocalErr(describeError(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
+        zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
+        backdropFilter: "blur(6px)",
+      }}
+      onClick={e => { if (e.target === e.currentTarget && !submitting) onClose(); }}
+    >
+      <div style={{
+        background: "var(--panel)",
+        border: "1px solid rgba(0,245,212,0.25)",
+        borderRadius: "10px 10px 0 0",
+        padding: "24px 20px",
+        width: "100%",
+        maxWidth: 520,
+      }}>
+        <div style={{ width: 36, height: 3, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }}/>
+        <div style={{
+          fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+          letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+          paddingBottom: 10, borderBottom: "1px solid var(--border)",
+        }}>
+          LIST PLANET
+        </div>
+        <div style={{ marginBottom: 14, color: "var(--text)", fontSize: 12 }}>
+          {planet.planet.name} [{planet.planet.galaxy}:{planet.planet.system}:{planet.planet.position}]
+        </div>
+        {hasActiveMissions && (
+          <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 12, letterSpacing: 0.5 }}>
+            Resolve this planet's active missions before listing it.
+          </div>
+        )}
+        <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
+          Total Price (ANTIMATTER tokens, min 1.0)
+        </div>
+        <input
+          type="number" min={1} step={1}
+          value={priceStr}
+          onChange={e => setPriceStr(e.target.value)}
+          placeholder="e.g. 5000"
+          style={{
+            width: "100%", padding: "10px 12px", borderRadius: 2,
+            background: "rgba(0,0,0,0.4)",
+            border: "1px solid var(--border)",
+            color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 13,
+            marginBottom: 14,
+          }}
+        />
+        {localErr && <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 10 }}>{localErr}</div>}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} disabled={submitting} style={{
+            flex: 1, padding: "12px 16px", borderRadius: 2,
+            border: "1px solid var(--border)", background: "transparent",
+            color: "var(--dim)", cursor: "pointer",
+            fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+          }}>CANCEL</button>
+          <button onClick={() => void handleSubmit()} disabled={!canSubmit} style={{
+            flex: 2, padding: "12px 16px", borderRadius: 2,
+            border: `1px solid ${canSubmit ? "var(--cyan)" : "var(--border)"}`,
+            background: canSubmit ? "rgba(0,245,212,0.1)" : "transparent",
+            color: canSubmit ? "var(--cyan)" : "var(--dim)",
+            cursor: canSubmit ? "pointer" : "not-allowed",
+            fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+          }}>
+            {submitting ? "LISTING..." : "LIST PLANET"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CreateOfferModal: React.FC<{
+  liveRes: Resources | undefined;
+  txBusy: boolean;
+  onClose: () => void;
+  onSubmit: (params: CreateOfferParams) => Promise<void>;
+}> = ({ liveRes, txBusy, onClose, onSubmit }) => {
+  const [resourceType, setResourceType] = useState<ResourceType>(ResourceType.Metal);
+  const [amountStr, setAmountStr] = useState("");
+  const [priceStr, setPriceStr] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [localErr, setLocalErr] = useState<string | null>(null);
+
+  const available: Record<ResourceType, bigint> = {
+    [ResourceType.Metal]:     liveRes?.metal     ?? 0n,
+    [ResourceType.Crystal]:   liveRes?.crystal   ?? 0n,
+    [ResourceType.Deuterium]: liveRes?.deuterium ?? 0n,
+  };
+
+  const parsedAmount = BigInt(Math.max(0, parseInt(amountStr) || 0));
+  const parsedPrice  = amRawFromDisplay(parseFloat(priceStr) || 0);
+
+  const exceedsAvailable = parsedAmount > available[resourceType];
+  const tooSmall = parsedAmount < 1_000n && amountStr !== "";
+  const priceTooLow = parsedPrice < ANTIMATTER_SCALE && priceStr !== "";
+  const canSubmit = parsedAmount >= 1_000n && parsedPrice >= ANTIMATTER_SCALE && !exceedsAvailable && !submitting;
+
+  const handleSubmit = async () => {
+    setLocalErr(null);
+    if (parsedAmount < 1_000n) { setLocalErr("Minimum amount is 1,000 resources."); return; }
+    if (parsedPrice < ANTIMATTER_SCALE) { setLocalErr("Minimum price is 1.00 ANTIMATTER."); return; }
+    if (exceedsAvailable) { setLocalErr("You don't have enough of that resource."); return; }
+    setSubmitting(true);
+    try {
+      await onSubmit({ resourceType, resourceAmount: parsedAmount, priceAntimatter: parsedPrice });
+      onClose();
+    } catch (e) {
+      setLocalErr(describeError(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
+        zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
+        backdropFilter: "blur(6px)",
+      }}
+      onClick={e => { if (e.target === e.currentTarget && !submitting) onClose(); }}
+    >
+      <div style={{
+        background: "var(--panel)",
+        border: "1px solid rgba(0,245,212,0.25)",
+        borderRadius: "10px 10px 0 0",
+        padding: "24px 20px",
+        width: "100%",
+        maxWidth: 520,
+        maxHeight: "90dvh",
+        overflowY: "auto",
+        animation: "slideUp 0.22s ease",
+      }}>
+        {/* Handle */}
+        <div style={{ width: 36, height: 3, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }}/>
+
+        <div style={{
+          fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+          letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+          paddingBottom: 10, borderBottom: "1px solid var(--border)",
+        }}>
+          + LIST A RESOURCE
+        </div>
+
+        {/* Resource type selector */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 8 }}>
+            Resource Type
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {([ResourceType.Metal, ResourceType.Crystal, ResourceType.Deuterium] as const).map(rt => (
+              <button
+                key={rt}
+                onClick={() => setResourceType(rt)}
+                style={{
+                  flex: 1, padding: "10px 8px",
+                  border: `1px solid ${resourceType === rt ? RESOURCE_COLORS[rt] : "var(--border)"}`,
+                  background: resourceType === rt ? `${RESOURCE_COLORS[rt]}18` : "transparent",
+                  color: resourceType === rt ? RESOURCE_COLORS[rt] : "var(--dim)",
+                  borderRadius: 3, cursor: "pointer", transition: "all 0.15s",
+                  fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                }}
+              >
+                <span style={{ fontSize: 18 }}>{RESOURCE_ICONS[rt]}</span>
+                <span>{RESOURCE_LABELS[rt]}</span>
+                <span style={{ fontSize: 9, color: "var(--dim)" }}>
+                  {formatResource(available[rt])} avail
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Amount */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
+            Amount (min 1,000)
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              type="number" min={1000} step={1000}
+              value={amountStr}
+              onChange={e => setAmountStr(e.target.value)}
+              placeholder="e.g. 50000"
+              style={{
+                flex: 1, padding: "10px 12px", borderRadius: 2,
+                background: "rgba(0,0,0,0.4)",
+                border: `1px solid ${tooSmall || exceedsAvailable ? "var(--danger)" : "var(--border)"}`,
+                color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 13,
+              }}
+            />
+            <button
+              onClick={() => setAmountStr(available[resourceType].toString())}
+              style={{
+                padding: "10px 12px", borderRadius: 2,
+                border: "1px solid var(--border)", background: "transparent",
+                color: "var(--dim)", cursor: "pointer", fontSize: 10, letterSpacing: 1,
+                fontFamily: "'Share Tech Mono', monospace",
+              }}
+            >MAX</button>
+          </div>
+          {tooSmall && <div style={{ fontSize: 10, color: "var(--danger)", marginTop: 4 }}>Minimum 1,000</div>}
+          {exceedsAvailable && <div style={{ fontSize: 10, color: "var(--danger)", marginTop: 4 }}>Exceeds available resources</div>}
+        </div>
+
+        {/* Price */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
+            Total Price (ANTIMATTER tokens, min 1.0)
+          </div>
+          <input
+            type="number" min={1} step={0.5}
+            value={priceStr}
+            onChange={e => setPriceStr(e.target.value)}
+            placeholder="e.g. 5.0"
+            style={{
+              width: "100%", padding: "10px 12px", borderRadius: 2,
+              background: "rgba(0,0,0,0.4)",
+              border: `1px solid ${priceTooLow ? "var(--danger)" : "var(--border)"}`,
+              color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 13,
+            }}
+          />
+          {priceTooLow && <div style={{ fontSize: 10, color: "var(--danger)", marginTop: 4 }}>Minimum 1.0 AM</div>}
+        </div>
+
+        {/* Preview */}
+        {parsedAmount > 0n && parsedPrice > 0n && (
+          <div style={{
+            padding: "10px 14px", borderRadius: 3, marginBottom: 16,
+            border: "1px solid rgba(0,245,212,0.18)",
+            background: "rgba(0,245,212,0.04)",
+            fontSize: 10, lineHeight: 1.8,
+          }}>
+            <div style={{ color: "var(--dim)" }}>Preview</div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Selling</span>
+              <ResourcePill type={resourceType} amount={parsedAmount}/>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+              <span>Asking</span>
+              <AmPill amount={parsedPrice}/>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+              <span>Rate</span>
+              <span style={{ color: "var(--warn)", fontFamily: "'Orbitron', sans-serif", fontSize: 11 }}>
+                {formatAm(parsedAmount > 0n ? (parsedPrice * 1000n) / parsedAmount : 0n)} AM / 1k
+              </span>
+            </div>
+          </div>
+        )}
+
+        {localErr && <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 10, letterSpacing: 0.5 }}>{localErr}</div>}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onClose} disabled={submitting}
+            style={{
+              flex: 1, padding: "12px 16px", borderRadius: 2,
+              border: "1px solid var(--border)", background: "transparent",
+              color: "var(--dim)", cursor: "pointer",
+              fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+            }}
+          >CANCEL</button>
+          <button
+            onClick={() => void handleSubmit()}
+            disabled={!canSubmit || txBusy}
+            style={{
+              flex: 2, padding: "12px 16px", borderRadius: 2,
+              border: `1px solid ${canSubmit ? "var(--cyan)" : "var(--border)"}`,
+              background: canSubmit ? "rgba(0,245,212,0.1)" : "transparent",
+              color: canSubmit ? "var(--cyan)" : "var(--dim)",
+              cursor: canSubmit && !txBusy ? "pointer" : "not-allowed",
+              fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+              transition: "all 0.15s",
+            }}
+          >
+            {submitting ? "LISTING..." : "+ LIST OFFER"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Buy Confirm Modal ─────────────────────────────────────────────────────────
+
+const BuyConfirmModal: React.FC<{
+  offer: MarketOffer;
+  antimatterBalance: bigint;
+  txBusy: boolean;
+  marketUnlocked: boolean;
+  marketUnlockLeft: number;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}> = ({ offer, antimatterBalance, txBusy, marketUnlocked, marketUnlockLeft, onClose, onConfirm }) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [localErr, setLocalErr] = useState<string | null>(null);
+  const canAfford = antimatterBalance >= offer.priceAntimatter;
+
+  const handleConfirm = async () => {
+    setLocalErr(null);
+    setSubmitting(true);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (e) {
+      setLocalErr(describeError(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
+        zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
+        backdropFilter: "blur(6px)",
+      }}
+      onClick={e => { if (e.target === e.currentTarget && !submitting) onClose(); }}
+    >
+      <div style={{
+        background: "var(--panel)",
+        border: "1px solid rgba(0,245,212,0.3)",
+        borderRadius: 6, padding: "28px",
+        width: "min(92vw, 420px)",
+        animation: "fadeIn 0.18s ease",
+      }}>
+        <div style={{
+          fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+          letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+          paddingBottom: 10, borderBottom: "1px solid var(--border)",
+        }}>
+          CONFIRM PURCHASE
+        </div>
+
+        {/* Deal summary */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+          {[
+            { label: "You receive", node: <ResourcePill type={offer.resourceType} amount={offer.resourceAmount}/> },
+            { label: "You pay", node: <AmPill amount={offer.priceAntimatter}/> },
+            { label: "Rate", node: <span style={{ color: "var(--warn)", fontFamily: "'Orbitron', sans-serif", fontSize: 11 }}>{pricePerKDisplay(offer)} AM / 1k</span> },
+            { label: "Seller", node: <span style={{ fontSize: 10, color: "var(--text)" }}>{offer.seller.slice(0, 8)}...{offer.seller.slice(-6)}</span> },
+          ].map(({ label, node }) => (
+            <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(26,26,58,0.4)" }}>
+              <span style={{ fontSize: 10, color: "var(--dim)" }}>{label}</span>
+              {node}
+            </div>
+          ))}
+        </div>
+
+        {!canAfford && (
+          <div style={{
+            padding: "8px 12px", borderRadius: 3, marginBottom: 14,
+            background: "rgba(255,0,110,0.08)", border: "1px solid rgba(255,0,110,0.3)",
+            fontSize: 10, color: "var(--danger)", letterSpacing: 0.5,
+          }}>
+            Insufficient ANTIMATTER. You have {formatAm(antimatterBalance)} AM, need {formatAm(offer.priceAntimatter)} AM.
+          </div>
+        )}
+        {!marketUnlocked && (
+          <div style={{
+            padding: "8px 12px", borderRadius: 3, marginBottom: 14,
+            background: "rgba(255,214,10,0.08)", border: "1px solid rgba(255,214,10,0.3)",
+            fontSize: 10, color: "var(--warn)", letterSpacing: 0.5,
+          }}>
+            Market unlocks for this planet in {fmtCountdown(marketUnlockLeft)}.
+          </div>
+        )}
+
+        {localErr && <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 10 }}>{localErr}</div>}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onClose} disabled={submitting}
+            style={{
+              flex: 1, padding: "12px 16px", borderRadius: 2,
+              border: "1px solid var(--border)", background: "transparent",
+              color: "var(--dim)", cursor: "pointer",
+              fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+            }}
+          >CANCEL</button>
+          <button
+            onClick={() => void handleConfirm()}
+            disabled={!canAfford || !marketUnlocked || submitting || txBusy}
+            style={{
+              flex: 2, padding: "12px 16px", borderRadius: 2,
+              border: `1px solid ${canAfford ? "var(--cyan)" : "var(--border)"}`,
+              background: canAfford ? "rgba(0,245,212,0.12)" : "transparent",
+              color: canAfford ? "var(--cyan)" : "var(--dim)",
+              cursor: canAfford && !submitting ? "pointer" : "not-allowed",
+              fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+            }}
+          >
+            {submitting ? "BUYING..." : "+ CONFIRM BUY"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Market Admin Card ────────────────────────────────────────────────────────
+
+const MarketAdminCard: React.FC<{
+  client: MarketClient | null;
+  visible: boolean;
+  config: import("./market-client").MarketConfig | null;
+  escrowInitialized: boolean;
+  mintInput: string;
+  onMintInputChange: (v: string) => void;
+  onSubmit: () => Promise<void>;
+  onInitEscrow: () => Promise<void>;
+  busy: boolean;
+}> = ({ client, visible, config, escrowInitialized, mintInput, onMintInputChange, onSubmit, onInitEscrow, busy }) => {
+  if (!visible) return null;
+  return (
+    <div style={{
+      marginBottom: 20,
+      padding: "14px 16px",
+      background: "linear-gradient(180deg, rgba(255,214,10,0.06), rgba(11,11,30,0.92))",
+      border: "1px solid rgba(255,214,10,0.35)",
+      borderRadius: 4,
+    }}>
+      <div style={{
+        fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700,
+        letterSpacing: 2, color: "var(--warn)", marginBottom: 12,
+      }}>
+        MARKET ADMIN
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
+          <span>Market Config</span>
+          <span style={{ color: config ? "var(--success)" : "var(--warn)" }}>{config ? "INITIALIZED" : "NOT INITIALIZED"}</span>
+        </div>
+        {config && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
+              <span>ANTIMATTER Mint</span>
+              <span style={{ color: "var(--text)", fontSize: 9 }}>{config.antimatterMint.slice(0, 8)}...{config.antimatterMint.slice(-6)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
+              <span>Escrow Account</span>
+              <span style={{ color: escrowInitialized ? "var(--success)" : "var(--danger)" }}>
+                {escrowInitialized ? "INITIALIZED" : "NOT INITIALIZED"}
+              </span>
+            </div>
+          </>
+        )}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+          <input
+            type="text"
+            value={mintInput}
+            onChange={e => onMintInputChange(e.target.value.trim())}
+            placeholder="ANTIMATTER mint address"
+            disabled={busy}
+            spellCheck={false}
+            style={{
+              flex: 1, padding: "7px 10px", borderRadius: 2,
+              background: "rgba(0,0,0,0.4)", border: "1px solid var(--border)",
+              color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 11,
+            }}
+          />
+          <button
+            onClick={() => void onSubmit()}
+            disabled={busy || !mintInput}
+            style={{
+              padding: "7px 14px", borderRadius: 2, cursor: "pointer",
+              border: "1px solid var(--warn)", background: "rgba(255,214,10,0.1)",
+              color: "var(--warn)", fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 10, letterSpacing: 1, whiteSpace: "nowrap",
+              opacity: busy || !mintInput ? 0.4 : 1,
+            }}
+          >
+            {config ? "UPDATE" : "INITIALIZE"}
+          </button>
+        </div>
+
+        {/* Escrow initialization button - only show when market is initialized but escrow is not */}
+        {config && !escrowInitialized && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 10, color: "var(--danger)", marginBottom: 8, lineHeight: 1.6 }}>
+              The escrow account is not initialized. You must initialize it before offers can be accepted.
+            </div>
+            <button
+              onClick={() => void onInitEscrow()}
+              disabled={busy}
+              style={{
+                width: "100%",
+                padding: "10px 14px", borderRadius: 2, cursor: "pointer",
+                border: "1px solid var(--cyan)", background: "rgba(0,245,212,0.1)",
+                color: "var(--cyan)", fontFamily: "'Share Tech Mono', monospace",
+                fontSize: 10, letterSpacing: 1,
+                opacity: busy ? 0.4 : 1,
+              }}
+            >
+              INITIALIZE ESCROW
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Main MarketTab ────────────────────────────────────────────────────────────
+
+const MarketTab: React.FC<MarketTabProps> = ({
+  client,
+  state,
+  ownedPlanets,
+  liveRes,
+  antimatterBalance,
+  onTxStart,
+  onTxEnd,
+  onResourceCreditWarning,
+  txBusy,
+  sectionMode = "both",
+  canTransact = true,
+}) => {
+  const forcedSection = sectionMode === "both" ? null : sectionMode;
+  const [section, setSection] = useState<MarketSection>(forcedSection ?? "resources");
+  const [view, setView] = useState<MarketView>("buy");
+  const [planetView, setPlanetView] = useState<PlanetMarketView>("buy");
+  const [filterResource, setFilterResource] = useState<ResourceType | undefined>(undefined);
+  const [offers, setOffers] = useState<MarketOffer[]>([]);
+  const [planetListings, setPlanetListings] = useState<PlanetListing[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [planetListingTarget, setPlanetListingTarget] = useState<PlayerState | null>(null);
+  const [buyTarget, setBuyTarget] = useState<MarketOffer | null>(null);
+  const [planetBuyTarget, setPlanetBuyTarget] = useState<PlanetListing | null>(null);
+  const [planetDetailsTarget, setPlanetDetailsTarget] = useState<PlanetListing | null>(null);
+  const [lastRefresh, setLastRefresh] = useState(0);
+  const [nowTs, setNowTs] = useState(() => Math.floor(Date.now() / 1000));
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const marketUnlockLeft = state ? Math.max(0, state.planet.marketUnlockedAt - nowTs) : 0;
+  const marketUnlocked = marketUnlockLeft === 0;
+  const planetBuyUnlocked = forcedSection === "planets" ? true : marketUnlocked;
+  const playerPlanets = ownedPlanets ?? (state ? [state] : []);
+
+  // ── Market config state ──────────────────────────────────────────────────
+  // undefined = loading, null = not initialized, MarketConfig = initialized
+  const [marketConfig, setMarketConfig] = useState<import("./market-client").MarketConfig | null | undefined>(undefined);
+  const [marketMintInput, setMarketMintInput] = useState("FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh");
+  const [escrowInitialized, setEscrowInitialized] = useState(false);
+  const walletAddress = state?.planet.owner ?? "";
+  const isProtocolAuthority = walletAddress === PROTOCOL_AUTHORITY;
+  const isAdmin = marketConfig ? marketConfig.admin === walletAddress : isProtocolAuthority;
+  const marketLoading = marketConfig === undefined;  // undefined = still fetching
+  const showAdminCard = isProtocolAuthority || isAdmin;
+
+  // ── Market admin handler ──────────────────────────────────────────────────
+  const handleInitializeMarket = useCallback(async () => {
+    if (!client) return;
+    if (!isAdmin) {
+      onTxEnd("Only the protocol authority can initialize or update the market config.");
+      return;
+    }
+    let mint: PublicKey;
+    try {
+      mint = new PublicKey(marketMintInput);
+    } catch {
+      onTxEnd("Invalid mint address.");
+      return;
+    }
+    onTxStart(marketConfig ? "Updating market config..." : "Initializing market...");
+    try {
+      if (marketConfig) {
+        await client.updateMarketConfig(mint);
+      } else {
+        // Initialize market config
+        await client.initializeMarket(mint);
+
+        // Also initialize escrow after market
+        onTxStart("Initializing escrow...");
+        await client.initializeEscrow();
+        setEscrowInitialized(true);
+      }
+      const cfg = await client.getMarketConfig();
+      setMarketConfig(cfg);
+      if (cfg) setMarketMintInput(cfg.antimatterMint);
+      onTxEnd();
+    } catch (e: any) {
+      onTxEnd(describeError(e));
+    }
+  }, [client, isAdmin, marketConfig, marketMintInput, onTxStart, onTxEnd]);
+
+  // ── Escrow initialization handler (for existing markets) ──────────────────
+  const handleInitializeEscrow = useCallback(async () => {
+    if (!client) return;
+    if (!isAdmin) {
+      onTxEnd("Only the market admin can initialize escrow.");
+      return;
+    }
+    onTxStart("Initializing escrow...");
+    try {
+      await client.initializeEscrow();
+      setEscrowInitialized(true);
+      onTxEnd();
+    } catch (e: any) {
+      onTxEnd(describeError(e));
+    }
+  }, [client, isAdmin, onTxStart, onTxEnd]);
+
+  // ── Data fetching ────────────────────────────────────────────────────────────
+
+  const fetchOffers = useCallback(async () => {
+    if (!client) return;
+    setLoading(true);
+    try {
+      // Always re-check config so tab auto-activates after initialization
+      const cfg = await client.getMarketConfig();
+      setMarketConfig(cfg ?? null);
+      if (cfg) setMarketMintInput(cfg.antimatterMint);
+
+      // Check escrow status
+      const escrowOk = await client.isEscrowInitialized();
+      setEscrowInitialized(escrowOk);
+
+      // Only fetch offers if market is initialized
+      if (cfg) {
+        const all = await client.fetchAllOffers(filterResource);
+        setOffers(all);
+        const planetMarket = await client.fetchAllPlanetListings();
+        setPlanetListings(planetMarket);
+      }
+      setLastRefresh(Date.now());
+    } catch {
+      // silently ignore — polling will retry
+    } finally {
+      setLoading(false);
+    }
+  }, [client, filterResource]);
+
+  useEffect(() => {
+    void fetchOffers();
+    pollRef.current = setInterval(() => void fetchOffers(), 8_000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [fetchOffers]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTs(Math.floor(Date.now() / 1000)), 1_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (forcedSection) setSection(forcedSection);
+  }, [forcedSection]);
+
+  // Re-fetch when view changes to myoffers
+  useEffect(() => {
+    if (view === "myoffers" || planetView === "myoffers") void fetchOffers();
+  }, [view, planetView, fetchOffers]);
+
+  // ── Filtered views ───────────────────────────────────────────────────────────
+
+  const displayedOffers = useMemo(() => {
+    if (view === "myoffers") return offers.filter(o => o.seller === walletAddress);
+    if (view === "sell") return [];
+    // buy: exclude own offers
+    return offers.filter(o => o.seller !== walletAddress);
+  }, [offers, view, walletAddress]);
+
+  const displayedPlanetListings = useMemo(() => {
+    const sellableListings = planetListings.filter(l => l.planetIndex !== 0);
+    if (planetView === "myoffers") return sellableListings.filter(l => l.seller === walletAddress);
+    if (planetView === "sell") return [];
+    return sellableListings;
+  }, [planetListings, planetView, walletAddress]);
+
+  const listablePlanets = useMemo(() => {
+    const alreadyListed = new Set(
+      planetListings
+        .filter(listing => listing.seller === walletAddress)
+        .map(listing => listing.planet),
+    );
+    return playerPlanets
+      .filter(planet => planet.planet.planetIndex !== 0)
+      .filter(planet => !alreadyListed.has(planet.planetPda));
+  }, [planetListings, playerPlanets, walletAddress]);
+
+  const planetMarketStats = useMemo(() => {
+    const sellableListings = planetListings.filter(l => l.planetIndex !== 0);
+    const prices = sellableListings.map(l => l.priceAntimatter).sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
+    const totalValue = prices.reduce((sum, value) => sum + value, 0n);
+    return {
+      listed: sellableListings.length,
+      floor: prices[0] ?? null,
+      average: prices.length > 0 ? totalValue / BigInt(prices.length) : null,
+      owned: walletAddress ? sellableListings.filter(l => l.seller === walletAddress).length : 0,
+    };
+  }, [planetListings, walletAddress]);
+
+  const resourceCreditDeltaForOffer = (offer: MarketOffer): ResourceCreditDelta => {
+    if (offer.resourceType === ResourceType.Metal) return { metal: offer.resourceAmount };
+    if (offer.resourceType === ResourceType.Crystal) return { crystal: offer.resourceAmount };
+    return { deuterium: offer.resourceAmount };
+  };
+
+  // ── Transaction handlers ─────────────────────────────────────────────────────
+
+  const handleCreateOffer = async (params: CreateOfferParams) => {
+    if (!client) return;
+    if (!marketUnlocked) {
+      onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
+      return;
+    }
+    if (!marketConfig) {
+      onTxEnd("Market is not initialized yet. Initialize it first using the admin panel.");
+      return;
+    }
+    onTxStart("Creating listing...");
+    try {
+      await client.createOffer(params);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+      throw e;
+    }
+  };
+
+  const handleCancelOffer = async (offer: MarketOffer) => {
+    if (!client) return;
+    if (onResourceCreditWarning && !onResourceCreditWarning("Cancel market offer", resourceCreditDeltaForOffer(offer))) return;
+    onTxStart("Cancelling offer...");
+    try {
+      await client.cancelOffer(offer);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+    }
+  };
+
+  const handleAcceptOffer = async (offer: MarketOffer) => {
+    if (!client) return;
+    if (!marketUnlocked) {
+      onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
+      return;
+    }
+    if (onResourceCreditWarning && !onResourceCreditWarning("Buy market resources", resourceCreditDeltaForOffer(offer))) return;
+    onTxStart("Purchasing...");
+    try {
+      await client.acceptOffer(offer);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+      throw e;
+    }
+  };
+
+  const handleCreatePlanetListing = async (planetToList: PlayerState, priceAntimatter: bigint) => {
+    if (!client) return;
+    if (!canTransact) {
+      onTxEnd("Connect wallet to list a planet.");
+      return;
+    }
+    if (planetToList.planet.planetIndex === 0) {
+      onTxEnd("The initial homeworld planet cannot be sold.");
+      return;
+    }
+    if (planetToList.fleet.activeMissions > 0) {
+      onTxEnd("Resolve this planet's active missions before listing it.");
+      return;
+    }
+    const planetUnlockLeft = Math.max(0, planetToList.planet.marketUnlockedAt - Math.floor(Date.now() / 1000));
+    if (planetUnlockLeft > 0) {
+      onTxEnd(`Market unlocks for this planet in ${fmtCountdown(planetUnlockLeft)}.`);
+      return;
+    }
+    if (!marketConfig) {
+      onTxEnd("Market is not initialized yet. Initialize it first using the admin panel.");
+      return;
+    }
+    onTxStart("Listing planet...");
+    try {
+      await client.createPlanetListing(planetToList, priceAntimatter);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+      throw e;
+    }
+  };
+
+  const handleCancelPlanetListing = async (listing: PlanetListing) => {
+    if (!client) return;
+    if (!canTransact) {
+      onTxEnd("Connect wallet to cancel a listing.");
+      return;
+    }
+    onTxStart("Cancelling planet listing...");
+    try {
+      await client.cancelPlanetListing(listing);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+    }
+  };
+
+  const handleBuyPlanetListing = async (listing: PlanetListing) => {
+    if (!client) return;
+    if (!canTransact) {
+      onTxEnd("Connect wallet to buy a planet.");
+      return;
+    }
+    if (!planetBuyUnlocked) {
+      onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
+      return;
+    }
+    onTxStart("Buying planet...");
+    try {
+      await client.buyPlanetListing(listing);
+      await fetchOffers();
+      onTxEnd();
+    } catch (e) {
+      onTxEnd(describeError(e));
+      throw e;
+    }
+  };
+
+  // ── Resource balance summary ─────────────────────────────────────────────────
+
+  const resSummary: { type: ResourceType; amount: bigint }[] = [
+    { type: ResourceType.Metal,     amount: liveRes?.metal     ?? 0n },
+    { type: ResourceType.Crystal,   amount: liveRes?.crystal   ?? 0n },
+    { type: ResourceType.Deuterium, amount: liveRes?.deuterium ?? 0n },
+  ];
+
+  // ── Market stats ─────────────────────────────────────────────────────────────
+
+  const stats = useMemo(() => {
+    const byType: Record<ResourceType, MarketOffer[]> = {
+      [ResourceType.Metal]:     [],
+      [ResourceType.Crystal]:   [],
+      [ResourceType.Deuterium]: [],
+    };
+    for (const o of offers) {
+      if (!o.filled && o.seller !== walletAddress) byType[o.resourceType].push(o);
+    }
+    return ([ResourceType.Metal, ResourceType.Crystal, ResourceType.Deuterium] as const).map(rt => {
+      const list = byType[rt];
+      const bestOffer = list.length > 0 ? list[0] : null; // already sorted asc
+      return { type: rt, count: list.length, bestPricePerK: bestOffer?.pricePerUnit ?? null };
+    });
+  }, [offers, walletAddress]);
+  const activeResourceOffers = offers.filter(offer => !offer.filled);
+  const ownResourceOffers = activeResourceOffers.filter(offer => offer.seller === walletAddress);
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  if (!client) {
+    return (
+      <div>
+        <div className="section-title">{forcedSection === "planets" ? "PLANET MARKETPLACE" : "P2P MARKET"}</div>
+        <div style={{
+          textAlign: "center", padding: "60px 20px",
+          background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 4,
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>MARKET</div>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "var(--purple)", letterSpacing: 2, marginBottom: 8 }}>
+            MARKET NOT DEPLOYED
+          </div>
+          <div style={{ fontSize: 11, color: "var(--dim)" }}>
+            Deploy the market Anchor program and pass a MarketClient instance to this tab.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Not initialized yet banner (loading state) ────────────────────────────
+  const marketUninitialized = marketConfig === null; // null = loaded but not on-chain
+
+  return (
+    <div className="market-command">
+      {/* ── Header ── */}
+      <div className="section-title">{forcedSection === "planets" ? "PLANET MARKETPLACE" : "P2P MARKET"}</div>
+
+      {/* ── Market Admin Card — shown when not initialized OR to admin ── */}
+      <MarketAdminCard
+        client={client}
+        visible={!marketLoading && (showAdminCard || isAdmin)}
+        config={marketConfig ?? null}
+        escrowInitialized={escrowInitialized}
+        mintInput={marketMintInput}
+        onMintInputChange={setMarketMintInput}
+        onSubmit={handleInitializeMarket}
+        onInitEscrow={handleInitializeEscrow}
+        busy={txBusy}
+      />
+
+      {/* ── Uninitialized notice for non-admins ── */}
+      {marketUninitialized && !showAdminCard && (
+        <div style={{
+          padding: "14px 16px", marginBottom: 20, borderRadius: 4,
+          background: "rgba(255,214,10,0.05)", border: "1px solid rgba(255,214,10,0.25)",
+          fontSize: 11, color: "var(--warn)", letterSpacing: 0.5, lineHeight: 1.7,
+        }}>
+          The market has not been initialized yet. The game admin needs to call
+          <strong> initialize_market</strong> with the ANTIMATTER mint address before trading is available.
+        </div>
+      )}
+
+      {/* ── Loading state ── */}
+      {marketLoading && (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--dim)", fontSize: 11, animation: "pulse 2s ease-in-out infinite" }}>
+          Loading market...
+        </div>
+      )}
+
+      {/* ── Rest of UI — only shown when initialized ── */}
+      {!marketLoading && !marketUninitialized && (<>
+
+      {sectionMode === "both" && <div className="market-section-tabs" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {([
+          { id: "resources", label: "RESOURCES" },
+          { id: "planets", label: "PLANETS" },
+        ] as const).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setSection(tab.id)}
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 11,
+              letterSpacing: 1.5,
+              borderRadius: 3,
+              border: `1px solid ${section === tab.id ? "var(--cyan)" : "var(--border)"}`,
+              background: section === tab.id ? "rgba(0,245,212,0.08)" : "transparent",
+              color: section === tab.id ? "var(--cyan)" : "var(--dim)",
+              cursor: "pointer",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>}
+
+      <section className="market-status-strip" aria-label="Live market status">
+        <div className="live"><span>MARKET STATUS</span><b>LIVE · DEVNET</b></div>
+        <div><span>RESOURCE OFFERS</span><b>{activeResourceOffers.length}</b></div>
+        <div><span>YOUR LISTINGS</span><b>{ownResourceOffers.length}</b></div>
+        <div><span>LAST SYNC</span><b>{loading ? "UPDATING" : lastRefresh > 0 ? `${Math.max(0, Math.round((Date.now() - lastRefresh) / 1000))}s AGO` : "PENDING"}</b></div>
+      </section>
+
+      {/* ── Balance strip ── */}
+      {section === "resources" && <div className="market-balance-grid" style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: 8, marginBottom: 20,
+      }}>
+        {resSummary.map(({ type, amount }) => (
+          <div key={type} className="card" style={{ padding: "10px 12px" }}>
+            <div className="card-label">{RESOURCE_ICONS[type]} {RESOURCE_LABELS[type]}</div>
+            <div className="card-value" style={{ color: RESOURCE_COLORS[type], fontSize: 14 }}>
+              {formatResource(amount)}
+            </div>
+          </div>
+        ))}
+        <div className="card" style={{
+          padding: "10px 12px",
+          background: "linear-gradient(135deg, rgba(255,214,10,0.08), rgba(11,11,30,0.9))",
+          borderColor: "rgba(255,214,10,0.3)",
+        }}>
+          <div className="card-label" style={{ color: "rgba(255,214,10,0.7)" }}>
+            <AntimatterIcon size={11}/> ANTIMATTER
+          </div>
+          <div className="card-value" style={{
+            color: "var(--warn)", fontSize: 14,
+            fontFamily: "'Orbitron', sans-serif",
+          }}>
+            {formatAm(antimatterBalance, 2)}
+          </div>
+        </div>
+      </div>}
+
+      {/* ── Market price board ── */}
+      {section === "resources" && <div className="market-price-board" style={{
+        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20,
+        padding: "12px 14px",
+        background: "rgba(8,8,22,0.7)",
+        border: "1px solid var(--border)", borderRadius: 4,
+      }}>
+        {stats.map(s => (
+          <div key={s.type} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", marginBottom: 4 }}>
+              {RESOURCE_ICONS[s.type]} {RESOURCE_LABELS[s.type].toUpperCase()}
+            </div>
+            <div style={{
+              fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+              color: s.bestPricePerK !== null ? "var(--warn)" : "var(--border)",
+            }}>
+              {s.bestPricePerK !== null ? `${formatAm(s.bestPricePerK)} AM` : "-"}
+            </div>
+            <div style={{ fontSize: 9, color: "var(--dim)", marginTop: 2 }}>
+              {s.count} offer{s.count !== 1 ? "s" : ""} - best/1k
+            </div>
+          </div>
+        ))}
+      </div>}
+
+      {/* ── Nav ── */}
+      {section === "resources" && <div className="market-view-tabs" style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
+        {([
+          { id: "buy",      label: "BUY RESOURCES",  icon: "BUY" },
+          { id: "sell",     label: "SELL RESOURCES", icon: "SELL" },
+          { id: "myoffers", label: "MY LISTINGS",    icon: "OFFERS" },
+        ] as const).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setView(tab.id)}
+            style={{
+              flex: 1, padding: "10px 8px",
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 10, letterSpacing: 1.5,
+              textTransform: "uppercase",
+              background: "transparent",
+              border: "none",
+              borderBottom: `2px solid ${view === tab.id ? "var(--cyan)" : "transparent"}`,
+              color: view === tab.id ? "var(--cyan)" : "var(--dim)",
+              cursor: "pointer", transition: "all 0.15s",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>}
+
+      {/* ── Filter chips (buy only) ── */}
+      {section === "resources" && view === "buy" && (
+        <div className="market-filter-bar" style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setFilterResource(undefined)}
+            style={{
+              padding: "4px 10px", borderRadius: 12,
+              border: `1px solid ${filterResource === undefined ? "var(--cyan)" : "var(--border)"}`,
+              background: filterResource === undefined ? "rgba(0,245,212,0.1)" : "transparent",
+              color: filterResource === undefined ? "var(--cyan)" : "var(--dim)",
+              cursor: "pointer", fontSize: 10, letterSpacing: 1,
+              fontFamily: "'Share Tech Mono', monospace",
+            }}
+          >ALL</button>
+          {([ResourceType.Metal, ResourceType.Crystal, ResourceType.Deuterium] as const).map(rt => (
+            <button
+              key={rt}
+              onClick={() => setFilterResource(prev => prev === rt ? undefined : rt)}
+              style={{
+                padding: "4px 10px", borderRadius: 12,
+                border: `1px solid ${filterResource === rt ? RESOURCE_COLORS[rt] : "var(--border)"}`,
+                background: filterResource === rt ? `${RESOURCE_COLORS[rt]}18` : "transparent",
+                color: filterResource === rt ? RESOURCE_COLORS[rt] : "var(--dim)",
+                cursor: "pointer", fontSize: 10, letterSpacing: 1,
+                fontFamily: "'Share Tech Mono', monospace",
+              }}
+            >
+              {RESOURCE_ICONS[rt]} {RESOURCE_LABELS[rt].toUpperCase()}
+            </button>
+          ))}
+          <span style={{ marginLeft: "auto", fontSize: 9, color: "var(--dim)", alignSelf: "center" }}>
+            {loading ? "Refreshing..." : `${displayedOffers.length} offers - ${Math.round((Date.now() - lastRefresh) / 1000)}s ago`}
+          </span>
+        </div>
+      )}
+
+      {/* ── SELL view ── */}
+      {section === "resources" && view === "sell" && (
+        <div className="market-sell-workspace" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="market-sell-brief" style={{
+            padding: "14px 16px", borderRadius: 4,
+            background: "rgba(155,93,229,0.05)",
+            border: "1px solid rgba(155,93,229,0.2)",
+            fontSize: 10, color: "var(--dim)", lineHeight: 1.8, letterSpacing: 0.5,
+          }}>
+            <strong style={{ color: "var(--purple)" }}>RESOURCE LISTING</strong>
+            <span>Choose a resource amount and your ANTIMATTER price. A buyer receives the resources after confirmation and payment goes directly to your wallet.</span>
+            <small>You can cancel any open listing before it is accepted.</small>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            disabled={txBusy || !state || !marketUnlocked}
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: 12, fontWeight: 700, letterSpacing: 2,
+              padding: "14px 20px", borderRadius: 3,
+              border: "2px solid var(--cyan)",
+              background: "linear-gradient(135deg, rgba(0,245,212,0.1), rgba(155,93,229,0.05))",
+              color: "var(--cyan)", cursor: "pointer", transition: "all 0.2s",
+              width: "100%", textTransform: "uppercase",
+            }}
+          >
+            CREATE RESOURCE LISTING
+          </button>
+          {!marketUnlocked && state && (
+            <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
+              Market unlocks for this planet in {fmtCountdown(marketUnlockLeft)}.
+            </div>
+          )}
+          {!state && (
+            <div style={{ fontSize: 10, color: "var(--dim)", textAlign: "center" }}>
+              No planet loaded - cannot verify resources.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── BUY / MY OFFERS offer list ── */}
+      {section === "resources" && (view === "buy" || view === "myoffers") && (
+        <>
+          {displayedOffers.length === 0 ? (
+            <div className="market-empty-state" style={{
+              textAlign: "center", padding: "48px 20px",
+              border: "1px dashed var(--border)", borderRadius: 4,
+              color: "var(--dim)", fontSize: 11, letterSpacing: 1,
+            }}>
+              {loading ? (
+                <span style={{ animation: "pulse 2s ease-in-out infinite" }}>Loading offers...</span>
+              ) : view === "myoffers" ? (
+                <>
+                  <span>YOUR MARKET DESK</span>
+                  <h3>No active listings</h3>
+                  <p>Create a resource listing to start earning ANTIMATTER from other commanders.</p>
+                  <button type="button" onClick={() => setView("sell")}>CREATE A LISTING</button>
+                </>
+              ) : (
+                <>
+                  <span>LIVE RESOURCE EXCHANGE</span>
+                  <h3>{filterResource !== undefined ? `No ${RESOURCE_LABELS[filterResource].toLowerCase()} listed` : "The market is waiting for its first listing"}</h3>
+                  <p>{filterResource !== undefined ? "Clear the filter to inspect every resource, or list your own production." : "Create the first sell order or refresh to check for newly confirmed offers."}</p>
+                  <div><button type="button" onClick={() => setView("sell")}>SELL RESOURCES</button><button type="button" className="secondary" disabled={loading} onClick={() => void fetchOffers()}>{loading ? "CHECKING..." : "REFRESH MARKET"}</button></div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="market-offer-list" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {displayedOffers.map(offer => (
+                <OfferCard
+                  key={offer.pubkey}
+                  offer={offer}
+                  antimatterBalance={antimatterBalance}
+                  txBusy={txBusy}
+                  marketUnlocked={marketUnlocked}
+                  onBuy={o => setBuyTarget(o)}
+                  onCancel={o => void handleCancelOffer(o)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Modals ── */}
+      {section === "planets" && (
+        <>
+          <div className="market-planet-summary" style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 14,
+            marginBottom: 16,
+          }}>
+            <div style={{
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 8,
+              background: "rgba(7,11,22,0.72)",
+              padding: 12,
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 8,
+            }}>
+              {[
+                ["LISTED", planetMarketStats.listed.toLocaleString()],
+                ["FLOOR", planetMarketStats.floor === null ? "-" : `${formatAm(planetMarketStats.floor, 2)} AM`],
+                ["AVG PRICE", planetMarketStats.average === null ? "-" : `${formatAm(planetMarketStats.average, 2)} AM`],
+                ["YOUR LISTINGS", canTransact ? planetMarketStats.owned.toLocaleString() : "-"],
+              ].map(([label, value]) => (
+                <div key={label} style={{
+                  minWidth: 0,
+                  padding: "10px",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 6,
+                  background: "rgba(0,0,0,0.18)",
+                }}>
+                  <div style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--dim)", marginBottom: 5 }}>{label}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "var(--cyan)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="market-planet-tabs" style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+            {([
+              { id: "buy", label: "BUY PLANETS" },
+              { id: "sell", label: "LIST A PLANET" },
+              { id: "myoffers", label: "MY LISTINGS" },
+            ] as const).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setPlanetView(tab.id)}
+                style={{
+                  padding: "10px 14px",
+                  fontFamily: "'Share Tech Mono', monospace",
+                  fontSize: 10, letterSpacing: 1.5,
+                  textTransform: "uppercase",
+                  borderRadius: 3,
+                  background: planetView === tab.id ? "rgba(0,245,212,0.1)" : "rgba(7,11,22,0.5)",
+                  border: `1px solid ${planetView === tab.id ? "var(--cyan)" : "var(--border)"}`,
+                  color: planetView === tab.id ? "var(--cyan)" : "var(--dim)",
+                  cursor: "pointer",
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+            <span style={{ marginLeft: "auto", fontSize: 9, color: "var(--dim)" }}>
+              {loading ? "Refreshing..." : `${displayedPlanetListings.length} shown - ${Math.round((Date.now() - lastRefresh) / 1000)}s ago`}
+            </span>
+          </div>
+
+          {planetView === "sell" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{
+                padding: "14px 16px", borderRadius: 4,
+                background: "rgba(155,93,229,0.05)",
+                border: "1px solid rgba(155,93,229,0.2)",
+                fontSize: 10, color: "var(--dim)", lineHeight: 1.8, letterSpacing: 0.5,
+              }}>
+                <strong style={{ color: "var(--purple)" }}>Planet sales:</strong> choose one of your eligible planets and list it for ANTIMATTER. Initial homeworlds and already-listed planets are hidden.
+              </div>
+              {!canTransact && (
+                <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
+                  Connect a wallet in the top bar to list a planet.
+                </div>
+              )}
+              {!state && listablePlanets.length === 0 && (
+                <div style={{ fontSize: 10, color: "var(--dim)", textAlign: "center" }}>
+                  Connect a wallet to load your planets.
+                </div>
+              )}
+              {state && listablePlanets.length === 0 && (
+                <div style={{
+                  textAlign: "center", padding: "36px 20px",
+                  border: "1px dashed var(--border)", borderRadius: 4,
+                  color: "var(--dim)", fontSize: 11, letterSpacing: 1,
+                }}>
+                  No planets available to list. Initial homeworlds and already-listed planets are excluded.
+                </div>
+              )}
+              {listablePlanets.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
+                  {listablePlanets.map(planetState => {
+                    const planet = planetState.planet;
+                    const unlockLeft = Math.max(0, planet.marketUnlockedAt - nowTs);
+                    const hasActiveMissions = planetState.fleet.activeMissions > 0;
+                    const disabled = txBusy || !canTransact || unlockLeft > 0 || hasActiveMissions || !marketConfig;
+                    const disabledReason = hasActiveMissions
+                      ? "Resolve active missions first"
+                      : unlockLeft > 0
+                        ? `Market unlocks in ${fmtCountdown(unlockLeft)}`
+                        : !marketConfig
+                          ? "Market config not initialized"
+                          : null;
+                    return (
+                      <div key={planetState.planetPda} style={{
+                        border: "1px solid rgba(0,245,212,0.18)",
+                        borderRadius: 6,
+                        padding: 14,
+                        background: "linear-gradient(180deg, rgba(11,14,30,0.86), rgba(6,8,18,0.72))",
+                        display: "grid",
+                        gap: 10,
+                      }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "center" }}>
+                          <MarketPlanetPreview planet={planet} />
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                            <div>
+                              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "var(--cyan)", letterSpacing: 1.5 }}>
+                                {planet.name || `Planet ${planet.planetIndex + 1}`}
+                              </div>
+                              <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 4 }}>
+                                [{planet.galaxy}:{planet.system}:{planet.position}]
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 9, color: "var(--warn)", letterSpacing: 1.2 }}>
+                              #{planet.planetIndex + 1}
+                            </div>
+                          </div>
+                        </div>
+                        <PlanetInfoGrid items={[
+                          { label: "FIELDS", value: `${planet.usedFields}/${planet.maxFields}` },
+                          { label: "DIAMETER", value: `${planet.diameter.toLocaleString()} km` },
+                          { label: "CLIMATE", value: `${planet.temperature}C` },
+                          { label: "MISSIONS", value: `${planetState.fleet.activeMissions}` },
+                        ]} />
+                        {disabledReason && (
+                          <div style={{ fontSize: 10, color: "var(--warn)", letterSpacing: 0.5 }}>
+                            {disabledReason}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setPlanetListingTarget(planetState)}
+                          disabled={disabled}
+                          style={{
+                            fontFamily: "'Orbitron', sans-serif",
+                            fontSize: 11, fontWeight: 700, letterSpacing: 2,
+                            padding: "11px 14px", borderRadius: 3,
+                            border: disabled ? "1px solid var(--border)" : "1px solid var(--cyan)",
+                            background: disabled ? "rgba(255,255,255,0.03)" : "rgba(0,245,212,0.08)",
+                            color: disabled ? "var(--dim)" : "var(--cyan)",
+                            cursor: disabled ? "not-allowed" : "pointer",
+                            width: "100%", textTransform: "uppercase",
+                          }}
+                        >
+                          LIST PLANET
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {(planetView === "buy" || planetView === "myoffers") && (
+            <>
+              {displayedPlanetListings.length === 0 ? (
+                <div style={{
+                  textAlign: "center", padding: "48px 20px",
+                  border: "1px dashed var(--border)", borderRadius: 4,
+                  color: "var(--dim)", fontSize: 11, letterSpacing: 1,
+                }}>
+                  {loading ? (
+                    <span style={{ animation: "pulse 2s ease-in-out infinite" }}>Loading planet listings...</span>
+                  ) : planetView === "myoffers" ? (
+                    <>You have no active planet listings. Switch to <em>List</em> to create one.</>
+                  ) : (
+                    <>No planets listed yet.</>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
+                  {displayedPlanetListings.map(listing => (
+                    <PlanetListingCard
+                      key={listing.pubkey}
+                      listing={listing}
+                      antimatterBalance={antimatterBalance}
+                      txBusy={txBusy}
+                      marketUnlocked={canTransact && planetBuyUnlocked}
+                      onBuy={l => void handleBuyPlanetListing(l)}
+                      onCancel={l => void handleCancelPlanetListing(l)}
+                      onDetails={l => setPlanetDetailsTarget(l)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {showCreateModal && (
+        <CreateOfferModal
+          liveRes={liveRes}
+          txBusy={txBusy}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={handleCreateOffer}
+        />
+      )}
+
+      {buyTarget && (
+        <BuyConfirmModal
+          offer={buyTarget}
+          antimatterBalance={antimatterBalance}
+          txBusy={txBusy}
+          marketUnlocked={marketUnlocked}
+          marketUnlockLeft={marketUnlockLeft}
+          onClose={() => setBuyTarget(null)}
+          onConfirm={() => handleAcceptOffer(buyTarget)}
+        />
+      )}
+
+      {planetListingTarget && (
+        <CreatePlanetListingModal
+          planet={planetListingTarget}
+          txBusy={txBusy}
+          onClose={() => setPlanetListingTarget(null)}
+          onSubmit={price => handleCreatePlanetListing(planetListingTarget, price)}
+        />
+      )}
+
+      {planetDetailsTarget && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
+            zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
+            backdropFilter: "blur(6px)", padding: "clamp(8px, 2vw, 18px)",
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setPlanetDetailsTarget(null); }}
+        >
+          <div className="planet-details-dialog" style={{
+            background: "linear-gradient(180deg, rgba(18,23,45,0.98), rgba(7,10,22,0.98))",
+            border: "1px solid rgba(0,245,212,0.25)",
+            borderRadius: 10,
+            padding: "clamp(14px, 2vw, 20px)",
+            width: "100%",
+            maxWidth: 980,
+            boxShadow: "0 22px 70px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)",
+          }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+              marginBottom: 14, paddingBottom: 9, borderBottom: "1px solid var(--border)",
+              position: "sticky", top: 0, zIndex: 3,
+              background: "linear-gradient(180deg, rgba(18,23,45,0.98), rgba(18,23,45,0.92))",
+            }}>
+              <div style={{
+                fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+                letterSpacing: 3, color: "var(--cyan)",
+              }}>
+                PLANET DETAILS
+              </div>
+              <button
+                onClick={() => setPlanetDetailsTarget(null)}
+                disabled={txBusy}
+                style={{
+                  border: "1px solid var(--border)", background: "transparent",
+                  color: "var(--dim)", borderRadius: 3, padding: "7px 10px",
+                  fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: 1,
+                  cursor: txBusy ? "not-allowed" : "pointer",
+                }}
+              >
+                CLOSE
+              </button>
+            </div>
+            <div className="planet-details-body">
+              <div className="planet-details-visual">
+                <MarketPlanetPreview
+                  planet={{
+                    name: planetDetailsTarget.planetName,
+                    galaxy: planetDetailsTarget.coords?.galaxy,
+                    system: planetDetailsTarget.coords?.system,
+                    position: planetDetailsTarget.coords?.position,
+                    temperature: planetDetailsTarget.temperature,
+                    diameter: planetDetailsTarget.diameter,
+                    maxFields: planetDetailsTarget.maxFields,
+                  }}
+                  size={132}
+                />
+              </div>
+              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{
+                  display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12,
+                }}>
+                  <div>
+                    <div style={{
+                      fontFamily: "'Orbitron', sans-serif", fontSize: 18,
+                      color: "var(--cyan)", letterSpacing: 1.4, lineHeight: 1.2,
+                    }}>
+                      {planetDetailsTarget.planetName || "Planet"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 5 }}>
+                      {planetCoordsLabel(planetDetailsTarget)} {planetDetailsTarget.planetIndex !== undefined ? `· #${planetDetailsTarget.planetIndex + 1}` : ""}
+                    </div>
+                  </div>
+                  <AmPill amount={planetDetailsTarget.priceAntimatter}/>
+                </div>
+                <div className="planet-details-grid">
+                  <PlanetDetailSection
+                    title="OVERVIEW"
+                    items={[
+                      { label: "FIELDS", value: planetDetailsTarget.maxFields !== undefined ? `${planetDetailsTarget.usedFields ?? 0}/${planetDetailsTarget.maxFields}` : "-" },
+                      { label: "DIAMETER", value: planetDetailsTarget.diameter !== undefined ? `${planetDetailsTarget.diameter.toLocaleString()} km` : "-" },
+                      { label: "CLIMATE", value: planetDetailsTarget.temperature !== undefined ? `${planetDetailsTarget.temperature}C` : "-" },
+                      { label: "SELLER", value: `${planetDetailsTarget.seller.slice(0, 8)}...${planetDetailsTarget.seller.slice(-6)}` },
+                    ]}
+                  />
+                  <PlanetDetailSection
+                    title="ECONOMY"
+                    items={[
+                      { label: "METAL", value: listingResource(planetDetailsTarget.metal), accent: "var(--metal)" },
+                      { label: "METAL RATE", value: listingRate(planetDetailsTarget.metalHour), accent: "var(--metal)" },
+                      { label: "CRYSTAL", value: listingResource(planetDetailsTarget.crystal), accent: "var(--crystal)" },
+                      { label: "CRYSTAL RATE", value: listingRate(planetDetailsTarget.crystalHour), accent: "var(--crystal)" },
+                      { label: "DEUTERIUM", value: listingResource(planetDetailsTarget.deuterium), accent: "var(--deut)" },
+                      { label: "DEUT RATE", value: listingRate(planetDetailsTarget.deuteriumHour), accent: "var(--deut)" },
+                    ]}
+                  />
+                  <PlanetDetailSection
+                    title="INFRASTRUCTURE"
+                    items={[
+                      { label: "METAL MINE", value: listingLevel(planetDetailsTarget.metalMine) },
+                      { label: "CRYSTAL MINE", value: listingLevel(planetDetailsTarget.crystalMine) },
+                      { label: "DEUT SYNTH", value: listingLevel(planetDetailsTarget.deuteriumSynthesizer) },
+                      { label: "SOLAR PLANT", value: listingLevel(planetDetailsTarget.solarPlant), accent: "var(--warn)" },
+                      { label: "SHIPYARD", value: listingLevel(planetDetailsTarget.shipyard), accent: "var(--cyan)" },
+                      { label: "RESEARCH LAB", value: listingLevel(planetDetailsTarget.researchLab), accent: "var(--purple)" },
+                    ]}
+                  />
+                  <PlanetDetailSection
+                    title="CAPACITY"
+                    items={[
+                      { label: "METAL CAP", value: listingResource(planetDetailsTarget.metalCap), accent: "var(--metal)" },
+                      { label: "CRYSTAL CAP", value: listingResource(planetDetailsTarget.crystalCap), accent: "var(--crystal)" },
+                      { label: "DEUT CAP", value: listingResource(planetDetailsTarget.deuteriumCap), accent: "var(--deut)" },
+                      { label: "ENERGY", value: listingEnergy(planetDetailsTarget), accent: "var(--warn)" },
+                      { label: "FLEET UNITS", value: planetDetailsTarget.fleetUnits !== undefined ? planetDetailsTarget.fleetUnits.toLocaleString() : "-" },
+                      { label: "DEFENSE UNITS", value: planetDetailsTarget.defenseUnits !== undefined ? planetDetailsTarget.defenseUnits.toLocaleString() : "-" },
+                    ]}
+                  />
+                  <PlanetDetailSection
+                    title="TECHNOLOGY"
+                    items={[
+                      { label: "WEAPONS", value: listingLevel(planetDetailsTarget.weaponsTechnology) },
+                      { label: "SHIELDING", value: listingLevel(planetDetailsTarget.shieldingTechnology) },
+                      { label: "ARMOR", value: listingLevel(planetDetailsTarget.armorTechnology) },
+                      { label: "ROBOTICS", value: listingLevel(planetDetailsTarget.roboticsFactory) },
+                      { label: "NANITE", value: listingLevel(planetDetailsTarget.naniteFactory) },
+                      { label: "FUSION", value: listingLevel(planetDetailsTarget.fusionReactor) },
+                    ]}
+                  />
+                </div>
+                <div className="planet-details-actions">
+                  {planetDetailsTarget.isOwn ? (
+                    <>
+                      <button
+                        onClick={() => setPlanetDetailsTarget(null)}
+                        disabled={txBusy}
+                        style={{
+                          padding: "12px 16px", borderRadius: 3,
+                          border: "1px solid var(--border)", background: "transparent",
+                          color: "var(--dim)", cursor: txBusy ? "not-allowed" : "pointer",
+                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                        }}
+                      >
+                        CLOSE
+                      </button>
+                      <button
+                        onClick={() => void handleCancelPlanetListing(planetDetailsTarget).then(() => setPlanetDetailsTarget(null))}
+                        disabled={txBusy}
+                        style={{
+                          padding: "12px 16px", borderRadius: 3,
+                          border: "1px solid rgba(255,0,110,0.4)", background: "rgba(255,0,110,0.06)",
+                          color: "var(--danger)", cursor: txBusy ? "not-allowed" : "pointer",
+                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                        }}
+                      >
+                        CANCEL LISTING
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setPlanetDetailsTarget(null)}
+                        disabled={txBusy}
+                        style={{
+                          padding: "12px 16px", borderRadius: 3,
+                          border: "1px solid var(--border)", background: "transparent",
+                          color: "var(--dim)", cursor: txBusy ? "not-allowed" : "pointer",
+                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                        }}
+                      >
+                        CLOSE
+                      </button>
+                      <button
+                        onClick={() => void handleBuyPlanetListing(planetDetailsTarget).then(() => setPlanetDetailsTarget(null))}
+                        disabled={txBusy || !canTransact || !planetBuyUnlocked || antimatterBalance < planetDetailsTarget.priceAntimatter}
+                        style={{
+                          padding: "12px 16px", borderRadius: 3,
+                          border: canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "1px solid var(--cyan)" : "1px solid var(--border)",
+                          background: canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "rgba(0,245,212,0.1)" : "transparent",
+                          color: canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "var(--cyan)" : "var(--dim)",
+                          cursor: !txBusy && canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "pointer" : "not-allowed",
+                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                        }}
+                      >
+                        {canTransact ? "BUY PLANET" : "ENTER WITH PASSKEY"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {planetBuyTarget && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(4,4,13,0.88)",
+            zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
+            backdropFilter: "blur(6px)",
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setPlanetBuyTarget(null); }}
+        >
+          <div style={{
+            background: "var(--panel)",
+            border: "1px solid rgba(0,245,212,0.25)",
+            borderRadius: "10px 10px 0 0",
+            padding: "24px 20px",
+            width: "100%",
+            maxWidth: 520,
+          }}>
+            <div style={{ width: 36, height: 3, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }}/>
+            <div style={{
+              fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+              letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+              paddingBottom: 10, borderBottom: "1px solid var(--border)",
+            }}>
+              BUY PLANET
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 11 }}>
+              <span style={{ color: "var(--dim)" }}>{planetBuyTarget.planetName || "Planet"} {planetCoordsLabel(planetBuyTarget)}</span>
+              <AmPill amount={planetBuyTarget.priceAntimatter}/>
+            </div>
+            <div style={{ fontSize: 10, color: "var(--dim)", lineHeight: 1.7, marginBottom: 16 }}>
+              This transfers the planet ownership to your player profile when the transaction confirms.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setPlanetBuyTarget(null)}
+                disabled={txBusy}
+                style={{
+                  flex: 1, padding: "12px 16px", borderRadius: 2,
+                  border: "1px solid var(--border)", background: "transparent",
+                  color: "var(--dim)", cursor: "pointer",
+                  fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                }}
+              >CANCEL</button>
+              <button
+                onClick={() => void handleBuyPlanetListing(planetBuyTarget).then(() => setPlanetBuyTarget(null))}
+                disabled={txBusy || !canTransact || antimatterBalance < planetBuyTarget.priceAntimatter}
+                style={{
+                  flex: 2, padding: "12px 16px", borderRadius: 2,
+                  border: `1px solid ${canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--border)"}`,
+                  background: canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "rgba(0,245,212,0.1)" : "transparent",
+                  color: canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--dim)",
+                  cursor: !txBusy && canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "pointer" : "not-allowed",
+                  fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                }}
+              >{canTransact ? "CONFIRM BUY" : "ENTER WITH PASSKEY"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close the !marketLoading && !marketUninitialized wrapper */}
+      </>)}
+    </div>
+  );
+};
+
+export default MarketTab;

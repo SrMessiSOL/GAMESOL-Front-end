@@ -1,0 +1,52 @@
+{
+  "name": "gamesol-passkey-universe",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --mode passkey",
+    "dev:loadtest": "vite --mode loadtest",
+    "build": "tsc && vite build --mode passkey",
+    "build:loadtest": "tsc && vite build --mode loadtest",
+    "test:keeper": "node server/futarchy-keeper.test.cjs",
+    "test:paymaster": "node api/lazor-paymaster.test.cjs",
+    "verify": "npm run build && npm audit --omit=dev --audit-level=high",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@coral-xyz/anchor": "^0.29.0",
+    "@lazorkit/wallet": "2.1.0",
+    "@metadaoproject/programs": "file:vendor/metadaoproject-programs-0.1.1-alpha.0.tgz",
+    "@react-three/drei": "^9.114.3",
+    "@react-three/fiber": "^8.17.10",
+    "@solana/spl-token": "^0.3.11",
+    "@solana/wallet-adapter-react": "^0.15.35",
+    "@solana/web3.js": "^1.91.8",
+    "bs58": "^4.0.1",
+    "buffer": "^6.0.3",
+    "lucide-react": "^1.24.0",
+    "process": "^0.11.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "three": "^0.169.0",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.0",
+    "@types/bs58": "^4.0.4",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^5.2.2",
+    "vite": "^8.0.2"
+  },
+  "overrides": {
+    "@xmldom/xmldom": "0.8.13",
+    "brace-expansion": "5.0.7",
+    "shell-quote": "1.10.0",
+    "tar": "7.5.19",
+    "ws@>=7 <8": "7.5.11",
+    "ws@>=8 <9": "8.21.0"
+  }
+}
