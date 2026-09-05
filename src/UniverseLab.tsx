@@ -9,7 +9,7 @@ import { ChevronDown, ChevronRight, ChevronUp, MapPin, Navigation2, TrendingUp, 
 import { createUniverseSnapshotFromChainData, orbitForSystemPosition, pointOnUniverseOrbit, snapshotFromPublicPlanets, type UniverseMission, type UniverseOrbit, type UniversePlanet, type UniverseSnapshot } from "./universe-data";
 import { fetchAllianceDirectory, fetchAllianceGovernance, fetchAllPublicPlanets, fetchSystemSovereignties, fetchUniverseMapData, SOVEREIGNTY_WRITES_ENABLED, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceStateAccount, type SystemSovereigntyAccount } from "./game-state";
 import { planetSurfaceStyleForSystem, type PlanetSurfaceStyle } from "./planet-style";
-import { planetBiomeIndex } from "./planet-biome-assets";
+import { planetBiomeIndex, planetBiomeTexture } from "./planet-biome-assets";
 import { useProceduralPlanetTexture } from "./procedural-planet-texture";
 import { buyDecisionMarketSide, estimateDecisionMarketBuyMinimum, estimateDecisionMarketSellMinimum, fetchDecisionMarket, launchDecisionProposal, redeemDecisionMarketPositions, requestDecisionMarketFinalization, sellDecisionMarketSide, stakeToDecisionProposal, unstakeFromDecisionProposal, type DecisionMarketSide, type DecisionMarketSnapshot, type SponsoredTokenAccountBuilder } from "./futarchy-market";
 import WalletConnectControl from "./WalletConnectControl";
@@ -329,6 +329,25 @@ const GALAXY_COLORS = ["#86d5ff", "#c597ff", "#ffbd72", "#9cf7d4", "#6d8dff", "#
 type GalaxyDefinition = { id: string; label: string; position: [number, number, number]; density: number; kind: typeof GALAXY_KINDS[number]; tint: string; liveWorlds: number };
 type GalaxySystem = { id: string; label: string; position: [number, number, number]; occupied: boolean; star: StarDefinition; planetCount: number };
 export type UniverseOwnedPlanet = { entity: string; name: string; galaxy: number; system: number; position: number; activeJobs?: number; readyActions?: number; energyPercent?: number };
+
+function EmpireWorldPortrait({ planet, index }: { planet: UniverseOwnedPlanet; index: number }) {
+  const style = planetSurfaceStyleForSystem(planet.position, planet.galaxy, planet.system);
+  const texture = planetBiomeTexture(style);
+  const seed = style.variantSeed ?? 0;
+  return <span
+    className={`empire-world-portrait is-${style.className}${style.rings ? " has-rings" : ""}`}
+    style={{
+      backgroundColor: style.water,
+      backgroundImage: `radial-gradient(circle at 31% 24%, rgba(255,255,255,.54), transparent 21%), linear-gradient(145deg, ${style.atmosphere}1f, ${style.water}38), url(${texture})`,
+      backgroundPosition: `center, center, ${20 + seed % 61}% ${18 + (seed >>> 8) % 65}%`,
+      backgroundSize: "auto, auto, 170%",
+      backgroundBlendMode: "screen, color, normal",
+      borderColor: style.atmosphere,
+      boxShadow: `inset -7px -5px 11px rgba(0,0,0,.72), inset 3px 3px 6px rgba(255,255,255,.12), 0 0 13px ${style.atmosphere}35`,
+    }}
+    aria-hidden="true"
+  ><i>{String(index).padStart(2, "0")}</i></span>;
+}
 // This is one rendered sector of the backend's 1-999 galaxy range. Additional
 // sectors are generated from exactly the same deterministic coordinate seed.
 function buildGalaxySector(firstGalaxy: number, populations: Map<number, number>): GalaxyDefinition[] {
@@ -3230,7 +3249,19 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
         <label><span>SORT</span><select value={planetSort} onChange={(event) => setPlanetSort(event.target.value as "ATTENTION" | "ACTIVE" | "COORDINATES" | "NAME")}><option value="ATTENTION">ACTION NEEDED</option><option value="ACTIVE">ACTIVE FIRST</option><option value="COORDINATES">COORDINATES</option><option value="NAME">NAME</option></select></label>
       </section>
       <div className="empire-results"><span>{filteredOwnedPlanets.length} {filteredOwnedPlanets.length === 1 ? "WORLD" : "WORLDS"}</span><small>Showing {Math.min(visibleOwnedPlanets.length, filteredOwnedPlanets.length)}</small></div>
-      <div className="owned-planet-roster empire-world-list">{visibleOwnedPlanets.map((planet) => { const planetNumber = ownedPlanets.findIndex((candidate) => candidate.entity === planet.entity) + 1; const needsAction = (planet.readyActions ?? 0) > 0 || (planet.energyPercent ?? 100) < 100; return <article className={`${planet.entity === activeOwnedPlanet ? "is-active " : ""}${needsAction ? "needs-action" : ""}`} key={planet.entity}><button className="empire-world-visit" onClick={() => visitOwnedPlanet(planet)}><span className="roster-index">{String(planetNumber).padStart(2, "0")}</span><span className="roster-planet"><b>{planet.name}</b><small>G {planet.galaxy} · S {planet.system} · P {planet.position}</small></span><span className="empire-world-state">{(planet.readyActions ?? 0) > 0 ? <b>{planet.readyActions} READY</b> : (planet.energyPercent ?? 100) < 100 ? <b>LOW POWER</b> : (planet.activeJobs ?? 0) > 0 ? <em>{planet.activeJobs} ACTIVE</em> : <em>STABLE</em>}</span></button><button className="empire-world-operate" aria-label={`Operate ${planet.name}`} onClick={() => onOperatePlanet?.(planet)}>OPERATE</button></article>; })}{filteredOwnedPlanets.length === 0 && <div className="planet-roster-empty"><b>NO WORLDS FOUND</b><span>Change the search or galaxy filter.</span></div>}{visibleOwnedPlanets.length < filteredOwnedPlanets.length && <button className="planet-roster-more" type="button" onClick={() => setPlanetVisibleCount((count) => count + 12)}>LOAD 12 MORE <span>{visibleOwnedPlanets.length} / {filteredOwnedPlanets.length}</span></button>}</div>
+      <div className="owned-planet-roster empire-world-list">{visibleOwnedPlanets.map((planet) => {
+        const planetNumber = ownedPlanets.findIndex((candidate) => candidate.entity === planet.entity) + 1;
+        const needsAction = (planet.readyActions ?? 0) > 0 || (planet.energyPercent ?? 100) < 100;
+        const surfaceStyle = planetSurfaceStyleForSystem(planet.position, planet.galaxy, planet.system);
+        return <article className={`${planet.entity === activeOwnedPlanet ? "is-active " : ""}${needsAction ? "needs-action" : ""}`} key={planet.entity}>
+          <button className="empire-world-visit" onClick={() => visitOwnedPlanet(planet)}>
+            <EmpireWorldPortrait planet={planet} index={planetNumber} />
+            <span className="roster-planet"><b>{planet.name}</b><small>G {planet.galaxy} · S {planet.system} · P {planet.position}</small><i>{surfaceStyle.name}</i></span>
+            <span className="empire-world-state">{(planet.readyActions ?? 0) > 0 ? <b>{planet.readyActions} READY</b> : (planet.energyPercent ?? 100) < 100 ? <b>LOW POWER</b> : (planet.activeJobs ?? 0) > 0 ? <em>{planet.activeJobs} ACTIVE</em> : <em>STABLE</em>}</span>
+          </button>
+          <button className="empire-world-operate" aria-label={`Operate ${planet.name}`} onClick={() => onOperatePlanet?.(planet)}>OPERATE</button>
+        </article>;
+      })}{filteredOwnedPlanets.length === 0 && <div className="planet-roster-empty"><b>NO WORLDS FOUND</b><span>Change the search or galaxy filter.</span></div>}{visibleOwnedPlanets.length < filteredOwnedPlanets.length && <button className="planet-roster-more" type="button" onClick={() => setPlanetVisibleCount((count) => count + 12)}>LOAD 12 MORE <span>{visibleOwnedPlanets.length} / {filteredOwnedPlanets.length}</span></button>}</div>
     </aside> : <aside className={`universe-intel ${hudOpen ? "" : "is-hidden"}`}><div className="intel-kicker">COMMAND NETWORK</div><div className="roster-heading"><div><h1>Your planets</h1><p>{ownedPlanets.length} worlds under your control</p></div><b>{ownedPlanets.length}</b></div>{activePlanet && <button className="visit-active-system" onClick={() => visitOwnedPlanet(activePlanet)}>VISIT ACTIVE SYSTEM</button>}<div className="planet-roster-tools"><label><span>FIND WORLD</span><input type="search" value={planetSearch} onChange={(event) => setPlanetSearch(event.target.value)} placeholder="Name or G:S:P" /></label><label><span>SORT</span><select value={planetSort} onChange={(event) => setPlanetSort(event.target.value as "ATTENTION" | "ACTIVE" | "COORDINATES" | "NAME")}><option value="ATTENTION">ACTION NEEDED</option><option value="ACTIVE">ACTIVE FIRST</option><option value="COORDINATES">COORDINATES</option><option value="NAME">NAME</option></select></label><small>{filteredOwnedPlanets.length} MATCHING</small></div><div className="owned-planet-roster">{visibleOwnedPlanets.map((planet) => { const planetNumber = ownedPlanets.findIndex((candidate) => candidate.entity === planet.entity) + 1; return <button className={planet.entity === activeOwnedPlanet ? "is-active" : ""} key={planet.entity} onClick={() => onOperatePlanet?.(planet)}><span className="roster-index">{String(planetNumber).padStart(2, "0")}</span><span className="roster-planet"><b>{planet.name}</b><small>G {planet.galaxy} · S {planet.system} · P {planet.position}</small></span><em>{planet.entity === activeOwnedPlanet ? "ACTIVE" : "OPERATE"}</em></button>; })}{filteredOwnedPlanets.length === 0 && <div className="planet-roster-empty">NO WORLDS MATCH THIS SEARCH</div>}{visibleOwnedPlanets.length < filteredOwnedPlanets.length && <button className="planet-roster-more" type="button" onClick={() => setPlanetVisibleCount((count) => count + 12)}>SHOW 12 MORE <span>{visibleOwnedPlanets.length} / {filteredOwnedPlanets.length}</span></button>}</div></aside>)}
     {zoomLevel === "system" && !sovereigntyPanelOpen && <button className={`sovereignty-toggle${selectedMarketPhase && ["STAKING", "TRADING", "FINALIZING"].includes(selectedMarketPhase) ? " has-live-market" : ""}`} aria-controls="system-intel-panel" aria-expanded={false} aria-haspopup="dialog" onClick={(event) => { openSovereigntyPanel(event.currentTarget); if (typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches) setHudOpen(false); }}><span>{selectedMarketPhase ? `${selectedMarketPhase} · SYSTEM INTEL` : "SYSTEM INTEL"}</span><b>G {selectedGalaxy} · S {selectedSystem}</b><small>{selectedStar.label.toUpperCase()} · {occupiedPlanetCount} OCCUPIED {occupiedPlanetCount === 1 ? "PLANET" : "PLANETS"}</small></button>}
     {zoomLevel === "system" && selectedLiveMarket && selectedMarketPhase && ["STAKING", "TRADING", "FINALIZING"].includes(selectedMarketPhase) && <button className={`system-market-beacon${selectedMarketPhase === "STAKING" ? " is-staking" : ""}`} onClick={(event) => openMarketHub(event.currentTarget)}><TrendingUp /><span>{selectedMarketPhase === "STAKING" ? "PROPOSAL AWAITING STAKE" : selectedMarketPhase === "FINALIZING" ? "MARKET FINALIZING" : "LIVE DECISION MARKET"}</span><b>{selectedMarketPhase === "STAKING" ? `${selectedLiveMarket.market.totalStaked.toFixed(2)} / ${selectedLiveMarket.market.requiredStake.toFixed(2)} AM` : selectedMarketPhase === "FINALIZING" ? "TRADING CLOSED · KEEPER ACTIVE" : `PASS $${selectedLiveMarket.market.passPrice.toFixed(4)} · FAIL $${selectedLiveMarket.market.failPrice.toFixed(4)}`}</b></button>}
@@ -3323,4 +3354,3 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
     </aside>}
   </main>;
 }
-
