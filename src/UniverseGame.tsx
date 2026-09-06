@@ -13,7 +13,7 @@ import {
   useWallet,
 } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
-import { BarChart3, Building2, CheckCircle2, ChevronLeft, ChevronRight, Crosshair, FlaskConical, Gem, LoaderCircle, Pickaxe, Rocket, Shield, ShoppingCart, TriangleAlert, Trophy, Users, X, Zap } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, BarChart3, Building2, CheckCircle2, ChevronLeft, ChevronRight, Crosshair, FlaskConical, Gem, LoaderCircle, Pickaxe, Rocket, Shield, ShoppingCart, TriangleAlert, Trophy, Users, X, Zap } from "lucide-react";
 import UniverseLab from "./UniverseLab";
 import type { PlanetWorldCommandRequest, PlanetWorldModal } from "./PlanetWorld";
 import { MarketClient } from "./market-client";
@@ -473,29 +473,31 @@ function FundsModal({
         <div><span>PLAYER ACCOUNT</span><h2 id="ug-funds-title">Your assets</h2></div>
         <button ref={closeRef} type="button" aria-label="Close funds" title="Close funds (Esc)" disabled={busy} onClick={onClose}><X aria-hidden="true" /></button>
       </header>
-      {success ? <section className="ug-funds-success"><i>✓</i><h3>Transfer complete</h3><p>{success}</p><button onClick={onClose}>DONE</button></section> : reviewing ? <section className="ug-funds-review">
-        <span>REVIEW TRANSFER</span>
+      {success ? <section className="ug-funds-success"><i>✓</i><h3>Withdrawal complete</h3><p>{success}</p><button onClick={onClose}>DONE</button></section> : reviewing ? <section className="ug-funds-review">
+        <span>REVIEW WITHDRAWAL</span>
         <h3>{amount} {asset}</h3>
         <dl><div><dt>From</dt><dd>Game account</dd></div><div><dt>To</dt><dd className="ug-funds-destination">{destination}</dd></div></dl>
-        <p>Your device will ask you to approve this transfer. Quick Play cannot approve withdrawals.</p>
+        <p>Your device will ask you to approve this withdrawal. Quick Play cannot approve withdrawals.</p>
         {error && <div className="ug-funds-error">{error}</div>}
         <div className="ug-funds-actions"><button className="secondary" disabled={busy} onClick={() => setReviewing(false)}>BACK</button><button disabled={busy} onClick={() => void confirmSend()}>{busy ? "WAITING FOR APPROVAL…" : "CONFIRM WITH PASSKEY"}</button></div>
       </section> : <>
         <section className="ug-funds-balances">
-          <article><span>GAME ACCOUNT</span><b>{formatRawBalance(vaultSol, 9, 4)} SOL</b><small>{formatRawBalance(antimatter, 6, 2)} AM · {formatRawBalance(usdc, 6, 2)} USDC</small></article>
-          <article><span>NETWORK FEES</span><b>SPONSORED</b><small>No separate gameplay wallet to fund</small></article>
+          <article className="sol"><i aria-hidden="true">SOL</i><span>GAME BALANCE</span><b>{formatRawBalance(vaultSol, 9, 4)}</b><small>Solana</small></article>
+          <article className="antimatter"><i aria-hidden="true">AM</i><span>ANTIMATTER</span><b>{formatRawBalance(antimatter, 6, 2)}</b><small>Governance and acceleration</small></article>
+          <article className="usdc"><i aria-hidden="true">$</i><span>USDC</span><b>{formatRawBalance(usdc, 6, 2)}</b><small>Store and market balance</small></article>
+          <article className="sponsor"><i aria-hidden="true">✓</i><span>NETWORK FEES</span><b>SPONSORED</b><small>No separate fee wallet</small></article>
         </section>
         <nav className="ug-funds-mode" aria-label="Asset actions" role="tablist">
-          <button type="button" role="tab" aria-controls="ug-funds-add" className={mode === "add" ? "active" : ""} aria-selected={mode === "add"} onClick={() => { setMode("add"); setError(""); }}>ADD ASSETS <small>Deposit and claim</small></button>
-          <button type="button" role="tab" aria-controls="ug-funds-send" className={mode === "send" ? "active" : ""} aria-selected={mode === "send"} onClick={() => { setMode("send"); setAcquisitionMessage(""); }}>SEND ASSETS <small>Transfer out securely</small></button>
+          <button type="button" role="tab" aria-controls="ug-funds-add" className={mode === "add" ? "active" : ""} aria-selected={mode === "add"} onClick={() => { setMode("add"); setError(""); }}><ArrowDownToLine aria-hidden="true" /><span>DEPOSIT<small>Add assets to your game account</small></span></button>
+          <button type="button" role="tab" aria-controls="ug-funds-send" className={mode === "send" ? "active" : ""} aria-selected={mode === "send"} onClick={() => { setMode("send"); setAcquisitionMessage(""); }}><ArrowUpFromLine aria-hidden="true" /><span>WITHDRAW<small>Move assets to another wallet</small></span></button>
         </nav>
         {mode === "add" ? <section id="ug-funds-add" className="ug-funds-acquire">
-          <div className="ug-funds-section-title"><span>ADD FUNDS</span><b>{IS_DEVNET ? "SOLANA DEVNET" : "SOLANA MAINNET"}</b></div>
+          <div className="ug-funds-section-title"><span>DEPOSIT TO GAME ACCOUNT</span><b>{IS_DEVNET ? "SOLANA DEVNET" : "SOLANA MAINNET"}</b></div>
           <p>{IS_DEVNET
             ? "Test assets have no cash value. Copy your game address, then use the official faucets below."
             : "Buy USDC with an available payment method, then swap USDC for ANTIMATTER when market liquidity is live."}</p>
           <div className="ug-funds-acquire-grid">
-            <button type="button" className="secondary" disabled={acquisitionBusy} onClick={() => void copyGameAddress()}>COPY GAME ADDRESS</button>
+            <button type="button" className="secondary" disabled={acquisitionBusy} onClick={() => void copyGameAddress()}>COPY DEPOSIT ADDRESS</button>
             {IS_DEVNET ? <>
               <a href="https://faucet.circle.com/" target="_blank" rel="noreferrer">GET TEST USDC</a>
               <button type="button" disabled={acquisitionBusy || !onClaimDevnetAntimatter} onClick={() => void claimDevnetAntimatter()}>{acquisitionBusy ? "WORKING…" : "GET TEST ANTIMATTER"}</button>
@@ -508,7 +510,7 @@ function FundsModal({
           {!IS_DEVNET && <small>Apple Pay and Google Pay availability depends on the selected provider, device, region, and identity checks.</small>}
           {acquisitionMessage && <div className="ug-funds-acquire-message" role="status">{acquisitionMessage}</div>}
         </section> : <section id="ug-funds-send" className="ug-funds-send">
-          <div className="ug-funds-section-title"><span>SEND FROM GAME ACCOUNT</span><b>PASSKEY REQUIRED</b></div>
+          <div className="ug-funds-section-title"><span>WITHDRAW FROM GAME ACCOUNT</span><b>PASSKEY REQUIRED</b></div>
           <div className="ug-funds-assets">
             {(["SOL", "AM", "USDC"] as FundsAsset[]).map((entry) => <button key={entry} className={asset === entry ? "active" : ""} disabled={(entry === "AM" && !antimatterAvailable) || (entry === "USDC" && !usdcAvailable)} onClick={() => { setAsset(entry); setAmount(""); setError(""); }}>{entry}</button>)}
           </div>
@@ -516,7 +518,7 @@ function FundsModal({
           <label><span>Send to</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="Solana address" spellCheck={false} /></label>
           {asset === "SOL" && <p className="ug-funds-note">MAX keeps 0.05 SOL in your account so the game continues working.</p>}
           {error && <div className="ug-funds-error">{error}</div>}
-          <button className="ug-funds-primary" disabled={busy || !amount || !destination.trim()} onClick={prepareReview}>REVIEW TRANSFER</button>
+          <button className="ug-funds-primary" disabled={busy || !amount || !destination.trim()} onClick={prepareReview}>REVIEW WITHDRAWAL</button>
         </section>}
         <details className="ug-funds-advanced"><summary>Advanced details</summary><dl><div><dt>Game account</dt><dd>{vaultAddress.toBase58()}</dd></div><div><dt>Fee model</dt><dd>GAMESOL sponsored</dd></div></dl></details>
       </>}
