@@ -20,3 +20,6 @@ android/release-signing.properties
 vite-dev.*.log
 .vercel
 .env*.local
+.env.passkey
+.env.loadtest
+vite.dev.*.log
