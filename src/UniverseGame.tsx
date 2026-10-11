@@ -36,6 +36,7 @@ import {
 import type { UniversePlanet } from "./universe-data";
 import { usePasskeyGameplayVault } from "./usePasskeyGameplayVault";
 import WalletConnectControl from "./WalletConnectControl";
+import { useCryptoUfos } from "./CryptoUfos";
 import { resolveGameArt } from "./ui-art";
 import { BUILDING_REQUIREMENTS } from "./combat-engine";
 
@@ -1425,6 +1426,7 @@ function empireWorldSummary(state: PlayerState, nowTs: number) {
 }
 
 export default function UniverseGame() {
+  const { flagship } = useCryptoUfos();
   const productionPreview = typeof window !== "undefined" && window.location.pathname === "/next";
   const { connection } = useConnection();
   const { publicKey } = useWallet();
@@ -2240,7 +2242,7 @@ export default function UniverseGame() {
                   </header>
 
                   <section className="ug-account-identity">
-                    <span className="ug-account-avatar" aria-hidden="true">{walletLabel.slice(0, 2)}</span>
+                    {flagship?.image ? <img className="ug-account-avatar" src={flagship.image} alt={flagship.name} style={{ objectFit: 'cover' }} /> : <span className="ug-account-avatar" aria-hidden="true">{walletLabel.slice(0, 2)}</span>}
                     <div><strong>{walletLabel}</strong><small>Permanent passkey game account · {NETWORK_LABEL}</small></div>
                     <b className={passkey.connected ? "good" : ""}>{passkey.connected ? "SECURE" : "OFFLINE"}</b>
                   </section>
@@ -2421,6 +2423,7 @@ export default function UniverseGame() {
                     </div>
                   </section>}
                   <div className="ug-wallet-actions">
+                    <a href="/founders">{flagship ? flagship.name : 'CRYPTO UFOS'}</a>
                     <button onClick={() => void passkey.disconnect()}>SIGN OUT</button>
                   </div>
                   <details className="ug-passkey-funding-note">

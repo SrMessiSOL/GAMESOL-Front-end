@@ -6,6 +6,7 @@ import { Connection } from "@solana/web3.js";
 import { DialogManager, LazorKitClient, LazorkitProvider } from "@lazorkit/wallet";
 import "./index.css";
 import WalletConnectionProvider from "./WalletConnectionProvider";
+import { CryptoUfosProvider } from "./CryptoUfos";
 import { IS_SHARED_PUBLIC_RPC, RPC_ENDPOINT } from "./game-state";
 import { installSolanaRpcFetchGuard } from "./rpc-fetch-guard";
 import gamesolMark from "./assets/ui/logobg.png";
@@ -93,6 +94,8 @@ async function bootstrap() {
   const pathname = window.location.pathname;
   const { default: App } = pathname === "/app" || pathname === "/universe-game" || pathname === "/universe-lab" || pathname === "/next"
     ? await import("./UniverseGame")
+    : pathname === "/founders"
+      ? await import("./CryptoUfos")
     : pathname === "/sovereignty-lab"
       ? await import("./UniverseLab")
       : await import("./App");
@@ -107,7 +110,7 @@ async function bootstrap() {
       }}
     >
       <WalletConnectionProvider>
-        <App />
+        <CryptoUfosProvider><App /></CryptoUfosProvider>
       </WalletConnectionProvider>
     </LazorkitProvider>
   );

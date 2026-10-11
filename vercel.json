@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
+    "api/crypto-ufos.js": { "maxDuration": 60 },
     "api/futarchy-finalizer.js": { "maxDuration": 60 },
     "api/lazor-paymaster.js": { "maxDuration": 30 },
     "api/solana-rpc.js": { "maxDuration": 30 }

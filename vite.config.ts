@@ -1,6 +1,40 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
+import { createRequire } from 'node:module'
+
+function cryptoUfosGateway(env: Record<string, string>) {
+  const require = createRequire(import.meta.url)
+  const { createService } = require('./server/crypto-ufos.cjs')
+  let service: ReturnType<typeof createService>
+  return {
+    name: 'gamesol-crypto-ufos-api',
+    configureServer(server: { middlewares: { use: (path: string, handler: (req: any, res: any) => void) => void } }) {
+      server.middlewares.use('/api/crypto-ufos', (req, res) => {
+        res.setHeader('content-type', 'application/json')
+        res.setHeader('cache-control', 'no-store')
+        if (req.method !== 'POST') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed.' })); return }
+        try {
+          if (new URL(req.headers.origin).host !== req.headers.host) throw new Error()
+        } catch { res.statusCode = 403; res.end(JSON.stringify({ error: 'Use the game website to link your wallet.' })); return }
+        const chunks: Buffer[] = []
+        let size = 0
+        req.on('data', (chunk: Buffer) => { size += chunk.length; if (size <= 16000) chunks.push(chunk) })
+        req.on('end', () => {
+          if (size > 16000) { res.statusCode = 413; res.end(JSON.stringify({ error: 'Request too large.' })); return }
+          void (async () => {
+            service ||= createService({ env })
+            const value = await service(JSON.parse(Buffer.concat(chunks).toString()), new URL(req.headers.origin).origin)
+            res.end(JSON.stringify(value))
+          })().catch((error: unknown) => {
+            res.statusCode = 503
+            res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'NFT service unavailable.' }))
+          })
+        })
+      })
+    },
+  }
+}
 
 function resilientRpcGateway(target: URL, maxConcurrent: number) {
   let active = 0
@@ -96,6 +130,7 @@ function resilientRpcGateway(target: URL, maxConcurrent: number) {
 
 export default defineConfig(({ mode }) => {
   const serverEnv = loadEnv(mode, __dirname, '')
+  const nftEnv = { ...loadEnv('nft.server', __dirname, ''), ...serverEnv, ...process.env } as Record<string, string>
   const heliusApiKey = (process.env.HELIUS_API_KEY || serverEnv.HELIUS_API_KEY)?.trim()
   const privateRpcTarget = (
     process.env.GAMESOL_RPC_PROXY_TARGET
@@ -106,7 +141,7 @@ export default defineConfig(({ mode }) => {
   const wsUrl = new URL(rpcUrl.toString().replace(/^https:/, 'wss:').replace(/^http:/, 'ws:'))
 
   return {
-    plugins: [react(), resilientRpcGateway(rpcUrl, privateRpcTarget ? 6 : 2)],
+    plugins: [react(), resilientRpcGateway(rpcUrl, privateRpcTarget ? 6 : 2), cryptoUfosGateway(nftEnv)],
     assetsInclude: ['**/*.glb'],
     server: {
       host: '127.0.0.1',
