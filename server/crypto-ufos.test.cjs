@@ -13,6 +13,43 @@ const input = { owner, smartWallet: smartWallet.toBase58(), commander: vault.toB
 const asset = { id: Keypair.generate().publicKey.toBase58(), compression: { compressed: true }, ownership: { owner },
   grouping: [{ group_key: 'collection', group_value: nft.COLLECTION }], content: { metadata: { name: 'Test NFT' }, links: { image: 'https://example.com/art.png' } } };
 
+test('public owner reader needs no passkey, commander, signature or link secret', async () => {
+  const service = nft.createService({ env: {}, connection: { getAccountInfo() { throw new Error('Must not consult LazorKit'); } },
+    das: async () => ({ items: [asset, { ...asset, id: 'wrong-owner', ownership: { owner: input.commander } }] }) });
+  const result = await service({ action: 'owner-assets', owner }, origin);
+  assert.equal(result.owner, owner);
+  assert.equal(result.assets.length, 1);
+  assert.equal(result.assets[0].id, asset.id);
+  assert.equal(result.identityVerified, false);
+  assert.equal(result.linkToken, undefined);
+  await assert.rejects(service({ action: 'owner-assets', owner: 'invalid!' }, origin));
+});
+
+test('direct holding-wallet connection calls connect only, never signing', async () => {
+  const fs = require('node:fs');
+  const ts = require('typescript');
+  const Module = require('node:module');
+  const source = fs.readFileSync(require('node:path').join(__dirname, '../src/nft-holding-wallet.ts'), 'utf8');
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const module = new Module('holding-wallet-test');
+  module._compile(compiled, 'holding-wallet-test.cjs');
+  let connections = 0;
+  const options = [];
+  const account = { address: owner, chains: ['solana:mainnet'], features: [] };
+  const wallet = { features: {
+    'standard:connect': { connect: async (input) => { connections++; options.push(input); return { accounts: [account] }; } },
+    'solana:signMessage': { signMessage() { throw new Error('Must not sign'); } },
+    'solana:signTransaction': { signTransaction() { throw new Error('Must not transact'); } },
+  } };
+  assert.equal((await module.exports.connectHoldingWallet(wallet)).address, owner);
+  assert.equal(connections, 1);
+  assert.equal((await module.exports.connectHoldingWallet(wallet, true)).address, owner);
+  assert.deepEqual(options, [{ silent: false }, { silent: true }]);
+  assert.equal(module.exports.holdingAccount([]), null);
+  const ui = fs.readFileSync(require('node:path').join(__dirname, '../src/CryptoUfos.tsx'), 'utf8');
+  assert.doesNotMatch(ui, /DialogManager|useLazorWallet|passkeyProof|holdingSignature|signMessage|linkToken/);
+});
+
 test('challenge receipts reject tampering, expiry, wrong site and wrong purpose', () => {
   const challenge = nft.createChallenge(input, origin, key, 1000);
   assert.equal(nft.unseal(challenge.challengeToken, key, 'challenge', origin, 1001).owner, owner);

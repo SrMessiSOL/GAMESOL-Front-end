@@ -1,17 +1,17 @@
-# Crypto UFOs wallet linking
+# Crypto UFOs holding-wallet reader
 
-The game account remains the LazorKit devnet vault. An independent mainnet
-Wallet Standard account signs a domain-bound message identifying that vault.
-The game passkey approves the same challenge. The server verifies Ed25519 and
-WebAuthn P-256 signatures, including the registered devnet authority account.
-Neither approval transfers assets or authorizes a game transaction.
+The game account remains the LazorKit devnet vault. The NFT reader connects an
+independent Wallet Standard wallet such as Solflare and reads its public mainnet
+holdings. It does not call message signing, transaction signing or the LazorKit
+portal. NFT browsing does not require a game account to be signed in.
 
 ## Configuration
 
 Set `GAMESOL_MAINNET_DAS_RPC_URL` to a mainnet Helius DAS RPC URL in the Vercel
 `frontend` project. This value is server-only; never use a `VITE_` prefix.
-Set `GAMESOL_NFT_LINK_SECRET` to a random secret of at least 32 characters.
-The existing `CRON_SECRET` is accepted as a fallback with a derived purpose key.
+Read-only `owner-assets` and `collection` actions do not require a link secret.
+Legacy signed-link API actions retain their original two-signature verification
+and signing secret; the current frontend no longer calls those actions.
 Local development can use an ignored `.env.nft.server.local` file.
 
 The provider's mainnet genesis hash is verified before any NFT queries.
@@ -25,19 +25,24 @@ image attempted after the provider CDN fails. No substitute art is used.
 ## First scope
 
 `/founders` displays actual DAS collection metadata and artwork. Players can
-link a holding wallet and select an owned cNFT as a cosmetic flagship identity.
+connect a holding wallet and select an owned cNFT as a cosmetic flagship identity.
 The game account menu uses its actual artwork. No stats or rewards change.
 Ownership is checked on assignment, refresh, focus and every visible minute.
-Failures remove active holder identity. Link receipts expire after seven days.
+Failures remove active holder identity. Wallet account changes and disconnects
+clear the previous wallet's assets and selected identity.
 
-Receipts are HMAC-signed and stored on this device, not in a central database.
-Link again on another device. Unlink removes this device's receipt only; it is
-not global revocation. This cosmetic implementation does not enforce a globally
-unique NFT-to-commander binding and must not be used to award economic benefits.
+The browser remembers only the wallet name and cosmetic selection. Returning
+to the game uses Wallet Standard silent connect; the owner address comes from
+the wallet, never from browser storage. Selection is checked against fresh DAS
+holdings before it is restored. Disconnecting the NFT reader leaves LazorKit and
+the wallet extension unchanged. This is not an authenticated permanent account
+link. `identityVerified` is explicitly false; never award economic benefits from
+this reader's response.
 
 ## Validation
 
-`npm run test:nfts` covers receipt tampering, expiry, domain/purpose separation,
-both signature algorithms, current collection ownership and sold-NFT clearing.
-A real external-wallet plus real LazorKit passkey rehearsal is still required.
+`npm run test:nfts` checks the direct connection makes no signing calls, supports
+silent reconnect, and reads holdings without a commander, passkey or secret.
+It also retains legacy signature tests and ownership/collection checks.
+A real Solflare-extension connection rehearsal is still required.
 Test Phantom, Solflare and Jupiter separately in their actual environments.

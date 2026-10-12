@@ -179,10 +179,13 @@ async function fetchOwnedAssets(owner, das) {
 }
 
 function createService({ env = process.env, connection, das, now = Date.now } = {}) {
-  const key = signingKey(env);
   const rpc = connection || new Connection(env.SOLANA_RPC_URL || 'https://api.devnet.solana.com', 'confirmed');
   const lookup = das || createDas(mainnetEndpoint(env));
   return async (body, origin) => {
+    if (body.action === 'owner-assets') {
+      const owner = address(body.owner);
+      return { owner, assets: await fetchOwnedAssets(owner, lookup), checkedAt: now(), identityVerified: false };
+    }
     if (body.action === 'collection') {
       const page = Number.isInteger(body.page) && body.page >= 1 && body.page <= 1000 ? body.page : 1;
       const result = await lookup('getAssetsByGroup', { groupKey: 'collection', groupValue: COLLECTION, page, limit: 24 });
@@ -190,6 +193,7 @@ function createService({ env = process.env, connection, das, now = Date.now } = 
       return { collection: COLLECTION, assets: result.items.filter((asset) => ownedCollectionAsset(asset, asset.ownership?.owner)).map(displayAsset),
         page, hasMore: result.items.length === 24, total: result.total, checkedAt: now() };
     }
+    const key = signingKey(env);
     if (body.action === 'challenge') return createChallenge(body, origin, key, now());
     if (body.action === 'link') {
       const data = unseal(body.challengeToken, key, 'challenge', origin, now());
