@@ -37,6 +37,7 @@ import type { UniversePlanet } from "./universe-data";
 import { usePasskeyGameplayVault } from "./usePasskeyGameplayVault";
 import WalletConnectControl from "./WalletConnectControl";
 import { useCryptoUfos, CommanderAvatar, CommanderAvatarDialog } from "./CryptoUfos";
+import { SceneTransition, useSceneTransit } from "./SceneTransition";
 import { resolveGameArt } from "./ui-art";
 import { BUILDING_REQUIREMENTS } from "./combat-engine";
 
@@ -141,19 +142,6 @@ function PlanetWorldLoading({ worldName }: { worldName: string }) {
     <h2>{worldName}</h2>
     <p>Loading the planetary surface, live facilities, fleet control, and on-chain command systems.</p>
     <div className="ug-world-loader-progress" aria-hidden="true"><i /></div>
-  </section>;
-}
-
-function PlanetTransitTransition({ worldName, coordinates, direction = "approach" }: { worldName: string; coordinates: string; direction?: "approach" | "departure" }) {
-  const departing = direction === "departure";
-  return <section className={`ug-planet-approach${departing ? " is-departure" : ""}`} role="status" aria-live="polite">
-    <div className="ug-planet-approach-vignette" aria-hidden="true"><i /><b /><span /></div>
-    <div className="ug-planet-approach-copy">
-      <span>{departing ? "ORBITAL ASCENT CONFIRMED" : "APPROACH VECTOR LOCKED"}</span>
-      <h2>{worldName}</h2>
-      <p>{coordinates}</p>
-    </div>
-    <div className="ug-planet-approach-status"><i /><b>{departing ? "RETURNING TO SYSTEM COMMAND" : "ENTERING PLANETARY ORBIT"}</b></div>
   </section>;
 }
 
@@ -528,6 +516,7 @@ function FundsModal({
 }
 
 import "./universe-game.css";
+import './game-polish.css';
 
 const RESEARCH = [
   "Energy Technology",
@@ -1435,8 +1424,7 @@ export default function UniverseGame() {
   const [planets, setPlanets] = useState<PlayerState[]>([]);
   const [target, setTarget] = useState<MissionTarget | null>(null);
   const [planetWorldEntity, setPlanetWorldEntity] = useState<string | null>(null);
-  const [planetApproach, setPlanetApproach] = useState<{ id: number; name: string; coordinates: string } | null>(null);
-  const [planetDeparture, setPlanetDeparture] = useState<{ id: number; name: string; coordinates: string } | null>(null);
+  const planetTransit = useSceneTransit();
   const [planetCommandRequest, setPlanetCommandRequest] = useState<PlanetWorldCommandRequest | null>(null);
   const [returnSystem, setReturnSystem] = useState<{ galaxy: number; system: number } | null>(null);
   const [sourceEntity, setSourceEntity] = useState("");
@@ -1728,35 +1716,17 @@ export default function UniverseGame() {
     modal?: PlanetWorldModal,
     mission?: PlanetWorldCommandRequest["mission"],
   ) => {
-    if (!modal) {
-      const destination = planets.find((planet) => planet.entityPda === entity);
-      if (destination) setPlanetApproach({
-        id: Date.now(),
-        name: destination.planet.name || "Command world",
-        coordinates: `G ${destination.planet.galaxy} · S ${destination.planet.system} · P ${destination.planet.position}`,
-      });
-    }
-    setSourceEntity(entity);
-    setPlanetWorldEntity(entity);
-    setTarget(null);
-    setPlanetCommandRequest(modal ? {
-      id: Date.now(),
-      modal,
-      mission,
-    } : null);
+    const open = () => {
+      setSourceEntity(entity);
+      setPlanetWorldEntity(entity);
+      setTarget(null);
+      setPlanetCommandRequest(modal ? { id: Date.now(), modal, mission } : null);
+    };
+    const destination = planets.find((planet) => planet.entityPda === entity);
+    if (!destination) return;
+    if (planetWorldEntity === entity) open();
+    else planetTransit.begin(open, destination.planet.name || "Planet", `G ${destination.planet.galaxy} / S ${destination.planet.system} / P ${destination.planet.position}`);
   };
-  useEffect(() => {
-    if (!planetApproach) return;
-    const approachId = planetApproach.id;
-    const timer = window.setTimeout(() => setPlanetApproach((current) => current?.id === approachId ? null : current), 1_150);
-    return () => window.clearTimeout(timer);
-  }, [planetApproach]);
-  useEffect(() => {
-    if (!planetDeparture) return;
-    const departureId = planetDeparture.id;
-    const timer = window.setTimeout(() => setPlanetDeparture((current) => current?.id === departureId ? null : current), 950);
-    return () => window.clearTimeout(timer);
-  }, [planetDeparture]);
 
   // Selecting a source planet is not a command. Keep the universe visible
   // until the player explicitly opens a planet or target from the map/roster.
@@ -2051,6 +2021,7 @@ export default function UniverseGame() {
         productionUi={productionPreview}
         initialEmpireOpen={!returnSystem}
         onNavigationLevelChange={setExplorationLevel}
+        onSceneReady={planetTransit.ready}
         onOpenCommand={(planet) => {
           const ownedPlanet = planets.find((candidate) => candidate.entityPda === planet.id);
           if (ownedPlanet) {
@@ -2112,6 +2083,7 @@ export default function UniverseGame() {
         <PlanetWorldBoundary>
         <React.Suspense fallback={<PlanetWorldLoading worldName={planetWorldState.planet.name || "Command world"} />}>
         <PlanetWorld
+          onSceneReady={planetTransit.ready}
           state={planetWorldState}
           busy={busy}
           run={(label, action) => runForEntity(label, planetWorldState.entityPda, action)}
@@ -2140,14 +2112,11 @@ export default function UniverseGame() {
             },
           }}
           onExit={() => {
-            setPlanetDeparture({
-              id: Date.now(),
-              name: planetWorldState.planet.name || "Command world",
-              coordinates: `G ${planetWorldState.planet.galaxy} · S ${planetWorldState.planet.system} · P ${planetWorldState.planet.position}`,
-            });
-            setReturnSystem({ galaxy: planetWorldState.planet.galaxy, system: planetWorldState.planet.system });
-            setPlanetWorldEntity(null);
-            setPlanetCommandRequest(null);
+            planetTransit.begin(() => {
+              setReturnSystem({ galaxy: planetWorldState.planet.galaxy, system: planetWorldState.planet.system });
+              setPlanetWorldEntity(null);
+              setPlanetCommandRequest(null);
+            }, `System ${planetWorldState.planet.system}`, `Galaxy ${planetWorldState.planet.galaxy}`);
           }}
           onOpenWallet={() => setWalletMenuOpen(true)}
           wallet={publicKey ? {
@@ -2174,8 +2143,7 @@ export default function UniverseGame() {
         </React.Suspense>
         </PlanetWorldBoundary>
       )}
-      {planetApproach && <PlanetTransitTransition worldName={planetApproach.name} coordinates={planetApproach.coordinates} />}
-      {planetDeparture && <PlanetTransitTransition worldName={planetDeparture.name} coordinates={planetDeparture.coordinates} direction="departure" />}
+      <SceneTransition state={planetTransit.state} />
       {!planetWorldState && publicKey && !loadingPlanets && selectedState && (
         <nav ref={commandDockRef} className="ug-global-command" aria-label="Game command center" onScroll={updateCommandDock}>
           <button className="primary" onClick={() => openPlanetCommand(selectedState.entityPda)}><BarChart3 /><span>PLANET</span></button>

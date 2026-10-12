@@ -1,0 +1,12 @@
+.scene-transit{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;background:#03070c;color:#eef5f7;animation:scene-cover 160ms ease-out both;pointer-events:auto}
+.scene-transit.is-loading,.scene-transit.is-error{animation:none;opacity:1}
+.scene-transit.is-revealing{animation:scene-reveal 280ms ease-in both}
+.scene-transit-caption{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;max-width:calc(100% - 40px);text-align:center;font:14px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+.scene-transit-caption strong{font-weight:600;overflow-wrap:anywhere}
+.scene-transit-caption span{flex-basis:100%;color:#95a9b4;font:12px/1.5 'DM Mono',monospace}
+.scene-transit-caption>svg{color:#83dec7;animation:scene-spinner 900ms linear infinite}
+.scene-transit-caption button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #83dec7;border-radius:5px;background:#16392f;color:#e1fff4;font:inherit}
+@keyframes scene-cover{from{opacity:0}to{opacity:1}}
+@keyframes scene-reveal{from{opacity:1}to{opacity:0}}
+@keyframes scene-spinner{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.scene-transit,.scene-transit.is-revealing,.scene-transit-caption>svg{animation:none}.scene-transit.is-revealing{opacity:0}}

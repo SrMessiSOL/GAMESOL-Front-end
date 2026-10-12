@@ -2,7 +2,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ArcballControls, Billboard, Environment, Lightformer, Stars, Text, useGLTF, useTexture } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { Activity, Building2, ChevronLeft, ChevronRight, CircleAlert, Crosshair, FlaskConical, Gem, Hammer, Inbox, LoaderCircle, Menu, Pickaxe, Rocket, Scale, Shield, ShoppingCart, Trophy, Users, X, Zap } from "lucide-react";
+import { Activity, Building2, ChevronLeft, ChevronRight, CircleAlert, Crosshair, FlaskConical, Gem, Hammer, Inbox, LoaderCircle, Menu, Pickaxe, Rocket, RotateCcw, Scale, Shield, ShoppingCart, Trophy, Users, X, Zap } from "lucide-react";
 import { ALLIANCE_CREATE_ANTIMATTER_COST, ALLIANCE_CREATE_USDC_COST, BUILDINGS, EXPLORER_CLUSTER, GAMESOL_GOVERNANCE_ROOT_ENABLED, NETWORK_LABEL, SHIPS, SHIP_TYPE_IDX, SYSTEM_SOVEREIGNTY_ACTION_COSTS, buildTimeSecs, energyEfficiency, upgradeCost, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceJoinRequestAccount, type AllianceMembershipAccount, type AllianceStateAccount, type AllianceTreasuryStateAccount, type BattleResolvedEventRecord, type EspionageReportEventRecord, type GameClient, type GamesolGovernanceConfigAccount, type PlayerState, type QuestProgressStateAccount, type QuestRewardTargetStateAccount, type QuestStateAccount, type StoreConfigState, type StorePurchaseStateAccount } from "./game-state";
 import { PublicKey } from "@solana/web3.js";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
@@ -10,10 +10,14 @@ import { activeQuestDefinitions, allianceBuildingCost, ALLIANCE_BUILDINGS, ALLIA
 import gamesolMark from "./assets/ui/logobg.png";
 import WalletConnectControl from "./WalletConnectControl";
 import { CommanderAvatar } from "./CryptoUfos";
+import { SceneReady, useCameraInputCancel } from './SceneTransition';
+import { easeSceneProgress, motionDuration } from './scene-motion';
 import usdcCoin from "./assets/ui/usdc.svg";
 import "./planet-world.css";
 import "./planet-world-extra.css";
 import "./planet-world-local.css";
+import './game-polish.css';
+import { GameButton, GameIconButton } from './design-system/game-ui';
 import { resolveGameArt, resolveGameArtUrl } from "./ui-art";
 import type { MarketClient } from "./market-client";
 import MarketTab from "./Markettab";
@@ -1186,12 +1190,13 @@ function PlanetCameraRig({ selected, selectedLevel, resetCommand, inspectionActi
   const { camera } = useThree();
   const mounted = useRef(false);
   const transition = useRef<{ startedAt: number; duration: number; fromPosition: THREE.Vector3; fromTarget: THREE.Vector3; toPosition: THREE.Vector3; toTarget: THREE.Vector3 } | null>(null);
+  useCameraInputCancel(controls, transition);
   const beginTransition = (toPosition: THREE.Vector3, toTarget: THREE.Vector3, duration: number) => {
     const orbit = controls.current;
     if (!orbit) return;
     transition.current = {
       startedAt: performance.now(),
-      duration,
+      duration: Math.max(1, motionDuration(duration)),
       fromPosition: camera.position.clone(),
       fromTarget: orbit.target.clone(),
       toPosition,
@@ -1206,7 +1211,7 @@ function PlanetCameraRig({ selected, selectedLevel, resetCommand, inspectionActi
       camera.position.set(0, 3.2, 19.5);
       orbit.target.set(0, 0, 0);
       orbit.update();
-      beginTransition(new THREE.Vector3(0, .9, 13.8), new THREE.Vector3(0, 0, 0), 2250);
+      beginTransition(new THREE.Vector3(0, .9, 13.8), new THREE.Vector3(0, 0, 0), 850);
       return;
     }
     if (!inspectionActive) return;
@@ -1226,18 +1231,18 @@ function PlanetCameraRig({ selected, selectedLevel, resetCommand, inspectionActi
     const side = selected % 2 === 0 ? 1 : -1;
     const toTarget = normal.clone().multiplyScalar(5.98 + silhouetteHeight);
     const toPosition = toTarget.clone().addScaledVector(normal, cameraDistance).addScaledVector(tangent, lateral * side).addScaledVector(bitangent, elevation);
-    beginTransition(toPosition, toTarget, 1650 + stage * 110);
+    beginTransition(toPosition, toTarget, 550 + stage * 60);
   }, [inspectionActive, selected, selectedLevel]);
   useEffect(() => {
     if (!resetCommand) return;
-    beginTransition(new THREE.Vector3(0, .9, 13.8), new THREE.Vector3(0, 0, 0), 1250);
+    beginTransition(new THREE.Vector3(0, .9, 13.8), new THREE.Vector3(0, 0, 0), 450);
   }, [resetCommand]);
   useFrame(() => {
     const active = transition.current;
     const orbit = controls.current;
     if (!active || !orbit) return;
     const progress = THREE.MathUtils.clamp((performance.now() - active.startedAt) / active.duration, 0, 1);
-    const eased = 1 - Math.pow(1 - progress, 4);
+    const eased = easeSceneProgress(progress);
     camera.position.lerpVectors(active.fromPosition, active.toPosition, eased);
     orbit.target.lerpVectors(active.fromTarget, active.toTarget, eased);
     orbit.update();
@@ -1725,7 +1730,7 @@ export type PlanetWorldCommandRequest = {
   };
 };
 
-export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wallet, game, market, worlds, ownedWorlds, activity, marketControls, vaultControls, allianceBalances, commandRequest }: { state: PlayerState; busy: boolean; run: (label: string, action: (client: GameClient, entity: PublicKey) => Promise<unknown>) => Promise<void>; onExit: () => void; onOpenWallet?: () => void; wallet: PlanetWalletSummary | null; game: GameClient | null; market: MarketClient | null; worlds: Array<{ entity: string; name: string }>; ownedWorlds: PlayerState[]; activity: { battleReports: BattleResolvedEventRecord[]; spyReports: EspionageReportEventRecord[]; loading: boolean; refresh: () => Promise<void> }; marketControls: { onTxStart: (label: string) => void; onTxEnd: (error?: string) => void }; vaultControls: { depositAmount: string; withdrawAmount: string; onDepositAmountChange: (value: string) => void; onWithdrawAmountChange: (value: string) => void; onDeposit: () => Promise<void>; onWithdraw: () => Promise<void>; busy: boolean }; allianceBalances: { usdc: bigint; antimatter: bigint }; commandRequest?: PlanetWorldCommandRequest | null }) {
+export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wallet, game, market, worlds, ownedWorlds, activity, marketControls, vaultControls, allianceBalances, commandRequest, onSceneReady }: { state: PlayerState; busy: boolean; run: (label: string, action: (client: GameClient, entity: PublicKey) => Promise<unknown>) => Promise<void>; onExit: () => void; onOpenWallet?: () => void; wallet: PlanetWalletSummary | null; game: GameClient | null; market: MarketClient | null; worlds: Array<{ entity: string; name: string }>; ownedWorlds: PlayerState[]; activity: { battleReports: BattleResolvedEventRecord[]; spyReports: EspionageReportEventRecord[]; loading: boolean; refresh: () => Promise<void> }; marketControls: { onTxStart: (label: string) => void; onTxEnd: (error?: string) => void }; vaultControls: { depositAmount: string; withdrawAmount: string; onDepositAmountChange: (value: string) => void; onWithdrawAmountChange: (value: string) => void; onDeposit: () => Promise<void>; onWithdraw: () => Promise<void>; busy: boolean }; allianceBalances: { usdc: bigint; antimatter: bigint }; commandRequest?: PlanetWorldCommandRequest | null; onSceneReady?: () => void }) {
   const { publicKey: connectedPublicKey, connect, disconnect } = useWallet();
   const [selected, setSelected] = useState(0);
   const [cameraReset, setCameraReset] = useState(0);
@@ -2496,7 +2501,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
       <Canvas shadows camera={{ position: [0, .9, 13.8], fov: 40 }} dpr={[1, 1.45]} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.setClearColor("#01030a"); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.04; }}>
         <color attach="background" args={["#01030a"]} />
         <Stars radius={68} depth={34} count={1050} factor={2.25} saturation={.5} fade speed={0} />
-        <Suspense fallback={null}><WorldStructures state={state} selected={selected} onSelect={selectFacility} /></Suspense>
+        <Suspense fallback={null}><WorldStructures state={state} selected={selected} onSelect={selectFacility} /><SceneReady sceneKey={state.entityPda} onReady={onSceneReady} /></Suspense>
         <PlanetCameraRig selected={selected} selectedLevel={Number((state.planet as unknown as Record<string, number>)[BUILDINGS[selected].key] ?? 0)} resetCommand={cameraReset} inspectionActive={inspectionActive} />
       </Canvas>
       <div className={`pw-scene-readout${inspectionActive ? " is-inspecting" : ""}`}>
@@ -2504,11 +2509,11 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
         <b>{inspectionActive ? BUILDINGS[selected].name.toUpperCase() : `${planetSurfaceStyleForSystem(state.planet.position, state.planet.galaxy, state.planet.system).name.toUpperCase()} WORLD`}</b>
         <small>{inspectionActive ? `LEVEL ${Number((state.planet as unknown as Record<string, number>)[BUILDINGS[selected].key] ?? 0)} · STAGE ${facilityStage(Number((state.planet as unknown as Record<string, number>)[BUILDINGS[selected].key] ?? 0))} ARCHITECTURE · ← → SWITCH · ENTER COMMAND` : `${SHIPS.filter((ship) => ship.key !== "solarSatellite").reduce((total, ship) => total + Number((state.fleet as unknown as Record<string, number>)[ship.key] ?? 0), 0).toLocaleString()} VESSELS · ${state.fleet.solarSatellite.toLocaleString()} SOLAR SATELLITES · SHIPYARD L${state.planet.shipyard}`}</small>
         {inspectionActive ? <div className="pw-inspection-controls">
-          <button type="button" aria-label="Previous constructed facility" onClick={() => cycleInspection(-1)}>PREVIOUS</button>
-          <button type="button" className="primary" onClick={openInspectionCommand}>OPEN COMMAND</button>
-          <button type="button" aria-label="Next constructed facility" onClick={() => cycleInspection(1)}>NEXT</button>
-          <button type="button" className="orbit" onClick={returnToOrbit}>RETURN TO ORBIT</button>
-        </div> : <button type="button" onClick={returnToOrbit}>RESET ORBIT</button>}
+          <GameIconButton label="Previous constructed facility" onClick={() => cycleInspection(-1)}><ChevronLeft aria-hidden="true" /></GameIconButton>
+          <GameButton className="primary" onClick={openInspectionCommand}><Building2 aria-hidden="true" /> Open command</GameButton>
+          <GameIconButton label="Next constructed facility" onClick={() => cycleInspection(1)}><ChevronRight aria-hidden="true" /></GameIconButton>
+          <GameButton className="orbit" onClick={returnToOrbit}><RotateCcw aria-hidden="true" /> Return to orbit</GameButton>
+        </div> : <GameIconButton label="Reset orbit" onClick={returnToOrbit}><RotateCcw aria-hidden="true" /></GameIconButton>}
       </div>
       <div className="pw-scene-vignette" aria-hidden="true" />
     </section>

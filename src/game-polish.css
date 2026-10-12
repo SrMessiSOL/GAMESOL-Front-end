@@ -1,0 +1,63 @@
+.universe-game-root .wallet-connect-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:1px solid #82dec7;border-radius:5px;background:#163d32;color:#eafff6;font:600 12px/1.2 Outfit,system-ui,sans-serif;letter-spacing:0;box-shadow:none}
+.universe-game-root .wallet-connect-btn:hover:not(:disabled){background:#205344;border-color:#b0f4df}
+.universe-game-root .wallet-connect-btn:disabled{opacity:.55;cursor:wait}
+.universe-lab .navigation-console .polished-control,.universe-lab .navigation-rail-toggle{display:inline-flex!important;align-items:center;justify-content:center;gap:7px;min-height:44px!important;height:44px!important;min-width:44px;border-radius:5px!important;border:1px solid #35535e!important;background:#10212a!important;color:#dceef2!important;font:600 12px/1.2 Outfit,system-ui,sans-serif!important;letter-spacing:0!important;box-shadow:none!important;transition:background 140ms ease,border-color 140ms ease,color 140ms ease!important}
+.universe-lab .navigation-console .polished-control svg,.universe-lab .navigation-rail-toggle svg{width:18px!important;height:18px!important;flex-shrink:0}
+.universe-lab .navigation-console .gds-icon-button,.universe-lab .navigation-rail-toggle{width:44px!important;padding:0!important;flex:0 0 44px}
+.universe-lab .navigation-console .polished-control:hover:not(:disabled),.universe-lab .navigation-rail-toggle:hover{background:#1c3944!important;border-color:#73cabd!important;color:#fff!important;transform:none!important}
+.universe-lab .navigation-console .polished-control:disabled{opacity:.4!important;cursor:not-allowed}
+.universe-lab .coordinate-jump{display:flex;align-items:center;gap:5px;padding:0 6px;border-color:#35535e;background:#0a161e}
+.universe-lab .coordinate-jump>svg{color:#86b8bd;flex-shrink:0}
+.universe-lab .coordinate-jump input{width:40px!important;height:40px!important;color:#eef7f9;font:500 13px/1.2 'DM Mono',monospace!important;text-align:center;letter-spacing:0}
+.universe-lab .coordinate-jump>span{font-size:14px}
+.universe-lab .level-controls{gap:5px}
+.universe-lab .level-controls b{min-width:76px;padding:0 6px;color:#dceef2;font-size:11px!important;letter-spacing:0!important}
+.universe-lab .level-controls b small{font-size:8px!important;letter-spacing:0}
+.universe-lab .level-controls .polished-control{padding:0 10px!important}
+.universe-lab .navigation-console{padding:5px!important;gap:6px!important;border-radius:6px;background:#08121bee!important}
+.universe-lab .market-directory-copy strong{font-size:10px!important;letter-spacing:0!important}
+.universe-lab .market-directory-copy small{font-size:8px!important;letter-spacing:0!important}
+.universe-game-root .ug-global-command button{min-height:44px;padding:0 12px;border-radius:5px;background:#10212a;font:600 11px/1.2 Outfit,system-ui,sans-serif;letter-spacing:0;box-shadow:none;transform:none}
+.universe-game-root .ug-global-command button.primary{background:#174b3d;border-color:#70c8ae;color:#e6fff2}
+.planet-world .pw-top>button,.planet-world .pw-inspection-controls button,.planet-world .pw-scene-readout>button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;height:44px;padding:0 14px;border:1px solid #426470;border-radius:5px;background:#10252e;color:#edf8fa;font:600 12px/1.2 Outfit,system-ui,sans-serif;letter-spacing:0;box-shadow:none}
+.planet-world .pw-inspection-controls .gds-icon-button{width:44px;padding:0}
+.planet-world .pw-inspection-controls button.primary{background:#174b3d;border-color:#70c8ae}
+.planet-world .pw-top>button:hover,.planet-world .pw-inspection-controls button:hover:not(:disabled),.planet-world .pw-scene-readout>button:hover{background:#214550;border-color:#83d7c8;transform:none}
+.planet-world .pw-inspection-controls svg,.planet-world .pw-scene-readout>button svg{width:18px;height:18px}
+.universe-game-root button:focus-visible,.universe-game-root a:focus-visible,.universe-game-root input:focus-visible{outline:2px solid #a6ead6;outline-offset:3px}
+.planet-world .pw-wallet-trigger{min-height:44px;border-radius:5px;font-size:12px;letter-spacing:0}
+@media(max-width:1100px){.universe-lab .level-controls .polished-control span{display:none}.universe-lab .level-controls .polished-control{width:44px;padding:0!important}}
+@media(max-width:700px){.universe-lab .navigation-console .coordinate-jump{min-width:0}.universe-lab .level-controls .polished-control span{display:inline}.universe-lab .level-controls .polished-control{width:auto}.planet-world .pw-inspection-controls{gap:6px;flex-wrap:wrap}.planet-world .pw-inspection-controls button.primary{flex:1;min-width:120px}}
+@media(prefers-reduced-motion:reduce){.universe-game-root button,.universe-lab .navigation-console .polished-control{transition:none!important}}
+@media(max-width:700px){
+  .universe-game-root .ug-top>.passkey-connect-control{display:grid!important}
+  .universe-game-root .ug-top{top:6px!important;right:8px!important;max-width:144px}
+  .universe-game-root .ug-top .wallet-connect-btn{max-width:144px;padding:0 12px!important;font-size:11px!important}
+  .universe-game-root .ug-wallet-trigger .commander-avatar{width:30px;height:30px}
+  .universe-lab .universe-topbar>.universe-brand{display:none}
+  .universe-lab .navigation-console>.navigation-rail-toggle{position:fixed!important;left:8px!important;top:6px!important;width:44px!important;height:44px!important}
+  .universe-lab .navigation-console .coordinate-jump{position:fixed!important;top:6px!important;left:58px!important;right:auto!important;width:176px!important;height:44px!important;gap:4px!important;padding:0 5px!important;justify-content:flex-start!important;border-radius:5px}
+  .universe-lab .coordinate-jump input{flex:0 0 32px;min-width:32px;width:32px!important;height:40px!important;padding:0!important;font-size:12px!important}
+  .universe-lab .coordinate-jump button{margin:0!important}
+  .universe-lab .level-controls{top:56px!important;left:8px!important;right:8px!important}
+  .universe-lab .market-directory-trigger{position:fixed!important;top:110px!important;left:auto!important;right:8px!important;width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;padding:0!important;justify-content:center!important;border-radius:5px!important}
+  .universe-lab .market-directory-copy,.universe-lab .market-directory-trigger>b{display:none!important}
+  .universe-lab .market-directory-mark{margin:0!important;flex:0 0 24px;width:24px;height:24px}
+}
+@media(max-width:700px){
+  .universe-game-root .ug-top .wallet-adapter-button.wallet-connect-btn{min-height:44px!important;height:44px!important;color:#f0fff7!important;border-radius:5px!important}
+  .universe-game-root .universe-lab.embedded .universe-topbar .navigation-console .coordinate-jump{position:fixed!important;left:58px!important;top:6px!important;width:146px!important;height:44px!important;padding:0 4px!important;gap:4px!important}
+  .universe-game-root .universe-lab.embedded .universe-topbar .coordinate-jump input{flex:0 0 26px!important;width:26px!important;min-width:26px!important;font-size:11px!important;padding:0!important}
+  .universe-game-root .universe-lab.embedded .universe-topbar .market-directory-trigger{position:fixed!important;left:212px!important;right:auto!important;top:6px!important;width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;display:flex!important}
+  .universe-game-root .universe-lab.embedded .universe-topbar .market-directory-trigger .market-directory-mark{display:inline-flex!important;align-items:center;justify-content:center;width:24px!important;height:24px!important}
+  .universe-game-root .universe-lab.embedded .universe-topbar .market-directory-trigger svg{display:block!important;width:18px!important;height:18px!important}
+}
+@media(max-width:360px){
+  .universe-game-root .universe-lab.embedded .universe-topbar .navigation-console .coordinate-jump{left:8px!important;top:56px!important;width:176px!important}
+  .universe-game-root .universe-lab.embedded .universe-topbar .market-directory-trigger{left:62px!important}
+  .universe-game-root .universe-lab.embedded .level-controls{top:108px!important}
+  .universe-game-root .universe-lab.embedded .universe-view-context{top:164px!important}
+}
+.universe-game-root .universe-lab .navigation-console.is-collapsed .coordinate-jump,
+.universe-game-root .universe-lab .navigation-console.is-collapsed .level-controls,
+.universe-game-root .universe-lab .navigation-console.is-collapsed .camera-controls{display:none!important}

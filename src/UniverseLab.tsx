@@ -5,7 +5,7 @@ import { Html, Line, OrbitControls, PerspectiveCamera, useTexture } from "@react
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import * as THREE from "three";
-import { ChevronDown, ChevronRight, ChevronUp, MapPin, Navigation2, TrendingUp, X, Zap } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, MapPin, Navigation2, TrendingUp, X, Zap, ZoomIn, ZoomOut } from "lucide-react";
 import { createUniverseSnapshotFromChainData, orbitForSystemPosition, pointOnUniverseOrbit, snapshotFromPublicPlanets, type UniverseMission, type UniverseOrbit, type UniversePlanet, type UniverseSnapshot } from "./universe-data";
 import { fetchAllianceDirectory, fetchAllianceGovernance, fetchAllPublicPlanets, fetchSystemSovereignties, fetchUniverseMapData, SOVEREIGNTY_WRITES_ENABLED, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceStateAccount, type SystemSovereigntyAccount } from "./game-state";
 import { planetSurfaceStyleForSystem, type PlanetSurfaceStyle } from "./planet-style";
@@ -13,8 +13,11 @@ import { planetBiomeIndex, planetBiomeTexture } from "./planet-biome-assets";
 import { useProceduralPlanetTexture } from "./procedural-planet-texture";
 import { buyDecisionMarketSide, estimateDecisionMarketBuyMinimum, estimateDecisionMarketSellMinimum, fetchDecisionMarket, launchDecisionProposal, redeemDecisionMarketPositions, requestDecisionMarketFinalization, sellDecisionMarketSide, stakeToDecisionProposal, unstakeFromDecisionProposal, type DecisionMarketSide, type DecisionMarketSnapshot, type SponsoredTokenAccountBuilder } from "./futarchy-market";
 import WalletConnectControl from "./WalletConnectControl";
-import { GameButton, GameEmptyState, GameWorkspace } from "./design-system/game-ui";
+import { GameButton, GameIconButton, GameEmptyState, GameWorkspace } from "./design-system/game-ui";
 import "./universe-lab.css";
+import { SceneReady, SceneTransition, useSceneTransit, useCameraInputCancel } from './SceneTransition';
+import { easeSceneProgress, motionDuration } from './scene-motion';
+import './game-polish.css';
 import stellarCorona from "./assets/universe-lab/stellar-corona.webp";
 import galaxyStellarFlare from "./assets/universe-lab/stellar-flare-v2.webp";
 import { GALAXY_KINDS, galaxyKindForId, galaxySystemLayout, starForSystem, type GalaxyKind, type StarDefinition } from "./stellar-system";
@@ -192,7 +195,7 @@ function DecisionStakeControls({ market, daoAddress, proposalAddress, onRefresh 
   </div>;
 }
 
-function DecisionResolutionControls({ market, daoAddress, proposalAddress, onRefresh, sponsorTokenAccounts }: { market: DecisionMarketSnapshot; daoAddress: string; proposalAddress: string; onRefresh: () => Promise<void>; sponsorTokenAccounts?: SponsoredTokenAccountBuilder }) {
+function DecisionResolutionControls({ market, daoAddress, proposalAddress, onRefresh, sponsorTokenAccounts }: { market: DecisionMarketSnapshot; daoAddress: string; proposalAddress: string; onRefresh: () => Promise<void>; sponsorTokenAccounts?: SponsoredTokenAccountBuilder; onSceneReady?: () => void }) {
   const { connection } = useConnection();
   const { sendTransaction } = useWallet();
   const anchorWallet = useAnchorWallet();
@@ -229,7 +232,7 @@ function DecisionResolutionControls({ market, daoAddress, proposalAddress, onRef
   </div>;
 }
 
-function DecisionMarketDirectoryCard({ entry, onVisitSystem, onRefresh, sponsorTokenAccounts }: { entry: LiveDecisionMarket; onVisitSystem: () => void; onRefresh: () => Promise<void>; sponsorTokenAccounts?: SponsoredTokenAccountBuilder }) {
+function DecisionMarketDirectoryCard({ entry, onVisitSystem, onRefresh, sponsorTokenAccounts }: { entry: LiveDecisionMarket; onVisitSystem: () => void; onRefresh: () => Promise<void>; sponsorTokenAccounts?: SponsoredTokenAccountBuilder; onSceneReady?: () => void }) {
   const { connection } = useConnection();
   const { sendTransaction } = useWallet();
   const anchorWallet = useAnchorWallet();
@@ -2078,9 +2081,19 @@ function BoundedCameraTarget({ controls, limit }: { controls: React.MutableRefOb
 
 function FocusedLevelCamera({ controls, enabled, target, offset }: { controls: React.MutableRefObject<any>; enabled: boolean; target: [number, number, number]; offset: [number, number, number] }) {
   const { camera } = useThree();
+  const activeLevel = useRef(false);
   const transition = useRef<{ startedAt: number; fromPosition: THREE.Vector3; fromTarget: THREE.Vector3; toPosition: THREE.Vector3; toTarget: THREE.Vector3 } | null>(null);
+  useCameraInputCancel(controls, transition);
   useEffect(() => {
-    if (!enabled || !controls.current) return;
+    if (!enabled) { activeLevel.current = false; transition.current = null; return; }
+    if (!controls.current) return;
+    if (!activeLevel.current) {
+      activeLevel.current = true;
+      camera.position.set(target[0] + offset[0], target[1] + offset[1], target[2] + offset[2]);
+      controls.current.target.set(...target);
+      controls.current.update();
+      return;
+    }
     transition.current = {
       startedAt: performance.now(),
       fromPosition: camera.position.clone(),
@@ -2093,8 +2106,8 @@ function FocusedLevelCamera({ controls, enabled, target, offset }: { controls: R
     const active = transition.current;
     const orbit = controls.current;
     if (!enabled || !active || !orbit) return;
-    const progress = THREE.MathUtils.clamp((performance.now() - active.startedAt) / 1650, 0, 1);
-    const eased = 1 - Math.pow(1 - progress, 4);
+    const progress = THREE.MathUtils.clamp((performance.now() - active.startedAt) / Math.max(1, motionDuration(500)), 0, 1);
+    const eased = easeSceneProgress(progress);
     camera.position.lerpVectors(active.fromPosition, active.toPosition, eased);
     orbit.target.lerpVectors(active.fromTarget, active.toTarget, eased);
     orbit.update();
@@ -2105,9 +2118,12 @@ function FocusedLevelCamera({ controls, enabled, target, offset }: { controls: R
 
 function SystemCameraComposition({ controls, enabled, star, focusPlanet, compositionKey }: { controls: React.MutableRefObject<any>; enabled: boolean; star?: StarDefinition; focusPlanet: UniversePlanet | null; compositionKey: string }) {
   const { camera, clock } = useThree();
+  const activeLevel = useRef(false);
   const transition = useRef<{ startedAt: number; fromPosition: THREE.Vector3; fromTarget: THREE.Vector3; toPosition: THREE.Vector3; toTarget: THREE.Vector3 } | null>(null);
+  useCameraInputCancel(controls, transition);
   useEffect(() => {
-    if (!enabled || !controls.current || !star) return;
+    if (!enabled) { activeLevel.current = false; transition.current = null; return; }
+    if (!controls.current || !star) return;
     let toTarget = new THREE.Vector3(0, 0, 0);
     let toPosition: THREE.Vector3;
     if (focusPlanet) {
@@ -2125,6 +2141,13 @@ function SystemCameraComposition({ controls, enabled, star, focusPlanet, composi
       const distance = systemSurveyCameraDistance(star);
       toPosition = new THREE.Vector3(0, distance * .492, distance * .871);
     }
+    if (!activeLevel.current) {
+      activeLevel.current = true;
+      camera.position.copy(toPosition);
+      controls.current.target.copy(toTarget);
+      controls.current.update();
+      return;
+    }
     transition.current = {
       startedAt: performance.now(),
       fromPosition: camera.position.clone(),
@@ -2137,8 +2160,8 @@ function SystemCameraComposition({ controls, enabled, star, focusPlanet, composi
     const active = transition.current;
     const orbit = controls.current;
     if (!enabled || !active || !orbit) return;
-    const progress = THREE.MathUtils.clamp((performance.now() - active.startedAt) / 1850, 0, 1);
-    const eased = 1 - Math.pow(1 - progress, 4);
+    const progress = THREE.MathUtils.clamp((performance.now() - active.startedAt) / Math.max(1, motionDuration(650)), 0, 1);
+    const eased = easeSceneProgress(progress);
     camera.position.lerpVectors(active.fromPosition, active.toPosition, eased);
     orbit.target.lerpVectors(active.fromTarget, active.toTarget, eased);
     orbit.update();
@@ -2149,14 +2172,26 @@ function SystemCameraComposition({ controls, enabled, star, focusPlanet, composi
 
 function CameraZoom({ command, controls, minDistance, maxDistance }: { command: { id: number; direction: "in" | "out" }; controls: React.MutableRefObject<any>; minDistance: number; maxDistance: number }) {
   const { camera } = useThree();
+  const appliedCommand = useRef(0);
+  const transition = useRef<{ startedAt: number; from: THREE.Vector3; to: THREE.Vector3 } | null>(null);
+  useCameraInputCancel(controls, transition);
   useEffect(() => {
     const orbit = controls.current;
-    if (!command.id || !orbit) return;
+    if (!command.id || command.id === appliedCommand.current || !orbit) return;
+    appliedCommand.current = command.id;
     const offset = camera.position.clone().sub(orbit.target).multiplyScalar(command.direction === "in" ? 0.72 : 1.38);
     offset.setLength(THREE.MathUtils.clamp(offset.length(), minDistance, maxDistance));
-    camera.position.copy(orbit.target).add(offset);
-    orbit.update();
+    orbit.dispatchEvent({ type: 'start' });
+    transition.current = { startedAt: performance.now(), from: camera.position.clone(), to: orbit.target.clone().add(offset) };
   }, [camera, command, controls, maxDistance, minDistance]);
+  useFrame(() => {
+    const active = transition.current;
+    if (!active || !controls.current) return;
+    const progress = Math.min(1, (performance.now() - active.startedAt) / Math.max(1, motionDuration(220)));
+    camera.position.lerpVectors(active.from, active.to, easeSceneProgress(progress));
+    controls.current.update();
+    if (progress >= 1) transition.current = null;
+  });
   return null;
 }
 
@@ -2354,7 +2389,7 @@ function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMiss
   </group>;
 }
 
-function WebGLContextMonitor({ onContextLost }: { onContextLost: () => void }) {
+function WebGLContextMonitor({ onContextLost }: { onContextLost: () => void; onSceneReady?: () => void }) {
   const { gl } = useThree();
   useEffect(() => {
     const canvas = gl.domElement;
@@ -2368,7 +2403,7 @@ function WebGLContextMonitor({ onContextLost }: { onContextLost: () => void }) {
   return null;
 }
 
-function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStart, selectedGalaxy, selectedSystem, cameraZoom, galaxyPopulations, systems, onSelect, onEmptySlotSelect, onLevelChange, onGalaxySelect, onSystemSelect, onFullGalaxySelect, onContextLost }: { snapshot: UniverseSnapshot; selected: UniversePlanet | null; level: ZoomLevel; fullUniverse: boolean; galaxySectorStart: number; selectedGalaxy: number; selectedSystem: number; cameraZoom: { id: number; direction: "in" | "out" }; galaxyPopulations: Map<number, number>; systems: GalaxySystem[]; onSelect: (planet: UniversePlanet) => void; onEmptySlotSelect: (target: { galaxy: number; system: number; position: number }) => void; onLevelChange: (level: ZoomLevel) => void; onGalaxySelect: (galaxy: number) => void; onSystemSelect: (system: number) => void; onFullGalaxySelect: (galaxy: number) => void; onContextLost: () => void }) {
+function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStart, selectedGalaxy, selectedSystem, cameraZoom, galaxyPopulations, systems, onSelect, onEmptySlotSelect, onLevelChange, onGalaxySelect, onSystemSelect, onFullGalaxySelect, onContextLost, onSceneReady }: { snapshot: UniverseSnapshot; selected: UniversePlanet | null; level: ZoomLevel; fullUniverse: boolean; galaxySectorStart: number; selectedGalaxy: number; selectedSystem: number; cameraZoom: { id: number; direction: "in" | "out" }; galaxyPopulations: Map<number, number>; systems: GalaxySystem[]; onSelect: (planet: UniversePlanet) => void; onEmptySlotSelect: (target: { galaxy: number; system: number; position: number }) => void; onLevelChange: (level: ZoomLevel) => void; onGalaxySelect: (galaxy: number) => void; onSystemSelect: (system: number) => void; onFullGalaxySelect: (galaxy: number) => void; onContextLost: () => void; onSceneReady?: () => void }) {
   const galaxies = useMemo(() => buildGalaxySector(galaxySectorStart, galaxyPopulations), [galaxySectorStart, galaxyPopulations]);
   const currentStar = starForSystem(selectedGalaxy, selectedSystem);
   const compactUniverseViewport = typeof window !== "undefined" && window.innerWidth <= 700;
@@ -2437,7 +2472,8 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
   }, [currentSystemDisplayPlanets, snapshot.missions]);
   const currentGalaxyKind = galaxyKindForId(selectedGalaxy);
   const starLabelOffset = -(systemStarClearanceRadius(currentStar) * 1.34);
-  return <Canvas key={`${level}-${fullUniverse ? "all" : "sector"}-${galaxySectorStart}-${selectedGalaxy}`} dpr={[1, 1.75]} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.setClearColor("#01030a"); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.08; }}>
+  return <Canvas dpr={[1, 1.5]} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.setClearColor("#01030a"); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.08; }}>
+    <Suspense fallback={null}>
     <WebGLContextMonitor onContextLost={onContextLost} />
     <PerspectiveCamera makeDefault position={cameraPosition} near={level === "universe" && fullUniverse ? 2 : .1} far={level === "universe" && fullUniverse ? 12_000 : 2_000} fov={level === "universe" && fullUniverse ? 42 : level === "universe" ? 42 : level === "galaxy" ? 36 : 34} />
     <CinematicSpaceEnvironment radius={fullUniverse ? 6000 : 260} opacity={level === "universe" && fullUniverse ? .42 : .78} />
@@ -2488,6 +2524,8 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
     <SystemCameraComposition controls={controls} enabled={level === "system"} star={currentStar} focusPlanet={systemFocusPlanet} compositionKey={systemCompositionKey} />
     <BoundedCameraTarget controls={controls} limit={targetLimit} />
     <CameraZoom command={cameraZoom} controls={controls} minDistance={cameraMinDistance} maxDistance={cameraMaxDistance} />
+    <SceneReady sceneKey={`${level}:${selectedGalaxy}:${selectedSystem}`} onReady={onSceneReady} />
+    </Suspense>
   </Canvas>;
 }
 
@@ -2529,7 +2567,7 @@ function CompatibilityUniverseScene({ snapshot, level, selectedGalaxy, selectedS
   </div>;
 }
 
-export default function UniverseLab({ embedded = false, productionUi = false, initialEmpireOpen, onOpenCommand, onOpenEmptyTarget, onNavigationLevelChange, ownedPlanets = [], activeOwnedPlanet, onOperatePlanet, initialGalaxy, initialSystem, sponsorTokenAccounts }: { embedded?: boolean; productionUi?: boolean; initialEmpireOpen?: boolean; onOpenCommand?: (planet: UniversePlanet) => void; onOpenEmptyTarget?: (target: { galaxy: number; system: number; position: number }) => void; onNavigationLevelChange?: (level: ZoomLevel) => void; ownedPlanets?: UniverseOwnedPlanet[]; activeOwnedPlanet?: string; onOperatePlanet?: (planet: UniverseOwnedPlanet) => void; initialGalaxy?: number; initialSystem?: number; sponsorTokenAccounts?: SponsoredTokenAccountBuilder }) {
+export default function UniverseLab({ embedded = false, productionUi = false, initialEmpireOpen, onOpenCommand, onOpenEmptyTarget, onNavigationLevelChange, ownedPlanets = [], activeOwnedPlanet, onOperatePlanet, initialGalaxy, initialSystem, sponsorTokenAccounts, onSceneReady }: { embedded?: boolean; productionUi?: boolean; initialEmpireOpen?: boolean; onOpenCommand?: (planet: UniversePlanet) => void; onOpenEmptyTarget?: (target: { galaxy: number; system: number; position: number }) => void; onNavigationLevelChange?: (level: ZoomLevel) => void; ownedPlanets?: UniverseOwnedPlanet[]; activeOwnedPlanet?: string; onOperatePlanet?: (planet: UniverseOwnedPlanet) => void; initialGalaxy?: number; initialSystem?: number; sponsorTokenAccounts?: SponsoredTokenAccountBuilder; onSceneReady?: () => void }) {
   const demoParams = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
   const localSystemDemo = import.meta.env.DEV && demoParams?.get("system-demo") === "full";
   const demoGalaxy = Math.max(1, Math.min(MAX_GALAXY, Number(demoParams?.get("galaxy")) || 3));
@@ -2546,7 +2584,13 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
   const empireRestoreFocusRef = useRef(false);
   const [viewContextOpen, setViewContextOpen] = useState(() => typeof window === "undefined" || !window.matchMedia("(max-width: 700px)").matches);
   const [navigationRailOpen, setNavigationRailOpen] = useState(() => !productionUi);
-  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(initialGalaxy && initialSystem || localSystemDemo ? "system" : "universe");
+  const [zoomLevel, commitZoomLevel] = useState<ZoomLevel>(initialGalaxy && initialSystem || localSystemDemo ? "system" : "universe");
+  const mapTransit = useSceneTransit();
+  const setZoomLevel = (level: ZoomLevel) => {
+    if (level === zoomLevel) return;
+    mapTransit.begin(() => commitZoomLevel(level), level === 'universe' ? 'Universe' : level === 'galaxy' ? 'Galaxy' : 'System');
+  };
+  const sceneReady = () => { mapTransit.ready(); onSceneReady?.(); };
   const fullUniverse = true;
   const [galaxyPopulations, setGalaxyPopulations] = useState<Map<number, number>>(() => new Map());
   const [selectedGalaxy, setSelectedGalaxy] = useState(initialGalaxy ?? (localSystemDemo ? demoGalaxy : 1));
@@ -2555,6 +2599,9 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
   const [galaxyInput, setGalaxyInput] = useState(String(initialGalaxy ?? (localSystemDemo ? demoGalaxy : 1)));
   const [systemInput, setSystemInput] = useState(String(initialSystem ?? (localSystemDemo ? demoSystem : 1)));
   const [graphicsMode, setGraphicsMode] = useState<GraphicsMode>(detectUniverseGraphicsMode);
+  useEffect(() => {
+    if (graphicsMode === 'compat' && snapshot) { mapTransit.ready(); onSceneReady?.(); }
+  }, [graphicsMode, snapshot, zoomLevel, selectedGalaxy, selectedSystem, mapTransit.ready, onSceneReady]);
   useEffect(() => onNavigationLevelChange?.(zoomLevel), [onNavigationLevelChange, zoomLevel]);
   useEffect(() => {
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches) {
@@ -3148,9 +3195,11 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
   };
   if (!snapshot) return <div className="universe-loading">CALIBRATING NAVIGATION ARRAY</div>;
   return <main className={`universe-lab${embedded ? " embedded" : ""}${productionUi ? " production-ui" : ""}`}>
+    <SceneTransition state={mapTransit.state} />
     <div className="universe-scene">
       {graphicsMode === "3d" ? <Suspense fallback={null}>
         <SectorScene
+          onSceneReady={sceneReady}
           snapshot={{ ...snapshot, planets: visiblePlanets }}
           selected={selected}
           level={zoomLevel}
@@ -3190,24 +3239,23 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
       />}
     </div>
     <div className={`scene-optics is-${zoomLevel}`} aria-hidden="true" />
-    <div key={`${zoomLevel}-${selectedGalaxy}-${selectedSystem}`} className={`scene-arrival is-${zoomLevel}`} aria-hidden="true">
-      <span>{zoomLevel === "universe" ? "KNOWN SPACE" : zoomLevel === "galaxy" ? "GALACTIC APPROACH" : "LOCAL SPACE"}</span>
-      <b>{zoomLevel === "universe" ? "THE GAMESOL UNIVERSE" : zoomLevel === "galaxy" ? `GALAXY ${String(selectedGalaxy).padStart(3, "0")}` : `G ${selectedGalaxy} · S ${selectedSystem}`}</b>
-      <i />
-    </div>
     {localSystemDemo && <aside className="system-demo-banner" role="status"><div><b>LOCAL FULL-SYSTEM SIMULATION</b><span>15 TEST WORLDS · 4 ALLIANCES · 24 ACTIVE FLEETS · COLLISION-SAFE ORBITS · NO ON-CHAIN DATA</span><nav className="system-demo-alliance-legend" aria-label="Simulated alliances">{SYSTEM_DEMO_ALLIANCES.map((alliance) => <i key={alliance.tag}><em style={{ background: FACTION_COLORS[alliance.faction] }} />{alliance.tag}</i>)}</nav></div><a href={window.location.pathname}>EXIT DEMO</a></aside>}
     <header className="universe-topbar">
       <a href="/" className="universe-brand" aria-label="GAMESOL home"><img src={gamesolMark} alt="GAMESOL" /></a>
       <div className={`navigation-console${navigationRailOpen ? "" : " is-collapsed"}`}>
         <button className="navigation-rail-toggle" type="button" aria-label={navigationRailOpen ? "Collapse navigation controls" : "Expand navigation controls"} title={navigationRailOpen ? "Collapse navigation controls" : "Expand navigation controls"} aria-expanded={navigationRailOpen} onClick={() => setNavigationRailOpen((open) => !open)}>
-          <span>NAVIGATION</span>{navigationRailOpen ? <ChevronRight /> : <Navigation2 />}
+          {navigationRailOpen ? <X aria-hidden="true" /> : <Navigation2 aria-hidden="true" />}
         </button>
         <div className="camera-controls" aria-label="Camera zoom">
-          <button className="camera-zoom" title="Zoom camera out" disabled={graphicsMode === "compat"} onClick={() => setCameraZoom(({ id }) => ({ id: id + 1, direction: "out" }))} aria-label="Zoom camera out">−</button>
-          <button className="camera-zoom" title="Zoom camera in" disabled={graphicsMode === "compat"} onClick={() => setCameraZoom(({ id }) => ({ id: id + 1, direction: "in" }))} aria-label="Zoom camera in">+</button>
+          <GameIconButton className="camera-zoom polished-control" label="Zoom camera out" disabled={graphicsMode === "compat"} onClick={() => setCameraZoom(({ id }) => ({ id: id + 1, direction: "out" }))}><ZoomOut aria-hidden="true" /></GameIconButton>
+          <GameIconButton className="camera-zoom polished-control" label="Zoom camera in" disabled={graphicsMode === "compat"} onClick={() => setCameraZoom(({ id }) => ({ id: id + 1, direction: "in" }))}><ZoomIn aria-hidden="true" /></GameIconButton>
         </div>
-        <div className="coordinate-jump"><small>JUMP TO</small><input aria-label="Galaxy number" title="Galaxy number" inputMode="numeric" value={galaxyInput} onChange={(event) => setGalaxyInput(event.target.value)} /><span>:</span><input aria-label="System number" title="System number" inputMode="numeric" value={systemInput} onChange={(event) => setSystemInput(event.target.value)} /><button title="Jump to coordinates" onClick={visitCoordinates}>GO</button></div>
-        <nav className="level-controls" aria-label="Universe navigation level"><button title="Move one level out" disabled={zoomLevel === "universe"} onClick={() => setZoomLevel(zoomLevel === "system" ? "galaxy" : "universe")}>LEVEL OUT</button><b aria-label={`Current view: ${zoomLevel}`}><small>VIEW</small>{graphicsMode === "compat" ? `COMPAT · ${zoomLevel.toUpperCase()}` : zoomLevel.toUpperCase()}</b><button title="Move one level in" disabled={zoomLevel === "system"} onClick={() => setZoomLevel(zoomLevel === "universe" ? "galaxy" : "system")}>LEVEL IN</button></nav>
+        <div className="coordinate-jump"><MapPin size={16} aria-hidden="true" /><input aria-label="Galaxy number" title="Galaxy number" inputMode="numeric" value={galaxyInput} onChange={(event) => setGalaxyInput(event.target.value)} /><span>:</span><input aria-label="System number" title="System number" inputMode="numeric" value={systemInput} onChange={(event) => setSystemInput(event.target.value)} /><GameIconButton className="polished-control" label="Jump to coordinates" onClick={visitCoordinates}><ArrowRight aria-hidden="true" /></GameIconButton></div>
+        <nav className="level-controls" aria-label="Universe navigation level">
+          <GameButton className="polished-control" title="Move one level out" aria-label="Move one level out" disabled={zoomLevel === 'universe' || mapTransit.active} onClick={() => setZoomLevel(zoomLevel === 'system' ? 'galaxy' : 'universe')}><ChevronLeft aria-hidden="true" /><span>{zoomLevel === 'system' ? 'Galaxy' : 'Universe'}</span></GameButton>
+          <b aria-label={`Current view: ${zoomLevel}`}><small>{graphicsMode === 'compat' ? '2D VIEW' : 'VIEW'}</small>{zoomLevel.toUpperCase()}</b>
+          <GameButton className="polished-control" title="Move one level in" aria-label="Move one level in" disabled={zoomLevel === 'system' || mapTransit.active} onClick={() => setZoomLevel(zoomLevel === 'universe' ? 'galaxy' : 'system')}><span>{zoomLevel === 'universe' ? 'Galaxy' : zoomLevel === 'galaxy' ? 'System' : 'Planet'}</span><ChevronRight aria-hidden="true" /></GameButton>
+        </nav>
         {ownedPlanets.length > 0 && <button ref={empireToggleRef} className={`planet-roster-toggle${productionUi ? " production-empire-toggle" : ""}`} title={`${hudOpen ? "Close" : "Open"} Empire Command`} aria-label={`${hudOpen ? "Close" : "Open"} empire command, ${ownedPlanets.length} ${ownedPlanets.length === 1 ? "world" : "worlds"}`} aria-controls="empire-command-center" aria-expanded={hudOpen} onClick={() => { const opening = !hudOpen; empireOpenedByControlRef.current = opening; setHudOpen(opening); if (opening && typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches) setSovereigntyPanelOpen(false); }}>{productionUi ? <><span>EMPIRE</span><b>{ownedPlanets.length}</b></> : hudOpen ? "HIDE PLANETS" : "SHOW PLANETS"}</button>}
       </div>
       <button className={`market-directory-trigger${unresolvedMarketCount > 0 ? " has-live" : ""}`} aria-label={`Universe Governance, ${marketDirectoryLoading ? "loading" : `${tradingMarketCount} trading, ${stakingMarketCount} awaiting stake, and ${finalizingMarketCount} finalizing`}`} title="Open Universe Governance" aria-haspopup="dialog" aria-expanded={marketHubOpen} onClick={(event) => openMarketHub(event.currentTarget)}>
