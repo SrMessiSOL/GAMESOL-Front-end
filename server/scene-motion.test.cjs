@@ -40,9 +40,17 @@ test('slow or failed destinations never silently reveal an unfinished scene', ()
   assert.equal(reduce(loading, { type: 'done', id: 1 }), loading);
   const failed = reduce(loading, { type: 'timeout', id: 1 });
   assert.equal(failed.phase, 'error');
-  assert.equal(reduce(failed, { type: 'ready', id: 1 }), failed);
+  assert.equal(reduce(failed, { type: 'done', id: 1 }), failed);
+  assert.equal(reduce(failed, { type: 'ready', id: 0 }), failed);
   const revealed = reduce(loading, { type: 'ready', id: 1 });
   assert.equal(reduce(revealed, { type: 'timeout', id: 1 }), revealed);
+});
+
+test('a timed-out scene recovers only after its own renderer reports readiness', () => {
+  const failed = reduce(reduce(reduce(INITIAL_TRANSIT, begin), { type: 'covered', id: 1 }), { type: 'timeout', id: 1 });
+  const ready = reduce(failed, { type: 'ready', id: 1 });
+  assert.equal(ready.phase, 'revealing');
+  assert.equal(reduce(ready, { type: 'done', id: 1 }).phase, 'idle');
 });
 
 test('camera easing clamps its endpoints and moves monotonically without overshoot', () => {

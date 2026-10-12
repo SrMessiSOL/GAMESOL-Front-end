@@ -14,6 +14,8 @@ Five deterministic tests cover success, closed/removed popup, blocked popup and 
 - A scene-loading timeout appeared while rendering the restored system; Retry reloaded the account. Subsequent planet-navigation automation became unresponsive. This does not establish whether the cause is the game, rendering load or browser automation.
 - No wallet was disconnected, no credentials were cleared and no signed game transaction was submitted.
 
+Follow-up: Homeworld eventually rendered its command UI with Metal 121, Crystal 407, Deuterium 147 and the selected UFO portrait, while the transition error remained visible. The transition reducer now accepts the same scene's renderer readiness after a timeout, then reveals normally. It still ignores stale scene IDs and never reveals on a timer alone. A regression test covers this recovery. Actual signed orders remain untested.
+
 ## Remaining Required Evidence
 
 The full loop is NOT passed. Complete these stages in the player's normal Chrome session, recording devnet signatures and confirmed on-chain state changes:

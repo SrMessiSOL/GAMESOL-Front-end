@@ -9,7 +9,7 @@ export function transitReducer(state: TransitState, event: TransitEvent): Transi
     ? { phase: 'covering', id: event.id, title: event.title, detail: event.detail } : state;
   if (event.id !== state.id) return state;
   if (event.type === 'covered' && state.phase === 'covering') return { ...state, phase: 'loading' };
-  if (event.type === 'ready' && state.phase === 'loading') return { ...state, phase: 'revealing' };
+  if (event.type === 'ready' && (state.phase === 'loading' || state.phase === 'error')) return { ...state, phase: 'revealing' };
   if (event.type === 'done' && state.phase === 'revealing') return { ...state, phase: 'idle' };
   if (event.type === 'timeout' && state.phase === 'loading') return { ...state, phase: 'error' };
   return state;
