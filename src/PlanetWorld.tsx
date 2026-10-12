@@ -2620,23 +2620,21 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
         <section className={`pw-facility-advanced-toggle${advancedFacilitiesOpen ? " is-open" : ""}`}><div><span>ADVANCED INFRASTRUCTURE</span><b>{advancedFacilitiesOpen ? "Robotics, storage, shipyard and research are visible." : "Unlock deeper construction paths when you need them."}</b></div><button type="button" aria-expanded={advancedFacilitiesOpen} onClick={() => setAdvancedFacilitiesOpen((open) => !open)}>{advancedFacilitiesOpen ? "SHOW CORE ONLY" : "SHOW 8 ADVANCED FACILITIES"}</button></section>
       </>}
       {modal === "building" && <section className="pw-building-command">
-        <button className="pw-command-back" type="button" onClick={() => setModal("buildingSelect")}><ChevronLeft /> ALL FACILITIES</button>
+        <CommandActionButton className="pw-command-back" type="button" icon={<ChevronLeft />} onClick={() => setModal("buildingSelect")}>All facilities</CommandActionButton>
         <div className="pw-command-art" style={{ backgroundImage: resolveGameArt(building.key, "none") }} />
         <div className="pw-command-head"><span>PLANETARY FACILITY</span><h2>{building.name}</h2><p>{NEXT_BUILDING_EFFECT[building.key]}</p></div>
         <section className="pw-upgrade-brief" aria-label={`${building.name} upgrade brief`}>
-          <div><span>OUTCOME</span><b>{NEXT_BUILDING_EFFECT[building.key]}</b></div>
-          <div><span>RESOURCE COST</span><b>{metalCost.toLocaleString()} M · {crystalCost.toLocaleString()} C{deuteriumCost > 0 ? ` · ${deuteriumCost.toLocaleString()} D` : ""}</b></div>
-          <div><span>CONSTRUCTION</span><b>{queueBusy ? "Planet queue occupied" : "Uses 1 planet queue slot"}</b></div>
+          <div><span>Upgrade cost</span>{costs(metalCost, crystalCost, deuteriumCost)}</div>
+          <div><span>Build time</span><b>{queueTime(buildTimeSecs(building.idx, level + 1, state.planet.roboticsFactory))}</b></div>
         </section>
         <div className={`pw-facility-status${buildingCommandReady ? " is-ready" : queueBusy ? " is-busy" : " is-blocked"}`} aria-live="polite">
           <div><span>{buildingCommandReady ? "UPGRADE READY" : queueBusy ? "CONSTRUCTION SLOT OCCUPIED" : !buildingPrerequisitesReady ? "PREREQUISITES REQUIRED" : "RESOURCES REQUIRED"}</span><b>LEVEL {level} <i>→</i> {level + 1}</b></div>
-          <small>{buildingCommandReady ? "All requirements are met. The command is ready for approval." : queueBusy ? "Finish the active construction before issuing another facility order." : !buildingPrerequisitesReady ? "Complete the missing facility requirements shown below." : "Accumulate the missing resources shown below."}</small>
+          {!buildingCommandReady && <small>{queueBusy ? "Finish the active construction first." : !buildingPrerequisitesReady ? "Missing facility requirements." : "Insufficient resources."}</small>}
         </div>
         <CommandActionButton tone="primary" className="pw-primary-action" icon={<Hammer />} pending={pendingCommand === `building:${building.key}`} pendingLabel="Starting upgrade..." disabled={busy || pendingCommand !== null || !buildingCommandReady} onClick={() => void trackCommand(`building:${building.key}`, () => run(`Upgrade ${building.name}`, (client, entity) => client.startBuild(entity, selected)))}>{queueBusy ? "Construction active" : !buildingPrerequisitesReady ? "Requirements not met" : !buildingAffordable ? "Insufficient resources" : "Upgrade to level " + (level + 1)}</CommandActionButton>
         <CommandActionButton className="pw-inspect-action" type="button" icon={<Crosshair />} onClick={() => inspectFacility()}>Inspect facility</CommandActionButton>
         {queueCommand(queues[0])}
         {storageCap && <section className="pw-storage-cap"><div><span>Current {storageCap.label} cap</span><b>{storageCap.current.toLocaleString()}</b></div><i>→</i><div><span>Next cap · Level {level + 1}</span><b>{storageCapacityAtLevel(level + 1).toLocaleString()}</b></div></section>}
-        {costs(metalCost, crystalCost, deuteriumCost)}
         {(!buildingPrerequisitesReady || !buildingAffordable) && requirementChecklist([...buildingRequirementsForSelected, ...resourceRequirementRows(metalCost, crystalCost, deuteriumCost)], "Upgrade requirements")}
       </section>}
       {modal === "research" && <section className="pw-research-command">

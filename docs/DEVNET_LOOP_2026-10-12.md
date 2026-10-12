@@ -20,6 +20,8 @@ Final release check: all 34 tests and the Vercel production build passed. Chrome
 
 ## Remaining Required Evidence
 
+Player submitted the first Crystal Mine test order after handoff. The live operation dialog reported "Quick Play is no longer active for this device. Nothing was changed." Crystal Mine remained level 1. The loop therefore has no successful signed upgrade yet; the player must explicitly re-enable their gameplay session before retrying. Do not count the click as a confirmed transaction.
+
 The full loop is NOT passed. Complete these stages in the player's normal Chrome session, recording devnet signatures and confirmed on-chain state changes:
 
 1. Complete Lazor sign-in; cancel and retry once to verify recovery.

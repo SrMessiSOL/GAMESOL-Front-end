@@ -25,5 +25,30 @@
 .planet-world .pw-shipyard-facility-actions .command-action,.planet-world .pw-inspect-action.command-action{min-height:48px;max-width:100%;white-space:normal;letter-spacing:0;font-size:12px}
 .planet-world .pw-inline-queue>div:first-child{min-width:0;overflow-wrap:anywhere}
 .planet-world .pw-primary-action.command-action{min-height:44px;white-space:normal;letter-spacing:0}
+.planet-world .pw-building-command{display:grid;gap:16px;min-width:0}
+.planet-world .pw-building-command>.pw-command-back{justify-self:start;min-height:44px;margin:0}
+.planet-world .pw-building-command>.pw-command-art{height:156px;margin:0;border:0;border-radius:0;background-size:cover;background-position:center 48%}
+.planet-world .pw-building-command>.pw-command-head{margin:0}
+.planet-world .pw-building-command .pw-command-head h2{margin:6px 0;font:600 24px/1.2 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-building-command .pw-command-head p{margin:0;color:#a9bbc4;font:14px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-building-command .pw-command-head>span{color:#91abb8;font:12px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-building-command .pw-upgrade-brief{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(120px,1fr);gap:24px;margin:0;padding:16px 0;border-block:1px solid #344c56}
+.planet-world .pw-building-command .pw-upgrade-brief>div{display:grid;align-content:start;gap:10px;min-width:0;padding:0;border:0;border-radius:0;background:none;min-height:0}
+.planet-world .pw-building-command .pw-upgrade-brief span{color:#a9bbc4;font:13px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-building-command .pw-upgrade-brief b{color:#edf6f8;font:600 16px/1.4 Outfit,system-ui,sans-serif}
+.planet-world .pw-building-command .pw-upgrade-brief .pw-costs{margin:0;display:flex;flex-wrap:wrap;gap:16px}
+.planet-world .pw-building-command .pw-costs span{display:inline-flex;align-items:center;gap:8px;font:600 16px/1.4 Outfit,system-ui,sans-serif}
+.planet-world .pw-building-command .pw-costs svg{width:18px;height:18px;flex-shrink:0}
+.planet-world .pw-building-command .pw-costs .metal{color:#c5d2d8}.planet-world .pw-building-command .pw-costs .crystal{color:#78dde0}.planet-world .pw-building-command .pw-costs .deuterium{color:#8ddbaf}
+.planet-world .pw-building-command .pw-facility-status{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 0;margin:0;border:0;background:none}
+.planet-world .pw-building-command .pw-facility-status>div{display:flex;align-items:center;justify-content:space-between;flex:1;gap:16px;min-width:0}
+.planet-world .pw-building-command .pw-facility-status span{color:#cbb48c;font:12px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-building-command .pw-facility-status.is-ready span{color:#82dbb6}
+.planet-world .pw-building-command .pw-facility-status b{white-space:nowrap;color:#edf6f8;font:600 16px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-building-command .pw-facility-status i{margin:0 8px;font-style:normal;color:#a9bbc4}
+.planet-world .pw-building-command .pw-facility-status small{flex-basis:100%;color:#c6adb0;font:13px/1.4 Outfit,system-ui,sans-serif}
+.planet-world .pw-building-command>.pw-primary-action{width:100%;margin:0;min-height:48px}
+.planet-world .pw-building-command>.pw-inspect-action{justify-self:start;width:auto;margin:0}
+@media(max-width:480px){.planet-world .pw-building-command{gap:12px}.planet-world .pw-building-command>.pw-command-art{height:112px}.planet-world .pw-building-command .pw-upgrade-brief{grid-template-columns:minmax(0,1fr);gap:16px}.planet-world .pw-building-command .pw-facility-status>div{flex-wrap:wrap}.planet-world .pw-building-command>.pw-inspect-action{width:100%}}
 .planet-world .pw-mission-preflight .command-preflight-error{color:#efbaad}
 @media(max-width:760px){.planet-world .pw-command-list article{min-width:0}.planet-world .pw-command-list article>.command-action{width:100%;grid-column:1/-1}.planet-world .pw-production-control{grid-template-columns:minmax(0,1fr)}.planet-world .pw-production-control>.command-quantity{justify-content:flex-start}.command-workspace-error{flex-wrap:wrap}.command-workspace-error>.command-action{width:100%}.planet-world .pw-destination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.planet-world .pw-cargo-grid{grid-template-columns:minmax(0,1fr)}.planet-world .pw-mission-preflight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Hammer, RotateCcw, Zap, CheckCircle2 } from 'lucide-react';
+import { Hammer, RotateCcw, Zap, CheckCircle2, ChevronLeft, Crosshair, Pickaxe, Gem } from 'lucide-react';
+import crystalMine from '../../src/assets/ui/crystalMine-v2.jpg';
 import { STORE_PACKS, type StorePack } from '../../src/store-catalog';
 import { StorePackCard, StorePurchaseReview } from '../../src/StoreControls';
 import { CommandActionButton, CommandQuantity } from '../../src/design-system/command-controls';
@@ -23,6 +24,15 @@ function Checks() {
   return <main style={{ maxWidth: 960, padding: 20, margin: 'auto', color: '#dceef3', fontFamily: 'Arial', boxSizing: 'border-box' }}>
     <header><h1 style={{ fontSize: 20 }}>Component checks</h1><p style={{ color: '#e2ba7a' }}>TEST ONLY: sample balance and destination. No wallet, network or transactions.</p></header>
     <section className="planet-world" style={{ position: 'relative', height: 'auto', minHeight: 0, width: 'auto', overflow: 'visible', background: 'none' }}>
+      <section className="pw-building-command" aria-label="Test-only facility layout">
+        <CommandActionButton className="pw-command-back" icon={<ChevronLeft />}>All facilities</CommandActionButton>
+        <div className="pw-command-art" style={{ backgroundImage: `url(${crystalMine})` }} />
+        <div className="pw-command-head"><span>PLANETARY FACILITY</span><h2>Crystal Mine</h2><p>Increases crystal production from this world.</p></div>
+        <section className="pw-upgrade-brief" aria-label="Test-only upgrade brief"><div><span>Upgrade cost</span><div className="pw-costs"><span className="metal"><Pickaxe />72</span><span className="crystal"><Gem />36</span></div></div><div><span>Build time</span><b>21s</b></div></section>
+        <div className="pw-facility-status is-ready"><div><span>UPGRADE READY</span><b>LEVEL 1 <i>→</i> 2</b></div></div>
+        <CommandActionButton tone="primary" className="pw-primary-action" icon={<Hammer />} pending={pending} pendingLabel="Starting upgrade..." onClick={() => setPending(true)}>Upgrade to level 2</CommandActionButton>
+        <CommandActionButton className="pw-inspect-action" icon={<Crosshair />}>Inspect facility</CommandActionButton>
+      </section>
       <section className="pw-shipyard-command">
       <div className="pw-production-control"><div><b>Fleet quantity</b></div><CommandQuantity label="Fleet production quantity" value={quantity} onChange={setQuantity} onValidityChange={setValid} disabled={pending} /></div>
       <div className="pw-command-list pw-ship-list"><article className="is-ready"><div className="pw-row-art" aria-hidden="true" /><div><h3>Layout-test hull</h3><p>UI-only production action</p></div><CommandActionButton tone="primary" pending={pending} pendingLabel="Commissioning..." disabled={!valid} icon={<Hammer />} onClick={() => {

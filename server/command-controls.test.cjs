@@ -127,3 +127,16 @@ test('construction, research and queues retain readiness gates and share the com
   assert.match(world, /trackCommand\(`queue:finish:\$\{activeQueue.label\}`/);
   assert.match(world, /trackCommand\(`queue:accelerate:\$\{activeQueue.label\}`/);
 });
+
+test('live facility layout is independent of preview mode and shows each cost once', () => {
+  const world = fs.readFileSync(path.join(__dirname, '../src/PlanetWorld.tsx'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../src/command-workspace.css'), 'utf8');
+  const start = world.indexOf('{modal === "building" && <section className="pw-building-command">');
+  assert.ok(start >= 0);
+  const building = world.slice(start, world.indexOf('{modal === "research"', start));
+  assert.equal((building.match(/costs\(metalCost, crystalCost, deuteriumCost\)/g) || []).length, 1);
+  assert.doesNotMatch(building, /<span>OUTCOME<\/span>/);
+  assert.match(css, /\.planet-world \.pw-building-command \.pw-upgrade-brief\{display:grid/);
+  assert.match(css, /\.planet-world \.pw-building-command \.pw-facility-status\{display:flex/);
+  assert.match(css, /@media\(max-width:480px\)/);
+});
