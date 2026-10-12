@@ -16,6 +16,8 @@ Five deterministic tests cover success, closed/removed popup, blocked popup and 
 
 Follow-up: Homeworld eventually rendered its command UI with Metal 121, Crystal 407, Deuterium 147 and the selected UFO portrait, while the transition error remained visible. The transition reducer now accepts the same scene's renderer readiness after a timeout, then reveals normally. It still ignores stale scene IDs and never reveals on a timer alone. A regression test covers this recovery. Actual signed orders remain untested.
 
+Final release check: all 34 tests and the Vercel production build passed. Chrome restored the account after reloading the new release. Both the system and Homeworld ultimately revealed without a stuck error overlay. The live Crystal Mine command showed level 1 to 2, cost 72 metal / 36 crystal, requirements met and a free construction slot. Its screenshot was captured and the Chrome tab retained for the player to submit the first test order. No submission was made by the agent; fresh passkey sign-in and popup cancellation remain unit-tested rather than physically verified.
+
 ## Remaining Required Evidence
 
 The full loop is NOT passed. Complete these stages in the player's normal Chrome session, recording devnet signatures and confirmed on-chain state changes:
