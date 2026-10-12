@@ -6,10 +6,24 @@ import { createRequire } from 'node:module'
 function cryptoUfosGateway(env: Record<string, string>) {
   const require = createRequire(import.meta.url)
   const { createService } = require('./server/crypto-ufos.cjs')
+  const { createImageService } = require('./server/crypto-ufo-images.cjs')
   let service: ReturnType<typeof createService>
+  let images: ReturnType<typeof createImageService>
   return {
     name: 'gamesol-crypto-ufos-api',
     configureServer(server: { middlewares: { use: (path: string, handler: (req: any, res: any) => void) => void } }) {
+      server.middlewares.use('/api/crypto-ufos-image', (req, res) => {
+        if (req.method !== 'GET') { res.statusCode = 405; res.end(); return }
+        const id = new URL(req.url, 'http://localhost').searchParams.get('id')
+        if (!id || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(id)) { res.statusCode = 400; res.end(); return }
+        void (async () => {
+          images ||= createImageService({ env })
+          const image = await images(id)
+          res.setHeader('content-type', image.type)
+          res.setHeader('cache-control', 'public, max-age=3600')
+          res.end(image.bytes)
+        })().catch(() => { res.statusCode = 503; res.setHeader('cache-control', 'no-store'); res.end('Original NFT artwork unavailable') })
+      })
       server.middlewares.use('/api/crypto-ufos', (req, res) => {
         res.setHeader('content-type', 'application/json')
         res.setHeader('cache-control', 'no-store')

@@ -13,6 +13,27 @@ const input = { owner, smartWallet: smartWallet.toBase58(), commander: vault.toB
 const asset = { id: Keypair.generate().publicKey.toBase58(), compression: { compressed: true }, ownership: { owner },
   grouping: [{ group_key: 'collection', group_value: nft.COLLECTION }], content: { metadata: { name: 'Test NFT' }, links: { image: 'https://example.com/art.png' } } };
 
+test('artwork reader preserves the original CID, rejects arbitrary URLs and checks image bytes', async () => {
+  const { imageResource, imageType, createImageService } = require('./crypto-ufo-images.cjs');
+  const original = 'https://nftstorage.link/ipfs/bafybeigxxhol7amgewoep2falpmmdxsjshpceockpsbmyooutvknj5jkhy/8342';
+  const imageAsset = { ...asset, content: { links: { image: original } } };
+  assert.equal(imageResource(imageAsset), original.replace('https://nftstorage.link/ipfs/', 'ipfs://'));
+  assert.throws(() => imageResource(asset));
+  assert.throws(() => imageResource({ ...imageAsset, grouping: [] }));
+  assert.throws(() => imageResource({ ...imageAsset, content: { links: { image: original + '/../other' } } }));
+  assert.throws(() => imageType(Buffer.from('<html>not artwork</html>')));
+  let reads = 0;
+  const jpeg = Buffer.from('ffd8ffe000104a46494600', 'hex');
+  const reader = createImageService({ das: async () => imageAsset, verifiedFetch: async (resource) => {
+    assert.equal(resource, imageResource(imageAsset)); reads++;
+    return new Response(jpeg);
+  } });
+  const result = await reader(asset.id);
+  assert.equal(result.type, 'image/jpeg'); assert.deepEqual(result.bytes, jpeg);
+  await reader(asset.id); assert.equal(reads, 1);
+  assert.equal(nft.displayAsset(imageAsset).image, `/api/crypto-ufos-image?id=${asset.id}`);
+});
+
 test('public owner reader needs no passkey, commander, signature or link secret', async () => {
   const service = nft.createService({ env: {}, connection: { getAccountInfo() { throw new Error('Must not consult LazorKit'); } },
     das: async () => ({ items: [asset, { ...asset, id: 'wrong-owner', ownership: { owner: input.commander } }] }) });
@@ -48,6 +69,8 @@ test('direct holding-wallet connection calls connect only, never signing', async
   assert.equal(module.exports.holdingAccount([]), null);
   const ui = fs.readFileSync(require('node:path').join(__dirname, '../src/CryptoUfos.tsx'), 'utf8');
   assert.doesNotMatch(ui, /DialogManager|useLazorWallet|passkeyProof|holdingSignature|signMessage|linkToken/);
+  assert.doesNotMatch(ui, /action: 'collection'|The collection|collectionBusy|setCollection/);
+  assert.match(ui, /const assets = nft\.link\?\.assets \?\? \[\]/);
 });
 
 test('challenge receipts reject tampering, expiry, wrong site and wrong purpose', () => {

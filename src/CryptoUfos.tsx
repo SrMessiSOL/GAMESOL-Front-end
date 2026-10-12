@@ -180,33 +180,17 @@ export function CryptoUfosPanel({ embedded = false, onClose }: { embedded?: bool
   const { publicKey } = useWallet();
   const [selected, setSelected] = useState<string | null>(null);
   const [walletPicker, setWalletPicker] = useState(false);
-  const [collection, setCollection] = useState<CryptoUfo[]>([]);
-  const [collectionBusy, setCollectionBusy] = useState(false);
-  const [collectionError, setCollectionError] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
   useEffect(() => setSelected(null), [nft.link?.owner]);
   const selectedAsset = nft.link?.assets.find((asset) => asset.id === selected) ?? nft.flagship;
-  useEffect(() => {
-    if (nft.link) { setCollectionError(''); setCollectionBusy(false); return; }
-    let canceled = false;
-    setCollectionBusy(true); setCollectionError('');
-    void cryptoUfosRequest<{ assets: CryptoUfo[]; hasMore: boolean }>({ action: 'collection', page }).then((result) => {
-      if (!canceled) { setCollection(result.assets); setHasMore(result.hasMore); }
-    }).catch((cause) => { if (!canceled) setCollectionError(cause instanceof Error ? cause.message : 'Unable to load the collection.'); })
-      .finally(() => { if (!canceled) setCollectionBusy(false); });
-    return () => { canceled = true; };
-  }, [page, Boolean(nft.link)]);
-  const assets = nft.link ? nft.link.assets : collection;
+  const assets = nft.link?.assets ?? [];
   return <section className={`nft-panel ${embedded ? 'nft-embedded' : ''}`} aria-label="Crypto UFOs founder hangar">
     <header className="nft-heading"><div><small>GAMESOL ORIGINAL COMMUNITY</small><h1>Crypto UFOs</h1><p>Your collection stays in your wallet. Your UFO joins your game.</p></div>{onClose && <button className="nft-icon-button" title="Close founder hangar" aria-label="Close founder hangar" onClick={onClose}><X size={20} /></button>}</header>
-    <div className="nft-layout"><section className="nft-gallery"><div className="nft-section-title"><h2>{nft.link ? 'Your Crypto UFOs' : 'The collection'}</h2><span>MAINNET cNFTs</span><a href="https://www.tensor.trade/trade/cryptoufos" target="_blank" rel="noopener noreferrer" title="View collection on Tensor"><ExternalLink size={16} /></a></div>
-      {(nft.error || collectionError) && <p className="nft-error" role="alert">{nft.error || collectionError}</p>}
-      {collectionBusy && !nft.link && <p className="nft-loading"><LoaderCircle size={18} className="nft-spin" /> Loading real collection artwork...</p>}
+    <div className="nft-layout"><section className="nft-gallery"><div className="nft-section-title"><h2>Your Crypto UFOs</h2><span>MAINNET cNFTs</span><a href="https://www.tensor.trade/trade/cryptoufos" target="_blank" rel="noopener noreferrer" title="View collection on Tensor"><ExternalLink size={16} /></a></div>
+      {nft.error && <p className="nft-error" role="alert">{nft.error}</p>}
+      {!nft.link && !nft.busy && <div className="nft-empty"><h3>No holding wallet connected</h3><button className="nft-button primary" onClick={() => setWalletPicker(true)}><WalletIcon size={16} /> Connect Solflare or another wallet</button></div>}
       {nft.busy && <p className="nft-loading" role="status"><LoaderCircle size={18} className="nft-spin" /> {nft.stage || 'Checking mainnet ownership...'}</p>}
       {nft.link && !nft.busy && assets.length === 0 && !nft.error && <div className="nft-empty"><h3>No Crypto UFOs in this wallet</h3><p>Switch to the wallet holding your collection.</p><button className="nft-button" onClick={() => setWalletPicker(true)}><WalletIcon size={16} /> Change holding wallet</button></div>}
       <div className="nft-grid">{assets.map((asset) => <button key={asset.id} className={`nft-card ${selectedAsset?.id === asset.id ? 'selected' : ''}`} aria-pressed={selectedAsset?.id === asset.id} disabled={!nft.link || nft.busy} onClick={() => setSelected(asset.id)}><div className="nft-art"><NftImage asset={asset} />{nft.flagship?.id === asset.id && <span className="nft-assigned"><Rocket size={12} /> FLAGSHIP</span>}</div><div className="nft-card-caption"><strong>{asset.name}</strong><span>{shortNftAddress(asset.id)}</span></div></button>)}</div>
-      {!nft.link && !collectionBusy && !collectionError && <div className="nft-pagination"><button className="nft-button" disabled={page === 1} onClick={() => setPage((value) => value - 1)}>Previous</button><span>Page {page}</span><button className="nft-button" disabled={!hasMore} onClick={() => setPage((value) => value + 1)}>Next</button></div>}
       <footer className="nft-collection-address"><span>Collection</span><a href={`https://solscan.io/account/${COLLECTION}`} target="_blank" rel="noopener noreferrer">{shortNftAddress(COLLECTION)} <ExternalLink size={12} /></a></footer>
     </section><aside className="nft-sidebar"><section><h2>Accounts</h2><div className="nft-account"><span>Game account</span><strong>{publicKey ? shortNftAddress(publicKey.toBase58()) : 'Not signed in'}</strong><small>LazorKit &middot; Devnet</small></div><div className="nft-account"><span>NFT holding wallet</span><strong>{nft.link ? shortNftAddress(nft.link.owner) : 'Not connected'}</strong><small>Phantom, Solflare, Jupiter or another Solana wallet &middot; Mainnet</small></div>
       {!publicKey && <WalletConnectControl disconnectedLabel="SIGN IN TO GAMESOL" />}<button className="nft-button primary" disabled={nft.busy} onClick={() => setWalletPicker(true)}><WalletIcon size={16} /> {nft.link ? 'Change holding wallet' : 'Connect holding wallet'}</button>

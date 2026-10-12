@@ -129,8 +129,7 @@ function ownedCollectionAsset(asset, owner) {
 function displayAsset(asset) {
   const metadata = asset.content?.metadata || {};
   return { id: asset.id, name: String(metadata.name || 'Crypto UFO').slice(0, 120),
-    image: mediaUrl(asset.content?.files?.find((file) => file.mime?.startsWith('image/'))?.cdn_uri) || mediaUrl(asset.content?.links?.image)
-      || mediaUrl(asset.content?.files?.find((file) => file.mime?.startsWith('image/'))?.uri),
+    image: mediaUrl(asset.content?.links?.image) ? `/api/crypto-ufos-image?id=${encodeURIComponent(asset.id)}` : null,
     originalImage: mediaUrl(asset.content?.links?.image),
     traits: (Array.isArray(metadata.attributes) ? metadata.attributes : []).slice(0, 24)
       .filter((trait) => typeof trait.trait_type === 'string' && ['string', 'number'].includes(typeof trait.value))

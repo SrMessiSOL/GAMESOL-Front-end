@@ -18,13 +18,14 @@ The provider's mainnet genesis hash is verified before any NFT queries.
 The collection address currently comes from the original Crypto UFOs game:
 `53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb`.
 Mainnet DAS has confirmed this grouping with Crypto UFOs compressed assets,
-names, traits and IPFS artwork metadata. The collection's image gateway can
-return HTTP 403; unavailable artwork is shown honestly, with the actual original
-image attempted after the provider CDN fails. No substitute art is used.
+names, traits and IPFS artwork metadata. Images now use the game's verified IPFS
+image endpoint rather than the retired NFTStorage HTTP gateway. No substitute
+art is used; genuinely unavailable original content remains an explicit error.
 
 ## First scope
 
-`/founders` displays actual DAS collection metadata and artwork. Players can
+`/founders` shows no NFTs before the holding wallet connects. It displays only
+that account's live DAS holdings; there is no public collection preview. Players can
 connect a holding wallet and select an owned cNFT as a cosmetic flagship identity.
 The game account menu uses its actual artwork. No stats or rewards change.
 Ownership is checked on assignment, refresh, focus and every visible minute.
@@ -45,4 +46,16 @@ this reader's response.
 silent reconnect, and reads holdings without a commander, passkey or secret.
 It also retains legacy signature tests and ownership/collection checks.
 A real Solflare-extension connection rehearsal is still required.
+
+## Artwork retrieval
+
+NFTStorage's ordinary HTTP gateway has retired. `/api/crypto-ufos-image` resolves
+the requested cNFT through mainnet DAS and checks its Crypto UFOs collection and
+the original image-directory CID. The official `@helia/verified-fetch` library
+retrieves and verifies the original IPFS blocks. Image magic bytes and a 4 MiB
+limit reject HTML errors or other content. Responses are CDN-cached; local cache
+is bounded to 16 MiB. No stock, generated or other NFT's artwork is substituted.
+A live retrieval of Crypto UFO #8342 returned a verified 2,789-byte JPEG that was
+visually inspected against its name and traits. Other NFTs still require their
+original content to remain available from IPFS providers.
 Test Phantom, Solflare and Jupiter separately in their actual environments.
