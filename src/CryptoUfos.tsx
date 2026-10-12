@@ -6,6 +6,8 @@ import { Check, ExternalLink, Link2, LoaderCircle, RefreshCw, Rocket, Unlink, Wa
 import WalletConnectControl from './WalletConnectControl';
 import gamesolLogo from './assets/ui/logobg.png';
 import './crypto-ufos.css';
+import { UfoLoadout } from './UfoLoadout';
+import { useUfoFrame } from './ufo-cosmetics';
 
 export type CryptoUfo = { id: string; name: string; image: string | null; originalImage?: string | null; traits: { name: string; value: string }[]; compressed: boolean };
 type LinkState = { owner: string; assets: CryptoUfo[]; selectedAsset: string | null; checkedAt: number; identityVerified: false };
@@ -183,7 +185,8 @@ function NftImage({ asset }: { asset: CryptoUfo }) {
 
 export function CommanderAvatar({ className = '', fallback = 'CO' }: { className?: string; fallback?: string }) {
   const { flagship } = useCryptoUfos();
-  return <span className={`commander-avatar ${className}`} title={flagship?.name ?? 'Commander'}>
+  const frame = useUfoFrame(flagship);
+  return <span className={`commander-avatar ${className}`} style={{ '--commander-accent': frame.accent } as React.CSSProperties} title={flagship?.name ?? 'Commander'}>
     {flagship ? <NftImage asset={flagship} /> : <span aria-hidden="true">{fallback}</span>}
   </span>;
 }
@@ -232,6 +235,7 @@ export function CryptoUfosPanel({ embedded = false, onClose }: { embedded?: bool
       {nft.link && <div className="nft-account-actions"><button className="nft-button" disabled={nft.busy} onClick={() => void nft.refresh()}><RefreshCw size={14} /> Refresh ownership</button><button className="nft-icon-button" disabled={nft.busy} title="Disconnect NFT reader" aria-label="Disconnect NFT reader" onClick={nft.unlink}><Unlink size={16} /></button></div>}
       <p className="nft-small">Read-only connection. No signatures or transfers.</p></section>
       <section className="nft-flagship"><h2>Commander avatar</h2>{selectedAsset ? <><div className="nft-flagship-art"><NftImage asset={selectedAsset} /></div><h3>{selectedAsset.name}</h3><dl className="nft-traits">{selectedAsset.traits.map((trait, index) => <div key={`${trait.name}-${index}`}><dt>{trait.name}</dt><dd>{trait.value}</dd></div>)}</dl><button className="nft-button primary" disabled={nft.busy || nft.flagship?.id === selectedAsset.id} onClick={() => void nft.assign(selectedAsset.id)}>{nft.flagship?.id === selectedAsset.id ? <><Check size={16} /> Assigned</> : <><Rocket size={16} /> Use as commander avatar</>}</button>{nft.flagship && <button className="nft-button" disabled={nft.busy} onClick={() => void nft.assign(null)}>Remove avatar</button>}</> : <p className="nft-small">Choose one of your UFOs.</p>}<p className="nft-small">Cosmetic identity. Combat stats stay unchanged.</p></section>
+      {selectedAsset && <UfoLoadout asset={selectedAsset} equipped={nft.flagship?.id === selectedAsset.id} />}
     </aside></div>
     {walletPicker && <div className="nft-wallet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !nft.busy) setWalletPicker(false); }}><WalletPicker onClose={() => setWalletPicker(false)} /></div>}
   </section>;

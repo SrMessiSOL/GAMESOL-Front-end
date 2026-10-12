@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Hammer, RotateCcw, Zap, CheckCircle2, ChevronLeft, Crosshair, Pickaxe, Gem } from 'lucide-react';
+import { Hammer, RotateCcw, Zap, CheckCircle2, ChevronLeft, Crosshair, Pickaxe, Gem, X } from 'lucide-react';
 import crystalMine from '../../src/assets/ui/crystalMine-v2.jpg';
 import { STORE_PACKS, type StorePack } from '../../src/store-catalog';
 import { StorePackCard, StorePurchaseReview } from '../../src/StoreControls';
@@ -11,6 +11,19 @@ import '../../src/planet-world-extra.css';
 import '../../src/planet-world-local.css';
 import '../../src/game-polish.css';
 import '../../src/command-workspace.css';
+import '../../src/planet-shell.css';
+import { PlanetHeader } from '../../src/PlanetHeader';
+import { UfoLoadout } from '../../src/UfoLoadout';
+import { useUfoFrame } from '../../src/ufo-cosmetics';
+
+const realTraitFixture = {
+  id: '5rDvPBStMCEdXTkc2viFrW7pBLnimj5MK8fuc7n3aY6', name: 'Crypto UFO #7541',
+  traits: [{ name: 'Body', value: 'Silver UFO' }, { name: 'Eyes', value: 'Small Eyes' }, { name: 'Hair', value: 'Tiara' }, { name: 'Accesory', value: 'Frown' }, { name: 'Background', value: 'VioletBG' }, { name: 'Mouth', value: 'Dracula' }, { name: 'Rarity Rank', value: '1873' }],
+};
+function CosmeticCheck() {
+  const frame = useUfoFrame(realTraitFixture);
+  return <section style={{ maxWidth: 400, margin: '24px auto' }}><p>TEST ONLY: real #7541 metadata, no connected wallet or granted loot.</p><span aria-label="Test cosmetic frame" style={{ display: 'inline-flex', width: 88, height: 88, border: `3px solid ${frame.accent}`, boxSizing: 'border-box' }}><img alt="Real Crypto UFO #7541 test fixture" src={`https://chained-universe.vercel.app/api/crypto-ufos-image?id=${realTraitFixture.id}`} style={{ width: '100%', height: '100%', imageRendering: 'pixelated', objectFit: 'contain' }} /></span><UfoLoadout asset={realTraitFixture} equipped /></section>;
+}
 
 function Checks() {
   const [quantity, setQuantity] = useState(1);
@@ -23,7 +36,13 @@ function Checks() {
   const packs = STORE_PACKS.filter((pack) => pack.period === 1 && [0, 4, 16].includes(pack.id));
   return <main style={{ maxWidth: 960, padding: 20, margin: 'auto', color: '#dceef3', fontFamily: 'Arial', boxSizing: 'border-box' }}>
     <header><h1 style={{ fontSize: 20 }}>Component checks</h1><p style={{ color: '#e2ba7a' }}>TEST ONLY: sample balance and destination. No wallet, network or transactions.</p></header>
+    <section className="planet-world" style={{ position: 'relative', height: 250, width: '100%', minHeight: 0, overflow: 'visible' }}>
+      <PlanetHeader world={{ name: 'LayoutTestDestinationName1234567', galaxy: 9, system: 427, position: 13 }} resources={{ metal: 123456789n, crystal: 847n, deuterium: 483n, energyProduction: 79n, energyConsumption: 100n }} energyPercent={79} energyTone="warning" onExit={() => setResult('Test system navigation')} />
+      <button className="pw-wallet-trigger">Test player</button>
+      <nav className="pw-operations is-guided" aria-label="Test operations">{['Buildings', 'Research', 'Shipyard', 'Missions', 'Reports', 'More operations'].map((name, index) => <button key={name} aria-label={name} className={index === 4 ? 'pw-operation-secondary' : index === 5 ? 'pw-operation-more' : ''}><Hammer /><span>{name}</span></button>)}</nav>
+    </section>
     <section className="planet-world" style={{ position: 'relative', height: 'auto', minHeight: 0, width: 'auto', overflow: 'visible', background: 'none' }}>
+      <section className="pw-command-modal" aria-label="Test-only command container"><header className="pw-modal-toolbar"><div className="pw-modal-title-group"><span className="pw-modal-command-mark"><Hammer /></span><div className="pw-modal-context"><span>PLANET COMMAND</span><strong>Construction</strong><small>LayoutTestDestinationName1234567 · 9:427:13</small></div></div><div className="pw-modal-toolbar-actions"><span className="pw-modal-network">DEVNET</span><CommandActionButton aria-label="Test close command" icon={<X />} onClick={() => setResult('Test close command')} /></div></header><div className="pw-modal-content"><p>TEST ONLY: long destination and command-container layout check.</p></div></section>
       <section className="pw-building-command" aria-label="Test-only facility layout">
         <CommandActionButton className="pw-command-back" icon={<ChevronLeft />}>All facilities</CommandActionButton>
         <div className="pw-command-art" style={{ backgroundImage: `url(${crystalMine})` }} />
@@ -53,6 +72,7 @@ function Checks() {
       </section>
       <div className="command-workspace-error" role="alert"><div><strong>Test-only loading failure</strong><p>Retry must remain reachable on mobile.</p></div><CommandActionButton icon={<RotateCcw />} onClick={() => setResult('Recorded test retry')}>Retry</CommandActionButton></div>
     </section>
+    <CosmeticCheck />
     {review && <StorePurchaseReview pack={review} worldName="LayoutTestDestinationName1234567" balance={3_000_000n} onClose={() => setReview(null)} onConfirm={() => {
       const key = `${review.period}:${review.id}`; setReview(null); setPurchasePending(key); setResult('Pending test purchase');
       window.setTimeout(() => { setPurchased((current) => [...current, key]); setPurchasePending(null); setResult('Recorded test purchase; no transaction'); }, 700);

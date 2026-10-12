@@ -31,6 +31,9 @@ const { isWholeQuantity, formatUsdc, storePurchaseEligibility, MAX_ORDER_QUANTIT
 const { STORE_PACKS } = load('store-catalog.ts');
 const { CommandActionButton, CommandQuantity } = load('design-system/command-controls.tsx');
 const { StorePackCard } = load('StoreControls.tsx');
+const { PlanetHeader } = load('PlanetHeader.tsx');
+const { ufoProfile, frameAccent, validFrameStyle } = load('ufo-traits.ts');
+const { UfoLoadout } = load('UfoLoadout.tsx');
 
 test('orders accept only whole quantities within the serialized u32 bounds', () => {
   for (const value of ['1', '5', 10, MAX_ORDER_QUANTITY]) assert.equal(isWholeQuantity(value), true);
@@ -139,4 +142,55 @@ test('live facility layout is independent of preview mode and shows each cost on
   assert.match(css, /\.planet-world \.pw-building-command \.pw-upgrade-brief\{display:grid/);
   assert.match(css, /\.planet-world \.pw-building-command \.pw-facility-status\{display:flex/);
   assert.match(css, /@media\(max-width:480px\)/);
+});
+
+test('planet header retains exact bigint values, compact values and labelled system navigation', () => {
+  const html = renderToStaticMarkup(React.createElement(PlanetHeader, {
+    world: { name: 'Homeworld', galaxy: 9, system: 427, position: 13 },
+    resources: { metal: 9007199254740993123n, crystal: 847n, deuterium: 483n, energyProduction: 79n, energyConsumption: 100n },
+    energyPercent: 79, energyTone: 'warning', onExit: () => {},
+  }));
+  assert.ok(html.includes((9007199254740993123n).toLocaleString()));
+  assert.match(html, /Return to active planet system/);
+  assert.match(html, /pw-resource-exact/); assert.match(html, /pw-resource-compact/);
+  assert.match(html, /79 percent available/);
+});
+
+test('UFO loadouts use real trait spellings and do not grant rarity-based power', () => {
+  const traits = [{ name: 'Body', value: 'Silver UFO' }, { name: 'Eyes', value: 'Small Eyes' }, { name: 'Accesory', value: 'Frown' }, { name: 'Hair', value: 'Tiara' }, { name: 'Background', value: 'VioletBG' }, { name: 'Rarity Rank', value: '1873' }];
+  const profile = ufoProfile(traits);
+  assert.equal(profile.role, 'Engineer'); assert.equal(profile.route, 'First contact');
+  assert.equal(profile.accessory, 'Frown'); assert.equal(profile.hair, 'Tiara');
+  assert.equal(profile.booster.status, 'planned'); assert.equal(profile.loot[0].trait, 'Silver UFO');
+  const rare = ufoProfile(traits.map(trait => trait.name === 'Rarity Rank' ? { ...trait, value: '1' } : trait));
+  assert.equal(rare.role, profile.role); assert.deepEqual(rare.booster, profile.booster);
+  assert.deepEqual(traits[2], { name: 'Accesory', value: 'Frown' });
+});
+
+test('unknown traits retain a neutral baseline, and frame preferences cannot inject CSS', () => {
+  const unknown = ufoProfile([{ name: 'Body', value: 'Unknown future trait' }, { name: 'Eyes', value: 'Toxido Mask' }]);
+  assert.equal(unknown.role, 'Commander'); assert.equal(unknown.booster, null); assert.equal(unknown.loot.length, 0);
+  assert.equal(unknown.route, 'Standard expedition');
+  assert.equal(validFrameStyle('url(evil)'), 'body');
+  assert.equal(frameAccent([{ name: 'Background', value: 'url(evil)' }], 'background'), '#84adb3');
+  assert.equal(ufoProfile([{ name: 'Eyes', value: '3D  Glasses' }]).route, 'Anomaly analysis');
+});
+
+test('real owned-body examples have distinct proposed roles without stacking or claims', () => {
+  for (const [body, role] of [['Red UFO', 'Escort'], ['Gold UFO', 'Quartermaster'], ['Blue UFO', 'Navigator']]) {
+    const profile = ufoProfile([{ name: 'Body', value: body }]);
+    assert.equal(profile.role, role); assert.equal(profile.booster.status, 'planned');
+    assert.doesNotMatch(JSON.stringify(profile), /multiplier|tokenAllocation|claimable/);
+  }
+});
+
+test('commander cosmetics render with tabs and distinguish saved from equipped frames', () => {
+  const asset = { id: 'test-only', name: 'Crypto UFO #7541', traits: [{ name: 'Body', value: 'Silver UFO' }] };
+  const html = renderToStaticMarkup(React.createElement(UfoLoadout, { asset }));
+  assert.match(html, /role="tablist"/); assert.match(html, /role="tabpanel"/);
+  assert.match(html, /Body frame/); assert.match(html, /Background frame/); assert.match(html, /Saved frame/);
+  assert.match(renderToStaticMarkup(React.createElement(UfoLoadout, { asset, equipped: true })), /Equipped frame/);
+  const source = fs.readFileSync(path.join(__dirname, '../src/UfoLoadout.tsx'), 'utf8');
+  assert.match(source, /Not active/); assert.match(source, /Not earned/);
+  assert.doesNotMatch(source, /sendTransaction|signMessage|claimReward|Math\.random/);
 });

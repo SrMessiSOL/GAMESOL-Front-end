@@ -1,6 +1,15 @@
 # Crypto UFOs Commander Utility
 
-Status: proposal only. No bonuses, rewards, NFT locks, or token promises are deployed.
+Status: commander portraits and selectable cosmetic frames are implemented. Trait-based booster and loot tabs display planned blueprints only. No bonuses, rewards, NFT locks, or token promises are enabled.
+
+## Implementation check, 2026-10-12
+
+- Loadout uses the selected ownership-filtered asset, never a default collection example.
+- Body, background, and standard frame choices update commander portraits and persist as cosmetic preferences. These preferences never authorize rewards.
+- Booster and loot tabs retain original metadata values and label utility Not active / Not earned. Unknown traits use a neutral fallback; rarity grants no power.
+- The supplied holding address returned nine eligible assets. #7541 (Silver UFO, VioletBG, Small Eyes, Frown, Tiara) was used as an explicitly labelled test fixture, not injected into a player's gallery.
+- Browser checks confirmed original artwork loading, frame synchronization and persistence, tab content, and no horizontal overflow at 320px. The focused frontend suites passed 43 tests.
+- Actual reward activation still requires wallet-control proof, game-account binding, authoritative mission settlement, ownership refresh, and replay-safe reward receipts. The signature-free gallery remains separate from that authorization.
 
 ## Verified collection evidence
 
