@@ -20,6 +20,8 @@ Final release check: all 34 tests and the Vercel production build passed. Chrome
 
 ## Remaining Required Evidence
 
+Quick Play follow-up: the player authorized the agent to start activation. The Lazor portal opened and returned; the account menu reported Quick Play ON and sponsored fees. Retrying Crystal Mine still failed locally with "Quick Play is off. Turn it on with your passkey first." No upgrade was applied. Code inspection found that an older background session refresh could overwrite a newly activated/revoked session after awaiting RPC. Refresh now checks the current stored snapshot before writing, re-reads a changed session with bounded retries, and rejects account changes. Three regression tests cover activation, revocation and account switching. Live retry after deployment remains required.
+
 Player submitted the first Crystal Mine test order after handoff. The live operation dialog reported "Quick Play is no longer active for this device. Nothing was changed." Crystal Mine remained level 1. The loop therefore has no successful signed upgrade yet; the player must explicitly re-enable their gameplay session before retrying. Do not count the click as a confirmed transaction.
 
 The full loop is NOT passed. Complete these stages in the player's normal Chrome session, recording devnet signatures and confirmed on-chain state changes:

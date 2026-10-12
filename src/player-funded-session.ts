@@ -482,7 +482,7 @@ function sessionExpiry(accountData: Uint8Array): bigint | null {
   return view.getBigUint64(72, true);
 }
 
-export async function refreshPlayerFundedSession(walletPda: string): Promise<PlayerFundedSessionState> {
+export async function refreshPlayerFundedSession(walletPda: string, retry = 0): Promise<PlayerFundedSessionState> {
   const stored = ensurePlayerFeeSession(walletPda);
   const rpc = connection();
   const sponsorPayer = await getSponsorPayer();
@@ -503,6 +503,14 @@ export async function refreshPlayerFundedSession(walletPda: string): Promise<Pla
     );
   }
 
+  // Activation/revocation can finish while this RPC read is pending. Never
+  // overwrite the newer session with the snapshot taken before the request.
+  const current = readStoredSession();
+  if (current?.walletPda !== walletPda) throw new Error("Your game account changed while checking Quick Play. Please retry.");
+  if (JSON.stringify(current) !== JSON.stringify(stored)) {
+    if (retry >= 2) throw new Error("Quick Play changed while checking its status. Please retry.");
+    return refreshPlayerFundedSession(walletPda, retry + 1);
+  }
   if (stored.active !== active || (expiresAtSlot && stored.expiresAt !== expiresAtSlot.toString())) {
     writeStoredSession({ ...stored, active, expiresAt: expiresAtSlot?.toString() });
   }
