@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite --mode passkey",
     "dev:loadtest": "vite --mode loadtest",
-    "build": "tsc && vite build --mode passkey",
+    "build": "node server/prepare-ipfs-runtime.cjs && tsc && vite build --mode passkey",
     "build:loadtest": "tsc && vite build --mode loadtest",
     "test:keeper": "node server/futarchy-keeper.test.cjs",
     "test:paymaster": "node api/lazor-paymaster.test.cjs",

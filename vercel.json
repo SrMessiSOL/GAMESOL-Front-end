@@ -2,7 +2,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/crypto-ufos-image.js": { "maxDuration": 60 },
+    "api/crypto-ufos-image.js": {
+      "maxDuration": 60,
+      "includeFiles": "node_modules/{interface-*,datastore-core,@helia/verified-fetch,@libp2p/websockets,@peculiar/*,webcrypto-core,asn1js,pvtsutils,pvutils,@node-datachannel/*,node-datachannel}/**"
+    },
     "api/crypto-ufos.js": { "maxDuration": 60 },
     "api/futarchy-finalizer.js": { "maxDuration": 60 },
     "api/lazor-paymaster.js": { "maxDuration": 30 },

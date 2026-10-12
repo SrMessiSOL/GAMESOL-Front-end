@@ -58,4 +58,11 @@ is bounded to 16 MiB. No stock, generated or other NFT's artwork is substituted.
 A live retrieval of Crypto UFO #8342 returned a verified 2,789-byte JPEG that was
 visually inspected against its name and traits. Other NFTs still require their
 original content to remain available from IPFS providers.
+
+The image function explicitly includes runtime packages and the platform's
+prebuilt node-datachannel addon, which Vercel's tracer otherwise omits. The build
+runs `server/prepare-ipfs-runtime.cjs` to select WebCrypto 1.7.1's original CJS
+entry point for ESM consumers, avoiding Vercel's incompatible ESM conversion.
+The cryptographic implementation itself is unchanged. Production delivery was
+verified byte-for-byte against the original JPEG.
 Test Phantom, Solflare and Jupiter separately in their actual environments.

@@ -15,7 +15,13 @@ module.exports = async function handler(req, res) {
     res.setHeader('Content-Type', image.type);
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
     return res.status(200).send(image.bytes);
-  } catch {
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'crypto-ufos-image-error',
+      name: error?.name,
+      code: error?.code,
+      message: String(error?.message || 'Unknown error').replace(/https?:\/\/[^\s]+/g, '[provider URL]').slice(0, 300),
+    }));
     res.setHeader('Cache-Control', 'no-store');
     return res.status(503).json({ error: 'Original NFT artwork is temporarily unavailable. Please retry.' });
   }
