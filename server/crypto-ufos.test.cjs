@@ -13,6 +13,23 @@ const input = { owner, smartWallet: smartWallet.toBase58(), commander: vault.toB
 const asset = { id: Keypair.generate().publicKey.toBase58(), compression: { compressed: true }, ownership: { owner },
   grouping: [{ group_key: 'collection', group_value: nft.COLLECTION }], content: { metadata: { name: 'Test NFT' }, links: { image: 'https://example.com/art.png' } } };
 
+test('commander avatar is available inside both game views with ownership-backed persistence', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const read = (name) => fs.readFileSync(path.join(__dirname, '../src', name), 'utf8');
+  const ui = read('CryptoUfos.tsx');
+  const game = read('UniverseGame.tsx');
+  assert.match(ui, /export function CommanderAvatar\(/);
+  assert.match(ui, /flagship \? <NftImage asset=\{flagship\}/);
+  assert.match(ui, /result\.assets\.some\(\(asset\) => asset\.id === selected\)/);
+  assert.match(ui, /savedPreference\(selectionKey\(account\.address\)\)/);
+  assert.match(game, /createPortal\(<CommanderAvatarDialog/);
+  assert.equal((game.match(/setAvatarPickerOpen\(true\)/g) || []).length, 2);
+  assert.match(read('PlanetWorld.tsx'), /<CommanderAvatar fallback=\{wallet\.label/);
+  const css = read('crypto-ufos.css');
+  assert.match(css, /\.nft-page\{height:100dvh;min-height:0;overflow-y:auto/);
+});
+
 test('IPFS crypto compatibility adapter retains the original named Crypto API and SHA256', async () => {
   require('./prepare-ipfs-runtime.cjs');
   const { Crypto } = await import('@peculiar/webcrypto');

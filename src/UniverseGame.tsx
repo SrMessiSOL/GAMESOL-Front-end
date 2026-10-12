@@ -36,7 +36,7 @@ import {
 import type { UniversePlanet } from "./universe-data";
 import { usePasskeyGameplayVault } from "./usePasskeyGameplayVault";
 import WalletConnectControl from "./WalletConnectControl";
-import { useCryptoUfos } from "./CryptoUfos";
+import { useCryptoUfos, CommanderAvatar, CommanderAvatarDialog } from "./CryptoUfos";
 import { resolveGameArt } from "./ui-art";
 import { BUILDING_REQUIREMENTS } from "./combat-engine";
 
@@ -1457,6 +1457,8 @@ export default function UniverseGame() {
   const [balanceRefreshBusy, setBalanceRefreshBusy] = useState(false);
   const [passkeyActionBusy, setPasskeyActionBusy] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const closeAvatarPicker = useCallback(() => setAvatarPickerOpen(false), []);
   const playerTriggerRef = useRef<HTMLButtonElement>(null);
   const accountCloseRef = useRef<HTMLButtonElement>(null);
   const accountDrawerRef = useRef<HTMLElement>(null);
@@ -2043,6 +2045,7 @@ export default function UniverseGame() {
         : 5;
   return (
     <main className={`universe-game-root${productionPreview ? " production-preview" : ""}`}>
+      {avatarPickerOpen && createPortal(<CommanderAvatarDialog onClose={closeAvatarPicker} />, document.body)}
       {!planetWorldState && <UniverseLab
         embedded
         productionUi={productionPreview}
@@ -2216,7 +2219,7 @@ export default function UniverseGame() {
               aria-controls="production-player-account"
               onClick={() => setWalletMenuOpen((open) => !open)}
             >
-              <span className="ug-player-mark" aria-hidden="true">{walletLabel.slice(0, 2)}</span>
+              <CommanderAvatar className="ug-player-mark" fallback={walletLabel.slice(0, 2)} />
               <span className="ug-player-copy">
                 <strong>{walletLabel}</strong>
                 <small>{planets.length} {planets.length === 1 ? "WORLD" : "WORLDS"}</small>
@@ -2242,7 +2245,7 @@ export default function UniverseGame() {
                   </header>
 
                   <section className="ug-account-identity">
-                    {flagship?.image ? <img className="ug-account-avatar" src={flagship.image} alt={flagship.name} style={{ objectFit: 'cover' }} /> : <span className="ug-account-avatar" aria-hidden="true">{walletLabel.slice(0, 2)}</span>}
+                    <CommanderAvatar className="ug-account-avatar" fallback={walletLabel.slice(0, 2)} />
                     <div><strong>{walletLabel}</strong><small>Permanent passkey game account · {NETWORK_LABEL}</small></div>
                     <b className={passkey.connected ? "good" : ""}>{passkey.connected ? "SECURE" : "OFFLINE"}</b>
                   </section>
@@ -2253,6 +2256,7 @@ export default function UniverseGame() {
                     <li className={quickPlayUsable ? "current" : ""} aria-current={quickPlayUsable ? "step" : undefined}><i aria-hidden="true">3</i><span><b>Commander</b><small>{quickPlayUsable ? "Ready to create" : "Up next"}</small></span></li>
                   </ol>}
 
+                  <button className="ug-commander-picker" onClick={() => { setWalletMenuOpen(false); setAvatarPickerOpen(true); }}>Choose commander avatar{flagship && <small>{flagship.name}</small>}</button>
                   <section className="ug-account-stats" aria-label="Player overview">
                     <div><span>WORLDS</span><strong>{planets.length}</strong></div>
                     <div><span>SOL BALANCE</span><strong>{(Number(vaultBalance) / 1_000_000_000).toFixed(3)}</strong></div>
@@ -2316,7 +2320,7 @@ export default function UniverseGame() {
               className="ug-wallet-trigger"
               onClick={() => setWalletMenuOpen((open) => !open)}
             >
-              {walletLabel}
+              <CommanderAvatar fallback={walletLabel.slice(0, 2)} /> {walletLabel}
             </button>
             {walletMenuOpen && createPortal(
               <>
@@ -2423,7 +2427,7 @@ export default function UniverseGame() {
                     </div>
                   </section>}
                   <div className="ug-wallet-actions">
-                    <a href="/founders">{flagship ? flagship.name : 'CRYPTO UFOS'}</a>
+                    <button onClick={() => { setWalletMenuOpen(false); setAvatarPickerOpen(true); }}>Choose commander avatar</button>
                     <button onClick={() => void passkey.disconnect()}>SIGN OUT</button>
                   </div>
                   <details className="ug-passkey-funding-note">

@@ -181,6 +181,35 @@ function NftImage({ asset }: { asset: CryptoUfo }) {
   }} /> : <span className="nft-image-missing">Artwork unavailable</span>;
 }
 
+export function CommanderAvatar({ className = '', fallback = 'CO' }: { className?: string; fallback?: string }) {
+  const { flagship } = useCryptoUfos();
+  return <span className={`commander-avatar ${className}`} title={flagship?.name ?? 'Commander'}>
+    {flagship ? <NftImage asset={flagship} /> : <span aria-hidden="true">{fallback}</span>}
+  </span>;
+}
+
+export function CommanderAvatarDialog({ onClose }: { onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    ref.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    const key = (event: KeyboardEvent) => {
+      if (ref.current?.querySelector('.nft-wallet-dialog')) return;
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+      if (event.key !== 'Tab') return;
+      const items = Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]') ?? []);
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', key);
+    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', key); previous?.focus(); };
+  }, [onClose]);
+  return <div ref={ref} role="dialog" aria-modal="true" aria-label="Choose commander avatar" className="nft-commander-dialog"><CryptoUfosPanel embedded onClose={onClose} /></div>;
+}
+
 export function CryptoUfosPanel({ embedded = false, onClose }: { embedded?: boolean; onClose?: () => void }) {
   const nft = useCryptoUfos();
   const { publicKey } = useWallet();
@@ -189,20 +218,20 @@ export function CryptoUfosPanel({ embedded = false, onClose }: { embedded?: bool
   useEffect(() => setSelected(null), [nft.link?.owner]);
   const selectedAsset = nft.link?.assets.find((asset) => asset.id === selected) ?? nft.flagship;
   const assets = nft.link?.assets ?? [];
-  return <section className={`nft-panel ${embedded ? 'nft-embedded' : ''}`} aria-label="Crypto UFOs founder hangar">
-    <header className="nft-heading"><div><small>GAMESOL ORIGINAL COMMUNITY</small><h1>Crypto UFOs</h1><p>Your collection stays in your wallet. Your UFO joins your game.</p></div>{onClose && <button className="nft-icon-button" title="Close founder hangar" aria-label="Close founder hangar" onClick={onClose}><X size={20} /></button>}</header>
+  return <section className={`nft-panel ${embedded ? 'nft-embedded' : ''}`} aria-label="Crypto UFOs commander avatars">
+    <header className="nft-heading"><div><small>GAMESOL ORIGINAL COMMUNITY</small><h1>Crypto UFOs</h1><p>Your collection stays in your wallet. Your UFO joins your game.</p></div>{onClose && <button className="nft-icon-button" title="Close commander avatars" aria-label="Close commander avatars" onClick={onClose}><X size={20} /></button>}</header>
     <div className="nft-layout"><section className="nft-gallery"><div className="nft-section-title"><h2>Your Crypto UFOs</h2><span>MAINNET cNFTs</span><a href="https://www.tensor.trade/trade/cryptoufos" target="_blank" rel="noopener noreferrer" title="View collection on Tensor"><ExternalLink size={16} /></a></div>
       {nft.error && <p className="nft-error" role="alert">{nft.error}</p>}
       {!nft.link && !nft.busy && <div className="nft-empty"><h3>No holding wallet connected</h3><button className="nft-button primary" onClick={() => setWalletPicker(true)}><WalletIcon size={16} /> Connect Solflare or another wallet</button></div>}
       {nft.busy && <p className="nft-loading" role="status"><LoaderCircle size={18} className="nft-spin" /> {nft.stage || 'Checking mainnet ownership...'}</p>}
       {nft.link && !nft.busy && assets.length === 0 && !nft.error && <div className="nft-empty"><h3>No Crypto UFOs in this wallet</h3><p>Switch to the wallet holding your collection.</p><button className="nft-button" onClick={() => setWalletPicker(true)}><WalletIcon size={16} /> Change holding wallet</button></div>}
-      <div className="nft-grid">{assets.map((asset) => <button key={asset.id} className={`nft-card ${selectedAsset?.id === asset.id ? 'selected' : ''}`} aria-pressed={selectedAsset?.id === asset.id} disabled={!nft.link || nft.busy} onClick={() => setSelected(asset.id)}><div className="nft-art"><NftImage asset={asset} />{nft.flagship?.id === asset.id && <span className="nft-assigned"><Rocket size={12} /> FLAGSHIP</span>}</div><div className="nft-card-caption"><strong>{asset.name}</strong><span>{shortNftAddress(asset.id)}</span></div></button>)}</div>
+      <div className="nft-grid">{assets.map((asset) => <button key={asset.id} className={`nft-card ${selectedAsset?.id === asset.id ? 'selected' : ''}`} aria-pressed={selectedAsset?.id === asset.id} disabled={!nft.link || nft.busy} onClick={() => setSelected(asset.id)}><div className="nft-art"><NftImage asset={asset} />{nft.flagship?.id === asset.id && <span className="nft-assigned"><Rocket size={12} /> COMMANDER</span>}</div><div className="nft-card-caption"><strong>{asset.name}</strong><span>{shortNftAddress(asset.id)}</span></div></button>)}</div>
       <footer className="nft-collection-address"><span>Collection</span><a href={`https://solscan.io/account/${COLLECTION}`} target="_blank" rel="noopener noreferrer">{shortNftAddress(COLLECTION)} <ExternalLink size={12} /></a></footer>
     </section><aside className="nft-sidebar"><section><h2>Accounts</h2><div className="nft-account"><span>Game account</span><strong>{publicKey ? shortNftAddress(publicKey.toBase58()) : 'Not signed in'}</strong><small>LazorKit &middot; Devnet</small></div><div className="nft-account"><span>NFT holding wallet</span><strong>{nft.link ? shortNftAddress(nft.link.owner) : 'Not connected'}</strong><small>Phantom, Solflare, Jupiter or another Solana wallet &middot; Mainnet</small></div>
       {!publicKey && <WalletConnectControl disconnectedLabel="SIGN IN TO GAMESOL" />}<button className="nft-button primary" disabled={nft.busy} onClick={() => setWalletPicker(true)}><WalletIcon size={16} /> {nft.link ? 'Change holding wallet' : 'Connect holding wallet'}</button>
       {nft.link && <div className="nft-account-actions"><button className="nft-button" disabled={nft.busy} onClick={() => void nft.refresh()}><RefreshCw size={14} /> Refresh ownership</button><button className="nft-icon-button" disabled={nft.busy} title="Disconnect NFT reader" aria-label="Disconnect NFT reader" onClick={nft.unlink}><Unlink size={16} /></button></div>}
       <p className="nft-small">Read-only connection. No signatures or transfers.</p></section>
-      <section className="nft-flagship"><h2>Flagship Identity</h2>{selectedAsset ? <><div className="nft-flagship-art"><NftImage asset={selectedAsset} /></div><h3>{selectedAsset.name}</h3><dl className="nft-traits">{selectedAsset.traits.map((trait, index) => <div key={`${trait.name}-${index}`}><dt>{trait.name}</dt><dd>{trait.value}</dd></div>)}</dl><button className="nft-button primary" disabled={nft.busy || nft.flagship?.id === selectedAsset.id} onClick={() => void nft.assign(selectedAsset.id)}>{nft.flagship?.id === selectedAsset.id ? <><Check size={16} /> Assigned</> : <><Rocket size={16} /> Assign to flagship</>}</button>{nft.flagship && <button className="nft-button" disabled={nft.busy} onClick={() => void nft.assign(null)}>Remove identity</button>}</> : <p className="nft-small">No flagship selected.</p>}<p className="nft-small">Cosmetic identity. Combat stats stay unchanged.</p></section>
+      <section className="nft-flagship"><h2>Commander avatar</h2>{selectedAsset ? <><div className="nft-flagship-art"><NftImage asset={selectedAsset} /></div><h3>{selectedAsset.name}</h3><dl className="nft-traits">{selectedAsset.traits.map((trait, index) => <div key={`${trait.name}-${index}`}><dt>{trait.name}</dt><dd>{trait.value}</dd></div>)}</dl><button className="nft-button primary" disabled={nft.busy || nft.flagship?.id === selectedAsset.id} onClick={() => void nft.assign(selectedAsset.id)}>{nft.flagship?.id === selectedAsset.id ? <><Check size={16} /> Assigned</> : <><Rocket size={16} /> Use as commander avatar</>}</button>{nft.flagship && <button className="nft-button" disabled={nft.busy} onClick={() => void nft.assign(null)}>Remove avatar</button>}</> : <p className="nft-small">Choose one of your UFOs.</p>}<p className="nft-small">Cosmetic identity. Combat stats stay unchanged.</p></section>
     </aside></div>
     {walletPicker && <div className="nft-wallet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !nft.busy) setWalletPicker(false); }}><WalletPicker onClose={() => setWalletPicker(false)} /></div>}
   </section>;
