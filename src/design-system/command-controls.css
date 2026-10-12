@@ -1,0 +1,19 @@
+.command-action.gds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;max-width:100%;padding:10px 16px;border:1px solid #47616c;border-radius:5px;background:#142630;color:#e9f4f7;font:600 12px/1.3 Outfit,system-ui,sans-serif;letter-spacing:0;box-shadow:none;white-space:normal;overflow-wrap:anywhere;transition:background 140ms ease,border-color 140ms ease}
+.command-action.gds-button.is-primary{border-color:#73c7b0;background:#164636;color:#effff6}
+.command-action.gds-button:hover:not(:disabled){background:#224754;border-color:#88d9c6;transform:none;box-shadow:none}
+.command-action.gds-button.is-primary:hover:not(:disabled){background:#215c46}
+.command-action.gds-button:disabled{opacity:.65;filter:none;cursor:not-allowed}
+.command-action-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px;width:18px;height:18px}
+.command-action-icon>svg{width:18px;height:18px}
+.command-spin{animation:command-spin 900ms linear infinite}
+.command-quantity{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}
+.command-quantity-stepper{display:grid;grid-template-columns:44px minmax(90px,128px) 44px;gap:4px;align-items:center}
+.command-quantity .gds-icon-button,.command-quantity-presets .gds-button{display:inline-flex;align-items:center;justify-content:center;width:44px;min-height:44px;height:44px;padding:0;border:1px solid #3c5965;border-radius:5px;background:#142630;color:#e9f4f7;font:600 13px/1.2 Outfit,system-ui,sans-serif;letter-spacing:0;box-shadow:none;transform:none}
+.command-quantity input{width:100%;min-width:0;height:44px;padding:0 8px;border:1px solid #3c5965;border-radius:5px;background:#09151c;color:#f0f7f8;font:500 14px/1.2 'DM Mono',monospace;text-align:center;letter-spacing:0}
+.command-quantity input[aria-invalid=true]{border-color:#e49791}
+.command-quantity-presets{display:flex;gap:4px}
+.command-quantity-presets button[aria-pressed=true]{background:#174a3d;border-color:#85d5bb;color:#e9fff4}
+.command-quantity small{flex-basis:100%;color:#f5b3a9;font:12px/1.5 Outfit,system-ui,sans-serif}
+.command-quantity button:focus-visible,.command-quantity input:focus-visible,.command-action:focus-visible{outline:2px solid #a7ead5;outline-offset:3px}
+@keyframes command-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.command-spin{animation:none}.command-action.gds-button{transition:none}}

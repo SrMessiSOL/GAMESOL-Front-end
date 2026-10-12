@@ -11,6 +11,7 @@
     "test:paymaster": "node api/lazor-paymaster.test.cjs",
     "test:nfts": "node --test server/crypto-ufos.test.cjs",
     "test:ui": "node --test server/scene-motion.test.cjs",
+    "test:commands": "node --test server/command-controls.test.cjs",
     "verify": "npm run build && npm audit --omit=dev --audit-level=high",
     "preview": "vite preview"
   },

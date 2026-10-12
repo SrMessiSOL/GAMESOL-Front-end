@@ -1,0 +1,22 @@
+.planet-world .command-store-balance{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;margin-bottom:8px;border-bottom:1px solid #344c56;font:14px/1.4 Outfit,system-ui,sans-serif;color:#a3bbc5}
+.command-store-balance strong{display:flex;align-items:center;gap:8px;color:#eef6f8;font-size:19px}
+.command-store-balance img{width:22px;height:22px;object-fit:contain}
+.command-workspace-error{display:flex;align-items:center;gap:14px;margin:16px 0;padding:16px 0;border-block:1px solid #80594d;color:#f2c8b8;font:13px/1.5 Outfit,system-ui,sans-serif}
+.command-workspace-error>svg{width:20px;height:20px;flex-shrink:0}
+.command-workspace-error>div,.command-workspace-error>p{flex:1;min-width:0;overflow-wrap:anywhere}
+.command-workspace-error p{margin:4px 0;color:#c5a99c}
+.planet-world .pw-command-list .command-action{min-height:44px;max-width:100%;font-size:12px;letter-spacing:0;white-space:normal;box-shadow:none;border-radius:5px}
+.planet-world .pw-production-control{gap:18px;grid-template-columns:minmax(100px,.6fr) minmax(0,1.4fr);align-items:center}
+.planet-world .pw-production-control>.command-quantity{justify-content:flex-end}
+.planet-world .pw-launch>.command-action{width:100%;margin-top:20px}
+.planet-world .pw-command-modal .pw-modal-close{display:inline-flex;align-items:center;justify-content:center;min-width:44px;width:44px;height:44px;padding:0;border-radius:5px}
+.planet-world .pw-modal-close>span{display:none}
+.planet-world .pw-modal-close>svg{width:20px;height:20px}
+.planet-world .pw-launch-grid input,.planet-world .pw-fleet-grid input,.planet-world .pw-colony-name input{min-height:44px;font-size:14px;letter-spacing:0;border-radius:5px}
+.planet-world .pw-launch-section-head h4{font-size:14px;letter-spacing:0}
+.planet-world .pw-launch-section-head span,.planet-world .pw-fleet-grid label>b,.planet-world .pw-fleet-grid label span>b,.planet-world .pw-launch-grid label>small{font-size:11px;letter-spacing:0}
+.planet-world .pw-mission-preflight p{font-size:13px;line-height:1.5}
+.command-launch-fields{display:block;min-width:0;margin:0;padding:0;border:0}
+.command-launch-fields:disabled{opacity:.75}
+.planet-world .pw-mission-preflight .command-preflight-error{color:#efbaad}
+@media(max-width:760px){.planet-world .pw-command-list article{min-width:0}.planet-world .pw-command-list article>.command-action{width:100%;grid-column:1/-1}.planet-world .pw-production-control{grid-template-columns:minmax(0,1fr)}.planet-world .pw-production-control>.command-quantity{justify-content:flex-start}.command-workspace-error{flex-wrap:wrap}.command-workspace-error>.command-action{width:100%}.planet-world .pw-destination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.planet-world .pw-cargo-grid{grid-template-columns:minmax(0,1fr)}.planet-world .pw-mission-preflight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
