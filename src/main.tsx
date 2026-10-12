@@ -10,6 +10,7 @@ import { CryptoUfosProvider } from "./CryptoUfos";
 import { IS_SHARED_PUBLIC_RPC, RPC_ENDPOINT } from "./game-state";
 import { installSolanaRpcFetchGuard } from "./rpc-fetch-guard";
 import gamesolMark from "./assets/ui/logobg.png";
+import { connectWithPopupRecovery } from "./passkey-connect-recovery";
 import "./design-system/tokens.css";
 
 if (!(globalThis as any).Buffer) (globalThis as any).Buffer = Buffer;
@@ -29,7 +30,7 @@ const DEFAULT_PAYMASTER_URL = new URL("/api/lazor-paymaster", window.location.or
 // on-chain create-wallet instruction. No credential or key material is logged.
 const originalOpenConnect = DialogManager.prototype.openConnect;
 DialogManager.prototype.openConnect = async function openCompatiblePasskey() {
-  const result = await originalOpenConnect.call(this);
+  const result = await connectWithPopupRecovery(this, () => originalOpenConnect.call(this));
   (globalThis as any).__gamesolLazorConnectDiagnostic = {
     connectionType: result.connectionType,
     hasPublicKey: Boolean(result.publicKey),
