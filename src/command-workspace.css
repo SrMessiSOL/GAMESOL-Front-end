@@ -18,5 +18,11 @@
 .planet-world .pw-mission-preflight p{font-size:13px;line-height:1.5}
 .command-launch-fields{display:block;min-width:0;margin:0;padding:0;border:0}
 .command-launch-fields:disabled{opacity:.75}
+.planet-world .pw-inline-queue-actions{display:flex;flex-wrap:wrap;gap:8px}
+.planet-world .pw-inline-queue-actions .command-action,.planet-world .pw-research-lab-actions .command-action{min-height:48px;white-space:normal;letter-spacing:0;max-width:100%;font-size:12px}
+.planet-world .pw-inline-queue-actions .command-action>span{letter-spacing:0;font:inherit;text-transform:none}
+.planet-world .pw-inline-queue-control{min-width:0}
+.planet-world .pw-inline-queue>div:first-child{min-width:0;overflow-wrap:anywhere}
+.planet-world .pw-primary-action.command-action{min-height:44px;white-space:normal;letter-spacing:0}
 .planet-world .pw-mission-preflight .command-preflight-error{color:#efbaad}
 @media(max-width:760px){.planet-world .pw-command-list article{min-width:0}.planet-world .pw-command-list article>.command-action{width:100%;grid-column:1/-1}.planet-world .pw-production-control{grid-template-columns:minmax(0,1fr)}.planet-world .pw-production-control>.command-quantity{justify-content:flex-start}.command-workspace-error{flex-wrap:wrap}.command-workspace-error>.command-action{width:100%}.planet-world .pw-destination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.planet-world .pw-cargo-grid{grid-template-columns:minmax(0,1fr)}.planet-world .pw-mission-preflight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

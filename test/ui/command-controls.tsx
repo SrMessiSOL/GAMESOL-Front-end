@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Hammer, RotateCcw } from 'lucide-react';
+import { Hammer, RotateCcw, Zap, CheckCircle2 } from 'lucide-react';
 import { STORE_PACKS, type StorePack } from '../../src/store-catalog';
 import { StorePackCard, StorePurchaseReview } from '../../src/StoreControls';
 import { CommandActionButton, CommandQuantity } from '../../src/design-system/command-controls';
@@ -30,6 +30,13 @@ function Checks() {
         window.setTimeout(() => { setPending(false); setResult(`Recorded test quantity ${quantity}`); }, 700);
       }}>Build {quantity}</CommandActionButton></article></div>
       <p role="status">{result}</p>
+      </section>
+      <section className="pw-research-command">
+        <h2>Construction and research checks</h2>
+        <CommandActionButton tone="primary" className="pw-primary-action" icon={<Hammer />} pending={pending} pendingLabel="Starting upgrade..." onClick={() => { setPending(true); setResult('Pending test upgrade'); }}>Upgrade to level 12</CommandActionButton>
+        <div className="pw-command-list pw-research-list"><article className="is-ready"><div className="pw-row-art" aria-hidden="true" /><div><h3>Layout-test technology</h3><p>Level 11 to 12</p></div><CommandActionButton tone="primary" icon={<Zap />} pending={pending} pendingLabel="Starting research..." onClick={() => { setPending(true); setResult('Pending test research'); }}>Research level 12</CommandActionButton></article></div>
+        {[false, true].map((ready) => <section key={String(ready)} className="pw-inline-queue"><div><span>Construction queue</span><strong>Layout-test research laboratory upgrade</strong><div className={`pw-inline-queue-progress${ready ? ' ready' : ''}`} role="progressbar" aria-label="Construction progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={ready ? 100 : 47}><i style={{ width: ready ? '100%' : '47%' }} /></div></div><div className="pw-inline-queue-control"><div className="pw-inline-queue-meta"><b>{ready ? 'READY' : '2h 13m'}</b><em>{ready ? 100 : 47}%</em></div><div className="pw-inline-queue-actions"><CommandActionButton icon={<Zap />} pending={pending} pendingLabel="Accelerating..." disabled={ready} onClick={() => { setPending(true); setResult('Pending test acceleration'); }}>Finish with AM</CommandActionButton><CommandActionButton tone="primary" icon={<CheckCircle2 />} pending={pending} pendingLabel="Finishing..." disabled={!ready} onClick={() => { setPending(true); setResult('Pending test finish'); }}>Finish</CommandActionButton></div></div></section>)}
+        <CommandActionButton icon={<RotateCcw />} onClick={() => { setPending(false); setResult('Reset test actions'); }}>Reset test actions</CommandActionButton>
       </section>
       <section className="pw-store-command">
       <div className="command-store-catalog"><section><header><h3>Store states</h3><small>Canonical pack data / simulated eligibility</small></header><div>{packs.map((pack) => <StorePackCard key={pack.id} pack={pack} worldName="LayoutTestDestinationName1234567" balance={3_000_000n} resetLabel="in 23h" purchased={purchased.includes(`${pack.period}:${pack.id}`)} pending={purchasePending === `${pack.period}:${pack.id}`} disabled={purchasePending !== null} onReview={setReview} />)}</div></section></div>

@@ -112,3 +112,16 @@ test('world integration preserves global transaction results and rejects stale s
   assert.match(world, /<StorePurchaseReview/);
   assert.doesNotMatch(world, /setCommandError\(['"]Purchase confirmed/);
 });
+
+test('construction, research and queues retain readiness gates and share the command lock', () => {
+  const world = fs.readFileSync(path.join(__dirname, '../src/PlanetWorld.tsx'), 'utf8');
+  assert.match(world, /trackCommand\(`building:\$\{building.key\}`/);
+  assert.match(world, /trackCommand\(`research:\$\{tech.key\}`/);
+  assert.match(world, /pendingCommand !== null \|\| !buildingCommandReady/);
+  assert.match(world, /pendingCommand !== null \|\| researchBusy \|\| researchLabUpgrading \|\| !ready/);
+  assert.match(world, /pendingCommand !== null \|\| ready/);
+  assert.match(world, /pendingCommand !== null \|\| !ready/);
+  assert.match(world, /role="progressbar" aria-label=\{`\$\{activeQueue.label\} progress`\}/);
+  assert.match(world, /trackCommand\(`queue:finish:\$\{activeQueue.label\}`/);
+  assert.match(world, /trackCommand\(`queue:accelerate:\$\{activeQueue.label\}`/);
+});
