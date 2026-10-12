@@ -20,7 +20,18 @@ Final release check: all 34 tests and the Vercel production build passed. Chrome
 
 ## Remaining Required Evidence
 
+### Confirmed Construction Stage
+
+After activation and dismissal through the visible close button, the live Quick Play order succeeded. Crystal Mine was started and finished without ANTIMATTER acceleration. Both signatures were queried through the public devnet RPC with `err: null` and finalized confirmation:
+
+- StartBuild, slot 510380639: `4ayDbN5JBgk7vyRgkhv8UJwtytVUW8DWR9G21kf6R4L4fBD42xGpp1BrmVAqkD3eYgiFmZ8u78kptMxWJKkxsXb4`.
+- FinishBuild, slot 510380847: `5ck48ZCJCrFK9oxb9F8wEy3zgC72tZkxoP3ubQSJzSeD5ZuB67eFSQvEJ5AmLdoaxghQWbx3yapm1KNEC6qjybK8`.
+
+Public transaction logs identify the corresponding StartBuild and FinishBuild instructions. The live UI displays Crystal Mine level 2 and no active construction queue; its next available upgrade is 2 to 3. This proves the Quick Play construction stage, not the full research/fleet/mission loop. The paragraphs below record earlier failed attempts, not the current construction result.
+
 Quick Play follow-up: the player authorized the agent to start activation. The Lazor portal opened and returned; the account menu reported Quick Play ON and sponsored fees. Retrying Crystal Mine still failed locally with "Quick Play is off. Turn it on with your passkey first." No upgrade was applied. Code inspection found that an older background session refresh could overwrite a newly activated/revoked session after awaiting RPC. Refresh now checks the current stored snapshot before writing, re-reads a changed session with bounded retries, and rejects account changes. Three regression tests cover activation, revocation and account switching. Live retry after deployment remains required.
+
+Diagnostic correction: subsequent live checks showed the automation's click on the full-screen "Close wallet menu" backdrop hit the underlying Quick Play toggle, producing the explicit "Quick Play is off. Your game account is still safely connected" message. This is an automation interaction error, not proof that the session-refresh race caused the observed rejection. Use the visible menu close button and verify ON after dismissal. The stale-refresh guard addresses an independently reproducible code race and must not be represented as the proven cause of this live failure.
 
 Player submitted the first Crystal Mine test order after handoff. The live operation dialog reported "Quick Play is no longer active for this device. Nothing was changed." Crystal Mine remained level 1. The loop therefore has no successful signed upgrade yet; the player must explicitly re-enable their gameplay session before retrying. Do not count the click as a confirmed transaction.
 
