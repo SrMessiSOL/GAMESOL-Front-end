@@ -22,6 +22,7 @@
 .planet-world .pw-inline-queue-actions .command-action,.planet-world .pw-research-lab-actions .command-action{min-height:48px;white-space:normal;letter-spacing:0;max-width:100%;font-size:12px}
 .planet-world .pw-inline-queue-actions .command-action>span{letter-spacing:0;font:inherit;text-transform:none}
 .planet-world .pw-inline-queue-control{min-width:0}
+.planet-world .pw-shipyard-facility-actions .command-action,.planet-world .pw-inspect-action.command-action{min-height:48px;max-width:100%;white-space:normal;letter-spacing:0;font-size:12px}
 .planet-world .pw-inline-queue>div:first-child{min-width:0;overflow-wrap:anywhere}
 .planet-world .pw-primary-action.command-action{min-height:44px;white-space:normal;letter-spacing:0}
 .planet-world .pw-mission-preflight .command-preflight-error{color:#efbaad}

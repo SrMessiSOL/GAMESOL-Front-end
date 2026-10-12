@@ -116,6 +116,8 @@ test('world integration preserves global transaction results and rejects stale s
 test('construction, research and queues retain readiness gates and share the command lock', () => {
   const world = fs.readFileSync(path.join(__dirname, '../src/PlanetWorld.tsx'), 'utf8');
   assert.match(world, /trackCommand\(`building:\$\{building.key\}`/);
+  assert.match(world, /trackCommand\('building:shipyard'/);
+  assert.match(world, /pendingCommand !== null \|\| queueBusy \|\| shipyardUpgradeBlocked \|\| !shipyardAffordable \|\| !shipyardRequirementsMet/);
   assert.match(world, /trackCommand\(`research:\$\{tech.key\}`/);
   assert.match(world, /pendingCommand !== null \|\| !buildingCommandReady/);
   assert.match(world, /pendingCommand !== null \|\| researchBusy \|\| researchLabUpgrading \|\| !ready/);
