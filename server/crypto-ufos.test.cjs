@@ -13,6 +13,15 @@ const input = { owner, smartWallet: smartWallet.toBase58(), commander: vault.toB
 const asset = { id: Keypair.generate().publicKey.toBase58(), compression: { compressed: true }, ownership: { owner },
   grouping: [{ group_key: 'collection', group_value: nft.COLLECTION }], content: { metadata: { name: 'Test NFT' }, links: { image: 'https://example.com/art.png' } } };
 
+test('IPFS crypto compatibility adapter retains the original named Crypto API and SHA256', async () => {
+  require('./prepare-ipfs-runtime.cjs');
+  const { Crypto } = await import('@peculiar/webcrypto');
+  assert.equal(typeof Crypto, 'function');
+  const value = Buffer.from('original Crypto UFOs content');
+  const digest = await new Crypto().subtle.digest('SHA-256', value);
+  assert.deepEqual(Buffer.from(digest), crypto.createHash('sha256').update(value).digest());
+});
+
 test('artwork reader preserves the original CID, rejects arbitrary URLs and checks image bytes', async () => {
   const { imageResource, imageType, createImageService } = require('./crypto-ufo-images.cjs');
   const original = 'https://nftstorage.link/ipfs/bafybeigxxhol7amgewoep2falpmmdxsjshpceockpsbmyooutvknj5jkhy/8342';

@@ -166,12 +166,18 @@ export function useCryptoUfos() {
 
 function NftImage({ asset }: { asset: CryptoUfo }) {
   const [failed, setFailed] = useState(false);
-  const [original, setOriginal] = useState(false);
-  useEffect(() => { setFailed(false); setOriginal(false); }, [asset.image]);
-  const source = original ? asset.originalImage : asset.image;
+  const [attempt, setAttempt] = useState(0);
+  const retry = useRef<number | undefined>();
+  useEffect(() => {
+    setFailed(false); setAttempt(0);
+    return () => window.clearTimeout(retry.current);
+  }, [asset.image]);
+  const source = asset.image && attempt > 0 ? `${asset.image}&retry=${attempt}` : asset.image;
   return source && !failed ? <img src={source} alt={asset.name} loading="lazy" referrerPolicy="no-referrer" onError={() => {
-    if (!original && asset.originalImage && asset.originalImage !== asset.image) setOriginal(true);
-    else setFailed(true);
+    if (attempt < 2) {
+      window.clearTimeout(retry.current);
+      retry.current = window.setTimeout(() => setAttempt((value) => value + 1), 1500 * (attempt + 1));
+    } else setFailed(true);
   }} /> : <span className="nft-image-missing">Artwork unavailable</span>;
 }
 
