@@ -14,6 +14,35 @@ function motion(window) {
 const { transitReducer: reduce, INITIAL_TRANSIT, easeSceneProgress } = motion();
 const begin = { type: 'begin', id: 1, title: 'Planet', detail: '1:1:1' };
 
+test('hidden tabs do not consume the scene loading timeout or remove readiness gates', () => {
+  let now = 0;
+  let timer;
+  let callback;
+  let visibilityChanged;
+  let fired = 0;
+  const page = {
+    hidden: true,
+    addEventListener(name, handler) { assert.equal(name, 'visibilitychange'); visibilityChanged = handler; },
+    removeEventListener(name, handler) { assert.equal(handler, visibilityChanged); visibilityChanged = undefined; },
+  };
+  const scheduler = {
+    performance: { now: () => now },
+    setTimeout(handler, delay) { callback = handler; timer = delay; return 1; },
+    clearTimeout() { timer = undefined; callback = undefined; },
+  };
+  const cleanup = motion().visiblePageTimeout(() => fired++, 15000, page, scheduler);
+  assert.equal(timer, undefined);
+  now = 30000; page.hidden = false; visibilityChanged();
+  assert.equal(timer, 15000);
+  now += 4000; page.hidden = true; visibilityChanged();
+  assert.equal(timer, undefined);
+  now += 60000; page.hidden = false; visibilityChanged();
+  assert.equal(timer, 11000);
+  callback(); assert.equal(fired, 1);
+  cleanup(); assert.equal(visibilityChanged, undefined);
+  assert.match(read('SceneTransition.tsx'), /visiblePageTimeout\(\(\) => dispatch\(\{ type: 'timeout'/);
+});
+
 test('scene changes cover first, wait for render readiness, then reveal', () => {
   let state = reduce(INITIAL_TRANSIT, begin);
   assert.equal(state.phase, 'covering');

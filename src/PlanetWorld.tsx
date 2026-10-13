@@ -21,7 +21,7 @@ import './game-polish.css';
 import { GameButton, GameIconButton } from './design-system/game-ui';
 import { CommandActionButton, CommandQuantity } from './design-system/command-controls';
 import { StorePackCard, StorePurchaseReview } from './StoreControls';
-import { formatUsdc, isWholeQuantity, storePurchaseEligibility } from './command-validation';
+import { formatUsdc, isWholeQuantity, samePlanetCoordinates, storePurchaseEligibility } from './command-validation';
 import type { StorePack } from './store-catalog';
 import './command-workspace.css';
 import './planet-shell.css';
@@ -1773,10 +1773,12 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const [operationMenuOpen, setOperationMenuOpen] = useState(false);
   const [advancedFacilitiesOpen, setAdvancedFacilitiesOpen] = useState(false);
   const [researchCatalogOpen, setResearchCatalogOpen] = useState(false);
+  const [showLockedShips, setShowLockedShips] = useState(false);
+  const [showLockedDefenses, setShowLockedDefenses] = useState(false);
   const [questState, setQuestState] = useState<QuestStateAccount | null>(null);
   const [questProgress, setQuestProgress] = useState<QuestProgressStateAccount | null>(null);
   const [questTargets, setQuestTargets] = useState<QuestRewardTargetStateAccount | null>(null);
-  const [questsLoading, setQuestsLoading] = useState(false);
+  const [questsLoading, setQuestsLoading] = useState(true);
   const [collapsedQuestGroups, setCollapsedQuestGroups] = useState<Record<QuestDefinition["group"], boolean>>({ Tutorial: true, Daily: true, Weekly: true, Monthly: true });
   const [storeConfig, setStoreConfig] = useState<StoreConfigState | null>(null);
   const [storePurchaseState, setStorePurchaseState] = useState<StorePurchaseStateAccount | null>(null);
@@ -1834,6 +1836,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const allianceConfirmationOpen = allianceConfirmation !== null;
   const openPlanetCommand = (nextModal: PlanetWorldModal, opener: HTMLElement | null = null) => {
     if (nextModal === 'store' && game) setStoreLoading(true);
+    if (nextModal === 'quests' && game) setQuestsLoading(true);
     modalOpenerRef.current = opener;
     setInspectionActive(false);
     setModal(nextModal);
@@ -2185,16 +2188,17 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const researchReadyCount = researchOptions.filter((option) => option.ready).length;
   const researchLockedCount = researchOptions.filter((option) => !option.prerequisitesReady).length;
   const researchCatalogVisible = state.planet.researchLab > 0 || researchReadyCount > 0 || researchCatalogOpen;
-  const shipOptions = SHIPS.map((ship) => {
+  const allShipOptions = SHIPS.map((ship) => {
     const cost = [ship.cost.m * quantity, ship.cost.c * quantity, ship.cost.d * quantity] as const;
     const requirements = requirementRows(SHIP_REQUIREMENTS[ship.key] ?? []);
     const prerequisitesReady = requirementsMet(requirements);
     const resourcesReady = canAfford(...cost);
     return { ship, cost, requirements, prerequisitesReady, resourcesReady, ready: prerequisitesReady && resourcesReady };
   });
-  const shipReadyCount = shipOptions.filter((option) => option.ready).length;
+  const shipOptions = allShipOptions.filter(({ ship, prerequisitesReady }) => showLockedShips || prerequisitesReady || Number((state.fleet as any)[ship.key] ?? 0) > 0 || ship.key === 'lightFighter');
+  const shipReadyCount = allShipOptions.filter((option) => option.ready).length;
   const ownedVesselCount = SHIPS.reduce((total, ship) => total + Number((state.fleet as any)[ship.key] ?? 0), 0);
-  const defenseOptions = DEFENSE.map((item, index) => {
+  const allDefenseOptions = DEFENSE.map((item, index) => {
     const cost = [item.cost[0] * quantity, item.cost[1] * quantity, item.cost[2] * quantity] as const;
     const requirements = requirementRows(DEFENSE_REQUIREMENTS[item.key] ?? []);
     const prerequisitesReady = requirementsMet(requirements);
@@ -2204,9 +2208,10 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
     const uniqueAlreadyBuilt = unique && online > 0;
     return { item, index, cost, requirements, prerequisitesReady, resourcesReady, online, unique, uniqueAlreadyBuilt, ready: prerequisitesReady && resourcesReady && !uniqueAlreadyBuilt };
   });
-  const defenseReadyCount = defenseOptions.filter((option) => option.ready).length;
-  const defenseUnitCount = defenseOptions.reduce((total, option) => total + option.online, 0);
-  const activeShieldCount = defenseOptions.filter((option) => option.uniqueAlreadyBuilt).length;
+  const defenseOptions = allDefenseOptions.filter(({ item, prerequisitesReady, online }) => showLockedDefenses || prerequisitesReady || online > 0 || item.key === 'rocketLauncher');
+  const defenseReadyCount = allDefenseOptions.filter((option) => option.ready).length;
+  const defenseUnitCount = allDefenseOptions.reduce((total, option) => total + option.online, 0);
+  const activeShieldCount = allDefenseOptions.filter((option) => option.uniqueAlreadyBuilt).length;
   const queues = [
     { label: "Construction", active: state.planet.buildQueueItem !== 255, item: BUILDINGS[state.planet.buildQueueItem]?.name ?? "Facility upgrade", artKey: BUILDINGS[state.planet.buildQueueItem]?.key, finishAt: state.planet.buildFinishTs, finish: (client: GameClient, entity: PublicKey) => client.finishBuild(entity), accelerate: (client: GameClient, entity: PublicKey) => client.accelerateBuildWithAntimatter(entity) },
     { label: "Research", active: state.research.queueItem !== 255, item: RESEARCH[state.research.queueItem]?.name ?? "Research project", artKey: RESEARCH[state.research.queueItem]?.key, finishAt: state.research.researchFinishTs, finish: (client: GameClient, entity: PublicKey) => client.finishResearch(entity), accelerate: (client: GameClient, entity: PublicKey) => client.accelerateResearchWithAntimatter(entity) },
@@ -2312,6 +2317,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const missionCargoAmounts = [Number(missionCargo.metal || 0), Number(missionCargo.crystal || 0), Number(missionCargo.deuterium || 0)];
   const selectedCargoTotal = missionCargoAmounts.reduce((total, amount) => total + amount, 0);
   const missionCoordinatesValid = isWholeQuantity(missionTarget.galaxy, 1, 999) && isWholeQuantity(missionTarget.system, 1, 999) && isWholeQuantity(missionTarget.position, 1, 15);
+  const missionDestinationIsSource = samePlanetCoordinates(state.planet, missionTarget);
   const missionSpeedValid = isWholeQuantity(missionTarget.speed, 10, 100);
   const missionFleetNumbersValid = Object.entries(missionShips).every(([key, amount]) => isWholeQuantity(amount, 0, Number((state.fleet as any)[key] ?? 0)));
   const missionFleetValid = missionFleetNumbersValid && selectedMissionShips > 0 && (missionType !== 6 || (selectedProbeCount > 0 && selectedMissionShips === selectedProbeCount)) && (missionType !== 5 || selectedColonyCount > 0);
@@ -2325,9 +2331,10 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const availableFleetClasses = SHIPS.filter((ship) => ship.key !== "solarSatellite" && Number((state.fleet as any)[ship.key] ?? 0) > 0).length;
   const estimatedMissionFuel = missionFuelCost(missionShips, missionTarget.speed) * (missionType === 5 ? 1 : 2);
   const missionResourcesValid = missionFleetNumbersValid && missionCargoNumbersValid && resource.metal >= BigInt(missionCargoAmounts[0]) && resource.crystal >= BigInt(missionCargoAmounts[1]) && resource.deuterium >= BigInt(missionCargoAmounts[2] + estimatedMissionFuel);
-  const canLaunchMission = missionCoordinatesValid && missionSpeedValid && missionFleetValid && missionCargoValid && availableMissionSlots > 0 && missionResourcesValid;
+  const canLaunchMission = missionCoordinatesValid && !missionDestinationIsSource && missionSpeedValid && missionFleetValid && missionCargoValid && availableMissionSlots > 0 && missionResourcesValid;
   useEffect(() => {
     if (!missionCoordinatesValid) { setMissionError("Use whole coordinates: Galaxy 1-999, System 1-999, Position 1-15."); return; }
+    if (missionDestinationIsSource) { setMissionError("Choose a destination other than this planet."); return; }
     if (!missionSpeedValid) { setMissionError("Choose a whole fleet speed from 10% to 100%."); return; }
     if (!missionFleetNumbersValid) { setMissionError('Ship assignments must be whole numbers within the available fleet.'); return; }
     if (missionType === 6 && !missionFleetValid) { setMissionError("Espionage requires probes only."); return; }
@@ -2338,7 +2345,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
     if (availableMissionSlots <= 0) { setMissionError("No mission slots are available. Resolve an existing mission first."); return; }
     if (!missionResourcesValid) { setMissionError("This world does not have enough cargo resources and deuterium fuel for the mission."); return; }
     setMissionError("");
-  }, [availableMissionSlots, missionCargoValid, missionFleetValid, missionFleetNumbersValid, missionResourcesValid, missionSpeedValid, missionCoordinatesValid, missionType, selectedCargoCapacity, selectedCargoTotal, selectedMissionShips]);
+  }, [availableMissionSlots, missionCargoValid, missionFleetValid, missionFleetNumbersValid, missionResourcesValid, missionSpeedValid, missionCoordinatesValid, missionDestinationIsSource, missionType, selectedCargoCapacity, selectedCargoTotal, selectedMissionShips]);
   const launchMission = async () => {
     if (!canLaunchMission || !game || missionChecking || busy) return;
     setMissionChecking(true);
@@ -2396,11 +2403,9 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
       if (!activeQueue.active) return null;
       const seconds = Math.max(0, activeQueue.finishAt - nowTs);
       const ready = seconds === 0;
-      const baseline = queueBaselines[`${activeQueue.label}:${activeQueue.finishAt}`] ?? 0;
-      const progress = ready ? 100 : baseline > 0 ? Math.min(99, Math.max(0, ((baseline - seconds) / baseline) * 100)) : 0;
       return <section key={`${activeQueue.label}:${activeQueue.finishAt}`} className="pw-inline-queue">
-        <div><span>{activeQueue.label} queue</span><strong>{activeQueue.item}</strong><div role="progressbar" aria-label={`${activeQueue.label} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)} aria-valuetext={ready ? "Ready to finish" : `${queueTime(seconds)} remaining`} className={`pw-inline-queue-progress${ready ? " ready" : ""}`}><i style={{ width: `${progress}%` }} /></div></div>
-        <div className="pw-inline-queue-control"><div className="pw-inline-queue-meta"><b>{ready ? "READY" : queueTime(seconds)}</b><em>{Math.round(progress)}%</em></div><div className="pw-inline-queue-actions"><CommandActionButton icon={<Zap />} pending={pendingCommand === `queue:accelerate:${activeQueue.label}`} pendingLabel="Accelerating..." disabled={busy || pendingCommand !== null || ready} onClick={() => void trackCommand(`queue:accelerate:${activeQueue.label}`, () => run(`Accelerate ${activeQueue.label.toLowerCase()}`, activeQueue.accelerate))}>Finish with AM</CommandActionButton><CommandActionButton tone="primary" icon={<CheckCircle2 />} pending={pendingCommand === `queue:finish:${activeQueue.label}`} pendingLabel="Finishing..." disabled={busy || pendingCommand !== null || !ready} onClick={() => void trackCommand(`queue:finish:${activeQueue.label}`, () => run(`Finish ${activeQueue.label.toLowerCase()}`, activeQueue.finish))}>Finish</CommandActionButton></div></div>
+        <div><span>{activeQueue.label} queue</span><strong>{activeQueue.item}</strong><small>{ready ? "Ready to collect" : "Production in progress"}</small></div>
+        <div className="pw-inline-queue-control"><div className="pw-inline-queue-meta"><b>{ready ? "READY" : queueTime(seconds)}</b></div><div className="pw-inline-queue-actions"><CommandActionButton icon={<Zap />} pending={pendingCommand === `queue:accelerate:${activeQueue.label}`} pendingLabel="Accelerating..." disabled={busy || pendingCommand !== null || ready} onClick={() => void trackCommand(`queue:accelerate:${activeQueue.label}`, () => run(`Accelerate ${activeQueue.label.toLowerCase()}`, activeQueue.accelerate))}>Finish with AM</CommandActionButton><CommandActionButton tone="primary" icon={<CheckCircle2 />} pending={pendingCommand === `queue:finish:${activeQueue.label}`} pendingLabel="Finishing..." disabled={busy || pendingCommand !== null || !ready} onClick={() => void trackCommand(`queue:finish:${activeQueue.label}`, () => run(`Finish ${activeQueue.label.toLowerCase()}`, activeQueue.finish))}>Finish</CommandActionButton></div></div>
       </section>;
     })}</>;
   };
@@ -2663,7 +2668,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
         {queueCommand(queues[2])}{queueCommand(queues[3])}
         <section className={`pw-facility-upgrade pw-shipyard-facility${!queueBusy && !shipyardBusy && shipyardAffordable && shipyardRequirementsMet ? " is-ready" : ""}`}><div><span>ORBITAL INFRASTRUCTURE</span><b>Shipyard · Level {state.planet.shipyard} → {state.planet.shipyard + 1}</b><small>Upgrade the orbital yard to unlock more fleet and defense blueprints.</small>{costs(shipyardMetalCost, shipyardCrystalCost, shipyardDeuteriumCost)}{!shipyardRequirementsMet && <p className="pw-command-warning">Requires {missingRequirementLabel(shipyardRequirements)}</p>}{!shipyardAffordable && <p className="pw-command-warning">Insufficient resources.</p>}</div><div className="pw-shipyard-facility-actions"><CommandActionButton className="pw-inspect-action" type="button" icon={<Crosshair />} onClick={() => inspectFacility(7)}>Inspect shipyard</CommandActionButton><CommandActionButton tone="primary" icon={<Hammer />} pending={pendingCommand === 'building:shipyard'} pendingLabel="Starting upgrade..." disabled={busy || pendingCommand !== null || queueBusy || shipyardUpgradeBlocked || !shipyardAffordable || !shipyardRequirementsMet} onClick={() => void trackCommand('building:shipyard', () => run("Upgrade Shipyard", (client, entity) => client.startBuild(entity, 7)))}>{queueBusy ? "Construction active" : shipyardUpgradeBlocked ? "Production active" : !shipyardRequirementsMet ? "Shipyard locked" : !shipyardAffordable ? "Needs resources" : `Upgrade to level ${state.planet.shipyard + 1}`}</CommandActionButton></div></section>
         <section className="pw-production-control" aria-label="Fleet production quantity"><div><span>PRODUCTION ORDER</span><b>Quantity</b></div><CommandQuantity label="Fleet production quantity" value={quantity} onChange={setQuantity} onValidityChange={setProductionQuantityValid} disabled={busy || pendingCommand !== null} /></section>
-        <div className="pw-command-section-title"><div><span>FLEET BLUEPRINTS</span><b>{shipOptions.length} HULL CLASSES</b></div><small>{shipReadyCount} can be produced with the selected quantity.</small></div>
+        <div className="pw-command-section-title"><div><span>FLEET BLUEPRINTS</span><b>{shipOptions.length} / {allShipOptions.length} hull classes</b></div><label className="pw-catalog-filter"><input type="checkbox" checked={showLockedShips} onChange={event => setShowLockedShips(event.target.checked)} />Show locked blueprints</label></div>
         <div className="pw-command-list pw-ship-list">{shipOptions.map(({ ship, cost, requirements, prerequisitesReady, resourcesReady, ready }) => <article key={ship.key} className={ready ? "is-ready" : "is-locked"}><div className="pw-row-art" style={{ backgroundImage: resolveGameArt(ship.key, "none") }} /><div><span className={`pw-card-readiness ${ready ? "ready" : "locked"}`}>{shipyardBusy ? "QUEUE OCCUPIED" : shipyardUpgrading ? "SHIPYARD UPGRADING" : ready ? `READY · BUILD ${quantity}` : !prerequisitesReady ? "BLUEPRINT LOCKED" : "NEEDS RESOURCES"}</span><h3>{ship.name}</h3><p>{Number((state.fleet as any)[ship.key] ?? 0).toLocaleString()} owned · {ship.cargo.toLocaleString()} cargo · {ship.atk.toLocaleString()} attack</p>{costs(...cost)}{!prerequisitesReady && <p className="pw-command-warning">Requires {missingRequirementLabel(requirements)}</p>}{!resourcesReady && <p className="pw-command-warning">Insufficient resources for {quantity}.</p>}</div><CommandActionButton tone="primary" icon={<Hammer />} pending={pendingCommand === `ship:${ship.key}`} pendingLabel="Commissioning..." disabled={busy || pendingCommand !== null || !productionQuantityValid || shipyardBusy || shipyardUpgrading || !ready} onClick={() => void trackCommand(`ship:${ship.key}`, () => run(`Build ${ship.name}`, (client, entity) => client.buildShip(entity, SHIP_TYPE_IDX[ship.key], quantity)))}>{!productionQuantityValid ? "Invalid quantity" : shipyardBusy ? "Queue active" : shipyardUpgrading ? "Shipyard upgrading" : !prerequisitesReady ? "Locked" : !resourcesReady ? "Needs resources" : `Build ${quantity}`}</CommandActionButton></article>)}</div>
       </section>}
       {modal === "defense" && <section className="pw-defense-command">
@@ -2672,7 +2677,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
         {queueCommand(queues[2])}{queueCommand(queues[3])}
         <section className="pw-defense-posture"><div><span>PLANETARY COVERAGE</span><b>{activeShieldCount > 0 ? `${activeShieldCount} SHIELD ${activeShieldCount === 1 ? "FIELD" : "FIELDS"} ONLINE` : "NO SHIELD FIELD"}</b><small>{activeShieldCount > 0 ? "Unique planetary shield infrastructure is active." : "Shield domes unlock after the required shipyard and shielding technology levels."}</small></div><div><span>SHIPYARD LINK</span><b>LEVEL {state.planet.shipyard}</b><small>Fleet and defense orders cannot run at the same time.</small></div></section>
         <section className="pw-production-control" aria-label="Defense production quantity"><div><span>PRODUCTION ORDER</span><b>Quantity</b></div><CommandQuantity label="Defense production quantity" value={quantity} onChange={setQuantity} onValidityChange={setProductionQuantityValid} disabled={busy || pendingCommand !== null} /></section>
-        <div className="pw-command-section-title"><div><span>DEFENSE BLUEPRINTS</span><b>{defenseOptions.length} INSTALLATIONS</b></div><small>{defenseReadyCount} can be produced with the selected quantity.</small></div>
+        <div className="pw-command-section-title"><div><span>DEFENSE BLUEPRINTS</span><b>{defenseOptions.length} / {allDefenseOptions.length} installations</b></div><label className="pw-catalog-filter"><input type="checkbox" checked={showLockedDefenses} onChange={event => setShowLockedDefenses(event.target.checked)} />Show locked blueprints</label></div>
         <div className="pw-command-list pw-defense-list">{defenseOptions.map(({ item, index, cost, requirements, prerequisitesReady, resourcesReady, online, unique, uniqueAlreadyBuilt, ready }) => <article key={item.key} className={ready ? "is-ready" : uniqueAlreadyBuilt ? "is-online" : "is-locked"}><div className="pw-row-art" style={{ backgroundImage: resolveGameArt(item.key, "none") }} /><div><span className={`pw-card-readiness ${ready ? "ready" : uniqueAlreadyBuilt ? "online" : "locked"}`}>{shipyardBusy ? "QUEUE OCCUPIED" : shipyardUpgrading ? "SHIPYARD UPGRADING" : ready ? `READY · BUILD ${quantity}` : uniqueAlreadyBuilt ? "UNIQUE FIELD ONLINE" : !prerequisitesReady ? "BLUEPRINT LOCKED" : "NEEDS RESOURCES"}</span><h3>{item.name}</h3><p>{item.role} · {online.toLocaleString()} online{unique ? " · UNIQUE" : ""}</p><small className="pw-defense-description">{item.desc}</small>{costs(...cost)}{!prerequisitesReady && <p className="pw-command-warning">Requires {missingRequirementLabel(requirements)}</p>}{uniqueAlreadyBuilt && <p className="pw-command-success">Maximum planetary deployment reached.</p>}{!resourcesReady && !uniqueAlreadyBuilt && <p className="pw-command-warning">Insufficient resources for {quantity}.</p>}</div><CommandActionButton tone="primary" icon={<Shield />} pending={pendingCommand === `defense:${item.key}`} pendingLabel="Commissioning..." disabled={busy || pendingCommand !== null || !productionQuantityValid || shipyardBusy || shipyardUpgrading || !ready} onClick={() => void trackCommand(`defense:${item.key}`, () => run(`Build ${item.name}`, (client, entity) => client.buildDefense(entity, index, quantity)))}>{!productionQuantityValid ? "Invalid quantity" : shipyardBusy ? "Queue active" : shipyardUpgrading ? "Shipyard upgrading" : uniqueAlreadyBuilt ? "Field online" : !prerequisitesReady ? "Locked" : !resourcesReady ? "Needs resources" : `Build ${quantity}`}</CommandActionButton></article>)}</div>
       </section>}
       {modal === "quests" && <section className="pw-quest-command">
@@ -2711,7 +2716,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
       {modal === "activity" && <section className="pw-intelligence-command">
         <div className="pw-command-head"><span>COMMAND INTELLIGENCE</span><h2>Battle and espionage reports</h2><p>Review verified outcomes and reconnaissance recovered from this commander's on-chain operations.</p></div>
         <section className="pw-intelligence-overview" aria-label="Command intelligence overview"><div><span>ALL REPORTS</span><b>{reportTotal}</b></div><div><span>BATTLE REPORTS</span><b>{activity.battleReports.length}</b></div><div><span>ESPIONAGE REPORTS</span><b>{activity.spyReports.length}</b></div><div className={activity.loading ? "scanning" : "ready"}><span>LAST ACTIVITY</span><b>{activity.loading ? "SCANNING" : latestReportAt > 0 ? new Date(latestReportAt * 1000).toLocaleDateString() : "NO HISTORY"}</b></div></section>
-        <div className="pw-activity-toolbar"><div><span>DEVNET INTELLIGENCE LEDGER</span><small>{activity.loading ? "Checking confirmed mission events..." : `${reportTotal} confirmed ${reportTotal === 1 ? "record" : "records"} loaded`}</small></div><button disabled={activity.loading} onClick={() => void activity.refresh()}>{activity.loading ? "SCANNING..." : "UPDATE REPORTS"}</button></div>
+        <div className="pw-activity-toolbar"><div><span>Mission history</span><small>{activity.loading ? "Checking recent missions..." : `${reportTotal} confirmed ${reportTotal === 1 ? "report" : "reports"}`}</small></div><button disabled={activity.loading} onClick={() => void activity.refresh()}><RotateCcw aria-hidden="true" />{activity.loading ? "Refreshing..." : "Refresh reports"}</button></div>
         {activity.loading && reportTotal === 0 ? <section className="pw-intelligence-loading"><Activity /><div><b>Scanning mission history</b><p>Checking confirmed battle and espionage events for your owned worlds.</p></div><i /></section> : reportTotal === 0 ? <section className="pw-intelligence-empty"><div className="pw-intelligence-empty-signal"><Activity /></div><div><span>NO REPORTS RECORDED</span><h3>Intelligence begins with a mission</h3><p>Battle reports appear after attacks resolve. Espionage reports appear after probe missions complete. Every result remains verifiable through Solana Explorer.</p></div><button type="button" onClick={() => setModal("missions")}>OPEN MISSION CONTROL</button></section> : <div className="pw-report-groups">
           {activity.spyReports.length > 0 && <section className="pw-report-group"><header><div><span>RECONNAISSANCE</span><b>Espionage intelligence</b></div><em>{activity.spyReports.length} REPORTS</em></header><div className="pw-activity-grid">{activity.spyReports.map(({ signature, event }) => { const resourcesVisible = event.revealLevel >= 1; const buildingsVisible = event.revealLevel >= 2; const militaryVisible = event.revealLevel >= 3; const techVisible = event.revealLevel >= 4; return <article key={`spy:${signature}`} className="spy"><header><div><span>SPY REPORT · LEVEL {event.revealLevel}</span><h3>{event.sourceGalaxy}:{event.sourceSystem}:{event.sourcePosition} → {event.targetGalaxy}:{event.targetSystem}:{event.targetPosition}</h3></div><b className={event.probesSurvived > 0 ? "good" : "danger"}>{event.probesSurvived > 0 ? "PROBES RETURNING" : "PROBES LOST"}</b></header><section><div><span>Signal / counter</span><b>{activityAmount(event.sensorScore)} / {activityAmount(event.counterScore)}</b></div><div><span>Resources</span><b>{resourcesVisible ? `${activityAmount(event.reportedMetal)} M · ${activityAmount(event.reportedCrystal)} C · ${activityAmount(event.reportedDeuterium)} D` : "HIDDEN"}</b></div><div><span>Building score</span><b>{buildingsVisible ? activityAmount(event.reportedBuildingScore) : "HIDDEN"}</b></div><div><span>Fleet / defense</span><b>{militaryVisible ? `${activityAmount(event.reportedFleetPoints)} / ${activityAmount(event.reportedDefensePoints)}` : "HIDDEN"}</b></div><div><span>Combat technology</span><b>{techVisible ? `W${event.reportedWeaponsTechnology} · S${event.reportedShieldingTechnology} · A${event.reportedArmorTechnology}` : "HIDDEN"}</b></div></section><footer><span>Probes {event.probesSurvived}/{event.probesSent}</span><span>{activityTime(event.resolvedAt)}</span><a href={`https://explorer.solana.com/tx/${signature}?cluster=${EXPLORER_CLUSTER}`} target="_blank" rel="noreferrer">VERIFY ON SOLANA</a></footer></article>; })}</div></section>}
           {activity.battleReports.length > 0 && <section className="pw-report-group"><header><div><span>COMBAT ARCHIVE</span><b>Resolved engagements</b></div><em>{activity.battleReports.length} REPORTS</em></header><div className="pw-activity-grid">{activity.battleReports.map(({ signature, event }) => { const loot = event.lootMetal + event.lootCrystal + event.lootDeuterium; const debris = event.debrisMetal + event.debrisCrystal; const recycled = event.recycledMetal + event.recycledCrystal; return <article key={`battle:${signature}`} className="battle"><header><div><span>ATTACK REPORT · ROUND {event.combatRounds}</span><h3>{event.sourceGalaxy}:{event.sourceSystem}:{event.sourcePosition} → {event.targetGalaxy}:{event.targetSystem}:{event.targetPosition}</h3></div><b className={event.attackerWon ? "good" : "danger"}>{event.attackerWon ? "ATTACKER WON" : "ATTACKER REPELLED"}</b></header><section><div><span>Loot recovered</span><b>{activityAmount(loot)}</b></div><div><span>Generated debris</span><b>{activityAmount(debris)}</b></div><div><span>Recycled</span><b>{activityAmount(recycled)}</b></div><div><span>Attacker fleet</span><b>{event.attackerDestroyed ? "DESTROYED" : "RETURNING"}</b></div><div><span>Defender</span><b>{event.defenderSurvived ? "SURVIVED" : "DESTROYED"}</b></div></section><footer><span>{activityTime(event.resolvedAt)}</span><a href={`https://explorer.solana.com/tx/${signature}?cluster=${EXPLORER_CLUSTER}`} target="_blank" rel="noreferrer">VERIFY ON SOLANA</a></footer></article>; })}</div></section>}

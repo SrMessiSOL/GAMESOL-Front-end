@@ -3,6 +3,8 @@
 .planet-world .pw-modal-title-group,.planet-world .pw-modal-title-group>div{min-width:0}
 .planet-world .pw-modal-title-group{flex:1}.planet-world .pw-modal-toolbar-actions{flex-shrink:0}
 .planet-world .pw-modal-title-group strong{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.planet-world .pw-catalog-filter{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:var(--command-muted);font:13px/1.5 Outfit,system-ui,sans-serif;cursor:pointer}
+.planet-world .pw-catalog-filter input{width:18px;height:18px;flex-shrink:0;accent-color:#86c9ab}
 @media(max-width:640px){.planet-world .pw-modal-title-group strong{font-size:16px}}
 .planet-world .pw-command-modal :is(button,input,select,textarea){font:inherit;letter-spacing:0;max-width:100%;box-sizing:border-box}
 .planet-world .pw-command-modal button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border:1px solid #49616b;border-radius:5px;background:#142b35;color:var(--command-text);white-space:normal;cursor:pointer;overflow-wrap:anywhere}
@@ -52,8 +54,52 @@
 .planet-world .pw-command-modal .market-empty-state p{font:13px/1.6 Outfit,system-ui,sans-serif;letter-spacing:0;color:var(--command-muted)}
 .planet-world .pw-launch-types{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .planet-world .pw-launch-types img{width:40px;height:40px;object-fit:contain;flex-shrink:0}.planet-world .pw-launch-types button{flex-direction:column;min-width:0}
+.planet-world .pw-mission-preflight{margin:16px 0;padding:16px;border:1px solid var(--command-border);border-radius:6px}
+.planet-world .pw-mission-preflight>header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.planet-world .pw-mission-preflight>header>div{display:grid;gap:6px}
+.planet-world .pw-mission-preflight>header span{font:12px Outfit,system-ui,sans-serif;color:var(--command-muted)}
+.planet-world .pw-mission-preflight>header strong{font:600 14px Outfit,system-ui,sans-serif}
+.planet-world .pw-mission-preflight>header>b{font:600 12px Outfit,system-ui,sans-serif}
 .planet-world .pw-mission-preflight-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:16px 0}.planet-world .pw-mission-preflight-grid>span{display:grid;gap:6px;min-width:0}.planet-world .pw-mission-preflight-grid small{font-size:12px;color:var(--command-muted)}
+.planet-world .pw-command-modal .pw-facility-grid>button{display:grid;grid-template-columns:88px minmax(0,1fr) 18px;justify-content:stretch;gap:14px;padding:14px;text-align:left}
+.planet-world .pw-command-modal .command-quantity :is(.gds-icon-button,.command-quantity-presets .gds-button){width:44px;min-width:44px;height:44px;padding:0;white-space:nowrap;overflow-wrap:normal;flex-shrink:0}
+.planet-world .pw-command-modal .command-quantity-stepper{grid-template-columns:44px minmax(72px,128px) 44px}
+.planet-world .pw-command-modal .pw-activity-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0;padding:16px 0;border:0;border-block:1px solid var(--command-border);background:none;font:13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-activity-toolbar>div{display:grid;gap:6px;min-width:0}
+.planet-world .pw-activity-toolbar span{font:500 13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;color:var(--command-text)}
+.planet-world .pw-activity-toolbar small{font:13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;color:var(--command-muted)}
+.planet-world .pw-command-modal .pw-activity-toolbar button{font:500 13px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;flex-shrink:0}
+.planet-world .pw-command-modal .pw-inline-queue :is(span,b,em){font:500 13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;font-style:normal}
+.planet-world .pw-inline-queue>div:first-child{flex:1}.planet-world .pw-inline-queue-progress{width:100%}
+.planet-world .pw-queue-progress:not(.ready){display:none}
+.planet-world .pw-inline-queue small{font:13px/1.5 Outfit,system-ui,sans-serif;color:var(--command-muted);letter-spacing:0}
+.planet-world .pw-command-modal .pw-inline-queue-actions .command-action{min-height:44px!important}
+.planet-world .pw-quest-requirements>span{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.planet-world .pw-quest-requirements>span>b{margin-left:auto;font:500 13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;white-space:nowrap}
+.planet-world .pw-command-modal .pw-activity-grid :is(span,b,a){font:13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-activity-grid footer{font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;gap:12px}
+.planet-world .pw-report-group>header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0}
+.planet-world .pw-report-group>header>div{display:grid;gap:6px}.planet-world .pw-report-group>header :is(span,em){font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;font-style:normal;color:var(--command-muted)}
+.planet-world .pw-launch-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.planet-world .pw-launch-progress span{display:flex;align-items:center;gap:8px;font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+.planet-world .pw-launch-type-copy{display:grid;gap:6px}.planet-world .pw-launch-types :is(small,i){font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;font-style:normal}
+.planet-world .pw-launch-head{display:flex;align-items:start;justify-content:space-between;gap:16px;padding:20px 0;border-top:1px solid var(--command-border)}
+.planet-world .pw-launch-head>div{display:grid;gap:8px;min-width:0}.planet-world .pw-launch-head :is(span,b){font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;color:var(--command-muted)}
+.planet-world .pw-launch-head :is(h3,p){margin:0}.planet-world .pw-launch-head p{font:13px/1.5 Outfit,system-ui,sans-serif;color:var(--command-muted)}
+.planet-world .pw-launch-section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0}
+.planet-world .pw-launch-section-head h4{margin:0}.planet-world .pw-launch-section-head>span{font:13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;color:var(--command-muted)}
+.planet-world .pw-command-modal .pw-fleet-grid label{font:14px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;min-width:0}
+.planet-world .pw-fleet-grid label>span{display:flex;align-items:center;justify-content:space-between;gap:12px;font:14px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;min-width:0;flex-wrap:wrap}
+.planet-world .pw-fleet-grid label>span>b{font:500 12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;color:var(--command-muted)}
+.planet-world .pw-command-modal .pw-launch-grid label>span{font:500 12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;text-transform:capitalize}
+.planet-world .pw-launch-grid label>small{font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;color:var(--command-muted)}
+.planet-world .pw-command-modal .market-sell-brief{display:grid;gap:10px;padding:16px 0;border-block:1px solid var(--command-border)}
+.planet-world .market-sell-brief :is(strong,span,small){display:block;font:13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
 @media(max-width:640px){
+.planet-world .pw-command-modal .pw-facility-grid>button{grid-template-columns:64px minmax(0,1fr) 18px;gap:10px;padding:12px}.planet-world .pw-facility-thumb{width:64px;height:64px}
+.planet-world .pw-command-modal .pw-activity-toolbar{flex-direction:column;align-items:stretch}.planet-world .pw-activity-toolbar button{width:100%}
+.planet-world .pw-launch-progress{grid-template-columns:repeat(2,minmax(0,1fr))}
+.planet-world :is(.pw-launch-head,.pw-launch-section-head){align-items:flex-start;flex-direction:column;gap:8px}
 .planet-world :is(.pw-research-overview,.pw-defense-overview,.pw-quest-overview,.pw-intelligence-overview,.pw-alliance-recruitment-status,.market-status-strip){grid-template-columns:repeat(2,minmax(0,1fr))}
 .planet-world :is(.pw-research-overview,.pw-defense-overview,.pw-quest-overview,.pw-intelligence-overview,.pw-alliance-recruitment-status,.market-status-strip)>div{padding:12px}.planet-world :is(.pw-research-overview,.pw-defense-overview,.pw-quest-overview,.pw-intelligence-overview,.pw-alliance-recruitment-status,.market-status-strip)>div:nth-child(odd){padding-left:0}.planet-world :is(.pw-research-overview,.pw-defense-overview,.pw-quest-overview,.pw-intelligence-overview,.pw-alliance-recruitment-status,.market-status-strip)>div:nth-child(even){border-right:0}
 .planet-world :is(.pw-research-lab,.pw-defense-posture,.pw-quest-grid){grid-template-columns:minmax(0,1fr)}

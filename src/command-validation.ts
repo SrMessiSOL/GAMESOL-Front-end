@@ -1,5 +1,9 @@
 export const MAX_ORDER_QUANTITY = 0xffffffff;
 
+export function samePlanetCoordinates(source: { galaxy: number; system: number; position: number }, target: { galaxy: number; system: number; position: number }) {
+  return source.galaxy === target.galaxy && source.system === target.system && source.position === target.position;
+}
+
 export function isWholeQuantity(value: string | number, min = 1, max = MAX_ORDER_QUANTITY) {
   if (typeof value === 'string' && !/^\d+$/.test(value)) return false;
   const number = Number(value);

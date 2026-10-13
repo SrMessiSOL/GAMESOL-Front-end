@@ -518,6 +518,7 @@ function FundsModal({
 import "./universe-game.css";
 import './wallet-modal.css';
 import './game-polish.css';
+import './operation-feedback.css';
 
 const RESEARCH = [
   "Energy Technology",
@@ -2293,7 +2294,7 @@ export default function UniverseGame() {
               aria-controls="live-player-account"
               onClick={() => setWalletMenuOpen((open) => !open)}
             >
-              <CommanderAvatar fallback={walletLabel.slice(0, 2)} /> {walletLabel}
+              <CommanderAvatar fallback={walletLabel.slice(0, 2)} /> <span className="ug-wallet-trigger-label">{walletLabel}</span>
             </button>
             {walletMenuOpen && createPortal(
               <>

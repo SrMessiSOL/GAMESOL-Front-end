@@ -81,7 +81,7 @@ const ResourcePill: React.FC<{ type: ResourceType; amount?: bigint; label?: stri
   <span style={{
     display: "inline-flex", alignItems: "center", gap: 5,
     padding: "2px 8px", borderRadius: 12,
-    fontSize: 10, letterSpacing: 0.5,
+    fontSize: 12, letterSpacing: 0,
     background: `${RESOURCE_COLORS[type]}18`,
     border: `1px solid ${RESOURCE_COLORS[type]}44`,
     color: RESOURCE_COLORS[type],
@@ -96,11 +96,11 @@ const AmPill: React.FC<{ amount: bigint; muted?: boolean }> = ({ amount, muted }
   <span style={{
     display: "inline-flex", alignItems: "center", gap: 5,
     padding: "2px 8px", borderRadius: 12,
-    fontSize: 10, letterSpacing: 0.5,
+    fontSize: 12, letterSpacing: 0,
     background: muted ? "rgba(255,214,10,0.05)" : "rgba(255,214,10,0.13)",
     border: "1px solid rgba(255,214,10,0.35)",
     color: "var(--warn)",
-    fontFamily: "'Orbitron', sans-serif",
+    fontFamily: "Outfit, system-ui, sans-serif",
     fontWeight: 700,
   }}>
     <AntimatterIcon size={10}/>
@@ -146,8 +146,8 @@ const PlanetInfoGrid: React.FC<{ items: Array<{ label: string; value: string }> 
   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
     {items.map(item => (
       <div key={item.label}>
-        <div style={{ fontSize: 8, letterSpacing: 1.4, color: "var(--dim)", marginBottom: 4 }}>{item.label}</div>
-        <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "var(--text)" }}>{item.value}</div>
+        <div style={{ fontSize: 12, letterSpacing: 0, color: "var(--dim)", marginBottom: 4 }}>{item.label}</div>
+        <div style={{ fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, color: "var(--text)" }}>{item.value}</div>
       </div>
     ))}
   </div>
@@ -165,9 +165,9 @@ const PlanetDetailSection: React.FC<{
     minWidth: 0,
   }}>
     <div style={{
-      fontFamily: "'Orbitron', sans-serif",
-      fontSize: 9,
-      letterSpacing: 1.8,
+      fontFamily: "Outfit, system-ui, sans-serif",
+      fontSize: 12,
+      letterSpacing: 0,
       color: "var(--purple)",
       marginBottom: 8,
     }}>
@@ -176,12 +176,12 @@ const PlanetDetailSection: React.FC<{
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(86px, 1fr))", gap: "7px 12px" }}>
       {items.map(item => (
         <div key={`${title}-${item.label}`} style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 8, letterSpacing: 1.2, color: "var(--dim)", marginBottom: 3 }}>
+          <div style={{ fontSize: 12, letterSpacing: 0, color: "var(--dim)", marginBottom: 3 }}>
             {item.label}
           </div>
           <div style={{
-            fontFamily: "'Share Tech Mono', monospace",
-            fontSize: 11,
+            fontFamily: "Outfit, system-ui, sans-serif",
+            fontSize: 12,
             color: item.accent ?? "var(--text)",
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -235,7 +235,7 @@ const OfferCard: React.FC<{
           <ResourcePill type={offer.resourceType} amount={offer.resourceAmount}/>
           {offer.isOwn && (
             <span style={{
-              fontSize: 9, letterSpacing: 1.5, padding: "2px 6px",
+              fontSize: 12, letterSpacing: 0, padding: "2px 6px",
               border: "1px solid rgba(155,93,229,0.4)", borderRadius: 2,
               color: "var(--purple)", background: "rgba(155,93,229,0.08)",
             }}>YOUR OFFER</span>
@@ -243,7 +243,7 @@ const OfferCard: React.FC<{
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <AmPill amount={offer.priceAntimatter}/>
-          <span style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 0.5 }}>
+          <span style={{ fontSize: 12, color: "var(--dim)", letterSpacing: 0 }}>
             {pricePerKDisplay(offer)} AM / 1k - by {shortSeller}
           </span>
         </div>
@@ -256,8 +256,8 @@ const OfferCard: React.FC<{
             onClick={() => onCancel(offer)}
             disabled={txBusy}
             style={{
-              fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 10, letterSpacing: 1,
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12, letterSpacing: 0,
               padding: "7px 12px", borderRadius: 2,
               border: "1px solid rgba(255,0,110,0.4)",
               background: "rgba(255,0,110,0.06)",
@@ -272,8 +272,8 @@ const OfferCard: React.FC<{
             disabled={txBusy || !canBuy || !marketUnlocked}
             title={!marketUnlocked ? "Market is still locked for this planet." : !canBuy ? `Need ${formatAm(offer.priceAntimatter)} AM` : undefined}
             style={{
-              fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 10, letterSpacing: 1,
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12, letterSpacing: 0,
               padding: "7px 12px", borderRadius: 2,
               border: canBuy ? "1px solid var(--cyan)" : "1px solid var(--border)",
               background: canBuy ? "rgba(0,245,212,0.08)" : "transparent",
@@ -336,10 +336,10 @@ const PlanetListingCard: React.FC<{
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, justifyContent: "space-between" }}>
           <div style={{ minWidth: 0 }}>
             <div style={{
-              fontFamily: "'Orbitron', sans-serif",
-              fontSize: 11,
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12,
               color: "var(--cyan)",
-              letterSpacing: 1.1,
+              letterSpacing: 0,
               lineHeight: 1.25,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -347,13 +347,13 @@ const PlanetListingCard: React.FC<{
             }}>
               {listing.planetName || "Planet"}
             </div>
-            <div style={{ fontSize: 9, color: "var(--dim)", marginTop: 3, whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 12, color: "var(--dim)", marginTop: 3, whiteSpace: "nowrap" }}>
               {planetCoordsLabel(listing)} {listing.planetIndex !== undefined ? `· #${listing.planetIndex + 1}` : ""}
             </div>
           </div>
           {listing.isOwn && (
             <span style={{
-              fontSize: 9, letterSpacing: 1.5, padding: "2px 6px",
+              fontSize: 12, letterSpacing: 0, padding: "2px 6px",
               border: "1px solid rgba(155,93,229,0.4)", borderRadius: 2,
               color: "var(--purple)", background: "rgba(155,93,229,0.08)",
               whiteSpace: "nowrap",
@@ -381,8 +381,8 @@ const PlanetListingCard: React.FC<{
           disabled={txBusy}
           style={{
             width: "100%",
-            fontFamily: "'Share Tech Mono', monospace",
-            fontSize: 10, letterSpacing: 1,
+            fontFamily: "Outfit, system-ui, sans-serif",
+            fontSize: 12, letterSpacing: 0,
             padding: "9px 10px", borderRadius: 3,
             border: "1px solid rgba(155,93,229,0.34)",
             background: "rgba(155,93,229,0.06)",
@@ -398,8 +398,8 @@ const PlanetListingCard: React.FC<{
             disabled={txBusy}
             style={{
               width: "100%",
-              fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 10, letterSpacing: 1,
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12, letterSpacing: 0,
               padding: "9px 10px", borderRadius: 3,
               border: "1px solid rgba(255,0,110,0.4)",
               background: "rgba(255,0,110,0.06)",
@@ -415,8 +415,8 @@ const PlanetListingCard: React.FC<{
             title={!marketUnlocked ? "Connect a wallet to buy this planet." : !canBuy ? `Need ${formatAm(listing.priceAntimatter)} AM` : undefined}
             style={{
               width: "100%",
-              fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 10, letterSpacing: 1,
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12, letterSpacing: 0,
               padding: "9px 10px", borderRadius: 3,
               border: canBuy ? "1px solid var(--cyan)" : "1px solid var(--border)",
               background: canBuy ? "rgba(0,245,212,0.08)" : "transparent",
@@ -479,8 +479,8 @@ const CreatePlanetListingModal: React.FC<{
       }}>
         <div style={{ width: 36, height: 3, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }}/>
         <div style={{
-          fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
-          letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+          fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13, fontWeight: 700,
+          letterSpacing: 0, color: "var(--cyan)", marginBottom: 20,
           paddingBottom: 10, borderBottom: "1px solid var(--border)",
         }}>
           LIST PLANET
@@ -489,11 +489,11 @@ const CreatePlanetListingModal: React.FC<{
           {planet.planet.name} [{planet.planet.galaxy}:{planet.planet.system}:{planet.planet.position}]
         </div>
         {hasActiveMissions && (
-          <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 12, letterSpacing: 0.5 }}>
+          <div style={{ color: "var(--danger)", fontSize: 12, marginBottom: 12, letterSpacing: 0 }}>
             Resolve this planet's active missions before listing it.
           </div>
         )}
-        <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
+        <div style={{ fontSize: 12, letterSpacing: 0, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
           Total Price (ANTIMATTER tokens, min 1.0)
         </div>
         <input
@@ -505,17 +505,17 @@ const CreatePlanetListingModal: React.FC<{
             width: "100%", padding: "10px 12px", borderRadius: 2,
             background: "rgba(0,0,0,0.4)",
             border: "1px solid var(--border)",
-            color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 13,
+            color: "var(--text)", fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13,
             marginBottom: 14,
           }}
         />
-        {localErr && <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 10 }}>{localErr}</div>}
+        {localErr && <div style={{ color: "var(--danger)", fontSize: 12, marginBottom: 10 }}>{localErr}</div>}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} disabled={submitting} style={{
             flex: 1, padding: "12px 16px", borderRadius: 2,
             border: "1px solid var(--border)", background: "transparent",
             color: "var(--dim)", cursor: "pointer",
-            fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+            fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
           }}>CANCEL</button>
           <button onClick={() => void handleSubmit()} disabled={!canSubmit} style={{
             flex: 2, padding: "12px 16px", borderRadius: 2,
@@ -523,7 +523,7 @@ const CreatePlanetListingModal: React.FC<{
             background: canSubmit ? "rgba(0,245,212,0.1)" : "transparent",
             color: canSubmit ? "var(--cyan)" : "var(--dim)",
             cursor: canSubmit ? "pointer" : "not-allowed",
-            fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+            fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
           }}>
             {submitting ? "LISTING..." : "LIST PLANET"}
           </button>
@@ -599,8 +599,8 @@ const CreateOfferModal: React.FC<{
         <div style={{ width: 36, height: 3, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }}/>
 
         <div style={{
-          fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
-          letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+          fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13, fontWeight: 700,
+          letterSpacing: 0, color: "var(--cyan)", marginBottom: 20,
           paddingBottom: 10, borderBottom: "1px solid var(--border)",
         }}>
           + LIST A RESOURCE
@@ -608,7 +608,7 @@ const CreateOfferModal: React.FC<{
 
         {/* Resource type selector */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 8 }}>
+          <div style={{ fontSize: 12, letterSpacing: 0, color: "var(--dim)", textTransform: "uppercase", marginBottom: 8 }}>
             Resource Type
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -622,13 +622,13 @@ const CreateOfferModal: React.FC<{
                   background: resourceType === rt ? `${RESOURCE_COLORS[rt]}18` : "transparent",
                   color: resourceType === rt ? RESOURCE_COLORS[rt] : "var(--dim)",
                   borderRadius: 3, cursor: "pointer", transition: "all 0.15s",
-                  fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                  fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
                   display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                 }}
               >
                 <span style={{ fontSize: 18 }}>{RESOURCE_ICONS[rt]}</span>
                 <span>{RESOURCE_LABELS[rt]}</span>
-                <span style={{ fontSize: 9, color: "var(--dim)" }}>
+                <span style={{ fontSize: 12, color: "var(--dim)" }}>
                   {formatResource(available[rt])} avail
                 </span>
               </button>
@@ -638,7 +638,7 @@ const CreateOfferModal: React.FC<{
 
         {/* Amount */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
+          <div style={{ fontSize: 12, letterSpacing: 0, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
             Amount (min 1,000)
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -651,7 +651,7 @@ const CreateOfferModal: React.FC<{
                 flex: 1, padding: "10px 12px", borderRadius: 2,
                 background: "rgba(0,0,0,0.4)",
                 border: `1px solid ${tooSmall || exceedsAvailable ? "var(--danger)" : "var(--border)"}`,
-                color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 13,
+                color: "var(--text)", fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13,
               }}
             />
             <button
@@ -659,18 +659,18 @@ const CreateOfferModal: React.FC<{
               style={{
                 padding: "10px 12px", borderRadius: 2,
                 border: "1px solid var(--border)", background: "transparent",
-                color: "var(--dim)", cursor: "pointer", fontSize: 10, letterSpacing: 1,
-                fontFamily: "'Share Tech Mono', monospace",
+                color: "var(--dim)", cursor: "pointer", fontSize: 12, letterSpacing: 0,
+                fontFamily: "Outfit, system-ui, sans-serif",
               }}
             >MAX</button>
           </div>
-          {tooSmall && <div style={{ fontSize: 10, color: "var(--danger)", marginTop: 4 }}>Minimum 1,000</div>}
-          {exceedsAvailable && <div style={{ fontSize: 10, color: "var(--danger)", marginTop: 4 }}>Exceeds available resources</div>}
+          {tooSmall && <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>Minimum 1,000</div>}
+          {exceedsAvailable && <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>Exceeds available resources</div>}
         </div>
 
         {/* Price */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
+          <div style={{ fontSize: 12, letterSpacing: 0, color: "var(--dim)", textTransform: "uppercase", marginBottom: 6 }}>
             Total Price (ANTIMATTER tokens, min 1.0)
           </div>
           <input
@@ -682,10 +682,10 @@ const CreateOfferModal: React.FC<{
               width: "100%", padding: "10px 12px", borderRadius: 2,
               background: "rgba(0,0,0,0.4)",
               border: `1px solid ${priceTooLow ? "var(--danger)" : "var(--border)"}`,
-              color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 13,
+              color: "var(--text)", fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13,
             }}
           />
-          {priceTooLow && <div style={{ fontSize: 10, color: "var(--danger)", marginTop: 4 }}>Minimum 1.0 AM</div>}
+          {priceTooLow && <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>Minimum 1.0 AM</div>}
         </div>
 
         {/* Preview */}
@@ -694,7 +694,7 @@ const CreateOfferModal: React.FC<{
             padding: "10px 14px", borderRadius: 3, marginBottom: 16,
             border: "1px solid rgba(0,245,212,0.18)",
             background: "rgba(0,245,212,0.04)",
-            fontSize: 10, lineHeight: 1.8,
+            fontSize: 12, lineHeight: 1.8,
           }}>
             <div style={{ color: "var(--dim)" }}>Preview</div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -707,14 +707,14 @@ const CreateOfferModal: React.FC<{
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
               <span>Rate</span>
-              <span style={{ color: "var(--warn)", fontFamily: "'Orbitron', sans-serif", fontSize: 11 }}>
+              <span style={{ color: "var(--warn)", fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12 }}>
                 {formatAm(parsedAmount > 0n ? (parsedPrice * 1000n) / parsedAmount : 0n)} AM / 1k
               </span>
             </div>
           </div>
         )}
 
-        {localErr && <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 10, letterSpacing: 0.5 }}>{localErr}</div>}
+        {localErr && <div style={{ color: "var(--danger)", fontSize: 12, marginBottom: 10, letterSpacing: 0 }}>{localErr}</div>}
 
         <div style={{ display: "flex", gap: 10 }}>
           <button
@@ -723,7 +723,7 @@ const CreateOfferModal: React.FC<{
               flex: 1, padding: "12px 16px", borderRadius: 2,
               border: "1px solid var(--border)", background: "transparent",
               color: "var(--dim)", cursor: "pointer",
-              fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+              fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
             }}
           >CANCEL</button>
           <button
@@ -735,7 +735,7 @@ const CreateOfferModal: React.FC<{
               background: canSubmit ? "rgba(0,245,212,0.1)" : "transparent",
               color: canSubmit ? "var(--cyan)" : "var(--dim)",
               cursor: canSubmit && !txBusy ? "pointer" : "not-allowed",
-              fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+              fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
               transition: "all 0.15s",
             }}
           >
@@ -792,8 +792,8 @@ const BuyConfirmModal: React.FC<{
         animation: "fadeIn 0.18s ease",
       }}>
         <div style={{
-          fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
-          letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+          fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13, fontWeight: 700,
+          letterSpacing: 0, color: "var(--cyan)", marginBottom: 20,
           paddingBottom: 10, borderBottom: "1px solid var(--border)",
         }}>
           CONFIRM PURCHASE
@@ -804,11 +804,11 @@ const BuyConfirmModal: React.FC<{
           {[
             { label: "You receive", node: <ResourcePill type={offer.resourceType} amount={offer.resourceAmount}/> },
             { label: "You pay", node: <AmPill amount={offer.priceAntimatter}/> },
-            { label: "Rate", node: <span style={{ color: "var(--warn)", fontFamily: "'Orbitron', sans-serif", fontSize: 11 }}>{pricePerKDisplay(offer)} AM / 1k</span> },
-            { label: "Seller", node: <span style={{ fontSize: 10, color: "var(--text)" }}>{offer.seller.slice(0, 8)}...{offer.seller.slice(-6)}</span> },
+            { label: "Rate", node: <span style={{ color: "var(--warn)", fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12 }}>{pricePerKDisplay(offer)} AM / 1k</span> },
+            { label: "Seller", node: <span style={{ fontSize: 12, color: "var(--text)" }}>{offer.seller.slice(0, 8)}...{offer.seller.slice(-6)}</span> },
           ].map(({ label, node }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(26,26,58,0.4)" }}>
-              <span style={{ fontSize: 10, color: "var(--dim)" }}>{label}</span>
+              <span style={{ fontSize: 12, color: "var(--dim)" }}>{label}</span>
               {node}
             </div>
           ))}
@@ -818,7 +818,7 @@ const BuyConfirmModal: React.FC<{
           <div style={{
             padding: "8px 12px", borderRadius: 3, marginBottom: 14,
             background: "rgba(255,0,110,0.08)", border: "1px solid rgba(255,0,110,0.3)",
-            fontSize: 10, color: "var(--danger)", letterSpacing: 0.5,
+            fontSize: 12, color: "var(--danger)", letterSpacing: 0,
           }}>
             Insufficient ANTIMATTER. You have {formatAm(antimatterBalance)} AM, need {formatAm(offer.priceAntimatter)} AM.
           </div>
@@ -827,13 +827,13 @@ const BuyConfirmModal: React.FC<{
           <div style={{
             padding: "8px 12px", borderRadius: 3, marginBottom: 14,
             background: "rgba(255,214,10,0.08)", border: "1px solid rgba(255,214,10,0.3)",
-            fontSize: 10, color: "var(--warn)", letterSpacing: 0.5,
+            fontSize: 12, color: "var(--warn)", letterSpacing: 0,
           }}>
             Market unlocks for this planet in {fmtCountdown(marketUnlockLeft)}.
           </div>
         )}
 
-        {localErr && <div style={{ color: "var(--danger)", fontSize: 10, marginBottom: 10 }}>{localErr}</div>}
+        {localErr && <div style={{ color: "var(--danger)", fontSize: 12, marginBottom: 10 }}>{localErr}</div>}
 
         <div style={{ display: "flex", gap: 10 }}>
           <button
@@ -842,7 +842,7 @@ const BuyConfirmModal: React.FC<{
               flex: 1, padding: "12px 16px", borderRadius: 2,
               border: "1px solid var(--border)", background: "transparent",
               color: "var(--dim)", cursor: "pointer",
-              fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+              fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
             }}
           >CANCEL</button>
           <button
@@ -854,7 +854,7 @@ const BuyConfirmModal: React.FC<{
               background: canAfford ? "rgba(0,245,212,0.12)" : "transparent",
               color: canAfford ? "var(--cyan)" : "var(--dim)",
               cursor: canAfford && !submitting ? "pointer" : "not-allowed",
-              fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+              fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
             }}
           >
             {submitting ? "BUYING..." : "+ CONFIRM BUY"}
@@ -888,23 +888,23 @@ const MarketAdminCard: React.FC<{
       borderRadius: 4,
     }}>
       <div style={{
-        fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700,
-        letterSpacing: 2, color: "var(--warn)", marginBottom: 12,
+        fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, fontWeight: 700,
+        letterSpacing: 0, color: "var(--warn)", marginBottom: 12,
       }}>
         MARKET ADMIN
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
           <span>Market Config</span>
           <span style={{ color: config ? "var(--success)" : "var(--warn)" }}>{config ? "INITIALIZED" : "NOT INITIALIZED"}</span>
         </div>
         {config && (
           <>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
               <span>ANTIMATTER Mint</span>
-              <span style={{ color: "var(--text)", fontSize: 9 }}>{config.antimatterMint.slice(0, 8)}...{config.antimatterMint.slice(-6)}</span>
+              <span style={{ color: "var(--text)", fontSize: 12 }}>{config.antimatterMint.slice(0, 8)}...{config.antimatterMint.slice(-6)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--dim)", padding: "4px 0", borderBottom: "1px solid rgba(26,26,58,0.3)" }}>
               <span>Escrow Account</span>
               <span style={{ color: escrowInitialized ? "var(--success)" : "var(--danger)" }}>
                 {escrowInitialized ? "INITIALIZED" : "NOT INITIALIZED"}
@@ -923,7 +923,7 @@ const MarketAdminCard: React.FC<{
             style={{
               flex: 1, padding: "7px 10px", borderRadius: 2,
               background: "rgba(0,0,0,0.4)", border: "1px solid var(--border)",
-              color: "var(--text)", fontFamily: "'Share Tech Mono', monospace", fontSize: 11,
+              color: "var(--text)", fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12,
             }}
           />
           <button
@@ -932,8 +932,8 @@ const MarketAdminCard: React.FC<{
             style={{
               padding: "7px 14px", borderRadius: 2, cursor: "pointer",
               border: "1px solid var(--warn)", background: "rgba(255,214,10,0.1)",
-              color: "var(--warn)", fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 10, letterSpacing: 1, whiteSpace: "nowrap",
+              color: "var(--warn)", fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12, letterSpacing: 0, whiteSpace: "nowrap",
               opacity: busy || !mintInput ? 0.4 : 1,
             }}
           >
@@ -944,7 +944,7 @@ const MarketAdminCard: React.FC<{
         {/* Escrow initialization button - only show when market is initialized but escrow is not */}
         {config && !escrowInitialized && (
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 10, color: "var(--danger)", marginBottom: 8, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8, lineHeight: 1.6 }}>
               The escrow account is not initialized. You must initialize it before offers can be accepted.
             </div>
             <button
@@ -954,8 +954,8 @@ const MarketAdminCard: React.FC<{
                 width: "100%",
                 padding: "10px 14px", borderRadius: 2, cursor: "pointer",
                 border: "1px solid var(--cyan)", background: "rgba(0,245,212,0.1)",
-                color: "var(--cyan)", fontFamily: "'Share Tech Mono', monospace",
-                fontSize: 10, letterSpacing: 1,
+                color: "var(--cyan)", fontFamily: "Outfit, system-ui, sans-serif",
+                fontSize: 12, letterSpacing: 0,
                 opacity: busy ? 0.4 : 1,
               }}
             >
@@ -1327,10 +1327,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
           background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 4,
         }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>MARKET</div>
-          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "var(--purple)", letterSpacing: 2, marginBottom: 8 }}>
+          <div style={{ fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13, color: "var(--purple)", letterSpacing: 0, marginBottom: 8 }}>
             MARKET NOT DEPLOYED
           </div>
-          <div style={{ fontSize: 11, color: "var(--dim)" }}>
+          <div style={{ fontSize: 12, color: "var(--dim)" }}>
             Deploy the market Anchor program and pass a MarketClient instance to this tab.
           </div>
         </div>
@@ -1364,7 +1364,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
         <div style={{
           padding: "14px 16px", marginBottom: 20, borderRadius: 4,
           background: "rgba(255,214,10,0.05)", border: "1px solid rgba(255,214,10,0.25)",
-          fontSize: 11, color: "var(--warn)", letterSpacing: 0.5, lineHeight: 1.7,
+          fontSize: 12, color: "var(--warn)", letterSpacing: 0, lineHeight: 1.7,
         }}>
           The market has not been initialized yet. The game admin needs to call
           <strong> initialize_market</strong> with the ANTIMATTER mint address before trading is available.
@@ -1373,7 +1373,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
       {/* ── Loading state ── */}
       {marketLoading && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--dim)", fontSize: 11, animation: "pulse 2s ease-in-out infinite" }}>
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--dim)", fontSize: 12, animation: "pulse 2s ease-in-out infinite" }}>
           Loading market...
         </div>
       )}
@@ -1392,9 +1392,9 @@ const MarketTab: React.FC<MarketTabProps> = ({
             style={{
               flex: 1,
               padding: "10px 12px",
-              fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 11,
-              letterSpacing: 1.5,
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12,
+              letterSpacing: 0,
               borderRadius: 3,
               border: `1px solid ${section === tab.id ? "var(--cyan)" : "var(--border)"}`,
               background: section === tab.id ? "rgba(0,245,212,0.08)" : "transparent",
@@ -1438,7 +1438,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
           </div>
           <div className="card-value" style={{
             color: "var(--warn)", fontSize: 14,
-            fontFamily: "'Orbitron', sans-serif",
+            fontFamily: "Outfit, system-ui, sans-serif",
           }}>
             {formatAm(antimatterBalance, 2)}
           </div>
@@ -1454,16 +1454,16 @@ const MarketTab: React.FC<MarketTabProps> = ({
       }}>
         {stats.map(s => (
           <div key={s.type} style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--dim)", marginBottom: 4 }}>
+            <div style={{ fontSize: 12, letterSpacing: 0, color: "var(--dim)", marginBottom: 4 }}>
               {RESOURCE_ICONS[s.type]} {RESOURCE_LABELS[s.type].toUpperCase()}
             </div>
             <div style={{
-              fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
+              fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13, fontWeight: 700,
               color: s.bestPricePerK !== null ? "var(--warn)" : "var(--border)",
             }}>
               {s.bestPricePerK !== null ? `${formatAm(s.bestPricePerK)} AM` : "-"}
             </div>
-            <div style={{ fontSize: 9, color: "var(--dim)", marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--dim)", marginTop: 2 }}>
               {s.count} offer{s.count !== 1 ? "s" : ""} - best/1k
             </div>
           </div>
@@ -1482,8 +1482,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
             onClick={() => setView(tab.id)}
             style={{
               flex: 1, padding: "10px 8px",
-              fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 10, letterSpacing: 1.5,
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12, letterSpacing: 0,
               textTransform: "uppercase",
               background: "transparent",
               border: "none",
@@ -1507,8 +1507,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
               border: `1px solid ${filterResource === undefined ? "var(--cyan)" : "var(--border)"}`,
               background: filterResource === undefined ? "rgba(0,245,212,0.1)" : "transparent",
               color: filterResource === undefined ? "var(--cyan)" : "var(--dim)",
-              cursor: "pointer", fontSize: 10, letterSpacing: 1,
-              fontFamily: "'Share Tech Mono', monospace",
+              cursor: "pointer", fontSize: 12, letterSpacing: 0,
+              fontFamily: "Outfit, system-ui, sans-serif",
             }}
           >ALL</button>
           {([ResourceType.Metal, ResourceType.Crystal, ResourceType.Deuterium] as const).map(rt => (
@@ -1520,14 +1520,14 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 border: `1px solid ${filterResource === rt ? RESOURCE_COLORS[rt] : "var(--border)"}`,
                 background: filterResource === rt ? `${RESOURCE_COLORS[rt]}18` : "transparent",
                 color: filterResource === rt ? RESOURCE_COLORS[rt] : "var(--dim)",
-                cursor: "pointer", fontSize: 10, letterSpacing: 1,
-                fontFamily: "'Share Tech Mono', monospace",
+                cursor: "pointer", fontSize: 12, letterSpacing: 0,
+                fontFamily: "Outfit, system-ui, sans-serif",
               }}
             >
               {RESOURCE_ICONS[rt]} {RESOURCE_LABELS[rt].toUpperCase()}
             </button>
           ))}
-          <span style={{ marginLeft: "auto", fontSize: 9, color: "var(--dim)", alignSelf: "center" }}>
+          <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--dim)", alignSelf: "center" }}>
             {loading ? "Refreshing..." : `${displayedOffers.length} offers - ${Math.round((Date.now() - lastRefresh) / 1000)}s ago`}
           </span>
         </div>
@@ -1540,7 +1540,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
             padding: "14px 16px", borderRadius: 4,
             background: "rgba(155,93,229,0.05)",
             border: "1px solid rgba(155,93,229,0.2)",
-            fontSize: 10, color: "var(--dim)", lineHeight: 1.8, letterSpacing: 0.5,
+            fontSize: 12, color: "var(--dim)", lineHeight: 1.8, letterSpacing: 0,
           }}>
             <strong style={{ color: "var(--purple)" }}>RESOURCE LISTING</strong>
             <span>Choose a resource amount and your ANTIMATTER price. A buyer receives the resources after confirmation and payment goes directly to your wallet.</span>
@@ -1550,8 +1550,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
             onClick={() => setShowCreateModal(true)}
             disabled={txBusy || !state || !marketUnlocked}
             style={{
-              fontFamily: "'Orbitron', sans-serif",
-              fontSize: 12, fontWeight: 700, letterSpacing: 2,
+              fontFamily: "Outfit, system-ui, sans-serif",
+              fontSize: 12, fontWeight: 700, letterSpacing: 0,
               padding: "14px 20px", borderRadius: 3,
               border: "2px solid var(--cyan)",
               background: "linear-gradient(135deg, rgba(0,245,212,0.1), rgba(155,93,229,0.05))",
@@ -1562,12 +1562,12 @@ const MarketTab: React.FC<MarketTabProps> = ({
             CREATE RESOURCE LISTING
           </button>
           {!marketUnlocked && state && (
-            <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
+            <div style={{ fontSize: 12, color: "var(--warn)", textAlign: "center" }}>
               Market unlocks for this planet in {fmtCountdown(marketUnlockLeft)}.
             </div>
           )}
           {!state && (
-            <div style={{ fontSize: 10, color: "var(--dim)", textAlign: "center" }}>
+            <div style={{ fontSize: 12, color: "var(--dim)", textAlign: "center" }}>
               No planet loaded - cannot verify resources.
             </div>
           )}
@@ -1581,7 +1581,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
             <div className="market-empty-state" style={{
               textAlign: "center", padding: "48px 20px",
               border: "1px dashed var(--border)", borderRadius: 4,
-              color: "var(--dim)", fontSize: 11, letterSpacing: 1,
+              color: "var(--dim)", fontSize: 12, letterSpacing: 0,
             }}>
               {loading ? (
                 <span style={{ animation: "pulse 2s ease-in-out infinite" }}>Loading offers...</span>
@@ -1650,8 +1650,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
                   borderRadius: 6,
                   background: "rgba(0,0,0,0.18)",
                 }}>
-                  <div style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--dim)", marginBottom: 5 }}>{label}</div>
-                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, color: "var(--cyan)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+                  <div style={{ fontSize: 12, letterSpacing: 0, color: "var(--dim)", marginBottom: 5 }}>{label}</div>
+                  <div style={{ fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13, color: "var(--cyan)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
                 </div>
               ))}
             </div>
@@ -1668,8 +1668,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 onClick={() => setPlanetView(tab.id)}
                 style={{
                   padding: "10px 14px",
-                  fontFamily: "'Share Tech Mono', monospace",
-                  fontSize: 10, letterSpacing: 1.5,
+                  fontFamily: "Outfit, system-ui, sans-serif",
+                  fontSize: 12, letterSpacing: 0,
                   textTransform: "uppercase",
                   borderRadius: 3,
                   background: planetView === tab.id ? "rgba(0,245,212,0.1)" : "rgba(7,11,22,0.5)",
@@ -1681,7 +1681,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 {tab.label}
               </button>
             ))}
-            <span style={{ marginLeft: "auto", fontSize: 9, color: "var(--dim)" }}>
+            <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--dim)" }}>
               {loading ? "Refreshing..." : `${displayedPlanetListings.length} shown - ${Math.round((Date.now() - lastRefresh) / 1000)}s ago`}
             </span>
           </div>
@@ -1692,17 +1692,17 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 padding: "14px 16px", borderRadius: 4,
                 background: "rgba(155,93,229,0.05)",
                 border: "1px solid rgba(155,93,229,0.2)",
-                fontSize: 10, color: "var(--dim)", lineHeight: 1.8, letterSpacing: 0.5,
+                fontSize: 12, color: "var(--dim)", lineHeight: 1.8, letterSpacing: 0,
               }}>
                 <strong style={{ color: "var(--purple)" }}>Planet sales:</strong> choose one of your eligible planets and list it for ANTIMATTER. Initial homeworlds and already-listed planets are hidden.
               </div>
               {!canTransact && (
-                <div style={{ fontSize: 10, color: "var(--warn)", textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: "var(--warn)", textAlign: "center" }}>
                   Connect a wallet in the top bar to list a planet.
                 </div>
               )}
               {!state && listablePlanets.length === 0 && (
-                <div style={{ fontSize: 10, color: "var(--dim)", textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: "var(--dim)", textAlign: "center" }}>
                   Connect a wallet to load your planets.
                 </div>
               )}
@@ -1710,7 +1710,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 <div style={{
                   textAlign: "center", padding: "36px 20px",
                   border: "1px dashed var(--border)", borderRadius: 4,
-                  color: "var(--dim)", fontSize: 11, letterSpacing: 1,
+                  color: "var(--dim)", fontSize: 12, letterSpacing: 0,
                 }}>
                   No planets available to list. Initial homeworlds and already-listed planets are excluded.
                 </div>
@@ -1742,14 +1742,14 @@ const MarketTab: React.FC<MarketTabProps> = ({
                           <MarketPlanetPreview planet={planet} />
                           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
                             <div>
-                              <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: "var(--cyan)", letterSpacing: 1.5 }}>
+                              <div style={{ fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, color: "var(--cyan)", letterSpacing: 0 }}>
                                 {planet.name || `Planet ${planet.planetIndex + 1}`}
                               </div>
-                              <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 4 }}>
+                              <div style={{ fontSize: 12, color: "var(--dim)", marginTop: 4 }}>
                                 [{planet.galaxy}:{planet.system}:{planet.position}]
                               </div>
                             </div>
-                            <div style={{ fontSize: 9, color: "var(--warn)", letterSpacing: 1.2 }}>
+                            <div style={{ fontSize: 12, color: "var(--warn)", letterSpacing: 0 }}>
                               #{planet.planetIndex + 1}
                             </div>
                           </div>
@@ -1761,7 +1761,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                           { label: "MISSIONS", value: `${planetState.fleet.activeMissions}` },
                         ]} />
                         {disabledReason && (
-                          <div style={{ fontSize: 10, color: "var(--warn)", letterSpacing: 0.5 }}>
+                          <div style={{ fontSize: 12, color: "var(--warn)", letterSpacing: 0 }}>
                             {disabledReason}
                           </div>
                         )}
@@ -1769,8 +1769,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
                           onClick={() => setPlanetListingTarget(planetState)}
                           disabled={disabled}
                           style={{
-                            fontFamily: "'Orbitron', sans-serif",
-                            fontSize: 11, fontWeight: 700, letterSpacing: 2,
+                            fontFamily: "Outfit, system-ui, sans-serif",
+                            fontSize: 12, fontWeight: 700, letterSpacing: 0,
                             padding: "11px 14px", borderRadius: 3,
                             border: disabled ? "1px solid var(--border)" : "1px solid var(--cyan)",
                             background: disabled ? "rgba(255,255,255,0.03)" : "rgba(0,245,212,0.08)",
@@ -1795,7 +1795,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 <div style={{
                   textAlign: "center", padding: "48px 20px",
                   border: "1px dashed var(--border)", borderRadius: 4,
-                  color: "var(--dim)", fontSize: 11, letterSpacing: 1,
+                  color: "var(--dim)", fontSize: 12, letterSpacing: 0,
                 }}>
                   {loading ? (
                     <span style={{ animation: "pulse 2s ease-in-out infinite" }}>Loading planet listings...</span>
@@ -1881,8 +1881,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
               background: "linear-gradient(180deg, rgba(18,23,45,0.98), rgba(18,23,45,0.92))",
             }}>
               <div style={{
-                fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
-                letterSpacing: 3, color: "var(--cyan)",
+                fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13, fontWeight: 700,
+                letterSpacing: 0, color: "var(--cyan)",
               }}>
                 PLANET DETAILS
               </div>
@@ -1892,7 +1892,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 style={{
                   border: "1px solid var(--border)", background: "transparent",
                   color: "var(--dim)", borderRadius: 3, padding: "7px 10px",
-                  fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: 1,
+                  fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
                   cursor: txBusy ? "not-allowed" : "pointer",
                 }}
               >
@@ -1920,12 +1920,12 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 }}>
                   <div>
                     <div style={{
-                      fontFamily: "'Orbitron', sans-serif", fontSize: 18,
-                      color: "var(--cyan)", letterSpacing: 1.4, lineHeight: 1.2,
+                      fontFamily: "Outfit, system-ui, sans-serif", fontSize: 18,
+                      color: "var(--cyan)", letterSpacing: 0, lineHeight: 1.2,
                     }}>
                       {planetDetailsTarget.planetName || "Planet"}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 5 }}>
+                    <div style={{ fontSize: 12, color: "var(--dim)", marginTop: 5 }}>
                       {planetCoordsLabel(planetDetailsTarget)} {planetDetailsTarget.planetIndex !== undefined ? `· #${planetDetailsTarget.planetIndex + 1}` : ""}
                     </div>
                   </div>
@@ -1996,7 +1996,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                           padding: "12px 16px", borderRadius: 3,
                           border: "1px solid var(--border)", background: "transparent",
                           color: "var(--dim)", cursor: txBusy ? "not-allowed" : "pointer",
-                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                          fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
                         }}
                       >
                         CLOSE
@@ -2008,7 +2008,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                           padding: "12px 16px", borderRadius: 3,
                           border: "1px solid rgba(255,0,110,0.4)", background: "rgba(255,0,110,0.06)",
                           color: "var(--danger)", cursor: txBusy ? "not-allowed" : "pointer",
-                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                          fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
                         }}
                       >
                         CANCEL LISTING
@@ -2023,7 +2023,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                           padding: "12px 16px", borderRadius: 3,
                           border: "1px solid var(--border)", background: "transparent",
                           color: "var(--dim)", cursor: txBusy ? "not-allowed" : "pointer",
-                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                          fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
                         }}
                       >
                         CLOSE
@@ -2037,7 +2037,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                           background: canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "rgba(0,245,212,0.1)" : "transparent",
                           color: canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "var(--cyan)" : "var(--dim)",
                           cursor: !txBusy && canTransact && planetBuyUnlocked && antimatterBalance >= planetDetailsTarget.priceAntimatter ? "pointer" : "not-allowed",
-                          fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                          fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
                         }}
                       >
                         {canTransact ? "BUY PLANET" : "ENTER WITH PASSKEY"}
@@ -2070,17 +2070,17 @@ const MarketTab: React.FC<MarketTabProps> = ({
           }}>
             <div style={{ width: 36, height: 3, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }}/>
             <div style={{
-              fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700,
-              letterSpacing: 3, color: "var(--cyan)", marginBottom: 20,
+              fontFamily: "Outfit, system-ui, sans-serif", fontSize: 13, fontWeight: 700,
+              letterSpacing: 0, color: "var(--cyan)", marginBottom: 20,
               paddingBottom: 10, borderBottom: "1px solid var(--border)",
             }}>
               BUY PLANET
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 11 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 12 }}>
               <span style={{ color: "var(--dim)" }}>{planetBuyTarget.planetName || "Planet"} {planetCoordsLabel(planetBuyTarget)}</span>
               <AmPill amount={planetBuyTarget.priceAntimatter}/>
             </div>
-            <div style={{ fontSize: 10, color: "var(--dim)", lineHeight: 1.7, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: "var(--dim)", lineHeight: 1.7, marginBottom: 16 }}>
               This transfers the planet ownership to your player profile when the transaction confirms.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
@@ -2091,7 +2091,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                   flex: 1, padding: "12px 16px", borderRadius: 2,
                   border: "1px solid var(--border)", background: "transparent",
                   color: "var(--dim)", cursor: "pointer",
-                  fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                  fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
                 }}
               >CANCEL</button>
               <button
@@ -2103,7 +2103,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                   background: canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "rgba(0,245,212,0.1)" : "transparent",
                   color: canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "var(--cyan)" : "var(--dim)",
                   cursor: !txBusy && canTransact && antimatterBalance >= planetBuyTarget.priceAntimatter ? "pointer" : "not-allowed",
-                  fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: 1,
+                  fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
                 }}
               >{canTransact ? "CONFIRM BUY" : "ENTER WITH PASSKEY"}</button>
             </div>

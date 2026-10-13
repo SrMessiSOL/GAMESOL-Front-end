@@ -26,6 +26,10 @@
 .planet-world .pw-inspection-controls svg,.planet-world .pw-scene-readout>button svg{width:18px;height:18px}
 .universe-game-root button:focus-visible,.universe-game-root a:focus-visible,.universe-game-root input:focus-visible{outline:2px solid #a6ead6;outline-offset:3px}
 .planet-world .pw-wallet-trigger{min-height:44px;border-radius:5px;font-size:12px;letter-spacing:0}
+.universe-game-root .ug-top .ug-wallet-trigger{display:flex;align-items:center;justify-content:center;gap:8px;width:154px;max-width:154px!important;height:44px!important;min-height:44px!important;padding:0 10px!important;box-sizing:border-box;font:500 12px/1.5 Outfit,system-ui,sans-serif!important;letter-spacing:0;border-radius:5px;background:#17333e!important;box-shadow:none}
+.universe-game-root .ug-wallet-trigger-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.universe-game-root .ug-top .ug-wallet-trigger .commander-avatar{flex:0 0 24px;width:24px;height:24px}
+@media(max-width:700px){.universe-game-root .ug-top .ug-wallet-trigger{width:118px;max-width:118px!important}}
 @media(max-width:1100px){.universe-lab .level-controls .polished-control span{display:none}.universe-lab .level-controls .polished-control{width:44px;padding:0!important}}
 @media(max-width:700px){.universe-lab .navigation-console .coordinate-jump{min-width:0}.universe-lab .level-controls .polished-control span{display:inline}.universe-lab .level-controls .polished-control{width:auto}.planet-world .pw-inspection-controls{gap:6px;flex-wrap:wrap}.planet-world .pw-inspection-controls button.primary{flex:1;min-width:120px}}
 @media(prefers-reduced-motion:reduce){.universe-game-root button,.universe-lab .navigation-console .polished-control{transition:none!important}}

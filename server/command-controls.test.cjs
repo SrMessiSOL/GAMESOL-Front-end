@@ -27,13 +27,22 @@ function load(name) {
   return module.exports;
 }
 
-const { isWholeQuantity, formatUsdc, storePurchaseEligibility, MAX_ORDER_QUANTITY } = load('command-validation.ts');
+const { isWholeQuantity, samePlanetCoordinates, formatUsdc, storePurchaseEligibility, MAX_ORDER_QUANTITY } = load('command-validation.ts');
 const { STORE_PACKS } = load('store-catalog.ts');
 const { CommandActionButton, CommandQuantity } = load('design-system/command-controls.tsx');
 const { StorePackCard } = load('StoreControls.tsx');
 const { PlanetHeader } = load('PlanetHeader.tsx');
 const { ufoProfile, frameAccent, validFrameStyle } = load('ufo-traits.ts');
 const { UfoLoadout } = load('UfoLoadout.tsx');
+
+test('mission preflight rejects only the exact departure coordinates before signing', () => {
+  const source = { galaxy: 9, system: 427, position: 13 };
+  assert.equal(samePlanetCoordinates(source, { ...source }), true);
+  for (const key of ['galaxy', 'system', 'position']) assert.equal(samePlanetCoordinates(source, { ...source, [key]: source[key] + 1 }), false);
+  const world = fs.readFileSync(path.join(__dirname, '../src/PlanetWorld.tsx'), 'utf8');
+  assert.match(world, /canLaunchMission = missionCoordinatesValid && !missionDestinationIsSource/);
+  assert.match(world, /if \(missionDestinationIsSource\) \{ setMissionError\("Choose a destination other than this planet\."\)/);
+});
 
 test('orders accept only whole quantities within the serialized u32 bounds', () => {
   for (const value of ['1', '5', 10, MAX_ORDER_QUANTITY]) assert.equal(isWholeQuantity(value), true);
@@ -126,7 +135,8 @@ test('construction, research and queues retain readiness gates and share the com
   assert.match(world, /pendingCommand !== null \|\| researchBusy \|\| researchLabUpgrading \|\| !ready/);
   assert.match(world, /pendingCommand !== null \|\| ready/);
   assert.match(world, /pendingCommand !== null \|\| !ready/);
-  assert.match(world, /role="progressbar" aria-label=\{`\$\{activeQueue.label\} progress`\}/);
+  assert.match(world, /const seconds = Math.max\(0, activeQueue.finishAt - nowTs\)/);
+  assert.match(world, /ready \? "READY" : queueTime\(seconds\)/);
   assert.match(world, /trackCommand\(`queue:finish:\$\{activeQueue.label\}`/);
   assert.match(world, /trackCommand\(`queue:accelerate:\$\{activeQueue.label\}`/);
 });

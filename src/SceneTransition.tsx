@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, type MutableRefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { LoaderCircle, RotateCcw } from 'lucide-react';
-import { INITIAL_TRANSIT, motionDuration, transitReducer, type TransitState } from './scene-motion';
+import { INITIAL_TRANSIT, motionDuration, transitReducer, visiblePageTimeout, type TransitState } from './scene-motion';
 import './scene-transition.css';
 
 export function useSceneTransit() {
@@ -26,9 +26,11 @@ export function useSceneTransit() {
       }, motionDuration(160));
       return () => window.clearTimeout(timer);
     }
-    if (state.phase === 'revealing' || state.phase === 'loading') {
-      const timer = window.setTimeout(() => dispatch({ type: state.phase === 'revealing' ? 'done' : 'timeout', id: state.id }),
-        state.phase === 'revealing' ? motionDuration(280) : 15000);
+    if (state.phase === 'loading') {
+      return visiblePageTimeout(() => dispatch({ type: 'timeout', id: state.id }), 15000);
+    }
+    if (state.phase === 'revealing') {
+      const timer = window.setTimeout(() => dispatch({ type: 'done', id: state.id }), motionDuration(280));
       return () => window.clearTimeout(timer);
     }
   }, [state.phase, state.id]);

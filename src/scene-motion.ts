@@ -23,3 +23,27 @@ export function easeSceneProgress(progress: number) {
 export function motionDuration(milliseconds: number) {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : milliseconds;
 }
+
+export function visiblePageTimeout(callback: () => void, milliseconds: number,
+  page: Pick<Document, 'hidden' | 'addEventListener' | 'removeEventListener'> = document,
+  scheduler: Pick<Window, 'setTimeout' | 'clearTimeout' | 'performance'> = window) {
+  let remaining = milliseconds;
+  let startedAt = 0;
+  let timer: number | undefined;
+  const pause = () => {
+    if (timer === undefined) return;
+    scheduler.clearTimeout(timer);
+    remaining = Math.max(0, remaining - (scheduler.performance.now() - startedAt));
+    timer = undefined;
+  };
+  const visibilityChanged = () => {
+    pause();
+    if (!page.hidden) {
+      startedAt = scheduler.performance.now();
+      timer = scheduler.setTimeout(callback, remaining);
+    }
+  };
+  page.addEventListener('visibilitychange', visibilityChanged);
+  visibilityChanged();
+  return () => { pause(); page.removeEventListener('visibilitychange', visibilityChanged); };
+}

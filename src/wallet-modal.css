@@ -8,7 +8,7 @@
 .ug-wallet-menu button:disabled{opacity:1;color:#93a6ad;background:#15232b;border-color:#33454e;cursor:not-allowed}
 .ug-wallet-row{padding:12px 0;font:13px/1.5 Outfit,system-ui,sans-serif;gap:20px}
 .ug-wallet-row span{color:#adc0c9;font:inherit;text-transform:none;letter-spacing:0}
-.ug-wallet-row b{font:600 14px/1.5 Outfit,system-ui,sans-serif;overflow-wrap:anywhere;text-align:right;min-width:0;letter-spacing:0}
+.ug-wallet-row b{font:600 14px/1.5 Outfit,system-ui,sans-serif;overflow-wrap:anywhere;text-align:right;min-width:0;letter-spacing:0;text-transform:none}
 .ug-wallet-menu .ug-manage-funds{width:100%;margin:16px 0 0}
 .ug-wallet-menu .ug-passkey-card{padding:16px 0;margin:20px 0;border:0;border-block:1px solid #344c56;border-radius:0;background:none;box-shadow:none;gap:12px}
 .ug-wallet-menu .ug-passkey-card>header{font:600 12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;padding:0!important;border:0}
