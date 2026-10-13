@@ -85,3 +85,19 @@ arbitrary proofs retain explicit passkey authorization. Signature verification
 still occurs through the precompile and on-chain issuer checks. Two additional
 runtime classifier regression tests cover valid bundles, mismatched commanders,
 proof/payload edits, unrelated actions, duplicate/late proofs and rent changes.
+
+Dispatcher commit `51b68c1` is live at
+https://frontend-h5v9hw6m5-srmessisols-projects.vercel.app
+(`dpl_AtmAKyNBM9hRABobf2244BE5dNGZ`) behind chained-universe.vercel.app.
+Its cloud TypeScript/Vite build passed. The full focused frontend suite now
+passes 69 tests; the transaction fixture uses the actual distinct Lazor wallet
+and derived commander vault identities. The sizes remain 1,335 / 1,152 bytes.
+
+Read-only devnet verification found no loadout at
+`EjqHypWAD6NWdUfXcwS4fkU7K8zsTDY75uDJWBPXiGLh` for commander
+`G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r` after the encoding failures.
+No expedition or launch cooldown was consumed. The player-loop test remains
+pending: Quick Play is off, and Chrome blocked the automated renewal popup.
+The user has been handed the live account menu to activate Quick Play through
+a direct browser click. No real expedition, booster rescue or claimed loot is
+reported as verified yet. Mainnet is unchanged.
