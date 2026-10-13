@@ -34,3 +34,7 @@ test('Lazor session forwarding executes ownership precompiles outside the CPI wr
   assert.match(source,/sendSponsored\(rpc, \[\.\.\.precompiles, \.\.\.wrapped\], \[sessionKeypair\]/);
   assert.match(read('game-state.ts'),/sendUfoInstructions[\s\S]*?commander\.equals\(this\.provider\.wallet\.publicKey\)[\s\S]*?execute\(instructions, 'session'\)/);
 });
+test('UFO issuer targets the existing LazorKit game instead of the legacy public program', () => {
+  const { PROGRAM } = require('./ufo-attestations.cjs');
+  assert.equal(PROGRAM.toBase58(),'J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq');
+});

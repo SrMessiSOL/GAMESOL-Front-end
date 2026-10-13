@@ -1,6 +1,8 @@
 const bs58 = require("bs58");
+const crypto = require("node:crypto");
 const {
   ComputeBudgetProgram,
+  Ed25519Program,
   Connection,
   Keypair,
   PublicKey,
@@ -35,7 +37,26 @@ const allowedPrograms = new Set([
   LAZOR_PROGRAM_ID.toBase58(),
   SECP256R1_PROGRAM_ID.toBase58(),
   ComputeBudgetProgram.programId.toBase58(),
+  Ed25519Program.programId.toBase58(),
 ]);
+const UFO_DOMAIN = Buffer.from('gamesol:ufo:devnet:v1');
+const UFO_PROGRAM = require('../server/ufo-attestations.cjs').PROGRAM;
+const UFO_COLLECTION = new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb');
+const UFO_ISSUER = new PublicKey('9XEL6rVQ2GK85ic1j2Nf6kykybsAtsP8nYzNnNCMun4a');
+const UFO_ACTIONS = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot'].map(name => crypto.createHash('sha256').update(`global:${name}`).digest().subarray(0,8));
+
+function assertUfoPrecompile(instruction) {
+  const data = Buffer.from(instruction.data);
+  const messageLength = UFO_DOMAIN.length + 32 * 5 + 8 + 2 + 32 * 2 + 8;
+  if (instruction.accountKeyIndexes.length || data.length !== 112 + messageLength || data[0] !== 1 || data[1] !== 0
+    || data.readUInt16LE(2) !== 48 || data.readUInt16LE(4) !== 65535
+    || data.readUInt16LE(6) !== 16 || data.readUInt16LE(8) !== 65535
+    || data.readUInt16LE(10) !== 112 || data.readUInt16LE(12) !== messageLength || data.readUInt16LE(14) !== 65535
+    || !data.subarray(16,48).equals(UFO_ISSUER.toBuffer())
+    || !data.subarray(112,112+UFO_DOMAIN.length+64).equals(Buffer.concat([UFO_DOMAIN,UFO_PROGRAM.toBuffer(),UFO_COLLECTION.toBuffer()]))) {
+    throw new Error('Only canonical GAMESOL UFO ownership proofs may be sponsored.');
+  }
+}
 const rateWindows = new Map();
 const RENT_SPONSOR_DISCRIMINATOR = Buffer.from([87, 113, 100, 97, 218, 156, 201, 21]);
 const RENT_CREATING_DISCRIMINATORS = [
@@ -277,6 +298,8 @@ function assertTransactionPolicy(transaction, sponsor) {
   if (!keys?.[0]?.equals(sponsor.publicKey)) throw new Error("The configured sponsor must be the transaction fee payer.");
 
   let hasLazorInstruction = false;
+  let ufoPrecompiles = 0;
+  let hasUfoAction = false;
   let maximumDebit = MAX_ROUTINE_DEBIT_LAMPORTS;
   let approvedRentBundle = false;
   let approvedRentOwnerAddresses = [];
@@ -288,6 +311,10 @@ function assertTransactionPolicy(transaction, sponsor) {
     if (!allowedPrograms.has(programAddress)) {
       throw new Error(`Program ${programAddress} is not allowed by the GAMESOL devnet sponsor.`);
     }
+    if (program.equals(Ed25519Program.programId)) {
+      assertUfoPrecompile(instruction);
+      if (++ufoPrecompiles > 1 || hasLazorInstruction) throw new Error('UFO proof must execute once before the Lazor command.');
+    }
     if (program.equals(LAZOR_PROGRAM_ID)) {
       hasLazorInstruction = true;
       const discriminator = Buffer.from(instruction.data)[0];
@@ -295,6 +322,7 @@ function assertTransactionPolicy(transaction, sponsor) {
         maximumDebit = Math.max(maximumDebit, MAX_LAZOR_ACCOUNT_DEBIT_LAMPORTS);
       } else if (discriminator === 4) {
         const innerInstructions = parseCompactInstructions(message, instruction);
+        hasUfoAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && UFO_ACTIONS.some(discriminator => isDiscriminator(inner.data,discriminator)));
         const rentPolicy = approvedRentPolicy(innerInstructions);
         if (rentPolicy) {
           approvedRentBundle = true;
@@ -306,6 +334,7 @@ function assertTransactionPolicy(transaction, sponsor) {
     }
   }
   if (!hasLazorInstruction) throw new Error("A sponsored transaction must contain a Lazor wallet instruction.");
+  if (ufoPrecompiles && !hasUfoAction) throw new Error('UFO ownership proof requires a matching UFO gameplay action.');
   return { maximumDebit, approvedRentBundle, approvedRentOwnerAddresses, approvedRentAccountAddresses };
 }
 

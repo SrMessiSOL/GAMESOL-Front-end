@@ -1,7 +1,7 @@
 const crypto = require('node:crypto');
 const { PublicKey, Keypair, Connection } = require('@solana/web3.js');
 const nft = require('./crypto-ufos.cjs');
-const PROGRAM = new PublicKey('FJGxh6SKgNoTVzHj98oBsC2oaEy8ovadVJf8rDUNaEHb');
+const PROGRAM = new PublicKey('J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq');
 const DOMAIN = Buffer.from('gamesol:ufo:devnet:v1');
 const DEVNET_GENESIS = 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG';
 const normalize = value => String(value).trim().replace(/\s+/g, ' ').toLowerCase();
