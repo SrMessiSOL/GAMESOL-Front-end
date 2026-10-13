@@ -6,7 +6,7 @@ const ATTESTOR=new PublicKey('9XEL6rVQ2GK85ic1j2Nf6kykybsAtsP8nYzNnNCMun4a');
 const pda=seed=>PublicKey.findProgramAddressSync([Buffer.from(seed)],PROGRAM)[0];
 
 async function main() {
-  const rpc=new Connection('https://api.devnet.solana.com','confirmed');
+  const rpc=new Connection(process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com','confirmed');
   if(await rpc.getGenesisHash()!==DEVNET_GENESIS)throw new Error('Refusing a non-devnet network.');
   const gameConfig=await rpc.getAccountInfo(pda('game_config'));
   if(!gameConfig||!gameConfig.owner.equals(PROGRAM)||gameConfig.data.length<40)throw new Error('Game admin configuration unavailable.');

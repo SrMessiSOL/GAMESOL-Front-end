@@ -23,3 +23,4 @@ server/ufo-devnet-rpc.cjs
 server/ufo-squads-approval.cjs
 server/ufo-squads-approval.html
 server/upload-ufo-devnet-buffer.cjs
+server/upgrade-active-ufo-devnet.cjs
