@@ -24,6 +24,19 @@ UFO issuer, bound to this program/collection/domain and paired with a UFO action
 Generic Ed25519 instructions, cross-instruction offsets, duplicates and late
 proofs remain rejected. Debit limits are unchanged.
 
-The initial production-settings Vercel deployment was built successfully but
-not assigned to the live game alias. Corrected deployment and active-game
-activation must precede the real expedition/booster/loot/equipment test.
+The corrected active-game artifact passed 69 host tests, the SBF stack gate,
+and the isolated expedition/booster/claim/equip validator loop:
+https://github.com/SrMessiSOL/GAMESOL/actions/runs/38328270029
+
+Artifact SHA-256: `20f9316b06bfd61ea7d011c88a6658b398fd89e11b8b3a8287300ca08b004c15`.
+Active upgrade: `2d24SXWkMfuszAz3bjpBrQSJaWJvZ3v51mD31uef2hQ9PR1QcL8Scm9ygKZQZPZzURsNw5bXGW78AFZyVhSSGun1`.
+Active issuer configuration: `3wj76GpKgrrjQmuQxSZhFAWnvrmAKnBP5wEk8iNvgjGkuuh7hyEotHHwRarXbCxN2uDAJKkqwV8ceptadNQsumqY`.
+Both signatures were independently verified finalized with no errors. The
+deployed program payload matches the artifact and its authority is unchanged.
+
+The live alias now points to
+https://frontend-hz1vwzn58-srmessisols-projects.vercel.app . Its cloud build
+passed and the UFO API returned enabled=true, network=devnet, storage=on-chain.
+The live game loaded the same Homeworld 9:427:13 after the upgrade. The focused
+frontend suite passed 61 tests plus the separate existing paymaster policy suite.
+Real holder authorization and player reward-loop checks remain separate.
