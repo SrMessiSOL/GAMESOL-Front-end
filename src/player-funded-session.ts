@@ -10,6 +10,7 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 import { Buffer } from "buffer";
+import { fetchUfoLookupTable } from './ufo-lookup-table';
 import {
   createAssociatedTokenAccountInstruction,
   createTransferCheckedTokenInstruction,
@@ -364,12 +365,18 @@ async function sendSponsored(
     getSponsorPayer(),
     initialLatest ? Promise.resolve(initialLatest) : takeLatestBlockhash(rpc),
   ]);
+  const lookupTables = instructions.some(instruction => instruction.programId.equals(Ed25519Program.programId))
+    ? [await fetchUfoLookupTable(rpc, payer)] : [];
   const message = new TransactionMessage({
     payerKey: payer,
     recentBlockhash: latest.blockhash,
     instructions,
-  }).compileToV0Message();
+  }).compileToV0Message(lookupTables);
   const transaction = new VersionedTransaction(message);
+  let bytes: number;
+  try { bytes = transaction.serialize().length; }
+  catch { throw new Error('This command exceeds the Solana transaction size limit. No command was submitted.'); }
+  if (bytes > 1232) throw new Error(`This command is too large (${bytes}/1232 bytes). No command was submitted.`);
   if (signers.length > 0) transaction.sign(signers);
 
   let signature: string;

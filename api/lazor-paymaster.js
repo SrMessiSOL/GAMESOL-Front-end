@@ -2,6 +2,8 @@ const bs58 = require("bs58");
 const crypto = require("node:crypto");
 const {
   ComputeBudgetProgram,
+  AddressLookupTableAccount,
+  AddressLookupTableProgram,
   Ed25519Program,
   Connection,
   Keypair,
@@ -44,6 +46,44 @@ const UFO_PROGRAM = require('../server/ufo-attestations.cjs').PROGRAM;
 const UFO_COLLECTION = new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb');
 const UFO_ISSUER = new PublicKey('9XEL6rVQ2GK85ic1j2Nf6kykybsAtsP8nYzNnNCMun4a');
 const UFO_ACTIONS = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot'].map(name => crypto.createHash('sha256').update(`global:${name}`).digest().subarray(0,8));
+const UFO_LOOKUP = require('../src/ufo-lookup-table.json');
+let cachedUfoTable = null;
+
+function resolvedTransactionKeys(message, tables = []) {
+  if (!message.addressTableLookups?.length) return message.staticAccountKeys;
+  if (message.addressTableLookups.length !== 1 || tables.length !== 1) throw new Error('Only the verified UFO address table may be used.');
+  const lookup = message.addressTableLookups[0];
+  const table = tables[0];
+  if (lookup.accountKey.toBase58() !== UFO_LOOKUP.table || table.key.toBase58() !== UFO_LOOKUP.table
+    || table.state.authority || !table.isActive() || table.state.addresses.length !== UFO_LOOKUP.addresses.length
+    || table.state.addresses.some((address, index) => address.toBase58() !== UFO_LOOKUP.addresses[index])) {
+    throw new Error('UFO address table failed verification.');
+  }
+  const indexes = [...lookup.writableIndexes, ...lookup.readonlyIndexes];
+  if (!indexes.length || new Set(indexes).size !== indexes.length || indexes.some(index => index >= table.state.addresses.length)) {
+    throw new Error('Malformed UFO address table indexes.');
+  }
+  const keys = message.getAccountKeys({ addressLookupTableAccounts: tables });
+  const resolved = Array.from({ length: keys.length }, (_, index) => keys.get(index));
+  if (resolved.some(key => !key) || new Set(resolved.map(key => key.toBase58())).size !== resolved.length) throw new Error('Duplicate or unresolved transaction accounts.');
+  return resolved;
+}
+
+async function fetchTransactionTables(connection, message) {
+  if (!message.addressTableLookups?.length) return [];
+  if (message.addressTableLookups.length !== 1 || message.addressTableLookups[0].accountKey.toBase58() !== UFO_LOOKUP.table) {
+    throw new Error('Only the verified UFO address table may be used.');
+  }
+  if (!cachedUfoTable) {
+    const key = new PublicKey(UFO_LOOKUP.table);
+    const account = await connection.getAccountInfo(key, 'confirmed');
+    if (!account || !account.owner.equals(AddressLookupTableProgram.programId)) throw new Error('UFO address table is unavailable.');
+    const table = new AddressLookupTableAccount({ key, state: AddressLookupTableAccount.deserialize(account.data) });
+    resolvedTransactionKeys(message, [table]);
+    cachedUfoTable = table;
+  }
+  return [cachedUfoTable];
+}
 
 function assertUfoPrecompile(instruction) {
   const data = Buffer.from(instruction.data);
@@ -167,7 +207,7 @@ function decodeTransaction(encoded) {
   return { raw, transaction: VersionedTransaction.deserialize(raw) };
 }
 
-function parseCompactInstructions(message, outerInstruction) {
+function parseCompactInstructions(message, outerInstruction, keys = message.staticAccountKeys) {
   const data = Buffer.from(outerInstruction.data);
   if (data.length < 2 || data[0] !== 4) return [];
   const count = data[1];
@@ -182,7 +222,7 @@ function parseCompactInstructions(message, outerInstruction) {
     const compactAccountIndexes = data.subarray(offset, offset + accountCount);
     const accounts = Array.from(compactAccountIndexes, (compactIndex) => {
       const globalIndex = outerInstruction.accountKeyIndexes[compactIndex];
-      const account = message.staticAccountKeys[globalIndex];
+      const account = keys[globalIndex];
       if (!account) throw new Error("Lazor command contains an unresolved account.");
       return account;
     });
@@ -191,7 +231,7 @@ function parseCompactInstructions(message, outerInstruction) {
     offset += 2;
     if (offset + dataLength > data.length) throw new Error("Malformed Lazor execute payload.");
     const globalProgramIndex = outerInstruction.accountKeyIndexes[programIdIndex];
-    const programId = message.staticAccountKeys[globalProgramIndex];
+    const programId = keys[globalProgramIndex];
     if (!programId) throw new Error("Lazor command contains an unresolved program.");
     parsed.push({ programId, accounts, data: data.subarray(offset, offset + dataLength) });
     offset += dataLength;
@@ -292,10 +332,9 @@ function isApprovedRentBundle(innerInstructions) {
   return approvedRentPolicy(innerInstructions) !== false;
 }
 
-function assertTransactionPolicy(transaction, sponsor) {
+function assertTransactionPolicy(transaction, sponsor, tables = []) {
   const message = transaction.message;
-  if (message.addressTableLookups?.length) throw new Error("Address lookup tables are not allowed for sponsored play.");
-  const keys = message.staticAccountKeys;
+  const keys = resolvedTransactionKeys(message, tables);
   if (!keys?.[0]?.equals(sponsor.publicKey)) throw new Error("The configured sponsor must be the transaction fee payer.");
 
   let hasLazorInstruction = false;
@@ -322,7 +361,7 @@ function assertTransactionPolicy(transaction, sponsor) {
       if (discriminator === 0 || discriminator === 1 || discriminator === 5) {
         maximumDebit = Math.max(maximumDebit, MAX_LAZOR_ACCOUNT_DEBIT_LAMPORTS);
       } else if (discriminator === 4) {
-        const innerInstructions = parseCompactInstructions(message, instruction);
+        const innerInstructions = parseCompactInstructions(message, instruction, keys);
         hasUfoAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && UFO_ACTIONS.some(discriminator => isDiscriminator(inner.data,discriminator)));
         const rentPolicy = approvedRentPolicy(innerInstructions);
         if (rentPolicy) {
@@ -336,12 +375,13 @@ function assertTransactionPolicy(transaction, sponsor) {
   }
   if (!hasLazorInstruction) throw new Error("A sponsored transaction must contain a Lazor wallet instruction.");
   if (ufoPrecompiles && !hasUfoAction) throw new Error('UFO ownership proof requires a matching UFO gameplay action.');
+  if (tables.length && (!ufoPrecompiles || !hasUfoAction)) throw new Error('Address tables are restricted to verified UFO gameplay.');
   return { maximumDebit, approvedRentBundle, approvedRentOwnerAddresses, approvedRentAccountAddresses };
 }
 
-async function simulateAndMeasure(connection, transaction, sponsor, policy) {
+async function simulateAndMeasure(connection, transaction, sponsor, policy, tables = []) {
   const message = transaction.message;
-  const writableKeys = message.staticAccountKeys.filter((_, index) => message.isAccountWritable(index));
+  const writableKeys = resolvedTransactionKeys(message, tables).filter((_, index) => message.isAccountWritable(index));
   const addresses = writableKeys.map((key) => key.toBase58());
   const [beforeAccounts, simulation] = await Promise.all([
     connection.getMultipleAccountsInfo(writableKeys, "confirmed"),
@@ -441,9 +481,10 @@ module.exports = async function handler(req, res) {
       throw new Error("Requested signer does not match the configured sponsor.");
     }
     const { transaction } = decodeTransaction(encoded);
-    const policy = assertTransactionPolicy(transaction, sponsor);
+    const tables = await fetchTransactionTables(connection, transaction.message);
+    const policy = assertTransactionPolicy(transaction, sponsor, tables);
     transaction.sign([sponsor]);
-    await simulateAndMeasure(connection, transaction, sponsor, policy);
+    await simulateAndMeasure(connection, transaction, sponsor, policy, tables);
     const signature = await connection.sendRawTransaction(transaction.serialize(), {
       skipPreflight: true,
       maxRetries: 4,
@@ -463,4 +504,7 @@ module.exports._test = {
   assertTransactionPolicy,
   isApprovedRentBundle,
   parseCompactInstructions,
+  resolvedTransactionKeys,
+  fetchTransactionTables,
+  simulateAndMeasure,
 };

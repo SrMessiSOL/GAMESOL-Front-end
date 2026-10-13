@@ -24,3 +24,5 @@ server/ufo-squads-approval.cjs
 server/ufo-squads-approval.html
 server/upload-ufo-devnet-buffer.cjs
 server/upgrade-active-ufo-devnet.cjs
+server/setup-ufo-lookup-table.cjs
+server/ufo-transaction-fixture.cjs
