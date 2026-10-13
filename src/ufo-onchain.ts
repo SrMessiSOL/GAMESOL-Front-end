@@ -30,6 +30,35 @@ async function instructionData(name: string, bytes: Buffer) {
   const hash = await crypto.subtle.digest('SHA-256',new TextEncoder().encode(`global:${name}`));
   return Buffer.concat([Buffer.from(hash).subarray(0,8),bytes]);
 }
+export async function isUfoSessionBundle(instructions: TransactionInstruction[], commander: PublicKey): Promise<boolean> {
+  if (instructions.length < 2 || instructions.length > 3) return false;
+  const [verification] = instructions;
+  const action = instructions[instructions.length - 1];
+  if (!verification.programId.equals(Ed25519Program.programId) || verification.keys.length
+    || !action.programId.equals(GAME_STATE_PROGRAM_ID) || !action.keys[0]?.pubkey.equals(commander)
+    || !action.keys[0]?.isSigner) return false;
+  const names = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot'];
+  const discriminators = await Promise.all(names.map(name => instructionData(name, Buffer.alloc(0))));
+  const kind = discriminators.findIndex(bytes => action.data.subarray(0, 8).equals(bytes));
+  if (kind < 0 || action.data.length !== (kind === 1 ? 156 : 154)
+    || (kind === 1 && (action.data[154] > 2 || action.data[155] > 1))) return false;
+  if (instructions.length === 3) {
+    const rent = instructions[1];
+    if (kind !== 0 || !rent.programId.equals(GAME_STATE_PROGRAM_ID) || rent.data.length !== 16
+      || !rent.data.subarray(0, 8).equals(await instructionData('sponsor_account_rent', Buffer.alloc(0)))
+      || rent.keys.length !== 3 || !rent.keys[0].isSigner || !rent.keys[1].pubkey.equals(commander)
+      || !rent.keys[2].pubkey.equals(SystemProgram.programId)) return false;
+  }
+  const data = Buffer.from(verification.data);
+  const message = Buffer.concat([Buffer.from('gamesol:ufo:devnet:v1'), GAME_STATE_PROGRAM_ID.toBuffer(),
+    new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb').toBuffer(), commander.toBuffer(), action.data.subarray(8, 154)]);
+  return data.length === 112 + message.length && data[0] === 1 && data[1] === 0
+    && data.readUInt16LE(2) === 48 && data.readUInt16LE(4) === 65535
+    && data.readUInt16LE(6) === 16 && data.readUInt16LE(8) === 65535
+    && data.readUInt16LE(10) === 112 && data.readUInt16LE(12) === message.length && data.readUInt16LE(14) === 65535
+    && data.subarray(16, 48).equals(new PublicKey('9XEL6rVQ2GK85ic1j2Nf6kykybsAtsP8nYzNnNCMun4a').toBuffer())
+    && data.subarray(112).equals(message);
+}
 export function proofData(attestation: UfoAttestation) {
   const p = attestation.proof; const nonce = Buffer.alloc(8); nonce.writeBigUInt64LE(BigInt(p.nonce)); const expires = Buffer.alloc(8); expires.writeBigInt64LE(BigInt(p.expires));
   if (p.accessory.length !== 32 || p.hair.length !== 32 || ![...p.accessory,...p.hair].every(v => Number.isInteger(v) && v >= 0 && v <= 255)) throw new Error('Invalid UFO trait attestation.');

@@ -40,3 +40,48 @@ passed and the UFO API returned enabled=true, network=devnet, storage=on-chain.
 The live game loaded the same Homeworld 9:427:13 after the upgrade. The focused
 frontend suite passed 61 tests plus the separate existing paymaster policy suite.
 Real holder authorization and player reward-loop checks remain separate.
+
+## Launch transaction size correction
+
+The live #513 holding-wallet authorization succeeded, but the first sponsored
+launch failed during transaction encoding. A reproduction using the installed
+LazorKit 2.1.0 SDK measured 1,335 bytes for the session launch with protocol
+fees, proof and atomic account rent. Solana permits 1,232 transaction bytes.
+
+Frontend commit `5086081` compresses the same command to 1,152 bytes using the
+devnet table `EZU4CQtw4Sr8V2kQhtQKYpAEuCwNcy8PLgVuGpfGnMew`. The table contains
+only 22 shared game, sysvar and Lazor fee addresses. No holder or player keys
+are added to the table. Creation cost 4,511,040 test lamports in rent, plus fees.
+
+Creation: `iDA21QVxcV9BGt9WmPiMg2aKtmySq9GdmZ4Svc9w7AxXbAGqjJ3AcvVqGKbAR9hWm5iB1XcykKwytns158BR63Y`.
+Freeze: `5S7wxYq8V59SMCaCBVcJU7VVRrU5mS8Wtmm4DJmT8hU1B3mfgLxU5Hgnk7f2LL1F9tBXgJMVz2a1tLrWWLz5EyNx`.
+Both were independently verified finalized without errors. The table is
+active, owned by the address-table program, immutable, and content-matched.
+
+The frontend verifies devnet genesis, sponsor, table owner, immutable status
+and exact contents before compiling. The sponsor accepts only this table,
+resolves every loaded account before policy and debit checks, and restricts
+its use to a canonical issuer proof paired with a UFO gameplay instruction.
+Unknown, mutable, deactivated, altered, unresolved and duplicate table entries
+are rejected. Ownership precompile checks and sponsorship debit limits are
+unchanged; account rent and launch still execute atomically.
+
+Validation: 67 focused tests, the existing paymaster policy suite, TypeScript
+and `git diff --check` passed. The Vercel cloud build also passed. The live
+alias was promoted to
+https://frontend-pbt47r43h-srmessisols-projects.vercel.app
+(`dpl_B92C1qtembLgRgMeBSuSsjc9t9Ex`). The live UFO API returned HTTP 200 with
+enabled=true, network=devnet and storage=on-chain. Refreshing retained
+Homeworld 9:427:13 and Crypto UFO #513. The real-player launch, booster, claim
+and equip checks must be recorded after successful execution.
+
+The first live compressed retry uncovered an additional executor guard:
+`usePasskeyGameplayVault` considered every Ed25519 precompile non-routine and
+silently switched the UFO bundle to passkey execution. The session-size
+fixture did not cover that dispatch boundary. The corrected dispatcher admits
+only the canonical, commander-bound proof plus its matching start/advance/claim
+action (and optional atomic start rent); direct System/SPL instructions and
+arbitrary proofs retain explicit passkey authorization. Signature verification
+still occurs through the precompile and on-chain issuer checks. Two additional
+runtime classifier regression tests cover valid bundles, mismatched commanders,
+proof/payload edits, unrelated actions, duplicate/late proofs and rent changes.

@@ -31,7 +31,7 @@ async function ufoTransactionFixture(action = 'start', protocolFees = true) {
   const instructions = [precompile, ...wrapped.instructions];
   const table = new AddressLookupTableAccount({ key: new PublicKey(manifest.table), state: { deactivationSlot: 18446744073709551615n, lastExtendedSlot: 0, lastExtendedSlotStartIndex: 0, authority: undefined, addresses: manifest.addresses.map(address => new PublicKey(address)) } });
   const compile = tables => new VersionedTransaction(new TransactionMessage({ payerKey: sponsor.publicKey, recentBlockhash: PublicKey.default.toBase58(), instructions }).compileToV0Message(tables));
-  return { sponsor, session, instructions, table, plain: compile([]), compressed: compile([table]) };
+  return { sponsor, session, commander, inner, instructions, table, plain: compile([]), compressed: compile([table]) };
 }
 
 module.exports = { ufoTransactionFixture };

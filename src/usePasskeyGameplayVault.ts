@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet as useLazorWallet } from "@lazorkit/wallet";
 import { PublicKey } from "@solana/web3.js";
 import { GAME_STATE_PROGRAM_ID, MARKET_PROGRAM_ID, type GameplayVaultExecutor } from "./game-state";
+import { isUfoSessionBundle } from './ufo-onchain';
 import {
   activatePlayerFundedSession,
   ensurePlayerFeeSession,
@@ -108,9 +109,10 @@ export function usePasskeyGameplayVault() {
           instruction.programId.equals(GAME_STATE_PROGRAM_ID)
           || instruction.programId.equals(MARKET_PROGRAM_ID),
         );
+        const verifiedUfoBundle = !routineProgramsOnly && await isUfoSessionBundle(instructions, vaultPublicKey);
         // Never silently broaden the session allowlist. Commands containing
         // direct System/SPL instructions fall back to explicit passkey approval.
-        const effectiveAuthorization = authorization === "session" && routineProgramsOnly
+        const effectiveAuthorization = authorization === "session" && (routineProgramsOnly || verifiedUfoBundle)
           ? "session"
           : "passkey";
         if (effectiveAuthorization === "session" && !hasPlayerFundedSession(wallet.smartWallet)) {
