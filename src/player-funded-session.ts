@@ -1,6 +1,7 @@
 import { DialogManager, LazorKitClient, Paymaster } from "@lazorkit/wallet";
 import {
   Connection,
+  Ed25519Program,
   Keypair,
   PublicKey,
   SystemProgram,
@@ -658,6 +659,9 @@ export async function executeWithPlayerSession(
   instructions: TransactionInstruction[],
   authorization: "session" | "passkey",
 ): Promise<string> {
+  // Signature precompiles must execute at the transaction level, never as CPIs.
+  const precompiles = instructions.filter(instruction => instruction.programId.equals(Ed25519Program.programId));
+  instructions = instructions.filter(instruction => !instruction.programId.equals(Ed25519Program.programId));
   const stored = readStoredSession();
   if (!stored || stored.walletPda !== wallet.smartWallet) {
     throw new Error("This device is not ready to submit account actions. Sign out, reconnect, and try again.");
@@ -685,7 +689,7 @@ export async function executeWithPlayerSession(
       }),
       takeLatestBlockhash(rpc),
     ]);
-    return sendSponsored(rpc, wrapped, [sessionKeypair], latest);
+    return sendSponsored(rpc, [...precompiles, ...wrapped], [sessionKeypair], latest);
   }
 
   const [resolved, displayBlockhash] = await Promise.all([
@@ -707,7 +711,7 @@ export async function executeWithPlayerSession(
   const displayTransaction = await buildDisplayTransaction(rpc, sponsorPayer, instructions, displayBlockhash.blockhash);
   const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId, displayTransaction);
   const { instructions: wrapped } = resolved.client.finalizeExecute(prepared, response);
-  return sendSponsored(rpc, wrapped, [], displayBlockhash);
+  return sendSponsored(rpc, [...precompiles, ...wrapped], [], displayBlockhash);
 }
 
 export async function fundPlayerFeeFromVault(

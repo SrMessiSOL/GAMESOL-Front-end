@@ -3710,6 +3710,12 @@ export class GameClient {
     return this.sendInstruction(instructions);
   }
 
+  async sendUfoInstructions(commander: PublicKey, instructions: TransactionInstruction[]): Promise<string> {
+    if (!commander.equals(this.provider.wallet.publicKey)) throw new Error('UFO utility requires the active game commander.');
+    if (this.gameplayVaultExecutor) return this.gameplayVaultExecutor.execute(instructions, 'session');
+    return this.sendInstruction(instructions);
+  }
+
   private activeVaultPublicKey(): PublicKey | null {
     if (!this.preferVaultSigning) return null;
     return this.gameplayVaultExecutor?.vaultPublicKey ?? this.vaultKeypair?.publicKey ?? null;

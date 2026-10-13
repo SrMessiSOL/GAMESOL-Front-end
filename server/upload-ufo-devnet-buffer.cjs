@@ -1,0 +1,30 @@
+const {spawn} = require('node:child_process');
+const {devnetConnection} = require('./ufo-devnet-rpc.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const {PublicKey} = require('@solana/web3.js');
+const hash = '73e565f2b42f3f78fbb2699e1597d7dabac864f38d7ec6f93a65a000b84747b7';
+async function main() {
+  const {connection, url} = await devnetConnection();
+  const base = path.resolve(__dirname, '../.vercel/ufo-release-85c2440');
+  const bytes = fs.readFileSync(path.join(base, 'game_state.so'));
+  if (crypto.createHash('sha256').update(bytes).digest('hex') !== hash) throw Error('Artifact checksum mismatch.');
+  const payer = new PublicKey('EhT4UUmsHyd41bZSGzj1W72yu2EptHk8sEvnK7aaNuBu');
+  const rent = await connection.getMinimumBalanceForRentExemption(bytes.length + 37);
+  const buffer = await connection.getAccountInfo(new PublicKey('6jWfknp2W2p6qwY6vCDZYynBDgTKi97EPLJEWWszL9Fj'));
+  if (buffer && (buffer.owner.toBase58() !== 'BPFLoaderUpgradeab1e11111111111111111111111' || buffer.data.length !== bytes.length + 37 || buffer.data.readUInt32LE(0) !== 1 || buffer.data[4] !== 1 || !new PublicKey(buffer.data.subarray(5, 37)).equals(payer))) throw Error('Existing staging buffer mismatch.');
+  const needed = Math.max(0, rent - (buffer?.lamports || 0));
+  if (rent > 6.79e9 || (await connection.getBalance(payer)) < needed + 0.02e9) throw Error('Upload budget or balance check failed.');
+  console.log(JSON.stringify({network: 'devnet', resumingExistingBuffer: !!buffer, additionalRentLamports: needed}));
+  const linux = '/mnt/c/solargrid-v9/experiments/passkey-universe/frontend/.vercel/ufo-release-85c2440';
+  const cli = '/home/srmessi/.local/share/solana/install/active_release/bin/solana';
+  const wallet = '/home/srmessi/.config/solana/id.json';
+  const child = spawn('wsl.exe', ['-d', 'Ubuntu-22.04', '--exec', cli, 'program', 'write-buffer', `${linux}/game_state.so`, '--buffer', `${linux}/buffer-keypair.json`, '--buffer-authority', wallet, '--fee-payer', wallet, '--keypair', wallet, '--url', url, '--max-len', String(bytes.length), '--max-sign-attempts', '2', '--use-rpc', '--output', 'json'], {windowsHide: true});
+  const redact = data => process.stdout.write(data.toString().split(url).join('[devnet RPC]'));
+  child.stdout.on('data', redact); child.stderr.on('data', redact);
+  for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill());
+  child.on('error', () => {console.error('WSL upload could not start.'); process.exitCode = 1;});
+  child.on('exit', code => {process.exitCode = code || 0;});
+}
+main().catch(() => {console.error('Devnet upload preflight failed; no new upload started.'); process.exitCode = 1;});

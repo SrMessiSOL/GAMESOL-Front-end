@@ -10,7 +10,16 @@ src/assets/universe-lab/planet-command-surface.png
 src/glb.d.ts
 docs
 *.log
+**/*.tsbuildinfo
 .tmp_research.txt
 .env*.local
 public/founders-preview
 **/*.test.cjs
+server/configure-ufo-devnet.cjs
+server/prepare-ufo-squads-upgrade.cjs
+server/setup-ufo-attestor.cjs
+server/stage-ufo-squads-buffer.cjs
+server/ufo-devnet-rpc.cjs
+server/ufo-squads-approval.cjs
+server/ufo-squads-approval.html
+server/upload-ufo-devnet-buffer.cjs

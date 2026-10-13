@@ -94,7 +94,10 @@ test('direct holding-wallet connection calls connect only, never signing', async
   assert.deepEqual(options, [{ silent: false }, { silent: true }]);
   assert.equal(module.exports.holdingAccount([]), null);
   const ui = fs.readFileSync(require('node:path').join(__dirname, '../src/CryptoUfos.tsx'), 'utf8');
-  assert.doesNotMatch(ui, /DialogManager|useLazorWallet|passkeyProof|holdingSignature|signMessage|linkToken/);
+  assert.doesNotMatch(ui, /DialogManager|useLazorWallet|passkeyProof|holdingSignature|linkToken/);
+  const galleryFlow = ui.slice(ui.indexOf('const connect ='), ui.indexOf('const verifyUtility ='));
+  assert.doesNotMatch(galleryFlow, /signMessage|ufo-challenge|ufo-verify/);
+  assert.match(ui, /const verifyUtility = async/);
   assert.doesNotMatch(ui, /action: 'collection'|The collection|collectionBusy|setCollection/);
   assert.match(ui, /const assets = nft\.link\?\.assets \?\? \[\]/);
 });

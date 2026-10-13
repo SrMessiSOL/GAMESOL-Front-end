@@ -180,7 +180,12 @@ async function fetchOwnedAssets(owner, das) {
 function createService({ env = process.env, connection, das, now = Date.now } = {}) {
   const rpc = connection || new Connection(env.SOLANA_RPC_URL || 'https://api.devnet.solana.com', 'confirmed');
   const lookup = das || createDas(mainnetEndpoint(env));
+  let utility;
   return async (body, origin) => {
+    if (typeof body.action === 'string' && body.action.startsWith('ufo-')) {
+      utility ||= require('./ufo-attestations.cjs').createAttestationService({ env, connection: rpc, das: lookup, now });
+      return utility(body, origin);
+    }
     if (body.action === 'owner-assets') {
       const owner = address(body.owner);
       return { owner, assets: await fetchOwnedAssets(owner, lookup), checkedAt: now(), identityVerified: false };

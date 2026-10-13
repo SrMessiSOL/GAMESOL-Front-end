@@ -8,12 +8,15 @@ import gamesolLogo from './assets/ui/logobg.png';
 import './crypto-ufos.css';
 import { UfoLoadout } from './UfoLoadout';
 import { useUfoFrame } from './ufo-cosmetics';
+import type { SolanaSignMessageFeature } from '@solana/wallet-standard-features';
+import { Buffer } from 'buffer';
 
 export type CryptoUfo = { id: string; name: string; image: string | null; originalImage?: string | null; traits: { name: string; value: string }[]; compressed: boolean };
 type LinkState = { owner: string; assets: CryptoUfo[]; selectedAsset: string | null; checkedAt: number; identityVerified: false };
 type NftContext = { link: LinkState | null; flagship: CryptoUfo | null; busy: boolean; error: string; stage: string;
   wallets: HoldingWallet[]; connect: (wallet: HoldingWallet) => Promise<boolean>; refresh: () => Promise<void>;
-  assign: (id: string | null) => Promise<void>; unlink: () => void; clearError: () => void };
+  assign: (id: string | null) => Promise<void>; unlink: () => void; clearError: () => void;
+  verifyUtility: (commander: string, asset: string) => Promise<string>; utilityEnabled: boolean | null };
 const Context = createContext<NftContext | null>(null);
 const COLLECTION = '53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb';
 const READER_WALLET = 'gamesol:cryptoufos:reader-wallet:v1';
@@ -39,11 +42,18 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
   const [stage, setStage] = useState('');
   const [wallets, setWallets] = useState<HoldingWallet[]>([]);
   const [holdingWallet, setHoldingWallet] = useState<HoldingWallet | null>(null);
+  const [utilityEnabled, setUtilityEnabled] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void cryptoUfosRequest<{enabled: boolean}>({action:'ufo-status'}).then(value => { if (!cancelled) setUtilityEnabled(value.enabled); }).catch(() => { if (!cancelled) setUtilityEnabled(false); });
+    return () => { cancelled = true; };
+  }, []);
   const linkRef = useRef(link);
   linkRef.current = link;
   const selectedRef = useRef<string | null>(null);
   const walletRef = useRef<HoldingWallet | null>(null);
   const revision = useRef(0);
+  const verificationRevision = useRef(0);
   const attemptedRestore = useRef(false);
 
   const readOwner = useCallback(async (owner: string, expected: number, selected = selectedRef.current) => {
@@ -80,6 +90,7 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
   }, []);
 
   const connect = useCallback(async (wallet: HoldingWallet, silent = false) => {
+    ++verificationRevision.current;
     attemptedRestore.current = true;
     const expected = ++revision.current;
     walletRef.current = null; setHoldingWallet(null); setLink(null);
@@ -123,6 +134,7 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
     if (!holdingWallet) return;
     const unsubscribe = holdingWallet.features['standard:events']?.on('change', (changes) => {
       if (changes.accounts === undefined || walletRef.current !== holdingWallet) return;
+      ++verificationRevision.current;
       const expected = ++revision.current;
       const account = holdingAccount(changes.accounts);
       selectedRef.current = null;
@@ -150,6 +162,7 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
   }, [readOwner, refresh]);
 
   const unlink = () => {
+    ++verificationRevision.current;
     ++revision.current;
     walletRef.current = null; selectedRef.current = null;
     savePreference(READER_WALLET, null);
@@ -157,7 +170,23 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
   };
   const fresh = link && !error && Date.now() - link.checkedAt < 120000;
   const flagship = fresh ? link.assets.find((asset) => asset.id === link.selectedAsset) ?? null : null;
-  return <Context.Provider value={{ link, flagship, wallets, busy, error, stage, connect, refresh, assign, unlink, clearError: () => setError('') }}>{children}</Context.Provider>;
+  const verifyUtility = async (commander: string, asset: string) => {
+    const wallet = walletRef.current; const account = wallet && holdingAccount(wallet.accounts);
+    if (!wallet || !account || account.address !== linkRef.current?.owner) throw new Error('Reconnect the UFO holding wallet.');
+    const signer = (wallet.features as Partial<SolanaSignMessageFeature>)['solana:signMessage'];
+    if (!signer || !account.features.includes('solana:signMessage')) throw new Error('This holding wallet cannot sign a utility message.');
+    const expected = verificationRevision.current;
+    const challenge = await cryptoUfosRequest<{challengeToken: string; message: string}>({ action: 'ufo-challenge', commander, owner: account.address, asset });
+    if (verificationRevision.current !== expected) throw new Error('Holding wallet changed. Retry verification.');
+    const message = new TextEncoder().encode(challenge.message);
+    const [signed] = await signer.signMessage({ account, message });
+    if (verificationRevision.current !== expected || holdingAccount(wallet.accounts)?.address !== account.address) throw new Error('Holding wallet changed. Retry verification.');
+    if (!signed || !Buffer.from(signed.signedMessage).equals(Buffer.from(message))) throw new Error('Wallet signed a different utility message.');
+    const result = await cryptoUfosRequest<{utilityToken: string}>({ action: 'ufo-verify', challengeToken: challenge.challengeToken, signature: Buffer.from(signed.signature).toString('base64') });
+    if (verificationRevision.current !== expected) throw new Error('Holding wallet changed. Retry verification.');
+    return result.utilityToken;
+  };
+  return <Context.Provider value={{ link, flagship, wallets, busy, error, stage, connect, refresh, assign, unlink, verifyUtility, utilityEnabled, clearError: () => setError('') }}>{children}</Context.Provider>;
 }
 
 export function useCryptoUfos() {
@@ -235,7 +264,7 @@ export function CryptoUfosPanel({ embedded = false, onClose }: { embedded?: bool
       {nft.link && <div className="nft-account-actions"><button className="nft-button" disabled={nft.busy} onClick={() => void nft.refresh()}><RefreshCw size={14} /> Refresh ownership</button><button className="nft-icon-button" disabled={nft.busy} title="Disconnect NFT reader" aria-label="Disconnect NFT reader" onClick={nft.unlink}><Unlink size={16} /></button></div>}
       <p className="nft-small">Read-only connection. No signatures or transfers.</p></section>
       <section className="nft-flagship"><h2>Commander avatar</h2>{selectedAsset ? <><div className="nft-flagship-art"><NftImage asset={selectedAsset} /></div><h3>{selectedAsset.name}</h3><dl className="nft-traits">{selectedAsset.traits.map((trait, index) => <div key={`${trait.name}-${index}`}><dt>{trait.name}</dt><dd>{trait.value}</dd></div>)}</dl><button className="nft-button primary" disabled={nft.busy || nft.flagship?.id === selectedAsset.id} onClick={() => void nft.assign(selectedAsset.id)}>{nft.flagship?.id === selectedAsset.id ? <><Check size={16} /> Assigned</> : <><Rocket size={16} /> Use as commander avatar</>}</button>{nft.flagship && <button className="nft-button" disabled={nft.busy} onClick={() => void nft.assign(null)}>Remove avatar</button>}</> : <p className="nft-small">Choose one of your UFOs.</p>}<p className="nft-small">Cosmetic identity. Combat stats stay unchanged.</p></section>
-      {selectedAsset && <UfoLoadout asset={selectedAsset} equipped={nft.flagship?.id === selectedAsset.id} />}
+        {selectedAsset && <UfoLoadout asset={selectedAsset} equipped={nft.flagship?.id === selectedAsset.id} utilityEnabled={nft.utilityEnabled === true} />}
     </aside></div>
     {walletPicker && <div className="nft-wallet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !nft.busy) setWalletPicker(false); }}><WalletPicker onClose={() => setWalletPicker(false)} /></div>}
   </section>;
