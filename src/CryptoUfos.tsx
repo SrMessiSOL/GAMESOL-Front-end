@@ -10,13 +10,15 @@ import { UfoLoadout } from './UfoLoadout';
 import { useUfoFrame } from './ufo-cosmetics';
 import type { SolanaSignMessageFeature } from '@solana/wallet-standard-features';
 import { Buffer } from 'buffer';
+import { nftReaderView, type NftOwnershipStatus } from './nft-reader-state';
 
 export type CryptoUfo = { id: string; name: string; image: string | null; originalImage?: string | null; traits: { name: string; value: string }[]; compressed: boolean };
 type LinkState = { owner: string; assets: CryptoUfo[]; selectedAsset: string | null; checkedAt: number; identityVerified: false };
 type NftContext = { link: LinkState | null; flagship: CryptoUfo | null; busy: boolean; error: string; stage: string;
+  ownershipReady: boolean; ownershipStatus: NftOwnershipStatus; ownershipEpoch: number;
   wallets: HoldingWallet[]; connect: (wallet: HoldingWallet) => Promise<boolean>; refresh: () => Promise<void>;
   assign: (id: string | null) => Promise<void>; unlink: () => void; clearError: () => void;
-  verifyUtility: (commander: string, asset: string) => Promise<string>; utilityEnabled: boolean | null };
+  verifyUtility: (commander: string, asset: string) => Promise<{utilityToken: string; expiresAt: number}>; utilityEnabled: boolean | null };
 const Context = createContext<NftContext | null>(null);
 const COLLECTION = '53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb';
 const READER_WALLET = 'gamesol:cryptoufos:reader-wallet:v1';
@@ -54,22 +56,27 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
   const walletRef = useRef<HoldingWallet | null>(null);
   const revision = useRef(0);
   const verificationRevision = useRef(0);
+  const [ownershipEpoch, setOwnershipEpoch] = useState(0);
+  const invalidateVerification = useCallback(() => { ++verificationRevision.current; setOwnershipEpoch(value => value + 1); }, []);
   const attemptedRestore = useRef(false);
 
   const readOwner = useCallback(async (owner: string, expected: number, selected = selectedRef.current) => {
     setBusy(true); setError(''); setStage('Reading mainnet Crypto UFOs');
-    setLink((value) => value?.owner === owner ? { ...value, assets: [] } : null);
+    setLink((value) => value?.owner === owner ? value : null);
     try {
       const result = await cryptoUfosRequest<{ owner: string; assets: CryptoUfo[]; checkedAt: number; identityVerified: false }>({ action: 'owner-assets', owner });
       if (revision.current !== expected) return false;
+      if (result.owner !== owner) throw new Error('The NFT service returned another holding wallet.');
       const selectedAsset = result.assets.some((asset) => asset.id === selected) ? selected : null;
       selectedRef.current = selectedAsset;
       savePreference(selectionKey(owner), selectedAsset);
-      setLink({ ...result, selectedAsset });
+      const next = { ...result, selectedAsset };
+      linkRef.current = next;
+      setLink(next);
       return true;
     } catch (cause) {
       if (revision.current === expected) {
-        setLink(null); selectedRef.current = null;
+        setLink(value => value?.owner === owner ? value : null);
         setError(cause instanceof Error ? cause.message : 'Unable to read this holding wallet.');
       }
       return false;
@@ -90,10 +97,10 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
   }, []);
 
   const connect = useCallback(async (wallet: HoldingWallet, silent = false) => {
-    ++verificationRevision.current;
+    invalidateVerification();
     attemptedRestore.current = true;
     const expected = ++revision.current;
-    walletRef.current = null; setHoldingWallet(null); setLink(null);
+    walletRef.current = null; linkRef.current = null; setHoldingWallet(null); setLink(null);
     selectedRef.current = null; setBusy(true); setError(''); setStage(`Connect ${wallet.name}`);
     try {
       const account = await connectHoldingWallet(wallet, silent);
@@ -107,7 +114,7 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
     } finally {
       if (revision.current === expected) { setBusy(false); setStage(''); }
     }
-  }, [readOwner]);
+  }, [readOwner, invalidateVerification]);
 
   useEffect(() => {
     if (attemptedRestore.current || walletRef.current) return;
@@ -123,21 +130,26 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
     const expected = ++revision.current;
     const account = holdingAccount(wallet.accounts);
     if (!account) {
+      invalidateVerification(); linkRef.current = null;
       selectedRef.current = null; setLink(null); setBusy(false); setStage('');
       setError('The NFT holding wallet is disconnected.');
       return;
     }
+    if (linkRef.current?.owner !== account.address) {
+      invalidateVerification(); linkRef.current = null; selectedRef.current = null; setLink(null);
+    }
     await readOwner(account.address, expected, linkRef.current?.owner === account.address ? selectedRef.current : null);
-  }, [readOwner]);
+  }, [readOwner, invalidateVerification]);
 
   useEffect(() => {
     if (!holdingWallet) return;
     const unsubscribe = holdingWallet.features['standard:events']?.on('change', (changes) => {
       if (changes.accounts === undefined || walletRef.current !== holdingWallet) return;
-      ++verificationRevision.current;
-      const expected = ++revision.current;
       const account = holdingAccount(changes.accounts);
-      selectedRef.current = null;
+      if (account?.address === linkRef.current?.owner) { void refresh(); return; }
+      invalidateVerification();
+      const expected = ++revision.current;
+      selectedRef.current = null; linkRef.current = null;
       setLink(null); setError('');
       if (account) void readOwner(account.address, expected, null);
       else {
@@ -150,7 +162,7 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
     const interval = window.setInterval(check, 60000);
     window.addEventListener('focus', check);
     return () => { unsubscribe?.(); clearInterval(interval); window.removeEventListener('focus', check); };
-  }, [holdingWallet, readOwner, refresh]);
+  }, [holdingWallet, readOwner, refresh, invalidateVerification]);
 
   const assign = useCallback(async (assetId: string | null) => {
     const current = linkRef.current;
@@ -158,21 +170,22 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
     if (!current || !wallet) return;
     const account = holdingAccount(wallet.accounts);
     if (!account || account.address !== current.owner) { await refresh(); return; }
+    if (assetId !== current.selectedAsset) invalidateVerification();
     await readOwner(account.address, ++revision.current, assetId);
-  }, [readOwner, refresh]);
+  }, [readOwner, refresh, invalidateVerification]);
 
   const unlink = () => {
-    ++verificationRevision.current;
+    invalidateVerification();
     ++revision.current;
-    walletRef.current = null; selectedRef.current = null;
+    walletRef.current = null; selectedRef.current = null; linkRef.current = null;
     savePreference(READER_WALLET, null);
     setHoldingWallet(null); setLink(null); setError(''); setBusy(false); setStage('');
   };
-  const fresh = link && !error && Date.now() - link.checkedAt < 120000;
-  const flagship = fresh ? link.assets.find((asset) => asset.id === link.selectedAsset) ?? null : null;
+  const { flagship, ownershipReady, ownershipStatus } = nftReaderView(link, busy, error);
   const verifyUtility = async (commander: string, asset: string) => {
     const wallet = walletRef.current; const account = wallet && holdingAccount(wallet.accounts);
     if (!wallet || !account || account.address !== linkRef.current?.owner) throw new Error('Reconnect the UFO holding wallet.');
+    if (!ownershipReady || linkRef.current?.selectedAsset !== asset || !linkRef.current.assets.some(value => value.id === asset)) throw new Error('Refresh ownership and choose an owned UFO commander.');
     const signer = (wallet.features as Partial<SolanaSignMessageFeature>)['solana:signMessage'];
     if (!signer || !account.features.includes('solana:signMessage')) throw new Error('This holding wallet cannot sign a utility message.');
     const expected = verificationRevision.current;
@@ -182,11 +195,11 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
     const [signed] = await signer.signMessage({ account, message });
     if (verificationRevision.current !== expected || holdingAccount(wallet.accounts)?.address !== account.address) throw new Error('Holding wallet changed. Retry verification.');
     if (!signed || !Buffer.from(signed.signedMessage).equals(Buffer.from(message))) throw new Error('Wallet signed a different utility message.');
-    const result = await cryptoUfosRequest<{utilityToken: string}>({ action: 'ufo-verify', challengeToken: challenge.challengeToken, signature: Buffer.from(signed.signature).toString('base64') });
-    if (verificationRevision.current !== expected) throw new Error('Holding wallet changed. Retry verification.');
-    return result.utilityToken;
+    const result = await cryptoUfosRequest<{utilityToken: string; expiresAt: number}>({ action: 'ufo-verify', challengeToken: challenge.challengeToken, signature: Buffer.from(signed.signature).toString('base64') });
+    if (verificationRevision.current !== expected || holdingAccount(wallet.accounts)?.address !== account.address || linkRef.current?.selectedAsset !== asset) throw new Error('Holding wallet or commander changed. Retry verification.');
+    return result;
   };
-  return <Context.Provider value={{ link, flagship, wallets, busy, error, stage, connect, refresh, assign, unlink, verifyUtility, utilityEnabled, clearError: () => setError('') }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ link, flagship, ownershipReady, ownershipStatus, ownershipEpoch, wallets, busy, error, stage, connect, refresh, assign, unlink, verifyUtility, utilityEnabled, clearError: () => setError('') }}>{children}</Context.Provider>;
 }
 
 export function useCryptoUfos() {
@@ -213,9 +226,9 @@ function NftImage({ asset }: { asset: CryptoUfo }) {
 }
 
 export function CommanderAvatar({ className = '', fallback = 'CO' }: { className?: string; fallback?: string }) {
-  const { flagship } = useCryptoUfos();
+  const { flagship, ownershipStatus } = useCryptoUfos();
   const frame = useUfoFrame(flagship);
-  return <span className={`commander-avatar ${className}`} style={{ '--commander-accent': frame.accent } as React.CSSProperties} title={flagship?.name ?? 'Commander'}>
+  return <span className={`commander-avatar ${className}`} data-ownership={ownershipStatus} style={{ '--commander-accent': frame.accent } as React.CSSProperties} title={flagship ? `${flagship.name}${ownershipStatus === 'verified' ? '' : ` (${ownershipStatus})`}` : 'Commander'}>
     {flagship ? <NftImage asset={flagship} /> : <span aria-hidden="true">{fallback}</span>}
   </span>;
 }
@@ -252,7 +265,7 @@ export function CryptoUfosPanel({ embedded = false, onClose }: { embedded?: bool
   const assets = nft.link?.assets ?? [];
   return <section className={`nft-panel ${embedded ? 'nft-embedded' : ''}`} aria-label="Crypto UFOs commander avatars">
     <header className="nft-heading"><div><small>GAMESOL ORIGINAL COMMUNITY</small><h1>Crypto UFOs</h1><p>Your collection stays in your wallet. Your UFO joins your game.</p></div>{onClose && <button className="nft-icon-button" title="Close commander avatars" aria-label="Close commander avatars" onClick={onClose}><X size={20} /></button>}</header>
-    <div className="nft-layout"><section className="nft-gallery"><div className="nft-section-title"><h2>Your Crypto UFOs</h2><span>MAINNET cNFTs</span><a href="https://www.tensor.trade/trade/cryptoufos" target="_blank" rel="noopener noreferrer" title="View collection on Tensor"><ExternalLink size={16} /></a></div>
+    <div className="nft-layout"><section className="nft-gallery"><div className="nft-section-title"><h2>{nft.link && !nft.ownershipReady ? 'Last verified Crypto UFOs' : 'Your Crypto UFOs'}</h2><span>MAINNET cNFTs</span><a href="https://www.tensor.trade/trade/cryptoufos" target="_blank" rel="noopener noreferrer" title="View collection on Tensor"><ExternalLink size={16} /></a></div>
       {nft.error && <p className="nft-error" role="alert">{nft.error}</p>}
       {!nft.link && !nft.busy && <div className="nft-empty"><h3>No holding wallet connected</h3><button className="nft-button primary" onClick={() => setWalletPicker(true)}><WalletIcon size={16} /> Connect Solflare or another wallet</button></div>}
       {nft.busy && <p className="nft-loading" role="status"><LoaderCircle size={18} className="nft-spin" /> {nft.stage || 'Checking mainnet ownership...'}</p>}
@@ -263,8 +276,8 @@ export function CryptoUfosPanel({ embedded = false, onClose }: { embedded?: bool
       {!publicKey && <WalletConnectControl disconnectedLabel="SIGN IN TO GAMESOL" />}<button className="nft-button primary" disabled={nft.busy} onClick={() => setWalletPicker(true)}><WalletIcon size={16} /> {nft.link ? 'Change holding wallet' : 'Connect holding wallet'}</button>
       {nft.link && <div className="nft-account-actions"><button className="nft-button" disabled={nft.busy} onClick={() => void nft.refresh()}><RefreshCw size={14} /> Refresh ownership</button><button className="nft-icon-button" disabled={nft.busy} title="Disconnect NFT reader" aria-label="Disconnect NFT reader" onClick={nft.unlink}><Unlink size={16} /></button></div>}
       <p className="nft-small">Read-only connection. No signatures or transfers.</p></section>
-      <section className="nft-flagship"><h2>Commander avatar</h2>{selectedAsset ? <><div className="nft-flagship-art"><NftImage asset={selectedAsset} /></div><h3>{selectedAsset.name}</h3><dl className="nft-traits">{selectedAsset.traits.map((trait, index) => <div key={`${trait.name}-${index}`}><dt>{trait.name}</dt><dd>{trait.value}</dd></div>)}</dl><button className="nft-button primary" disabled={nft.busy || nft.flagship?.id === selectedAsset.id} onClick={() => void nft.assign(selectedAsset.id)}>{nft.flagship?.id === selectedAsset.id ? <><Check size={16} /> Assigned</> : <><Rocket size={16} /> Use as commander avatar</>}</button>{nft.flagship && <button className="nft-button" disabled={nft.busy} onClick={() => void nft.assign(null)}>Remove avatar</button>}</> : <p className="nft-small">Choose one of your UFOs.</p>}<p className="nft-small">Cosmetic identity. Combat stats stay unchanged.</p></section>
-        {selectedAsset && <UfoLoadout asset={selectedAsset} equipped={nft.flagship?.id === selectedAsset.id} utilityEnabled={nft.utilityEnabled === true} />}
+      <section className="nft-flagship"><h2>Commander avatar</h2>{selectedAsset ? <><div className="nft-flagship-art"><NftImage asset={selectedAsset} /></div><h3>{selectedAsset.name}</h3><dl className="nft-traits">{selectedAsset.traits.map((trait, index) => <div key={`${trait.name}-${index}`}><dt>{trait.name}</dt><dd>{trait.value}</dd></div>)}</dl><button className="nft-button primary" disabled={nft.busy || !nft.ownershipReady || nft.flagship?.id === selectedAsset.id} onClick={() => void nft.assign(selectedAsset.id)}>{nft.flagship?.id === selectedAsset.id ? <><Check size={16} /> Assigned</> : <><Rocket size={16} /> Use as commander avatar</>}</button>{nft.flagship && <button className="nft-button" disabled={nft.busy} onClick={() => void nft.assign(null)}>Remove avatar</button>}</> : <p className="nft-small">Choose one of your UFOs.</p>}<p className="nft-small">Cosmetic identity. Combat stats stay unchanged.</p></section>
+        {selectedAsset && <UfoLoadout asset={selectedAsset} equipped={nft.flagship?.id === selectedAsset.id} utilityEnabled={nft.utilityEnabled === true && nft.ownershipReady} />}
     </aside></div>
     {walletPicker && <div className="nft-wallet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !nft.busy) setWalletPicker(false); }}><WalletPicker onClose={() => setWalletPicker(false)} /></div>}
   </section>;

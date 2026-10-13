@@ -23,7 +23,7 @@ test('ownership refresh does not revoke a still-connected wallet utility message
   const utility=source.slice(source.indexOf('const verifyUtility ='),source.indexOf('return <Context.Provider'));
   assert.match(utility,/verificationRevision\.current/);
   assert.doesNotMatch(utility,/\brevision\.current/);
-  assert.match(refresh,/verificationRevision\.current/);
+  assert.match(refresh,/invalidateVerification\(\)/);
   // Epoch changes are in the wallet account-change handler, not the periodic readOwner call.
   const readOwner=source.slice(source.indexOf('const readOwner ='),source.indexOf('const connect ='));
   assert.doesNotMatch(readOwner,/verificationRevision\.current/);

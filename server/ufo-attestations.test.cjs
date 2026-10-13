@@ -53,6 +53,17 @@ test('wrong holding signatures, origin, token edits and expiry fail closed',asyn
   await assert.rejects(ctx.service({action:'ufo-attest',utilityToken:auth.utilityToken+'x'},origin));
   ctx.state.now+=3600001; await assert.rejects(ctx.service({action:'ufo-attest',utilityToken:auth.utilityToken},origin),/expired/);
 });
+
+test('utility expiry exposed to the UI matches the sealed server deadline and never refreshes on attestations', async () => {
+  const ctx = setup(); const auth = await ctx.authorize();
+  const payload = JSON.parse(Buffer.from(auth.utilityToken.split('.')[0], 'base64url').toString());
+  assert.equal(auth.expiresAt, payload.expires); assert.equal(auth.expiresAt, ctx.state.now + 3600000);
+  ctx.state.now += 3500000;
+  const proof = await ctx.service({ action: 'ufo-attest', utilityToken: auth.utilityToken }, origin);
+  assert.equal(proof.proof.expires, Math.floor(ctx.state.now / 1000) + 90);
+  ctx.state.now = auth.expiresAt;
+  await assert.rejects(ctx.service({ action: 'ufo-attest', utilityToken: auth.utilityToken }, origin), /expired/);
+});
 test('replaying a still-valid holder challenge cannot extend its signed authorization window',async()=>{
   const ctx=setup(); const auth=await ctx.authorize();
   ctx.state.now+=240000;

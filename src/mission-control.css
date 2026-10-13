@@ -1,0 +1,20 @@
+.planet-world .pw-mission-command{display:grid;gap:20px;min-width:0}
+.planet-world .pw-mission-command [hidden]{display:none!important}
+.planet-world .pw-mission-tabs{display:flex;gap:24px;border-bottom:1px solid #304650;margin:-4px 0 0}
+.planet-world .pw-mission-tabs>button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 0;background:transparent;border:0;border-bottom:2px solid transparent;color:#a6bbc6;font:500 14px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;cursor:pointer}
+.planet-world .pw-mission-tabs>button[aria-selected=true]{border-bottom-color:#85cdb3;color:#edf6f4}
+.planet-world .pw-mission-tabs button:focus-visible,.planet-world .pw-mission-empty button:focus-visible{outline:2px solid #91dbba;outline-offset:3px}.planet-world .pw-mission-tabs svg{flex-shrink:0}
+.planet-world .pw-fleet-panel{display:grid;gap:20px;min-width:0}.planet-world .pw-fleet-panel>.pw-command-head{margin:0;padding:0}.planet-world .pw-fleet-panel>.pw-command-head h2{font-size:20px;margin:0}
+.planet-world .pw-mission-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #304650;border-bottom:1px solid #304650}
+.planet-world .pw-mission-overview>div{display:grid;align-content:center;gap:8px;min-height:80px;min-width:0;padding:12px 16px;border-right:1px solid #304650}.planet-world .pw-mission-overview>div:first-child{padding-left:0}.planet-world .pw-mission-overview>div:last-child{border-right:0}
+.planet-world .pw-mission-overview span{font:11px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;color:#a4bbc7;overflow-wrap:anywhere}.planet-world .pw-mission-overview b{font:600 17px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;color:#e8f2f6;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.planet-world .pw-mission-overview .ready b{color:#a5dcbc}
+.planet-world .pw-mission-idle{display:flex;align-items:center;gap:14px;padding:4px 0}.planet-world .pw-mission-idle>svg{width:24px;height:24px;flex-shrink:0;color:#81b8c8}.planet-world .pw-mission-idle>div{display:grid;gap:5px;min-width:0}
+.planet-world .pw-mission-idle span{font:11px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;color:#a4bbc7}.planet-world .pw-mission-idle b{font:500 14px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;color:#e8f2f6}.planet-world .pw-mission-idle p{margin:0;font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;color:#a4bbc7}
+.planet-world .pw-mission-empty{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:14px;padding:20px 0;border-top:1px solid #304650}.planet-world .pw-mission-empty-orbit{display:grid;place-items:center;width:44px;height:44px}.planet-world .pw-mission-empty-orbit svg{width:26px;height:26px;color:#a7bfc7}
+.planet-world .pw-mission-empty h3{margin:0 0 5px;font:500 16px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;color:#e8f2f6}.planet-world .pw-mission-empty p{margin:0;font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;color:#a4bbc7}
+.planet-world .pw-mission-empty button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border:1px solid #47616b;border-radius:4px;background:#142a33;color:#eaf3f4;font:13px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;cursor:pointer;white-space:normal}
+@media(max-width:600px){
+.planet-world .pw-mission-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.planet-world .pw-mission-tabs>button{font-size:13px;text-align:center}
+.planet-world .pw-mission-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.planet-world .pw-mission-overview>div{padding:12px}.planet-world .pw-mission-overview>div:nth-child(odd){padding-left:0}.planet-world .pw-mission-overview>div:nth-child(even){border-right:0}.planet-world .pw-mission-overview>div:nth-child(-n+2){border-bottom:1px solid #304650}
+.planet-world .pw-mission-empty{grid-template-columns:36px minmax(0,1fr)}.planet-world .pw-mission-empty button{grid-column:2;justify-self:start}
+}

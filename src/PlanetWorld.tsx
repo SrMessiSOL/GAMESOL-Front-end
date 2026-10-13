@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ArcballControls, Billboard, Environment, Lightformer, Stars, Text, useGLTF, useTexture } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Activity, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleAlert, Crosshair, FlaskConical, Gem, Hammer, Inbox, LoaderCircle, Menu, Pickaxe, Rocket, RotateCcw, Scale, Shield, ShoppingCart, Trophy, Users, X, Zap } from "lucide-react";
 import { ALLIANCE_CREATE_ANTIMATTER_COST, ALLIANCE_CREATE_USDC_COST, BUILDINGS, EXPLORER_CLUSTER, GAMESOL_GOVERNANCE_ROOT_ENABLED, NETWORK_LABEL, SHIPS, SHIP_TYPE_IDX, SYSTEM_SOVEREIGNTY_ACTION_COSTS, buildTimeSecs, energyEfficiency, upgradeCost, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceJoinRequestAccount, type AllianceMembershipAccount, type AllianceStateAccount, type AllianceTreasuryStateAccount, type BattleResolvedEventRecord, type EspionageReportEventRecord, type GameClient, type GamesolGovernanceConfigAccount, type PlayerState, type QuestProgressStateAccount, type QuestRewardTargetStateAccount, type QuestStateAccount, type StoreConfigState, type StorePurchaseStateAccount } from "./game-state";
@@ -24,6 +24,7 @@ import { formatUsdc, isWholeQuantity, storePurchaseEligibility } from './command
 import type { StorePack } from './store-catalog';
 import './command-workspace.css';
 import './planet-shell.css';
+import './mission-control.css';
 import { PlanetHeader } from './PlanetHeader';
 import { UfoExpeditions, useUfoOnchain } from './UfoExpeditions';
 import { lootName } from './ufo-onchain';
@@ -1746,6 +1747,8 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const [cameraReset, setCameraReset] = useState(0);
   const [inspectionActive, setInspectionActive] = useState(false);
   const [modal, setModal] = useState<PlanetWorldModal | null>(null);
+  const [missionView, setMissionView] = useState<'ufo' | 'fleet'>('ufo');
+  const missionTabsId = useId();
   const [quantity, setQuantity] = useState(1);
   const [productionQuantityValid, setProductionQuantityValid] = useState(true);
   const [pendingCommand, setPendingCommand] = useState<string | null>(null);
@@ -1842,6 +1845,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
     modalOpenerRef.current = null;
     setModal(commandRequest.modal);
     if (!commandRequest.mission) return;
+    setMissionView('fleet');
     setMissionType(commandRequest.mission.missionType);
     setMissionTarget((current) => ({
       ...current,
@@ -2713,11 +2717,22 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
       </section>}
       {modal === "market" && <><div className="pw-command-head"><span>INTERPLANETARY MARKET</span><h2>Exchange resources and colonies</h2><p>Browse live devnet listings, sell production for ANTIMATTER, or manage your active offers from one command desk.</p></div><MarketTab client={market} state={state} ownedPlanets={ownedWorlds} liveRes={state.resources} antimatterBalance={allianceBalances.antimatter} onTxStart={marketControls.onTxStart} onTxEnd={marketControls.onTxEnd} txBusy={busy} sectionMode="both" canTransact={Boolean(game && market)} /></>}
       {modal === "missions" && <section className="pw-mission-command">
+        <nav className="pw-mission-tabs" role="tablist" aria-label="Mission views" onKeyDown={event => {
+          const next = event.key === 'Home' ? 'ufo' : event.key === 'End' ? 'fleet'
+            : event.key === 'ArrowLeft' || event.key === 'ArrowRight' ? missionView === 'ufo' ? 'fleet' : 'ufo' : null;
+          if (next) { event.preventDefault(); setMissionView(next); document.getElementById(`${missionTabsId}-${next}-tab`)?.focus(); }
+        }}>
+          <button type="button" role="tab" id={`${missionTabsId}-ufo-tab`} aria-controls={`${missionTabsId}-ufo-panel`} aria-selected={missionView === 'ufo'} tabIndex={missionView === 'ufo' ? 0 : -1} onClick={() => setMissionView('ufo')}><Rocket size={17}/>UFO expeditions</button>
+          <button type="button" role="tab" id={`${missionTabsId}-fleet-tab`} aria-controls={`${missionTabsId}-fleet-panel`} aria-selected={missionView === 'fleet'} tabIndex={missionView === 'fleet' ? 0 : -1} onClick={() => setMissionView('fleet')}><Crosshair size={17}/>Fleet operations</button>
+        </nav>
+        <div role="tabpanel" id={`${missionTabsId}-ufo-panel`} aria-labelledby={`${missionTabsId}-ufo-tab`} hidden={missionView !== 'ufo'}>
         <UfoExpeditions game={game} commander={state.planet.owner} loadout={ufo.loadout} refresh={ufo.refresh} readError={ufo.error} busy={busy} run={(label, action) => run(label, client => action(client))}/>
-        <div className="pw-command-head"><span>MISSION CONTROL</span><h2>Fleet operations</h2><p>Track active movements, resolve arrivals, and dispatch the next order from {state.planet.name}.</p></div>
+        </div>
+        <div className="pw-fleet-panel" role="tabpanel" id={`${missionTabsId}-fleet-panel`} aria-labelledby={`${missionTabsId}-fleet-tab`} hidden={missionView !== 'fleet'}>
+        <div className="pw-command-head"><h2>Fleet operations</h2></div>
         <section className="pw-mission-overview" aria-label="Fleet mission overview"><div><span>ACTIVE ORDERS</span><b>{activeMissionCount}</b></div><div className={readyMissionCount > 0 ? "ready" : "idle"}><span>ARRIVALS READY</span><b>{readyMissionCount}</b></div><div><span>MISSION SLOTS</span><b>{availableMissionSlots}/{usableMissionSlots} FREE</b></div><div><span>AVAILABLE FLEET</span><b>{availableFleetUnits.toLocaleString()} UNITS</b></div></section>
         {activeMissionCount > 0 ? <div className="pw-command-list pw-active-missions">{state.fleet.missions.map((mission, slot) => { if (mission.missionType === 0) return null; const resolveAt = mission.applied ? mission.returnTs : mission.arriveTs; const ready = nowTs >= resolveAt; const missionArt = resolveGameArtUrl(missionArtKey(mission.missionType)); return <article key={slot} className={ready ? "is-ready" : "is-in-flight"}><div className="pw-mission-badge">{missionArt ? <img src={missionArt} alt="" /> : <Crosshair />}</div><div><span className={`pw-card-readiness ${ready ? "ready" : "in-flight"}`}>{ready ? "ARRIVAL READY" : mission.applied ? "RETURNING" : "IN FLIGHT"}</span><h3>{missionName(mission.missionType)} · {mission.targetGalaxy}:{mission.targetSystem}:{mission.targetPosition}</h3><p>Mission slot {slot + 1} · {mission.applied ? "Return leg" : "Outbound leg"} · {ready ? "Resolve the arrival now" : `${queueTime(Math.max(0, resolveAt - nowTs))} remaining`}</p></div>{ready ? <CommandActionButton tone="primary" icon={<CheckCircle2 />} pending={pendingCommand === `resolve:${slot}`} pendingLabel="Resolving..." disabled={busy || pendingCommand !== null} onClick={() => void trackCommand(`resolve:${slot}`, () => resolveMission(mission, slot))}>Resolve arrival</CommandActionButton> : <CommandActionButton icon={<Zap />} pending={pendingCommand === `accelerate:${slot}`} pendingLabel="Accelerating..." disabled={busy || pendingCommand !== null} onClick={() => void trackCommand(`accelerate:${slot}`, () => run("Accelerate mission", (client, entity) => client.accelerateMissionWithAntimatter(entity, slot, mission.applied ? 1 : 0)))}>Finish with AM</CommandActionButton>}</article>; })}</div> : <section className="pw-mission-idle"><Crosshair /><div><span>FLIGHT CONTROL CLEAR</span><b>No active operations</b><p>All usable mission slots are available for a new order.</p></div></section>}
-        {availableFleetUnits === 0 ? <section className="pw-mission-empty"><div className="pw-mission-empty-orbit"><Rocket /></div><div><span>FLEET REQUIRED</span><h3>Build your first mission-capable ship</h3><p>This world has no deployable ships. Open the Shipyard, unlock a blueprint, and commission a vessel before configuring coordinates or cargo.</p><ol><li><b>1</b>Upgrade the Shipyard</li><li><b>2</b>Build an available ship</li><li><b>3</b>Return here to launch</li></ol></div><button type="button" onClick={() => setModal("ships")}>OPEN SHIPYARD</button></section> : <section className="pw-launch">
+        {availableFleetUnits === 0 ? <section className="pw-mission-empty"><div className="pw-mission-empty-orbit"><Rocket /></div><div><h3>No ships ready</h3><p>{state.planet.name} has no mission-ready fleet.</p></div><button type="button" onClick={() => setModal("ships")}><Hammer size={17}/>Open shipyard</button></section> : <section className="pw-launch">
           <header className="pw-launch-head"><div><span>NEW FLEET ORDER</span><h3>Configure mission</h3><p>Select one objective and complete its live preflight.</p></div><b>{availableFleetClasses} FLEET CLASSES READY</b></header>
           <nav className="pw-launch-progress" aria-label="Mission configuration steps"><span className="active"><b>01</b>OBJECTIVE</span><span><b>02</b>DESTINATION</span><span><b>03</b>FLEET</span><span><b>04</b>{missionType === 5 || missionType === 6 ? "REVIEW" : "CARGO"}</span></nav>
           <fieldset className="command-launch-fields" disabled={busy || pendingCommand !== null || missionChecking}>
@@ -2730,6 +2745,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
           <section className={`pw-mission-preflight${canLaunchMission && !missionError ? " is-ready" : " is-blocked"}`} aria-live="polite"><header><div><span>MISSION PREFLIGHT</span><strong>{canLaunchMission && !missionError ? "READY TO LAUNCH" : "ACTION REQUIRED"}</strong></div><b>{availableMissionSlots}/{usableMissionSlots} SLOTS FREE</b></header><div className="pw-mission-preflight-grid"><span><small>ORDER</small><b>{missionName(missionType)}</b></span><span><small>DESTINATION</small><b>{missionTarget.galaxy}:{missionTarget.system}:{missionTarget.position}</b></span><span><small>FLEET</small><b>{selectedMissionShips.toLocaleString()} SHIPS</b></span><span><small>CARGO</small><b>{selectedCargoTotal.toLocaleString()} / {selectedCargoCapacity.toLocaleString()}</b></span><span><small>FUEL</small><b>{estimatedMissionFuel.toLocaleString()} D</b></span><span><small>SPEED</small><b>{missionTarget.speed}%</b></span></div><p className={missionError ? "command-preflight-error" : undefined} role={missionError ? "alert" : undefined}>{missionError || (canLaunchMission ? "Preflight checks passed. Final target checks run before signing." : "Complete the mission requirements above.")}</p></section>
           <CommandActionButton tone="primary" className="pw-launch-action" icon={<Rocket />} pending={pendingCommand === 'launch'} pendingLabel={busy ? 'Launching...' : 'Checking target...'} disabled={busy || pendingCommand !== null || missionChecking || !canLaunchMission} onClick={() => void trackCommand('launch', launchMission)}>{canLaunchMission ? `Launch ${missionName(missionType).toLowerCase()}` : 'Complete preflight'}</CommandActionButton>
         </section>}
+        </div>
       </section>}
     {modal === "alliance" && !allianceLoading && !alliance && allianceOnboardingMode === "discover" && <section className="pw-alliance-discovery">
       {pendingAllianceDirectory.length > 0 && <section className="pw-alliance-directory pw-alliance-pending"><header><span>YOUR APPLICATIONS</span><b>AWAITING APPROVAL</b></header><div>{pendingAllianceDirectory.map((item) => <article key={item.publicKey}><div><h3>{item.name} {item.tag ? `[${item.tag}]` : ""}</h3><p>Your verified request is waiting for an alliance leader.</p></div><strong>PENDING</strong></article>)}</div></section>}

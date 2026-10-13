@@ -87,7 +87,8 @@ function createAttestationService({ env=process.env, das, connection, now=Date.n
       const data=nft.unseal(body.challengeToken,key,'ufo-challenge',origin,now());
       nft.verifyHoldingSignature(data.owner,holdingMessage(data),body.signature);
       policy(await owned(data.owner,data.asset));
-      return {utilityToken:nft.seal({...data,kind:'ufo-authorization',expires:data.issuedAt+3600000},key)};
+      const expiresAt = data.issuedAt + 3600000;
+      return {utilityToken:nft.seal({...data,kind:'ufo-authorization',expires:expiresAt},key),expiresAt};
     }
     if (body.action==='ufo-attest') {
       const data=nft.unseal(body.utilityToken,key,'ufo-authorization',origin,now());

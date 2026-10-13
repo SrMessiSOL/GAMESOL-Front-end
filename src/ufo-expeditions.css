@@ -1,10 +1,43 @@
-.ufo-expeditions{border-top:1px solid #31505b;margin:24px 0;padding:20px 0;color:#e1eaee;letter-spacing:0}
-.ufo-expeditions header,.ufo-mission-identity,.ufo-mission-meta,.ufo-earned-loot>div{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.ufo-expeditions h3{font-size:20px;margin:5px 0 12px}.ufo-expeditions h4{font-size:16px;margin:14px 0 8px}.ufo-expeditions small,.ufo-expeditions p,.ufo-expeditions span{font-size:12px;color:#a9c0cb;line-height:1.6}
-.ufo-expeditions button{min-height:44px;padding:10px 14px;border:1px solid #4b6670;border-radius:4px;background:#112b32;color:#e7f2f5;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:12px;white-space:normal;text-align:left;cursor:pointer}
-.ufo-expeditions button:disabled{opacity:.45;cursor:not-allowed}.ufo-expeditions button:focus-visible{outline:2px solid #87d9ba;outline-offset:3px}.ufo-expeditions button[aria-pressed=true]{background:#184c43;border-color:#8bcab1}
-.ufo-expeditions .ufo-mission-primary{background:#164b41;border-color:#64a78f;margin:14px 0}.ufo-expeditions .ufo-mission-error{color:#f2a1ae}.ufo-mission-active{padding:16px 0;border-top:1px solid #29434c;margin-top:16px}
-.ufo-mission-identity small{display:block}.ufo-encounter-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}.ufo-booster-toggle{display:flex;align-items:center;gap:8px;min-height:44px;font-size:12px}.ufo-booster-toggle input{width:20px;height:20px;accent-color:#76c7a4}
-.ufo-earned-loot{border-top:1px solid #29434c;margin-top:16px;padding-top:12px}.ufo-earned-loot ul{list-style:none;margin:8px 0;padding:0}.ufo-earned-loot li{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #203b45}.ufo-earned-loot b{font-size:12px;overflow-wrap:anywhere}
+.ufo-expeditions{padding:4px 0;margin:0;color:#e5eef0;font-family:Outfit,system-ui,sans-serif;letter-spacing:0}
+.ufo-expeditions *,.ufo-expeditions *::before,.ufo-expeditions *::after{box-sizing:border-box}
+.ufo-expeditions header,.ufo-mission-meta,.ufo-earned-loot>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ufo-expeditions h3{margin:0;font-size:20px;line-height:1.3}.ufo-expeditions h4{margin:0;font-size:16px;line-height:1.4}
+.ufo-expeditions small,.ufo-expeditions p,.ufo-expeditions span{font-size:12px;line-height:1.5;color:#abc0c7}
+.ufo-expeditions button{min-height:44px;padding:10px 14px;border:1px solid #47616b;border-radius:4px;background:#142a33;color:#eaf3f4;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:13px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;white-space:normal;overflow-wrap:anywhere;text-align:center;cursor:pointer;transition:background-color 120ms,border-color 120ms}
+.ufo-expeditions button:hover:not(:disabled){background:#213b45;border-color:#83bcc0}.ufo-expeditions button:disabled{opacity:.5;cursor:not-allowed}
+.ufo-expeditions button:focus-visible,.ufo-expeditions input:focus-visible{outline:2px solid #91dbba;outline-offset:3px}.ufo-expeditions button svg{flex-shrink:0}
+.ufo-expeditions .ufo-icon-button{width:44px;height:44px;padding:0;flex-shrink:0}
+.ufo-expeditions .ufo-mission-primary{background:#1c5346;border-color:#73ad93;margin:18px 0 4px;font-weight:600}.ufo-expeditions .ufo-mission-primary:hover:not(:disabled){background:#286854}
+.ufo-mission-identity{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:14px;padding:20px 0;border-bottom:1px solid #304650;min-height:93px}
+.ufo-expeditions .ufo-commander-portrait{width:52px;height:52px;border-radius:4px;overflow:hidden;flex-shrink:0}.ufo-commander-portrait img{width:100%;height:100%;object-fit:contain}
+.ufo-identity-copy{display:grid;gap:3px;min-width:0}.ufo-identity-copy>b{font-size:15px;line-height:1.4;overflow-wrap:anywhere}.ufo-identity-copy>small{display:flex;align-items:center;gap:6px;min-height:18px}
+.ufo-ownership-status>span{width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#d6ad67}.ufo-ownership-status.verified>span{background:#8cd4b4}.ufo-ownership-status.unavailable>span{background:#ed929c}
+.ufo-mission-active{padding-top:20px}.ufo-mission-meta b{font-size:14px}.ufo-mission-meta span{font-size:11px;text-align:right}
+.ufo-mission-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;padding:0;margin:20px 0 24px}
+.ufo-mission-progress li{display:flex;align-items:center;gap:8px;border-bottom:3px solid #304650;padding-bottom:10px;color:#99afb8;min-width:0}
+.ufo-mission-progress li>span{display:grid;place-items:center;width:22px;height:22px;border:1px solid #47616b;border-radius:4px;flex-shrink:0}.ufo-mission-progress b{font-size:12px;font-weight:500}
+.ufo-mission-progress .complete{border-color:#7ab99f;color:#a4dcc5}.ufo-mission-progress .current{border-color:#8bc9dd;color:#eef6f8}
+.ufo-encounter-heading{display:flex;align-items:start;justify-content:space-between;gap:14px;margin-bottom:18px}.ufo-encounter-heading h4{max-width:650px}
+.ufo-encounter-clock{display:inline-flex;align-items:center;justify-content:end;gap:6px;min-width:70px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.ufo-booster-toggle{display:flex;align-items:center;gap:10px;min-height:56px;padding:12px 0;border-top:1px solid #304650;border-bottom:1px solid #304650;color:#d8bd82}
+.ufo-booster-toggle input{width:20px;height:20px;flex-shrink:0;accent-color:#8bc9ab;margin:0}.ufo-booster-toggle b{font-size:13px;font-weight:500}.ufo-booster-toggle>span{margin-left:auto;padding-left:12px;color:#dfc389;font-variant-numeric:tabular-nums}
+.ufo-booster-toggle.armed{border-color:#74ac94;color:#a9ddbf}.ufo-booster-toggle.armed>span{color:#a9ddbf}.ufo-booster-toggle.spent,.ufo-booster-toggle.spent>span{color:#94a9b2}
+.ufo-encounter-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}.ufo-encounter-actions button{min-height:52px}
+.ufo-expeditions .ufo-abort{color:#d0a6af;border-color:transparent;background:transparent;padding:8px 0;min-height:36px;font-size:12px}.ufo-expeditions .ufo-abort:hover:not(:disabled){background:transparent;border-color:transparent;color:#f1a9b6}
+.ufo-cooldown{display:flex;align-items:center;gap:10px;padding:16px 0;color:#d2bb88}.ufo-cooldown>b{margin-left:auto;font-size:14px;font-variant-numeric:tabular-nums}
+.ufo-abort-review{display:flex;align-items:center;justify-content:end;flex-wrap:wrap;gap:10px;padding:12px 0;border-top:1px solid #704851}.ufo-abort-review>span{margin-right:auto;color:#e6adb3}.ufo-expeditions .ufo-abort-confirm{border-color:#a76973;background:#4b2931;color:#ffe3e5}
+.ufo-earned-loot{border-top:1px solid #304650;margin-top:22px;padding-top:20px}.ufo-earned-loot>div:first-child>span{font-variant-numeric:tabular-nums}.ufo-earned-loot ul{list-style:none;margin:16px 0 0;padding:0}
+.ufo-earned-loot li{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #273e47}.ufo-earned-loot li>svg{color:#d8be7a}
+.ufo-earned-loot li>div{display:grid;gap:4px;min-width:0}.ufo-earned-loot b{font-size:14px;overflow-wrap:anywhere}.ufo-earned-loot small{font-size:11px}
+.ufo-earned-loot button{min-width:105px}.ufo-earned-loot button[aria-pressed=true]{background:#234c40;border-color:#81b89c}
+.ufo-loot-empty{display:flex;align-items:center;gap:12px;padding:24px 0 12px;color:#7f9aa7}.ufo-expeditions .ufo-mission-error{color:#f0a3ae;overflow-wrap:anywhere}
+.ufo-reward-notice{display:flex;align-items:center;gap:8px;color:#a5dabc!important;animation:ufo-reward-in 220ms ease-out}.ufo-spin{animation:ufo-spin 1s linear infinite}
 .pw-world-identity>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:600px){.ufo-encounter-actions{grid-template-columns:1fr}.ufo-mission-identity>div{max-width:100%;overflow-wrap:anywhere}.ufo-earned-loot li{grid-template-columns:20px minmax(0,1fr)}.ufo-earned-loot li button{grid-column:2;justify-self:start}}
+@keyframes ufo-spin{to{transform:rotate(360deg)}}@keyframes ufo-reward-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){
+.ufo-mission-identity{grid-template-columns:48px minmax(0,1fr);gap:12px}.ufo-expeditions .ufo-commander-portrait{width:48px;height:48px}.ufo-change-commander{grid-column:2;justify-self:start}
+.ufo-mission-meta{align-items:start;flex-direction:column;gap:5px}.ufo-mission-meta span{text-align:left}.ufo-mission-progress{gap:8px}.ufo-mission-progress li{flex-direction:column;align-items:start;gap:6px}.ufo-mission-progress b{font-size:11px}
+.ufo-encounter-actions{grid-template-columns:1fr}.ufo-booster-toggle{gap:8px}.ufo-booster-toggle>span{padding-left:4px}.ufo-earned-loot li{grid-template-columns:24px minmax(0,1fr)}.ufo-earned-loot li button{grid-column:2;justify-self:start}
+.ufo-encounter-heading{flex-direction:column}.ufo-encounter-clock{justify-content:start}.ufo-expeditions .ufo-mission-primary{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.ufo-expeditions *,.ufo-expeditions *::before,.ufo-expeditions *::after{animation:none!important;transition:none!important}}
