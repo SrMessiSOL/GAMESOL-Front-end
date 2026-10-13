@@ -101,3 +101,39 @@ pending: Quick Play is off, and Chrome blocked the automated renewal popup.
 The user has been handed the live account menu to activate Quick Play through
 a direct browser click. No real expedition, booster rescue or claimed loot is
 reported as verified yet. Mainnet is unchanged.
+
+## Live rent quote correction
+
+The user activated Quick Play through Chrome and the UI confirmed ON. The next
+launch passed transaction encoding and on-chain simulation, but the sponsor
+correctly rejected an overfunded rent bundle. No launch was sent.
+
+The shared account-rent builder still assumed 3,480 lamports/byte/year and a
+two-year exemption. Live devnet RPC quotes were lower:
+
+| Account size | Old estimate | Live quote |
+| --- | ---: | ---: |
+| 1,027 bytes (loadout) | 8,038,800 | 5,867,400 |
+| 16 bytes (each cooldown) | 1,002,240 | 731,520 |
+
+The obsolete total was 10,043,280 lamports, while account creation consumed
+7,330,440 lamports. The difference exceeded the routine allowance and triggered
+the rent-consumption check. Commit `6460216` replaces the fixed estimate with
+`getMinimumBalanceForRentExemption` for each distinct missing account size.
+Existing accounts are not funded again, duplicate sizes are quoted once, and
+RPC failures or invalid quotes fail closed. No quote persists between commands.
+The sponsor's rent-consumption invariant and debit limits remain unchanged.
+
+Validation: 74 focused tests, the existing paymaster policy suite, TypeScript
+and diff checks passed. A regression confirms the live quoted bundle passes
+sponsor accounting while the overfunded bundle remains rejected. Live player
+loop proof still depends on deploying this correction and completing the test.
+
+The rent-fix cloud build passed and the existing live alias was promoted to
+https://frontend-d7f53toyw-srmessisols-projects.vercel.app
+(`dpl_HRVAbJhMfPDKSsZ25MjXAA3YeS2v`). Runtime source is commit `6460216`.
+The promoted UFO status API returned HTTP 200, enabled=true, network=devnet and
+storage=on-chain. The existing homeworld and #513 selection survived refresh.
+The live game is waiting for the holding-wallet verification approval before
+the final launch retry. Quick Play was activated by the user; no real loot
+claim is reported as completed at this checkpoint.
