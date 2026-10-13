@@ -47,3 +47,21 @@ Local screenshot: `.vercel/ui-check/fleet-progression-resource-gate.png`.
 4. Choose a non-hostile devnet mission, verify its allowed destination and fuel.
 5. Capture the launch and resolution signatures and confirm them on devnet.
 6. Verify fleet counts, resource changes, mission slots, and refresh persistence.
+
+## Accrued production fix published
+
+Frontend fix `96af430` was pushed to `feat/crypto-ufos-wallet-link` and deployed
+to `frontend-ln335cr7q-srmessisols-projects.vercel.app`, then promoted to the
+existing `chained-universe.vercel.app` alias after the cloud build passed.
+
+The planet display and affordability checks now project resources using the
+program's integer efficiency, saturating production arithmetic, storage caps,
+and 24-hour settlement limit. Stored state and balance constants are unchanged.
+19 focused tests and TypeScript passed before publication.
+
+Live browser verification after reload displayed 2,615 metal, 1,084 crystal,
+and 76 deuterium, compared with the previous stored 2,599 / 1,074 / 75.
+Shipyard remained correctly disabled because it requires 100 deuterium.
+No new construction transaction was submitted in this checkpoint.
+The next gate is natural production, not a frozen affordability calculation.
+Screenshot: `.vercel/ui-check/resource-fix-live.png`.
