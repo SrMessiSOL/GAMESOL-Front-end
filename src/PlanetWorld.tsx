@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { Activity, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleAlert, Crosshair, FlaskConical, Gem, Hammer, Inbox, LoaderCircle, Menu, Pickaxe, Rocket, RotateCcw, Scale, Shield, ShoppingCart, Trophy, Users, X, Zap } from "lucide-react";
 import { ALLIANCE_CREATE_ANTIMATTER_COST, ALLIANCE_CREATE_USDC_COST, BUILDINGS, EXPLORER_CLUSTER, GAMESOL_GOVERNANCE_ROOT_ENABLED, NETWORK_LABEL, SHIPS, SHIP_TYPE_IDX, SYSTEM_SOVEREIGNTY_ACTION_COSTS, buildTimeSecs, energyEfficiency, upgradeCost, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceJoinRequestAccount, type AllianceMembershipAccount, type AllianceStateAccount, type AllianceTreasuryStateAccount, type BattleResolvedEventRecord, type EspionageReportEventRecord, type GameClient, type GamesolGovernanceConfigAccount, type PlayerState, type QuestProgressStateAccount, type QuestRewardTargetStateAccount, type QuestStateAccount, type StoreConfigState, type StorePurchaseStateAccount } from "./game-state";
 import { PublicKey } from "@solana/web3.js";
+import { projectResources } from "./resource-projection";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { activeQuestDefinitions, allianceBuildingCost, ALLIANCE_BUILDINGS, ALLIANCE_DEPOSIT_DEFINITIONS, hasQuestBit, questClaimedMask, questGroupResetSeconds, questRewardTargetForRequirement, STORE_PACKS, storePurchasedMask, tutorialQuestsComplete, type QuestDefinition } from "./App";
 import gamesolMark from "./assets/ui/logobg.png";
@@ -2122,7 +2123,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const queueBusy = state.planet.buildQueueItem !== 255;
   const researchBusy = state.research.queueItem !== 255;
   const shipyardBusy = state.planet.shipBuildItem !== 255 || state.planet.defenseBuildItem !== 255;
-  const resource = state.resources;
+  const resource = projectResources(state.resources, nowTs);
   const storageCap = building.key === "metalStorage"
     ? { label: "Metal", current: resource.metalCap }
     : building.key === "crystalStorage"
