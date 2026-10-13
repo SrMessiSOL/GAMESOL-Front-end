@@ -114,3 +114,32 @@ target 1 and finish timestamp `2026-10-13T22:53:37.000Z`.
 This proves stored game progress independently of browser storage or rendering.
 The research finish command has not been submitted. Final automated regression
 suite: 110 passed, zero failed; final frontend build and TypeScript passed.
+# October 13 follow-up: publication and colony progression
+
+UI commit `7377cc1` was pushed to `feat/crypto-ufos-wallet-link`. Vercel
+deployment `dpl_6bLScQtgb1A7vhT21kqEfB3TrHNA` reached Ready and the existing
+`chained-universe.vercel.app` alias was assigned explicitly. Live `/app`
+returned HTTP 200 and the new `index-CEUIt0x4.js` entry. A visible live reload
+restored the real Crypto UFO #513 portrait. Mobile content width was verified
+as 390 CSS pixels (the Chrome viewport override required compensation for
+the current browser scale).
+
+New finalized devnet transactions, all with `meta.err === null`:
+
+| Action | Signature |
+| --- | --- |
+| Finish Energy Technology 1 | `3Y9SETe8Xa2N2kfSgkrSzY9PFSq4h41ZcdDBMah1Bgx9FBeSRLV2zEbA1YaiQTWYoAhtEeXQ3xNVnAUu6shchr8P` |
+| Claim earned energy technology reward | `5sh8jQ3Yv4bqbh3M6qB4VTPavCj7iNks83QgW5LmCLD9fv6euxbd1pfXiunPm9GkgmUWr2kXC752ciGTHf63VrTS` |
+| Claim earned first ship reward | `WdMweoC5HMsfbeQJdg1yJmLzJhR2rqP2bhw5je67TV78oVjLH3PUYvi1Rz7RPj47BpeEj4uW6tb9nXEJHJm3bca` |
+| Start Research Lab 2 | `DsgBu4BnTGNx7YTtAnMakW13uZuYLGP8vBjG2RtbFmXmE9jpAZd36j6yKp7hPa5LCfnJpuurVL8pFFdMLGzfbaZ` |
+| Finish Research Lab 2 | `65vkqQFHSbMQRNRWN2qg1zhRrjwgb4tyMiQhaqsyGX1t7NeZgDBDc1dPwdvgV8dXhwNfrrh3a9PQMjjSfZ2JT3P1` |
+
+Independent account read confirms lab 2, energy technology 1, shipyard 1,
+one fighter, one rocket launcher, zero missions and no active research.
+The user has no second planet and requested colonization before transport.
+The actual program requires shipyard 4, impulse drive 3 and astrophysics 4
+to build a colony ship. Impulse drive requires lab 5. Current live resources
+were 3,184 metal, 2,896 crystal and 185 deuterium; lab 3 requires 450 metal,
+900 crystal and 450 deuterium. Further colony progression is gated by earned
+resources and prerequisites, not bypassed with grants or a new homeworld.
+Colonization, transport and complete-game certification remain pending.
