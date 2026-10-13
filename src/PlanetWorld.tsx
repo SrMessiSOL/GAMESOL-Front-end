@@ -26,6 +26,7 @@ import type { StorePack } from './store-catalog';
 import './command-workspace.css';
 import './planet-shell.css';
 import './mission-control.css';
+import './live-command-system.css';
 import { PlanetHeader } from './PlanetHeader';
 import { UfoExpeditions, useUfoOnchain } from './UfoExpeditions';
 import { lootName } from './ufo-onchain';

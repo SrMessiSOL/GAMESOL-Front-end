@@ -1,0 +1,37 @@
+.ug-wallet-menu{top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:min(460px,calc(100vw - 32px))!important;max-height:calc(100dvh - 32px)!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;padding:20px!important;border-radius:8px;background:#0d202a!important;color:#edf5f6;font:14px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;box-sizing:border-box}
+.ug-wallet-menu *{box-sizing:border-box;letter-spacing:0}
+.ug-wallet-menu>header{font:600 18px/1.4 Outfit,system-ui,sans-serif;letter-spacing:0;color:#edf5f6;gap:16px;padding-bottom:16px}
+.ug-wallet-menu button,.ug-wallet-menu a{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border:1px solid #4d6570;border-radius:5px;background:#17333e;color:#edf5f6;font:500 13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;text-decoration:none;white-space:normal;overflow-wrap:anywhere;cursor:pointer;max-width:100%}
+.ug-wallet-menu>header button{width:44px;height:44px;min-width:44px;padding:0;border:1px solid #4d6570;background:#17333e;border-radius:5px;font-size:14px}
+.ug-wallet-menu>header button svg{width:20px;height:20px}
+.ug-wallet-menu :is(button,a,summary):focus-visible{outline:2px solid #9addba;outline-offset:3px}
+.ug-wallet-menu button:disabled{opacity:1;color:#93a6ad;background:#15232b;border-color:#33454e;cursor:not-allowed}
+.ug-wallet-row{padding:12px 0;font:13px/1.5 Outfit,system-ui,sans-serif;gap:20px}
+.ug-wallet-row span{color:#adc0c9;font:inherit;text-transform:none;letter-spacing:0}
+.ug-wallet-row b{font:600 14px/1.5 Outfit,system-ui,sans-serif;overflow-wrap:anywhere;text-align:right;min-width:0;letter-spacing:0}
+.ug-wallet-menu .ug-manage-funds{width:100%;margin:16px 0 0}
+.ug-wallet-menu .ug-passkey-card{padding:16px 0;margin:20px 0;border:0;border-block:1px solid #344c56;border-radius:0;background:none;box-shadow:none;gap:12px}
+.ug-wallet-menu .ug-passkey-card>header{font:600 12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;padding:0!important;border:0}
+.ug-wallet-menu .ug-passkey-card :is(p,small){font:13px/1.6 Outfit,system-ui,sans-serif;color:#adc0c9;letter-spacing:0}
+.ug-wallet-menu .ug-passkey-card>header b,.ug-wallet-menu .ug-passkey-state b{font:600 12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+.ug-wallet-menu .ug-passkey-state{font:12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;gap:16px}
+.ug-wallet-menu .ug-passkey-address{font:12px/1.5 ui-monospace,monospace;letter-spacing:0;min-width:0}
+.ug-wallet-menu .ug-passkey-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ug-wallet-menu .ug-passkey-actions button:first-child{grid-column:1/-1}
+.ug-wallet-menu .ug-devnet-tools{padding:16px 0;margin:0;border:0;border-bottom:1px solid #344c56;background:none;border-radius:0}
+.ug-wallet-menu .ug-devnet-tools header{font:600 12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;gap:12px}
+.ug-wallet-menu .ug-devnet-tools p{font:13px/1.6 Outfit,system-ui,sans-serif;color:#adc0c9;letter-spacing:0}
+.ug-wallet-menu .ug-wallet-actions{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:16px}
+.ug-wallet-menu .ug-wallet-actions button:last-child{color:#f0b7ae;background:#342226;border-color:#705056}
+.ug-wallet-menu .ug-passkey-funding-note{margin-top:16px;font:13px/1.6 Outfit,system-ui,sans-serif;color:#adc0c9}
+.ug-wallet-menu summary{min-height:44px;display:flex;align-items:center;cursor:pointer;text-decoration:underline;text-underline-offset:4px}
+.ug-account-drawer button{min-height:44px;font:500 13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}.ug-account-drawer :is(button,summary):focus-visible{outline:2px solid #9addba;outline-offset:3px}
+.ug-funds-modal{max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;font:14px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+.ug-funds-modal :is(button,a,input,select){min-height:44px;font:500 13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0;white-space:normal;overflow-wrap:anywhere}
+.ug-funds-modal :is(p,small,summary,label){font:13px/1.6 Outfit,system-ui,sans-serif;letter-spacing:0;overflow-wrap:anywhere}
+.ug-funds-modal :is(button,a,input,select,summary):focus-visible{outline:2px solid #9addba;outline-offset:3px}
+.ug-funds-modal .ug-funds-mode button span{font:600 13px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}.ug-funds-modal .ug-funds-mode small{font-size:12px}
+.ug-funds-modal .ug-funds-balances article{min-width:0}.ug-funds-modal .ug-funds-balances article small{font-size:12px}
+.ug-funds-modal .ug-funds-section-title{display:flex;flex-wrap:wrap;gap:8px;font:600 12px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+@media(max-width:600px){.ug-wallet-menu{width:calc(100vw - 24px)!important;max-height:calc(100dvh - 24px)!important;padding:16px!important}.ug-wallet-menu .ug-passkey-actions{grid-template-columns:minmax(0,1fr)}.ug-wallet-row{gap:12px}.ug-wallet-menu .ug-devnet-tools header{align-items:flex-start;flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.ug-wallet-menu *,.ug-account-drawer *{animation:none!important;transition:none!important}}

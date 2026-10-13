@@ -516,6 +516,7 @@ function FundsModal({
 }
 
 import "./universe-game.css";
+import './wallet-modal.css';
 import './game-polish.css';
 
 const RESEARCH = [
@@ -2285,7 +2286,11 @@ export default function UniverseGame() {
             )}
           </> : <>
             <button
+              ref={playerTriggerRef}
               className="ug-wallet-trigger"
+              aria-haspopup="dialog"
+              aria-expanded={walletMenuOpen}
+              aria-controls="live-player-account"
               onClick={() => setWalletMenuOpen((open) => !open)}
             >
               <CommanderAvatar fallback={walletLabel.slice(0, 2)} /> {walletLabel}
@@ -2297,10 +2302,10 @@ export default function UniverseGame() {
                   aria-label="Close wallet menu"
                   onClick={() => setWalletMenuOpen(false)}
                 />
-                <section className="ug-wallet-menu">
+                <section ref={accountDrawerRef} id="live-player-account" className="ug-wallet-menu" role="dialog" aria-modal="true" aria-labelledby="live-player-account-title">
                   <header>
-                    <span>PLAYER ACCOUNT</span>
-                    <button onClick={() => setWalletMenuOpen(false)}>×</button>
+                    <span id="live-player-account-title">Player account</span>
+                    <button ref={accountCloseRef} type="button" aria-label="Close player account" title="Close (Esc)" onClick={() => setWalletMenuOpen(false)}><X aria-hidden="true" /></button>
                   </header>
                   <div className="ug-wallet-row">
                     <span>Network</span>
@@ -2372,7 +2377,6 @@ export default function UniverseGame() {
                             <button disabled={passkeyActionBusy || !passkey.hasSession} onClick={() => void initializePasskeyPlayer()}>CREATE COMMANDER</button>
                           )}
                           <button className="secondary" disabled={balanceRefreshBusy} onClick={() => void checkOnboardingFunding()}>{balanceRefreshBusy ? "CHECKING..." : "CHECK SPONSOR"}</button>
-                          <button className="secondary" disabled={passkeyActionBusy} onClick={() => void passkey.disconnect()}>SIGN OUT</button>
                         </>
                       )}
                     </div>
@@ -2391,12 +2395,11 @@ export default function UniverseGame() {
                     <p>GAMESOL sponsors devnet transaction fees and the GAMESOL account space needed for commanders, worlds, quests, alliances, governance, and player-created marketplace listings. Your permanent account keeps ownership without needing a SOL balance for these supported actions.</p>
                     <div>
                       <a href="https://faucet.solana.com/" target="_blank" rel="noreferrer">GET TEST SOL</a>
-                      <button disabled={balanceRefreshBusy} onClick={() => void checkOnboardingFunding()}>{balanceRefreshBusy ? "CHECKING…" : "CHECK SPONSOR"}</button>
                     </div>
                   </section>}
                   <div className="ug-wallet-actions">
                     <button onClick={() => { setWalletMenuOpen(false); setAvatarPickerOpen(true); }}>Choose commander avatar</button>
-                    <button onClick={() => void passkey.disconnect()}>SIGN OUT</button>
+                    <button disabled={passkeyActionBusy} onClick={() => void passkey.disconnect()}>SIGN OUT</button>
                   </div>
                   <details className="ug-passkey-funding-note">
                     <summary>Advanced account details</summary>
