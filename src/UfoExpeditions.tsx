@@ -81,6 +81,15 @@ export function UfoExpeditions({ game, commander, loadout, refresh, readError, b
     const proof = privileged ? await cryptoUfosRequest<UfoAttestation>({action:'ufo-attest',utilityToken:token}) : undefined;
     if (identityRef.current !== expected) throw new Error('Your commander changed. No command was sent.');
     const instructions = await ufoInstructions(commander,action,proof,choice,booster);
+    if (action === 'start') {
+      const start = instructions[instructions.length - 1];
+      const rent = await game.buildSponsoredProgramRentInstruction(new PublicKey(commander), [
+        { pubkey: start.keys[3].pubkey, space: 211 + 24 * 34 },
+        { pubkey: start.keys[4].pubkey, space: 16 },
+        { pubkey: start.keys[5].pubkey, space: 16 },
+      ]);
+      if (rent) instructions.splice(instructions.length - 1,0,rent);
+    }
     if (identityRef.current !== expected) throw new Error('Your commander changed. No command was sent.');
     await run(`UFO ${action}`,async client => {
       if (identityRef.current !== expected) throw new Error('Your commander changed. No command was sent.');

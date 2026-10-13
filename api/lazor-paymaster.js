@@ -60,6 +60,7 @@ function assertUfoPrecompile(instruction) {
 const rateWindows = new Map();
 const RENT_SPONSOR_DISCRIMINATOR = Buffer.from([87, 113, 100, 97, 218, 156, 201, 21]);
 const RENT_CREATING_DISCRIMINATORS = [
+  crypto.createHash('sha256').update('global:start_ufo_expedition').digest().subarray(0,8),
   // Permanent player + worlds.
   Buffer.from([189, 138, 205, 113, 18, 169, 30, 95]),
   Buffer.from([124, 7, 81, 167, 80, 191, 227, 173]),

@@ -16,6 +16,7 @@ const FUTARCHY_PROGRAM_ID = new PublicKey("FUTARELBfJfQ8RDGhg1wdhddq1odMAJUePHFu
 const CONDITIONAL_VAULT_PROGRAM_ID = new PublicKey("VLTX1ishMBbcX3rdBWGssxawAo1Q2X2qxYFYqiGodVg");
 const sponsorRent = Buffer.from([87, 113, 100, 97, 218, 156, 201, 21, 1, 0, 0, 0, 0, 0, 0, 0]);
 const approvedAccountCreatingInstructions = [
+  ["start UFO expedition", [...require('node:crypto').createHash('sha256').update('global:start_ufo_expedition').digest().subarray(0,8)]],
   ["initialize player", [189, 138, 205, 113, 18, 169, 30, 95]],
   ["initialize homeworld", [124, 7, 81, 167, 80, 191, 227, 173]],
   ["initialize colony", [91, 184, 105, 243, 90, 175, 137, 217]],
