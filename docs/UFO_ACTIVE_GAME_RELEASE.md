@@ -137,3 +137,56 @@ storage=on-chain. The existing homeworld and #513 selection survived refresh.
 The live game is waiting for the holding-wallet verification approval before
 the final launch retry. Quick Play was activated by the user; no real loot
 claim is reported as completed at this checkpoint.
+
+## Completed real-player devnet loop
+
+This final checkpoint supersedes the pending player-loop checkpoints above.
+The real game at chained-universe.vercel.app completed the entire UFO loop
+with Solflare holder `BTwMeqRYsnME4jpLFWgCePmBQzPYpciCb19o4gw1BaHG`, commander
+`G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r`, and Crypto UFO #513 asset
+`FzEWZMXsZxNzgCFtBrSJLYDCozR4n2yaHCEvTFPNGTZg`. Fresh holding-wallet
+authorization preceded gameplay; the mainnet NFT stayed in its holding wallet.
+
+The real Green UFO / Horned Rim Glasses traits produced Biologist doctrine 4
+and Research Survey route 2. Launch created the loadout and both cooldown
+accounts. The finalized launch measured exactly 1,152 bytes and sponsored
+7,330,440 lamports of account rent. No extra passkey prompt was required for
+these gameplay commands once Quick Play was ON.
+
+The first encounter deliberately used unsafe choice 0 with booster flag 1.
+Its finalized transaction was decoded to verify those actual arguments.
+The Sample Capsule rescued the encounter, spent its one charge, and left zero
+hazards. The remaining encounters used Decontaminate the sensor and Secure
+the capsules. Claim awarded one Ecosystem Expedition Badge, and equip saved
+inventory index 0.
+
+All six real transactions were independently verified finalized, err=null:
+
+| Action | Signature |
+| --- | --- |
+| Launch | `5WwK5v6sqJtzj87iosGUtvszVUmYNmn7UNABTfTmSgSJtVKWFD3YqFaw2WbrxDQMzfeYpCPeZjSAHMAyWaSMBetS` |
+| Booster rescue | `5F6VycZFDdvcVbJYidgBoeU1kDJUJv58nzg9ePLoiCYCnLbFQc3mum6mdeGmhfaRNEpV7agrq6tdpZTaA8mNEhnQ` |
+| Second encounter | `4vSFRUUxozvmL1fdeu1cnoXqNSfwKreYC8zJMy5fgCsoTFn2ocPB4jNsdLwBxXusqb4N63jT8GnkxLTeehzTsP74` |
+| Final encounter | `3xA5fonsb4vzSM5zAiRvGTgUFH2Qc1YzYujCo35J8jJ9aR2joFWENs4Le9RGL8ErpMamZXee3LSjKvxKZ3zaha9W` |
+| Claim | `2iZphdsDeJMzbPZLHSq9xhQt7wm6NiuKfM1H2khDtDY6gPVsiMFwodabrT97cW5GtEtDoWtNtmke3J66K1GShGD4` |
+| Equip | `2Qef9E9HZCCCkPjEsB8woEWZ3isp23DwppS5qkyVFT1THCbHbJmzA7UzMUwWXcnJPFzWcWhpLTEd5fptwUkRWh4P` |
+
+Final program-owned loadout: nonce=5, status=0, stage=3, hazards=0,
+booster=false, completed=1, loot_count=1, equipped=0. The loadout, asset-use
+and holder-use accounts are owned by the active J6r game. Both use accounts
+retain the same launch timestamp `1791856673`, enforcing the 24-hour cooldown.
+
+After a full browser refresh, the real UI retained the same homeworld,
+commander NFT, one completion, one equipped badge and disabled 24-hour launch
+control. The claim action was absent. The temporary ownership authorization
+reset on refresh as designed; earned inventory and equipment did not depend
+on that browser token. No duplicate claim or cooldown-bypass transaction was
+submitted during this live test; adversarial rejection coverage remains in
+the isolated-validator checks described above.
+
+Screenshot proof is stored locally in the ignored release directory:
+`ufo-active-release-25a1dc5/booster-rescue-live.png` and
+`ufo-active-release-25a1dc5/ufo-loop-complete-after-refresh.png`.
+This validates the devnet UFO gameplay slice, not mainnet launch, ICO, token,
+market deployment, combat or the entire game's readiness. Mainnet remains
+unchanged and UFO mainnet utility remains disabled.
