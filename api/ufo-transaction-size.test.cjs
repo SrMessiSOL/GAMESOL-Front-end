@@ -77,3 +77,20 @@ test('table resolution verifies the on-chain owner before trusting table content
   const f = await ufoTransactionFixture();
   await assert.rejects(_test.fetchTransactionTables({ getAccountInfo: async () => ({ owner: Keypair.generate().publicKey }) }, f.compressed.message), /unavailable/);
 });
+
+test('live quoted UFO rent passes accounting while the obsolete overfunded estimate remains rejected', async () => {
+  const f = await ufoTransactionFixture();
+  const keys = _test.resolvedTransactionKeys(f.compressed.message, [f.table]);
+  const writable = keys.filter((_, index) => f.compressed.message.isAccountWritable(index));
+  const start = f.inner[f.inner.length - 1];
+  const rents = new Map(start.keys.slice(3, 6).map((key, index) => [key.pubkey.toBase58(), index === 0 ? 5867400 : 731520]));
+  let debit = 7330440 + 5000;
+  const rpc = {
+    getMultipleAccountsInfo: async () => writable.map(key => key.equals(f.sponsor.publicKey) ? { lamports: 1000000000 } : null),
+    simulateTransaction: async () => ({ value: { err: null, accounts: writable.map(key => ({ lamports: key.equals(f.sponsor.publicKey) ? 1000000000 - debit : rents.get(key.toBase58()) || 0, owner: rents.has(key.toBase58()) ? 'J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq' : '11111111111111111111111111111111' })) } }),
+  };
+  const policy = _test.assertTransactionPolicy(f.compressed, f.sponsor, [f.table]);
+  await _test.simulateAndMeasure(rpc, f.compressed, f.sponsor, policy, [f.table]);
+  debit = 10043280 + 5000;
+  await assert.rejects(_test.simulateAndMeasure(rpc, f.compressed, f.sponsor, policy, [f.table]), /must be consumed/);
+});

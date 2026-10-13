@@ -11,6 +11,7 @@ import {
 import { AnchorProvider, setProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
+import { accountRentTotal } from './account-rent';
 
 type PrivateSnapshot = {
   resources: unknown;
@@ -96,9 +97,6 @@ const RPC_ACCOUNT_BATCH_SIZE = 100;
 const VAULT_BACKUP_VERSION = 1;
 const PASSKEY_VAULT_BACKUP_VERSION = 2;
 const VAULT_RECOVERY_MESSAGE_PREFIX = "GAMESOL vault recovery v1";
-const RENT_LAMPORTS_PER_BYTE_YEAR = 3_480;
-const RENT_EXEMPTION_YEARS = 2;
-const RENT_ACCOUNT_OVERHEAD_BYTES = 128;
 const ACCOUNT_SPACE = {
   lazorPlayer: 67,
   playerProfile: 45,
@@ -3416,16 +3414,8 @@ export class GameClient {
     const missing = accounts.filter((_, index) => infos[index] === null);
     if (missing.length === 0) return null;
 
-    // Solana's current rent exemption is exactly two years of rent plus the
-    // fixed account overhead. Keeping this calculation local avoids a burst of
-    // rent RPC calls during first-world onboarding.
-    const lamports = missing.reduce(
-      (total, { space }) => total
-        + (space + RENT_ACCOUNT_OVERHEAD_BYTES)
-          * RENT_LAMPORTS_PER_BYTE_YEAR
-          * RENT_EXEMPTION_YEARS,
-      0,
-    );
+    // Network rent can change; quote each distinct missing account size once.
+    const lamports = await accountRentTotal(this.connection, missing.map(({ space }) => space));
     const amount = Buffer.alloc(8);
     amount.writeBigUInt64LE(BigInt(lamports));
     return new TransactionInstruction({
