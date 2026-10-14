@@ -230,3 +230,15 @@ on-chain authority changes are introduced. The old UFO-only table restriction
 now additionally recognizes this canonical, already-permitted store action.
 Production build passed and the full selected regression suite passed 115/115.
 Live purchases and colony progression are not certified by these fixture tests.
+
+Commit `7ccf83d` was pushed to the existing branch. Vercel deployment
+`dpl_FFGfYckvEyaUnWWrDPr84fSnYiSB` reached Ready, and the existing
+`chained-universe.vercel.app` alias was assigned explicitly. Live `/app`
+returned HTTP 200 with the new `index-k5rr9nJP.js` entry. The game was refreshed
+and the 1-test-USDC cache was reviewed and confirmed once on the corrected
+build. The live UI is still preparing; the user was asked to approve any owner
+passkey prompt or report its absence. No successful purchase is claimed yet.
+The latest independent token read remains 20 test USDC, so the
+approved spend is still zero. The 5-test-USDC logistics crate has not been
+attempted. Do not retry the first command until its pending state resolves
+and its token balance and purchase ledger have been reconciled.
