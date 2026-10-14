@@ -242,3 +242,10 @@ The latest independent token read remains 20 test USDC, so the
 approved spend is still zero. The 5-test-USDC logistics crate has not been
 attempted. Do not retry the first command until its pending state resolves
 and its token balance and purchase ledger have been reconciled.
+
+The corrected-build attempt subsequently ended with "Signing timed out after
+60 seconds", before submission. The client was returned to its purchase
+review, and the user was asked to click Buy themselves and complete Lazor's
+passkey prompt. No second automatic retry was submitted and the logistics
+crate remains untouched. Packet compression is built/tested/published, but
+its real purchase validation is still gated by a completed owner signature.
