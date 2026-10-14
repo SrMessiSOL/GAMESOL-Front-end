@@ -667,6 +667,12 @@ export async function executeWithPlayerSession(
   instructions: TransactionInstruction[],
   authorization: "session" | "passkey",
 ): Promise<string> {
+  if (authorization === "session") {
+    const state = await refreshPlayerFundedSession(wallet.smartWallet);
+    if (!state.active) {
+      throw new Error("Quick Play session expired. Turn it on again before continuing. No command was submitted.");
+    }
+  }
   // Signature precompiles must execute at the transaction level, never as CPIs.
   const precompiles = instructions.filter(instruction => instruction.programId.equals(Ed25519Program.programId));
   instructions = instructions.filter(instruction => !instruction.programId.equals(Ed25519Program.programId));
