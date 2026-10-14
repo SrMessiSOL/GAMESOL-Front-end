@@ -1,0 +1,20 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const vm = require('node:vm');
+test('transport preflight uses only hulls supported by the deployed cargo formula', () => {
+  const text = fs.readFileSync(require('node:path').join(__dirname, '../src/game-state.ts'), 'utf8');
+  const ast = ts.createSourceFile('game.ts', text, ts.ScriptTarget.Latest, true);
+  const declaration = ast.statements.find(n => ts.isVariableStatement(n) && n.declarationList.declarations.some(d => d.name.getText(ast) === 'TRANSPORT_CARGO_CAPACITY'));
+  const code = ts.transpileModule(declaration.getText(ast), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports });
+  const caps = module.exports.TRANSPORT_CARGO_CAPACITY;
+  assert.equal(caps.smallCargo, 5000);
+  assert.equal(caps.largeCargo, 25000);
+  assert.equal(caps.recycler, 20000);
+  assert.equal(caps.cruiser, 800);
+  assert.equal(caps.battleship, 1500);
+  for (const hull of ['lightFighter', 'heavyFighter', 'colonyShip', 'deathstar', 'destroyer', 'bomber', 'battlecruiser']) assert.equal(caps[hull] ?? 0, 0);
+});

@@ -6516,6 +6516,11 @@ export const BUILDINGS = [
   { idx: 12, key: "missileSilo",          name: "Missile Silo",           icon: "🎯", desc: "Legacy missile infrastructure." },
 ] as const;
 
+// Only these hulls contribute cargo capacity in the deployed launch rules.
+export const TRANSPORT_CARGO_CAPACITY: Readonly<Record<string, number>> = {
+  smallCargo: 5_000, largeCargo: 25_000, recycler: 20_000, cruiser: 800, battleship: 1_500,
+};
+
 export const SHIPS = [
   { key: "smallCargo",    name: "Small Cargo",    icon: "📦", atk: 5,      cargo: 5_000,    cost: { m: 2000,    c: 2000,    d: 0       } },
   { key: "largeCargo",    name: "Large Cargo",    icon: "🚛", atk: 5,      cargo: 25_000,   cost: { m: 6000,    c: 6000,    d: 0       } },

@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { Activity, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleAlert, Crosshair, FlaskConical, Gem, Hammer, Inbox, LoaderCircle, Menu, Pickaxe, Rocket, RotateCcw, Scale, Shield, ShoppingCart, Trophy, Users, X, Zap } from "lucide-react";
 import { ALLIANCE_CREATE_ANTIMATTER_COST, ALLIANCE_CREATE_USDC_COST, BUILDINGS, EXPLORER_CLUSTER, GAMESOL_GOVERNANCE_ROOT_ENABLED, NETWORK_LABEL, SHIPS, SHIP_TYPE_IDX, SYSTEM_SOVEREIGNTY_ACTION_COSTS, buildTimeSecs, energyEfficiency, upgradeCost, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceJoinRequestAccount, type AllianceMembershipAccount, type AllianceStateAccount, type AllianceTreasuryStateAccount, type BattleResolvedEventRecord, type EspionageReportEventRecord, type GameClient, type GamesolGovernanceConfigAccount, type PlayerState, type QuestProgressStateAccount, type QuestRewardTargetStateAccount, type QuestStateAccount, type StoreConfigState, type StorePurchaseStateAccount } from "./game-state";
 import { PublicKey } from "@solana/web3.js";
+import { TRANSPORT_CARGO_CAPACITY } from './game-state';
 import { projectResources } from "./resource-projection";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { activeQuestDefinitions, allianceBuildingCost, ALLIANCE_BUILDINGS, ALLIANCE_DEPOSIT_DEFINITIONS, hasQuestBit, questClaimedMask, questGroupResetSeconds, questRewardTargetForRequirement, STORE_PACKS, storePurchasedMask, tutorialQuestsComplete, type QuestDefinition } from "./App";
@@ -2313,7 +2314,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const selectedMissionShips = Object.values(missionShips).reduce((total, amount) => total + Math.max(0, amount), 0);
   const selectedProbeCount = Math.max(0, missionShips.espionageProbe ?? 0);
   const selectedColonyCount = Math.max(0, missionShips.colonyShip ?? 0);
-  const selectedCargoCapacity = SHIPS.reduce((total, ship) => total + (missionShips[ship.key] ?? 0) * ship.cargo, 0);
+  const selectedCargoCapacity = SHIPS.reduce((total, ship) => total + (missionShips[ship.key] ?? 0) * (TRANSPORT_CARGO_CAPACITY[ship.key] ?? 0), 0);
   const missionCargoAmounts = [Number(missionCargo.metal || 0), Number(missionCargo.crystal || 0), Number(missionCargo.deuterium || 0)];
   const selectedCargoTotal = missionCargoAmounts.reduce((total, amount) => total + amount, 0);
   const missionCoordinatesValid = isWholeQuantity(missionTarget.galaxy, 1, 999) && isWholeQuantity(missionTarget.system, 1, 999) && isWholeQuantity(missionTarget.position, 1, 15);
