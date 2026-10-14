@@ -9,13 +9,13 @@ const { devnetConnection } = require('./ufo-devnet-rpc.cjs');
 function decoder() {
   const filename = path.join(__dirname, '../src/game-state.ts');
   const source = ts.createSourceFile(filename, fs.readFileSync(filename, 'utf8'), ts.ScriptTarget.Latest, true);
-  const functions = new Set(['readU8', 'readU16', 'readU32', 'readU64', 'readI16', 'readI64', 'readPubkeyRaw', 'readFixedString', 'deserializeMission', 'deserializePlanetState', 'derivePlanetStatePda']);
-  const constants = new Set(['PLANET_STATE_DISCRIMINATOR', 'MAX_PLANET_NAME_LEN', 'MAX_MISSION_COLONY_NAME_LEN', 'MAX_MISSIONS']);
+  const functions = new Set(['readU8', 'readU16', 'readU32', 'readU64', 'readI16', 'readI64', 'readPubkeyRaw', 'readFixedString', 'deserializeMission', 'deserializePlanetState', 'derivePlanetStatePda', 'deriveStoreConfigPda', 'deserializeStoreConfig']);
+  const constants = new Set(['PLANET_STATE_DISCRIMINATOR', 'MAX_PLANET_NAME_LEN', 'MAX_MISSION_COLONY_NAME_LEN', 'MAX_MISSIONS', 'STORE_CONFIG_DISCRIMINATOR']);
   const declarations = source.statements.filter(node =>
     ts.isFunctionDeclaration(node) && functions.has(node.name?.text) ||
     ts.isVariableStatement(node) && node.declarationList.declarations.some(item => constants.has(item.name.getText(source)))
   ).map(node => node.getText(source));
-  const code = ts.transpileModule(declarations.join('\n') + '\nmodule.exports = { deserializePlanetState, derivePlanetStatePda };', {
+  const code = ts.transpileModule(declarations.join('\n') + '\nmodule.exports = { deserializePlanetState, derivePlanetStatePda, deriveStoreConfigPda, deserializeStoreConfig };', {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText;
   const module = { exports: {} };
@@ -39,6 +39,14 @@ async function main() {
     shipyard: state.shipyard, researchLab: state.researchLab,
     lightFighter: state.lightFighter, rocketLauncher: state.rocketLauncher,
     energyTechnology: state.energyTech,
+    impulseDrive: state.impulseDrive, astrophysics: state.astrophysics,
+    deuteriumSynthesizer: state.deuteriumSynthesizer, solarPlant: state.solarPlant,
+    resources: { metal: state.metal.toString(), crystal: state.crystal.toString(), deuterium: state.deuterium.toString() },
+    productionPerHour: { metal: state.metalHour.toString(), crystal: state.crystalHour.toString(), deuterium: state.deuteriumHour.toString() },
+    energy: { produced: state.energyProduction.toString(), consumed: state.energyConsumption.toString() },
+    storage: { metal: state.metalCap.toString(), crystal: state.crystalCap.toString(), deuterium: state.deuteriumCap.toString() },
+    construction: { item: state.buildQueueItem, targetLevel: state.buildQueueTarget,
+      finishAtUtc: state.buildFinishTs > 0 ? new Date(state.buildFinishTs * 1000).toISOString() : null },
     activeMissions: state.activeMissions,
     productionQueueFree: state.shipBuildItem === 255 && state.defenseBuildItem === 255,
     research: { item: state.researchQueueItem, targetLevel: state.researchQueueTarget,
@@ -47,4 +55,5 @@ async function main() {
   }, null, 2));
 }
 
+module.exports = { decoder };
 if (require.main === module) main().catch(() => { console.error('Devnet checkpoint read failed; no transaction was sent.'); process.exitCode = 1; });

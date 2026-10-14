@@ -332,6 +332,28 @@ function isApprovedRentBundle(innerInstructions) {
   return approvedRentPolicy(innerInstructions) !== false;
 }
 
+function isCompressedStoreBundle(inner, sponsor) {
+  if (inner.length < 1 || inner.length > 2) return false;
+  const purchase = inner[inner.length - 1];
+  const data = purchase.data;
+  if (!purchase.programId.equals(GAME_STATE_PROGRAM_ID) || purchase.accounts.length !== 11
+    || data.length !== 10 || !isDiscriminator(data, Buffer.from([112, 75, 157, 242, 238, 109, 2, 252]))) return false;
+  const [period, pack] = data.subarray(8);
+  if (![1, 2, 3].includes(period) || !(pack === 16 || pack <= (period === 3 ? 9 : 5))) return false;
+  const owner = purchase.accounts[0];
+  const pda = seed => PublicKey.findProgramAddressSync([Buffer.from(seed), owner.toBuffer()], GAME_STATE_PROGRAM_ID)[0];
+  const config = PublicKey.findProgramAddressSync([Buffer.from('store_config')], GAME_STATE_PROGRAM_ID)[0];
+  if (!purchase.accounts[1].equals(config) || !purchase.accounts[2].equals(pda('store_purchase_state'))
+    || !purchase.accounts[4].equals(new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'))
+    || !purchase.accounts[7].equals(TOKEN_PROGRAM_ID) || !purchase.accounts[8].equals(SystemProgram.programId)
+    || !purchase.accounts[9].equals(pda('quest_progress')) || !purchase.accounts[10].equals(pda('quest_reward_targets'))) return false;
+  if (inner.length === 1) return true;
+  const rent = inner[0];
+  return Boolean(approvedRentPolicy(inner)) && rent.data.length === 16
+    && rent.accounts[0].equals(sponsor.publicKey) && rent.accounts[1].equals(owner)
+    && rent.accounts[2].equals(SystemProgram.programId);
+}
+
 function assertTransactionPolicy(transaction, sponsor, tables = []) {
   const message = transaction.message;
   const keys = resolvedTransactionKeys(message, tables);
@@ -340,6 +362,10 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   let hasLazorInstruction = false;
   let ufoPrecompiles = 0;
   let hasUfoAction = false;
+  let passkeyPrecompiles = 0;
+  let executeCount = 0;
+  let lazorCount = 0;
+  let hasCompressedStore = false;
   let maximumDebit = MAX_ROUTINE_DEBIT_LAMPORTS;
   let approvedRentBundle = false;
   let approvedRentOwnerAddresses = [];
@@ -355,13 +381,20 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
       assertUfoPrecompile(instruction);
       if (++ufoPrecompiles > 1 || hasLazorInstruction) throw new Error('UFO proof must execute once before the Lazor command.');
     }
+    if (program.equals(SECP256R1_PROGRAM_ID)) {
+      if (tables.length && hasLazorInstruction) throw new Error('Passkey verification must precede the wallet command.');
+      passkeyPrecompiles += 1;
+    }
     if (program.equals(LAZOR_PROGRAM_ID)) {
+      lazorCount += 1;
       hasLazorInstruction = true;
       const discriminator = Buffer.from(instruction.data)[0];
       if (discriminator === 0 || discriminator === 1 || discriminator === 5) {
         maximumDebit = Math.max(maximumDebit, MAX_LAZOR_ACCOUNT_DEBIT_LAMPORTS);
       } else if (discriminator === 4) {
+        executeCount += 1;
         const innerInstructions = parseCompactInstructions(message, instruction, keys);
+        hasCompressedStore = isCompressedStoreBundle(innerInstructions, sponsor);
         hasUfoAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && UFO_ACTIONS.some(discriminator => isDiscriminator(inner.data,discriminator)));
         const rentPolicy = approvedRentPolicy(innerInstructions);
         if (rentPolicy) {
@@ -375,7 +408,10 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   }
   if (!hasLazorInstruction) throw new Error("A sponsored transaction must contain a Lazor wallet instruction.");
   if (ufoPrecompiles && !hasUfoAction) throw new Error('UFO ownership proof requires a matching UFO gameplay action.');
-  if (tables.length && (!ufoPrecompiles || !hasUfoAction)) throw new Error('Address tables are restricted to verified UFO gameplay.');
+  if (tables.length && !(ufoPrecompiles && hasUfoAction)
+    && !(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedStore)) {
+    throw new Error('Address tables are restricted to verified UFO gameplay or passkey store purchases.');
+  }
   return { maximumDebit, approvedRentBundle, approvedRentOwnerAddresses, approvedRentAccountAddresses };
 }
 

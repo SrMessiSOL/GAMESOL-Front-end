@@ -143,3 +143,90 @@ were 3,184 metal, 2,896 crystal and 185 deuterium; lab 3 requires 450 metal,
 900 crystal and 450 deuterium. Further colony progression is gated by earned
 resources and prerequisites, not bypassed with grants or a new homeworld.
 Colonization, transport and complete-game certification remain pending.
+
+## Production progression follow-up
+
+The user authorized normal devnet production upgrades and colony progression.
+Solar Plant 4, 5 and 6 and Deuterium Synthesizer 2, 3 and 4 completed through
+the actual live command UI. A public account read confirmed synthesizer 4,
+solar 6, base deuterium production 76/hour, and energy 212/195 (full power).
+The starting effective production was about 11/hour: base 14/hour at 79% power.
+All five remaining earned tutorial rewards (metal, crystal, solar, robotics,
+rocket launcher) were claimed. No purchased resources or admin grants were used.
+
+Further prerequisite costs from the program's doubling research formula:
+Impulse 1-3 = 14,000 M / 28,000 C / 4,200 D; Astrophysics 1-4 =
+60,000 M / 30,000 C / 15,000 D; colony ship = 10,000 M / 20,000 C /
+10,000 D. Combined 84,000 M / 78,000 C / 29,200 D excludes infrastructure
+upgrades and flight fuel. Metal Storage 2 (40,000 capacity) and Crystal
+Storage 1 (20,000 capacity) are needed for the largest individual costs.
+Regular production cannot finish this entire chain in the same test session.
+The read-only checkpoint helper now reports rates, resources, storage,
+energy and construction deadlines; its syntax check passed.
+
+Final independent account read confirmed Deuterium Synthesizer 5 and Solar
+Plant 7, production 105 D/hour, energy 272/239, and clear construction and
+research queues. Stored resources were 1,480 M / 2,890 C / 194 D. Lab 3 still
+needs 450 D, about 2h27 of production at this rate without other rewards or
+spending. Colonization and transport were not launched.
+
+### Read-only devnet funding investigation
+
+The user authorized investigation, not funding or purchases. The existing
+store account `64SBDDso9t3CfpJrqfC4r72M4yakMoFSHLJTHMtQYVAS` is enabled;
+its configured USDC mint is `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`,
+matching Circle's official Solana-devnet address. The game account holds zero
+of this mint. Circle's public faucet offers 20 test USDC per request with a
+two-hour limit and may require CAPTCHA. References:
+https://faucet.circle.com/ and
+https://developers.circle.com/stablecoins/usdc-contract-addresses .
+
+Proposed first funded test, pending explicit user approval: request 20 free
+devnet USDC for the existing game account, spend at most 6 test USDC on the
+Daily Deuterium Cache (1, reward 750 D) and Daily Logistics Crate (5, rewards
+8,000 M / 5,000 C / 2,000 D). These fit current storage based on the latest
+read, but balances, caps and limits must be rechecked before submission.
+This funds further infrastructure, not the entire colony path; research and
+build timers remain unchanged. No funding, purchases, minting, grants,
+authority changes or mainnet actions were executed in this investigation.
+
+### Approved funding and first purchase blocker
+
+The user subsequently approved one Circle request for 20 devnet USDC and
+at most 6 test USDC spent on the two specified packs. Circle confirmed
+"Tokens sent" for the existing G6tR game account. Funding signature
+`5WkaMaHAwKhbEfKgkydN73LGqXkNgxAz7HGv6cZ9pHMVjKLnExo8xPCRzxSkTErfBcr8VnYcDgcVPDzLj67V56Nk`
+was independently read at finalized with `meta.err === null`. The configured
+mint balance was 20,000,000 base units (20 test USDC). No CAPTCHA challenge
+was shown. After refresh the live store displayed this balance.
+
+One Daily Deuterium Cache was reviewed at 1 test USDC and confirmed once.
+The client failed before submission with "This command exceeds the Solana
+transaction size limit. No command was submitted." The pending-state balance
+read remained 20 test USDC; the Daily Logistics Crate was not attempted.
+No successful pack purchase has been proven. The failure is in the sponsored
+transaction serializer in `player-funded-session.ts`, not a resource grant or
+mainnet payment. The current pinned lookup table is restricted to paired UFO
+proofs by sponsor policy; do not broaden that policy as an incidental fix.
+A separate approval request covers fixing/testing and publishing the store
+transaction correction before retrying within the same 6-test-USDC budget.
+
+### Checked store packet correction
+
+The user authorized fixing, testing and publishing the correction, then
+retrying the two packs within the same total 6-test-USDC limit. A fixture built
+with the real Lazor SDK and cross-origin WebAuthn JSON reproduces 1,258 bytes
+without rent and 1,281 with rent; the existing frozen address table reduces
+them to 1,106 and 1,129 bytes. Fixture signatures are synthetic and never sent.
+The client selects this table only for the existing passkey store bundle.
+The sponsor resolves and verifies the pinned table, and admits the store
+representation only with one preceding passkey precompile, one wallet execute,
+one canonical store purchase and its optional matched rent contribution.
+Wrong account PDAs, mint, token/system programs, periods, pack IDs, extra
+payloads, extra commands, absent verification and reordered verification fail
+closed. Existing debit limits, signature-verified simulation and rent
+consumption checks remain unchanged; no new program/action permissions or
+on-chain authority changes are introduced. The old UFO-only table restriction
+now additionally recognizes this canonical, already-permitted store action.
+Production build passed and the full selected regression suite passed 115/115.
+Live purchases and colony progression are not certified by these fixture tests.

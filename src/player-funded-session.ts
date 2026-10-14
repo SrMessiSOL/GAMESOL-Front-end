@@ -360,12 +360,13 @@ async function sendSponsored(
   instructions: TransactionInstruction[],
   signers: Keypair[] = [],
   initialLatest?: LatestBlockhash,
+  compressStore = false,
 ): Promise<string> {
   const [payer, latest] = await Promise.all([
     getSponsorPayer(),
     initialLatest ? Promise.resolve(initialLatest) : takeLatestBlockhash(rpc),
   ]);
-  const lookupTables = instructions.some(instruction => instruction.programId.equals(Ed25519Program.programId))
+  const lookupTables = compressStore || instructions.some(instruction => instruction.programId.equals(Ed25519Program.programId))
     ? [await fetchUfoLookupTable(rpc, payer)] : [];
   const message = new TransactionMessage({
     payerKey: payer,
@@ -718,7 +719,18 @@ export async function executeWithPlayerSession(
   const displayTransaction = await buildDisplayTransaction(rpc, sponsorPayer, instructions, displayBlockhash.blockhash);
   const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId, displayTransaction);
   const { instructions: wrapped } = resolved.client.finalizeExecute(prepared, response);
-  return sendSponsored(rpc, [...precompiles, ...wrapped], [], displayBlockhash);
+  return sendSponsored(rpc, [...precompiles, ...wrapped], [], displayBlockhash, isStorePurchaseBundle(instructions));
+}
+
+function isStorePurchaseBundle(instructions: TransactionInstruction[]): boolean {
+  const purchase = instructions[instructions.length - 1];
+  if (!purchase || instructions.length > 2 || !purchase.programId.equals(GAME_STATE_PROGRAM_ID)
+    || purchase.keys.length !== 11 || purchase.data.length !== 10
+    || !purchase.data.subarray(0, 8).equals(Buffer.from([112, 75, 157, 242, 238, 109, 2, 252]))) return false;
+  if (instructions.length === 1) return true;
+  const rent = instructions[0];
+  return rent.programId.equals(GAME_STATE_PROGRAM_ID) && rent.keys.length === 3 && rent.data.length === 16
+    && rent.data.subarray(0, 8).equals(Buffer.from([87, 113, 100, 97, 218, 156, 201, 21]));
 }
 
 export async function fundPlayerFeeFromVault(
