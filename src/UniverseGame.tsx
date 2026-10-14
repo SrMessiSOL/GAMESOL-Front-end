@@ -1745,8 +1745,14 @@ export default function UniverseGame() {
     try {
       await action(client, new PublicKey(entityPda));
       await refresh();
-      setStatus(`${label} submitted.`);
-      setOperation({ label, ...commandSuccessGuidance(label), phase: "success" });
+      let balanceWarning = "";
+      if (label.startsWith("Purchase ")) {
+        try { await refreshWalletTokenBalances(); }
+        catch { balanceWarning = " Purchase confirmed, but token balances could not refresh. Refresh balances before another purchase."; }
+      }
+      setStatus(`${label} submitted.${balanceWarning}`);
+      const guidance = commandSuccessGuidance(label);
+      setOperation({ label, ...guidance, detail: guidance.detail + balanceWarning, phase: "success" });
     } catch (error) {
       const failure = playerError(error, `${label} could not be completed.`);
       setStatus(failure.detail);

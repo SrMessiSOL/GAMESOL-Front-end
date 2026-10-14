@@ -249,3 +249,28 @@ review, and the user was asked to click Buy themselves and complete Lazor's
 passkey prompt. No second automatic retry was submitted and the logistics
 crate remains untouched. Packet compression is built/tested/published, but
 its real purchase validation is still gated by a completed owner signature.
+
+### Real store purchases confirmed
+
+The user completed both purchase approvals manually. Independent finalized
+reads show `meta.err === null` for the fuel cache
+`3XF4B4WmyV6A8AC6LXgzdQXV3AtRcXWSgQssfzRPV9J5zrANCRXGuo2JUYeMQkN4Ho66bnGFFJnYqidJW6YuooqS`
+(`SponsorAccountRent`, `PurchaseStorePack`) and logistics crate
+`2StSh8UzWc5mw4K4oaVmV4EKcwBNh3Ygp8aVdkaXFgoCe9wpZyTEGjo1JacCpxGz1EPV2XCRHTCf35pn35QZDjbr`
+(`PurchaseStorePack`). Token balance is 14,000,000 base units: exactly 6 test
+USDC spent from the original 20. No further purchases are authorized within
+this budget. Both cards show purchased/disabled for the current period.
+The resource read after logistics and lab 3 start was 9,147 M / 7,067 C /
+2,597 D, below all 10,000-unit caps. Lab 3 completed; lab 4 subsequently
+completed and lab 5 was started through ordinary Quick Play commands.
+Daily check-in and the completed one-store-pack objective rewards were claimed.
+
+Live testing found the store token-balance display still showed 20 although
+the on-chain balance was 14. The command runner refreshed the world but not
+token balances. A scoped correction refreshes token balances after confirmed
+purchase commands and preserves success with an actionable warning if the
+balance read fails. Focused tests verify that failed commands cannot retry or
+refresh balances, and ordinary construction does not add token RPC calls.
+This display correction does not change authentication, pack prices, economy
+or on-chain state. New live purchases are not needed to test its unit guards.
+The production build and full selected regression suite passed (118/118).
