@@ -224,8 +224,11 @@ serves this build (index-DR0RnYqF.js). Both approved Helius settings use the
 replacement key and are sensitive. Rebuilt preview and new production fresh
 NFT reads and exact #513 image checks passed; the game remains on devnet.
 Public alias input/origin guards passed after cutover. No USDC was spent.
-Old Stormjelly key revocation remains a human action followed by a final live
-check; see DEPENDENCY_SECURITY_2026-10-14.md for release evidence and limits.
+The user subsequently revoked Stormjelly; Helius confirmed its deletion.
+Post-revocation fresh NFT ownership and exact #513 image checks passed in
+Production and rebuilt Preview. The production devnet RPC and expected
+sponsor also passed. Rotation is complete; no USDC or transaction was used.
+See DEPENDENCY_SECURITY_2026-10-14.md for release evidence and remaining limits.
 
 98 regression tests passed, zero failed. These cover frontend and server
 policies; they do not substitute for live validator execution.

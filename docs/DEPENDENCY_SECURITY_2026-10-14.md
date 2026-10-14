@@ -145,9 +145,14 @@ Production verification passed after the rotated setting was applied:
 
 No USDC spending, wallet approval, token transfer, or Solana program upgrade
 was used for this release. Temporary replacement-key files were removed and
-the staged credential scan passed. The former key is intentionally still
-active to avoid an outage during cutover: final Stormjelly key revocation is
-the user's credential-management step, followed by another live health check.
+the staged credential scan passed. The former key was kept active during
+cutover to avoid an outage, then the user deleted Stormjelly in Helius.
+The dashboard confirmed API Key Deleted and listed only the GAMESOL key.
+Post-revocation checks passed on both Production and rebuilt Preview: fresh
+ownership reads returned all 15 UFOs including #513, and #513 artwork matched
+the recorded SHA-256. The production devnet genesis and expected sponsor
+checks also passed. Key replacement, deployment, and old-key retirement are
+complete; no transaction or spending was used in these final checks.
 Moderate advisories and unrelated mainnet gates remain as documented above.
 
 ## Sources
