@@ -6107,6 +6107,8 @@ export class GameClient {
         { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true },
         { pubkey: tutorialQuestRewardTargetsPda, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        // Remaining accounts: recurring reward targets, owner index, registry.
+        { pubkey: questRewardTargetsPda, isSigner: false, isWritable: true },
         { pubkey: ownerIndexPda, isSigner: false, isWritable: true },
         { pubkey: ownershipRegistryPda, isSigner: false, isWritable: true },
       ],
