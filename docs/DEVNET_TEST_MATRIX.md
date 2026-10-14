@@ -128,6 +128,93 @@ Mainnet clearance remains blocked on:
 
 ## Automated checks
 
+### Wallet/security remediation candidate (not promoted)
+
+Local candidate adds signing-popup closure/timeout recovery through the SDK's
+own error channel plus a local rejection fallback. Late signature results
+cannot proceed to finalization/submission. Read-only wallet preparation has
+20-second deadlines; transaction submission/confirmation is not raced by that
+deadline. A submitted session's status timeout explicitly says to check status
+before retrying. Successful activation no longer waits on an unrelated SOL
+balance refresh. Pending Quick Play buttons now say WAITING FOR APPROVAL.
+
+145 server/API test entries passed, including cancellation, blocked/synchronous
+popup failure, SDK promises that never settle, late signatures, preparation
+timeouts, post-submission wording and the actual enable-action busy state.
+Local production build passed before the final read-deadline additions; the
+final candidate also passed its preview-only cloud TypeScript/Vite build.
+Real browser cancellation/retry verification still requires preview sign-in.
+No live alias change, token purchase, session expansion or mainnet action.
+
+Capacitor Android/core/CLI updated together to 8.5.3 for
+https://github.com/advisories/GHSA-rvm3-566m-v7fv . The shell-quote override is
+updated to 1.12.0 for https://github.com/advisories/GHSA-pqg4-j6r4-53mv .
+Build installs use the lockfile with npm ci, legacy peer resolution and disabled
+install scripts, also enforced by project .npmrc for server-function packaging,
+matching the tested dependency closure instead of introducing
+unrelated optional peer trees. The explicit IPFS compatibility preparation
+remains in the build command.
+
+Fresh production audit: 0 critical, 19 high, 17 moderate (36 total).
+The full audit including development tools reports 0 critical, 26 high,
+10 moderate (36 total); transitive parent severities differ by included scope.
+High findings are NOT resolved or suppressed: native bigint-buffer through
+SPL Token; toml through Anchor; braces/glob and node-forge/ACME through Helia.
+Current verified-fetch 8.1.2 is already the latest published release. Proposed
+npm force fixes downgrade public APIs and cannot be applied without migration
+and NFT/transaction compatibility work. No package exclusions, advisory ignores,
+or audit-level changes are used to claim a clean audit. Production promotion
+remains gated on real popup recovery verification and security remediation.
+
+The first candidate sign-in succeeded as NewAccount (Fv9x...Rvdd), but its
+Quick Play button remained disabled. A read-only getPayerSigner request
+confirmed the preview error: "The devnet sponsor is not configured."
+With explicit user approval, the existing GAMESOL_DEVNET_SPONSOR_SECRET was
+added to Vercel Preview only. No unrelated environment variables were copied
+to Preview; temporary transfer files were removed. Production was unchanged.
+Replacement preview frontend-n5v1tlyya-srmessisols-projects.vercel.app is Ready.
+Its read-only getPayerSigner endpoint returned HTTP 200 with the expected
+public sponsor address F8HniT2KZspe6AGDQKvVrmkFt9LwZkctPVVQF8XZz6ub.
+The secret is marked sensitive. Environment-file quoting was decoded with
+JSON parsing before the successful transfer. The new origin requires another
+human sign-in, completed as NewAccount (Fv9x...Rvdd).
+Live popup-close/retry verification passed on this preview: Quick Play began
+OFF with sponsorship available; opening approval disabled the button and
+showed WAITING FOR APPROVAL. Closing the Lazor popup without signing produced
+"The approval was cancelled. Nothing was changed." and re-enabled both the
+Quick Play and sign-out buttons. Retrying opened a fresh approval popup;
+closing that popup recovered again. Quick Play remained OFF throughout.
+The portal Cancel-button interaction timed out and was not counted as a
+passed Cancel-button test; the second popup was explicitly closed instead.
+Screenshot: .vercel/ui-check/wallet-cancel-retry-passed.png.
+All 16 focused connect/sign recovery tests passed again. A subsequent live
+production-scope npm audit reports 0 critical, 19 high, 8 moderate (27 total);
+this later advisory snapshot supersedes the earlier moderate count, not the
+unresolved high-risk release gate. No session or game transaction was sent.
+These checks establish real popup-close recovery and retry, not a successful
+signed session, live blocked-popup behavior, or a live timeout test.
+
+### Dependency remediation follow-up (preview only)
+
+The current local and preview candidate supersedes the unresolved high-count
+snapshot above: runtime audit is 0 critical / 0 high / 13 moderate; full audit
+is 0 critical / 0 high / 15 moderate. Root fixes, first-party adapter boundaries,
+and verification are detailed in DEPENDENCY_SECURITY_2026-10-14.md.
+Clean install, all 158 server/API tests, production build, and the full audit
+gate passed. Preview frontend-1vrmbwjpz-srmessisols-projects.vercel.app built
+and packaged successfully. Fresh NFT ownership, byte-identical real #513
+artwork, invalid-input/origin guards, sponsor lookup, and anonymous desktop /
+390px mobile rendering passed. No production promotion or GitHub push yet.
+The user was notified that a Helius RPC URL appeared in a transfer error log;
+API key rotation is a follow-up before publication. No wallet signature,
+game command, or USDC spending occurred during dependency verification.
+Final-build human sign-in restored NewAccount and Homeworld 6:35:11. Two
+popup-close attempts, with a fresh retry between them, released the wallet
+controls and left Quick Play OFF. The signed-in mobile account panel fits
+390x844 without document overflow; viewport override was reset. No approval
+or transaction was submitted. These checks do not prove a newly signed game
+loop or remove unrelated mainnet readiness gates.
+
 98 regression tests passed, zero failed. These cover frontend and server
 policies; they do not substitute for live validator execution.
 Local blueprint-disclosure changes are not published.

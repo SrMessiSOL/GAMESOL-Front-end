@@ -11,6 +11,7 @@ import {
 } from "@solana/web3.js";
 import { Buffer } from "buffer";
 import { fetchUfoLookupTable } from './ufo-lookup-table';
+import { signWithPopupRecovery, withPreparationTimeout } from './passkey-connect-recovery';
 import {
   createAssociatedTokenAccountInstruction,
   createTransferCheckedTokenInstruction,
@@ -204,7 +205,7 @@ async function freshPasskeySlot(rpc: Connection): Promise<bigint> {
   // Lazor accepts WebAuthn proofs for only 150 slots. Use the freshest bank
   // available and leave a tiny cushion for RPC nodes that are a few slots
   // ahead of the validator that simulates the sponsored transaction.
-  const slot = BigInt(await rpc.getSlot("processed"));
+  const slot = BigInt(await withPreparationTimeout(rpc.getSlot("processed")));
   return slot > 4n ? slot - 4n : slot;
 }
 
@@ -466,7 +467,7 @@ async function requestPasskeySignature(
 ) {
   const dialog = new DialogManager({ portalUrl: PORTAL_URL, rpcUrl: RPC_ENDPOINT });
   try {
-    const result = await dialog.openSign(toBase64Url(challenge), displayTransaction, credentialId, "devnet");
+    const result = await signWithPopupRecovery(dialog, () => dialog.openSign(toBase64Url(challenge), displayTransaction, credentialId, "devnet"));
     return decodeSignResult(result);
   } finally {
     dialog.destroy();
@@ -556,13 +557,13 @@ async function revokeStoredSession(
 ): Promise<void> {
   if (!stored.sessionPda) return;
   const sessionPda = new PublicKey(stored.sessionPda);
-  if (!(await rpc.getAccountInfo(sessionPda, "confirmed"))) return;
-  const [resolved, sponsorPayer] = await Promise.all([
+  if (!(await withPreparationTimeout(rpc.getAccountInfo(sessionPda, "confirmed")))) return;
+  const [resolved, sponsorPayer] = await withPreparationTimeout(Promise.all([
     resolvePasskeyWallet(rpc, wallet),
     getSponsorPayer(),
-  ]);
+  ]));
   const signatureSlot = await freshPasskeySlot(rpc);
-  const prepared = await resolved.client.prepareRevokeSession({
+  const prepared = await withPreparationTimeout(resolved.client.prepareRevokeSession({
     payer: sponsorPayer,
     walletPda: resolved.walletPda,
     secp256r1: {
@@ -573,7 +574,7 @@ async function revokeStoredSession(
     },
     sessionPda,
     refundDestination: sponsorPayer,
-  });
+  }));
   const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId);
   const { instructions } = resolved.client.finalizeRevokeSession(prepared, response);
   await sendSponsored(rpc, instructions);
@@ -584,15 +585,15 @@ export async function activatePlayerFundedSession(wallet: LazorWalletInfo): Prom
   let stored = ensurePlayerFeeSession(wallet.smartWallet);
   let sessionKeypair = keypairFromStored(stored);
   const rpc = connection();
-  const [resolved, currentSlotRaw, sponsorPayer] = await Promise.all([
+  const [resolved, currentSlotRaw, sponsorPayer] = await withPreparationTimeout(Promise.all([
     resolvePasskeyWallet(rpc, wallet),
     rpc.getSlot("confirmed"),
     getSponsorPayer(),
-  ]);
+  ]));
   const currentSlot = BigInt(currentSlotRaw);
 
   if (stored.sessionPda) {
-    const existing = await rpc.getAccountInfo(new PublicKey(stored.sessionPda), "confirmed");
+    const existing = await withPreparationTimeout(rpc.getAccountInfo(new PublicKey(stored.sessionPda), "confirmed"));
     const existingExpiry = existing ? sessionExpiry(existing.data) : null;
     if (
       existing
@@ -602,7 +603,7 @@ export async function activatePlayerFundedSession(wallet: LazorWalletInfo): Prom
     ) {
       const next = { ...stored, active: true, expiresAt: existingExpiry.toString(), fundingMode: "sponsored" as const };
       writeStoredSession(next);
-      return refreshPlayerFundedSession(wallet.smartWallet);
+      return withPreparationTimeout(refreshPlayerFundedSession(wallet.smartWallet));
     }
     if (existing && sessionPolicyMatchesCurrentUniverse(stored)) {
       await revokeStoredSession(rpc, wallet, stored, sessionKeypair);
@@ -631,7 +632,7 @@ export async function activatePlayerFundedSession(wallet: LazorWalletInfo): Prom
     { type: 10, programId: MARKET_PROGRAM_ID },
   ];
   const signatureSlot = await freshPasskeySlot(rpc);
-  const prepared = await resolved.client.prepareCreateSession({
+  const prepared = await withPreparationTimeout(resolved.client.prepareCreateSession({
     payer: sponsorPayer,
     walletPda: resolved.walletPda,
     secp256r1: {
@@ -643,7 +644,7 @@ export async function activatePlayerFundedSession(wallet: LazorWalletInfo): Prom
     sessionKey: sessionKeypair.publicKey,
     expiresAt,
     actions: actions as never,
-  });
+  }));
   const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId);
   const { instructions, sessionPda } = resolved.client.finalizeCreateSession(prepared, response);
   // Session creation is authorized by the passkey proof embedded by Lazor.
@@ -659,7 +660,7 @@ export async function activatePlayerFundedSession(wallet: LazorWalletInfo): Prom
     fundingMode: "sponsored",
     allowedPrograms: requiredSessionPrograms(),
   });
-  return refreshPlayerFundedSession(wallet.smartWallet);
+  return withPreparationTimeout(refreshPlayerFundedSession(wallet.smartWallet), 'Quick Play approval was submitted, but its status check timed out. Select Check Sponsor before trying again.');
 }
 
 export async function executeWithPlayerSession(

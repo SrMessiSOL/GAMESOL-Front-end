@@ -1,4 +1,5 @@
 const { createDas, mainnetEndpoint, ownedCollectionAsset } = require('./crypto-ufos.cjs');
+const { createVerifiedIpfsFetch } = require('./verified-ipfs-artwork.cjs');
 const IMAGE_DIRECTORY = 'bafybeigxxhol7amgewoep2falpmmdxsjshpceockpsbmyooutvknj5jkhy';
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
@@ -59,8 +60,8 @@ function createImageService({ env = process.env, das, verifiedFetch } = {}) {
       const asset = await lookup('getAsset', { id });
       if (asset?.id !== id) throw new Error('NFT metadata does not match the requested address.');
       const resource = imageResource(asset);
-      // Helia verifies the original CID's blocks; no replacement or generated artwork.
-      fetchPromise ||= verifiedFetch ? Promise.resolve(verifiedFetch) : import('@helia/verified-fetch').then(({ createVerifiedFetch }) => createVerifiedFetch());
+      // Every original UnixFS block is hash-checked before the official exporter sees it.
+      fetchPromise ||= Promise.resolve(verifiedFetch || createVerifiedIpfsFetch());
       const fetchImage = await fetchPromise;
       const image = await readImage(await fetchImage(resource, { signal: AbortSignal.timeout(45000) }));
       const previous = cache.get(id);

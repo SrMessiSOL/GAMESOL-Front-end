@@ -1971,7 +1971,7 @@ export default function UniverseGame() {
     setStatus("Opening secure Quick Play approval…");
     try {
       await passkey.createGameplaySession();
-      await refreshVaultBalance();
+      void refreshVaultBalance().catch(() => undefined);
       setStatus("Quick Play is on. You can play for up to 8 hours without approving every action.");
     } catch (error) {
       setStatus(friendlyAccountError(error, "We couldn't turn on Quick Play. Please try again."));
@@ -2254,7 +2254,7 @@ export default function UniverseGame() {
                     </div>
                     <div className="ug-account-primary-actions">
                       {!passkey.hasSession ? (
-                        <button className="primary" disabled={passkeyActionBusy || !onboardingFunded} onClick={() => void enableGameplaySession()}>TURN ON QUICK PLAY</button>
+                        <button className="primary" disabled={passkeyActionBusy || !onboardingFunded} onClick={() => void enableGameplaySession()}>{passkeyActionBusy ? "WAITING FOR APPROVAL..." : "TURN ON QUICK PLAY"}</button>
                       ) : (
                         <button className="secondary" disabled={passkeyActionBusy} onClick={() => void lockGameplaySession()}>PAUSE QUICK PLAY</button>
                       )}
@@ -2376,7 +2376,7 @@ export default function UniverseGame() {
                       ) : (
                         <>
                           {!passkey.hasSession ? (
-                            <button disabled={passkeyActionBusy || !onboardingFunded} onClick={() => void enableGameplaySession()}>TURN ON QUICK PLAY</button>
+                            <button disabled={passkeyActionBusy || !onboardingFunded} onClick={() => void enableGameplaySession()}>{passkeyActionBusy ? "WAITING FOR APPROVAL..." : "TURN ON QUICK PLAY"}</button>
                           ) : (
                             <button className="secondary" disabled={passkeyActionBusy} onClick={() => void lockGameplaySession()}>TURN OFF QUICK PLAY</button>
                           )}

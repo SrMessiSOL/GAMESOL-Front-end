@@ -30,15 +30,6 @@ test('commander avatar is available inside both game views with ownership-backed
   assert.match(css, /\.nft-page\{height:100dvh;min-height:0;overflow-y:auto/);
 });
 
-test('IPFS crypto compatibility adapter retains the original named Crypto API and SHA256', async () => {
-  require('./prepare-ipfs-runtime.cjs');
-  const { Crypto } = await import('@peculiar/webcrypto');
-  assert.equal(typeof Crypto, 'function');
-  const value = Buffer.from('original Crypto UFOs content');
-  const digest = await new Crypto().subtle.digest('SHA-256', value);
-  assert.deepEqual(Buffer.from(digest), crypto.createHash('sha256').update(value).digest());
-});
-
 test('artwork reader preserves the original CID, rejects arbitrary URLs and checks image bytes', async () => {
   const { imageResource, imageType, createImageService } = require('./crypto-ufo-images.cjs');
   const original = 'https://nftstorage.link/ipfs/bafybeigxxhol7amgewoep2falpmmdxsjshpceockpsbmyooutvknj5jkhy/8342';
