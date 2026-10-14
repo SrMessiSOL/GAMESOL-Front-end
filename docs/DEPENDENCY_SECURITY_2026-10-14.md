@@ -123,6 +123,33 @@ and full audits still report zero high/critical findings, with respectively
 publication after these checks. Old-key revocation requires the user's final
 Helius action after the new production deployment is verified.
 
+## Published Release
+
+The user-authorized fixes were committed as `1219903` and pushed to
+`origin/feat/crypto-ufos-wallet-link` in SrMessiSOL/GAMESOL-Front-end.
+Production deployment `dpl_Eoo4vVbX3khmtAnEBGNTSCTgyqa1` completed at
+https://frontend-3pdz5m0sg-srmessisols-projects.vercel.app and the public alias
+https://chained-universe.vercel.app was explicitly moved to it.
+
+Production verification passed after the rotated setting was applied:
+
+- `/app` returns 200 and loads the new `index-DR0RnYqF.js` entry.
+- The game RPC still returns the Solana devnet genesis hash; expected sponsor
+  public payer is unchanged. No mainnet game deployment was made.
+- Fresh mainnet holding-wallet reads return 15 UFOs including #513.
+- The new production image function returns #513 as the same 3,873 bytes and
+  SHA-256 recorded above.
+- After alias cutover, the public game returns the new entry, fresh owner
+  lookup succeeds, invalid image input returns 400, and wrong origin returns
+  403.
+
+No USDC spending, wallet approval, token transfer, or Solana program upgrade
+was used for this release. Temporary replacement-key files were removed and
+the staged credential scan passed. The former key is intentionally still
+active to avoid an outage during cutover: final Stormjelly key revocation is
+the user's credential-management step, followed by another live health check.
+Moderate advisories and unrelated mainnet gates remain as documented above.
+
 ## Sources
 
 - https://github.com/advisories/GHSA-82x6-q7mm-w9cf

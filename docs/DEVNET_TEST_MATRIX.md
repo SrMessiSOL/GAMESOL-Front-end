@@ -215,6 +215,18 @@ controls and left Quick Play OFF. The signed-in mobile account panel fits
 or transaction was submitted. These checks do not prove a newly signed game
 loop or remove unrelated mainnet readiness gates.
 
+### Published wallet/security release
+
+After explicit user authorization, code commit 1219903 was pushed to the
+existing frontend branch and deployed to production as
+dpl_Eoo4vVbX3khmtAnEBGNTSCTgyqa1. The chained-universe.vercel.app alias now
+serves this build (index-DR0RnYqF.js). Both approved Helius settings use the
+replacement key and are sensitive. Rebuilt preview and new production fresh
+NFT reads and exact #513 image checks passed; the game remains on devnet.
+Public alias input/origin guards passed after cutover. No USDC was spent.
+Old Stormjelly key revocation remains a human action followed by a final live
+check; see DEPENDENCY_SECURITY_2026-10-14.md for release evidence and limits.
+
 98 regression tests passed, zero failed. These cover frontend and server
 policies; they do not substitute for live validator execution.
 Local blueprint-disclosure changes are not published.
