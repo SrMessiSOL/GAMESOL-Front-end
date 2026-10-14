@@ -1,9 +1,130 @@
 # Live Devnet Test Matrix
 
-Checkpoint: October 13, 2026. Live frontend release: `52a2a5d`.
+Current checkpoint: October 14, 2026. Gameplay evidence below was collected
+on frontend `87790c5`; the consolidation release adds the two preflight fixes
+and the updated evidence without a program upgrade.
 Game: https://chained-universe.vercel.app/app
 Commander: `G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r`
 Homeworld: `9:427:13`.
+
+## Current colony and transport checkpoint
+
+The sections below this checkpoint retain earlier chronological evidence;
+their pending/funding statements describe those earlier runs, not current state.
+
+- Active devnet program: `J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq`.
+- Existing colonization mission resolved, without relaunch. Owned colony
+  `Devnet Colony`, `9:427:1`, is account
+  `CyKmBAd6FttU8szoaUEao1cY7iUQGEhZGCJaAW7wgkFD`.
+- Astrophysics 4, Impulse Drive 3, Shipyard 4 and Research Lab 5 completed.
+  Combustion Drive 2 was subsequently completed for Small Cargo production.
+- Homeworld storage expanded to 160,000 metal, 160,000 crystal and 40,000
+  deuterium before claiming the earned monthly colonization reward.
+  Full reward delivered: 60,000 metal, 50,000 crystal and 20,000 deuterium.
+  Daily colonization reward also claimed: 1,400 metal, 1,200 crystal, 400 fuel.
+- One Small Cargo built naturally for 2,000 metal and 2,000 crystal.
+- Real transport: one Small Cargo carrying 10 metal from Homeworld to the
+  owned colony, 20 deuterium launch cost, natural outbound and return timers.
+  Arrival and return were resolved separately. Final confirmed on-chain read:
+  Small Cargo 1, Light Fighter 1, active missions 0, occupied mission entries 0.
+  Live UI independently shows 1/1 mission slots free and two fleet units.
+- No further USDC purchases or ANTIMATTER acceleration during this transport
+  rehearsal. Latest restriction remains no additional USDC spending.
+
+Finalized successful transport evidence (`meta.err === null`):
+
+| Action | Signature |
+| --- | --- |
+| Small Cargo production finish | `EJJsPXnfbhdRKjANdyuicbDAJzA2sp6ut7AvGKMxRRptNjk8goFdQz4prTnsTJfFpnzCJzUf2RCs1R8gHG6dfXN` |
+| Transport launch | `4RnbMtoghb7QaovuW8YrU2wcxLB8fejb1S8pTUbQsZiFcQS2yJtiSBEK6Fv2hBVHvoUqPhDMZ2V9tQjXi7a4N9X5` |
+| Transport delivery | `2j4VzSMc1kHG1a4cQaQxF9cRPQryH1xXVc2h1x8PB1LqjQU25Ho74pRB9QaQ3SjbwWkao6giezcMCikLVX6pjkgB` |
+| Transport return | `3uKqrhT94DoJTmLKgwsku9PkrKkWFjUXPMf1ich2GDujaJfepfndEumX9mUQCmMPkomePz8Avr36Zgjrn8CaVB5f` |
+
+### Replay boundary
+
+`node server/check-transport-replay.cjs` reconstructs the historical inner
+game instruction and simulates it only (`sigVerify: false`). The vault check
+passes and the cleared mission rejects with `InvalidMission` 6015. Independent
+before/after reads retain one cargo ship and zero active/occupied missions.
+The helper never signs or submits. This proves the game-level duplicate-return
+guard, not outer wallet authentication. Replaying the whole historical wallet
+transaction separately stops earlier at Lazor session error 3009; that result
+does not establish a game-level replay rejection.
+
+### Controlled espionage completed
+
+Separate commander `Fv9xRN5wqkQMWUqgDL7LPfXmhWkXnZS9ttcXW9oyRvdd`
+created `NewAccount Homeworld` at `6:35:11`, account
+`9pNkMopmGczUVkTFYP73zRZpKQPZTtuSpZdz7A21H4JN`.
+Its seven-day protection ends October 21, 2026 at 19:28:55 UTC
+(16:28:55 Buenos Aires). No protection bypass or combat launch performed.
+
+Main commander completed Combustion Drive 3, then a real probe-build attempt
+rejected with `TechLocked` 6019 without consuming resources. The active vault
+byte handler requires Shipyard 3 and Computer Technology 2; the typed helper
+and frontend had instead listed Combustion Drive 3. Computer Technology 1 and
+2 were completed naturally, and one probe was built for 1,000 crystal.
+  The frontend prerequisite correction and regression test are included in
+  the frontend consolidation release. No program/economy change was made.
+
+One real espionage mission launched to the controlled defender for 2 deuterium.
+The arrival generated a level-4 report with signal/counter 625/0 and 1/1 probe
+survival. Report resources 515 metal / 510 crystal / 106 deuterium match an
+independent confirmed read of the defender; four level-1 buildings and zero
+combat technology also match. Both arrival and return finalized successfully.
+Final source state: probe 1, active missions 0, occupied entries 0; UI 1/1 free.
+
+| Action | Finalized successful signature |
+| --- | --- |
+| Probe launch | `SY1ZHEVCF9rHRxerv24xjpWL9egw1ZZssd7wQTP2F9ZV4cEzh9HYpbk3i7upnNCkzwaYVQCryu5pcD3yUVj6PUg` |
+| Reconnaissance report | `4wQ2X4f85tpMqT6fcXR7v63MsVyH9oXneQQg7XLsxXJFEb47ia9WtxWTmeGQftHxC6zQJXh3EoZ59ykrjj8R5cPT` |
+| Probe return | `4T1BFCKwcoJrsmiCZH8L2DJgrSR3uc6SPiLzaR2fhqU46VFvxLN7AgPtHMnEpTqT3XLjbcaMnAK8vXkvcydA5R2x` |
+
+No USDC purchase or ANTIMATTER acceleration in this rehearsal. Main-account
+and defender Quick Play sessions were separately approved by the user.
+
+### Remaining gates at this checkpoint
+
+Controlled combat, fresh ownership-transfer/expiry safeguards,
+market settlement/cancel flows, alliance flows, and bounded deposit/withdrawal
+checks remain separate release gates. Their completion is not implied by this
+successful colony and transport round trip. No mainnet launch clearance.
+
+### Consolidation checks and mainnet blockers
+
+Frontend consolidation changes: probe blueprint requires Computer Technology
+2 (matching the active byte-handler), and hostile preflight verifies the target
+owner and rejects same-commander targets before submitting. Failed or missing
+ownership reads fail closed. Transport ownership rules are unchanged.
+
+Local checks passed: 121 server regression tests, 13 API test entries including
+the existing paymaster policy suite, TypeScript checking, and whitespace checks.
+The game-level transport replay simulation rejects with InvalidMission 6015.
+These checks are not a smart-contract security audit or mainnet certification.
+
+Production dependency audit on October 14 failed: 37 advisory entries,
+17 moderate, 19 high, 1 critical. The critical entry is @capacitor/android
+(GHSA-rvm3-566m-v7fv), relevant to the native Android surface; high entries
+include bigint-buffer, braces, node-forge and toml, with transitive findings
+through the Solana/IPFS dependency trees. Package findings require reachability
+analysis and tested remediation; a dependency advisory is not by itself proof
+of exploitability in the browser build. No automatic/breaking audit fix applied.
+
+Mainnet clearance remains blocked on:
+
+1. Controlled combat after defender protection expires; no bypass authorized.
+2. Lazor popup-close/blocked-popup recovery: repeated live attempts left the
+   Quick Play button disabled until reload. This remains unresolved.
+3. Dependency security triage/remediation and independent program/admin review.
+4. Market sell/buy/cancel/settlement, alliance and bounded withdrawal tests.
+5. Ownership transfer/expiry and cross-account negative checks beyond the
+   already-tested proof replay and frontend account-switch safeguards.
+6. Prerequisite parity review: the active byte-handler and typed helper diverge
+   for probes (Computer Technology 2 versus Combustion Drive 3); the frontend
+   now follows the active path, but backend consistency needs separate review.
+7. Separate mainnet token, treasury, governance, attestor and deployment signoff.
+   No token issuance, fundraising action, mainnet deployment, authority change
+   or further USDC spending is part of this consolidation.
 
 ## Automated checks
 

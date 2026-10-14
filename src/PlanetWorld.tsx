@@ -210,7 +210,7 @@ const SHIP_REQUIREMENTS: Record<string, Array<[string, string, number]>> = {
   destroyer: [["Shipyard", "shipyard", 9], ["Hyperspace Drive", "hyperspaceDrive", 6], ["Armor Technology", "armorTechnology", 6]],
   deathstar: [["Shipyard", "shipyard", 12], ["Hyperspace Drive", "hyperspaceDrive", 7], ["Weapons Technology", "weaponsTechnology", 10], ["Energy Technology", "energyTech", 12]],
   recycler: [["Shipyard", "shipyard", 4], ["Combustion Drive", "combustionDrive", 6], ["Shielding Technology", "shieldingTechnology", 2]],
-  espionageProbe: [["Shipyard", "shipyard", 3], ["Combustion Drive", "combustionDrive", 3]],
+  espionageProbe: [["Shipyard", "shipyard", 3], ["Computer Technology", "computerTech", 2]],
   colonyShip: [["Shipyard", "shipyard", 4], ["Impulse Drive", "impulseDrive", 3], ["Astrophysics", "astrophysics", 4]],
   solarSatellite: [["Shipyard", "shipyard", 1]],
 };
@@ -2362,6 +2362,13 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
       const targetFree = await game.isCoordFree(missionTarget.galaxy, missionTarget.system, missionTarget.position);
       if (missionType === 5 && !targetFree) throw new Error("That coordinate slot is already occupied.");
       if (missionType !== 5 && targetFree) throw new Error(`${missionName(missionType)} missions can only target occupied planets.`);
+      const targetInfo = missionType === 1 || missionType === 6
+        ? await game.getPublicPlanetInfoByCoordinates(missionTarget.galaxy, missionTarget.system, missionTarget.position)
+        : null;
+      if (missionType === 1 || missionType === 6) {
+        if (!targetInfo) throw new Error("Could not verify the target owner. Refresh and try again.");
+        if (targetInfo.owner === state.planet.owner) throw new Error("Attack and espionage missions require a planet owned by a different commander. Your own worlds can receive transports.");
+      }
       if (missionType === 1) {
         const now = Math.floor(Date.now() / 1000);
         const sourceUnlockLeft = Math.max(0, state.planet.attackUnlockedAt - now);
@@ -2370,7 +2377,6 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
         if (sourceUnlockLeft > 0) throw new Error(`Attack launches unlock in ${queueTime(sourceUnlockLeft)}.`);
         if (launchCooldownLeft > 0) throw new Error(`Attack launch cooldown: ${queueTime(launchCooldownLeft)} remaining.`);
         if (combatPoints < MIN_ATTACK_COMBAT_POINTS) throw new Error(`Attack fleet too weak. Need ${MIN_ATTACK_COMBAT_POINTS.toLocaleString()} combat points.`);
-        const targetInfo = await game.getPublicPlanetInfoByCoordinates(missionTarget.galaxy, missionTarget.system, missionTarget.position);
         if (targetInfo) {
           const protectionLeft = Math.max(0, targetInfo.protectionUntilTs - now);
           const targetCooldownLeft = targetInfo.lastAttackedTs > 0 ? Math.max(0, targetInfo.lastAttackedTs + TARGET_ATTACK_COOLDOWN_SECONDS - now) : 0;
