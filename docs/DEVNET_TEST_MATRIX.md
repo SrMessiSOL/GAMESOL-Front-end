@@ -117,6 +117,14 @@ assigned. Live `/app` returned 200 with `index-E2JM6QZW.js`; the new
 `UniverseGame-h1azrbQy.js` bundle also returned 200. No program upgrade,
 authority change, extended session duration or token purchase was involved.
 
+Public-origin confirmation: the user enabled the original G6tR account's own
+limited session on `chained-universe.vercel.app`. A full page reload restored
+Quick Play ON and Commander READY without another sign-in or approval. Both
+owned worlds and Crypto UFO #513 also restored. The modal still showed 10.5
+USDC and 4,995,000 AM; no game command or token spend was performed during
+this refresh check. Screenshot:
+`.vercel/ui-check/quick-play-production-after-refresh.png`.
+
 Latest alliance result: paid creation, NewAccount application, leader approval,
 application closure and regular-member UI checks are complete on devnet. See
 the finalized evidence below. Alliance contributions/upgrades, rejection,
