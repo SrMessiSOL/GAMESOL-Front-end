@@ -23,9 +23,10 @@ const account = address => ({ address, chains: ['solana:mainnet'], features: ['s
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 
 // Execute the provider's actual hooks and async callbacks without a browser wallet.
-function fixture() {
+function fixture(chain = {record: null}) {
   const hooks = [], effects = [], requests = [], reads = [], storage = new Map();
-  let cursor = 0, dirty = false, now = 1000000, listener, focus, signatureGate;
+  let cursor = 0, dirty = false, now = 1000000, listener, focus, signatureGate, saves = 0, saveError;
+  const game = {getConnection: () => ({getGenesisHash: async () => 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG'})};
   const wallet = { name: 'Solflare', chains: ['solana:mainnet'], accounts: [account('holder-a')], features: {
     'standard:connect': { connect: async () => ({ accounts: wallet.accounts }) },
     'standard:events': { on: (_, callback) => { listener = callback; return () => { listener = null; }; } },
@@ -47,6 +48,7 @@ function fixture() {
     if (body.action === 'owner-assets') return reads.length ? reads.shift()(body) : { owner: body.owner, assets: [asset], checkedAt: now, identityVerified: false };
     if (body.action === 'ufo-challenge') return { challengeToken: 'challenge', message: 'ownership-only-message' };
     if (body.action === 'ufo-verify') return { utilityToken: 'server-authorized-token', expiresAt: now + 3600000 };
+    if (body.action === 'ufo-commander-attest') return {proof: {asset: asset.id}};
     throw Error('Unexpected test request');
   };
   const context = { exports: target.exports, require, Context: { Provider: 'provider' }, useState: state, useRef: ref, useCallback: callback, useEffect: effect,
@@ -54,6 +56,14 @@ function fixture() {
     connectHoldingWallet: async (value, silent) => { const result = await value.features['standard:connect'].connect({ silent }); const a = result.accounts[0]; if (!a) throw Error('Disconnected'); return a; },
     holdingAccount: accounts => accounts.find(value => value.chains.includes('solana:mainnet')) || null,
     cryptoUfosRequest: api, nftReaderView: (link, busy, error) => nftReaderView(link, busy, error, now),
+    fetchCommanderIdentity: async () => chain.record,
+    saveCommanderSelection: async (_game, commander, id, attest, assertCurrent) => {
+      if (id) await attest(); assertCurrent();
+      if (saveError) throw saveError;
+      saves++;
+      chain.record = {commander, owner: id ? wallet.accounts[0].address : 'zero', asset: id ?? 'zero', nonce: (chain.record?.nonce ?? 0n) + 1n, verifiedAt: id ? 1n : 0n};
+      return chain.record;
+    },
     savedPreference: key => storage.get(key) ?? null, savePreference: (key, value) => value === null ? storage.delete(key) : storage.set(key, value),
     selectionKey: owner => `selection:${owner}`, READER_WALLET: 'reader', Buffer, TextEncoder, Number, Error,
     Date: class extends Date { static now() { return now; } },
@@ -73,8 +83,9 @@ function fixture() {
     throw Error('Provider test render did not settle');
   }
   async function settle() { for (let n = 0; n < 8; n++) await Promise.resolve(); return render(); }
-  async function connected() { await render().connect(wallet); await settle(); await render().assign(asset.id); await settle(); return render(); }
-  return { render, settle, connected, wallet, requests, reads, storage,
+  async function bind(commander = 'commander') { render().bindGame(game, commander); await settle(); await settle(); }
+  async function connected() { await bind(); await render().connect(wallet); await settle(); await render().assign(asset.id); await settle(); return render(); }
+  return { render, settle, bind, connected, wallet, requests, reads, storage, chain, saveCount: () => saves, failSave: error => { saveError = error; },
     change: address => { wallet.accounts = address ? [account(address)] : []; listener?.({ accounts: wallet.accounts }); },
     focus: () => focus?.(), setNow: value => { now = value; },
     holdSignature: () => { signatureGate = deferred(); return signatureGate; },
@@ -128,20 +139,22 @@ test('wallet change clears the old portrait immediately and ignores its late own
   assert.equal(f.render().link.owner, 'holder-b'); assert.equal(f.render().flagship, null);
 });
 
-test('disconnect and reconnect clear authorization scope while preserving only a freshly re-read cosmetic preference', async () => {
+test('disconnect keeps the saved portrait but revokes holder authorization, reconnect rechecks ownership', async () => {
   const f = fixture(); await f.connected(); const epoch = f.render().ownershipEpoch;
   f.render().unlink(); await f.settle();
-  assert.equal(f.render().link, null); assert.equal(f.render().flagship, null); assert.ok(f.render().ownershipEpoch > epoch);
+  assert.equal(f.render().flagship.id, asset.id); assert.equal(f.render().holdingConnected, false); assert.ok(f.render().ownershipEpoch > epoch);
+  await assert.rejects(f.render().verifyUtility('commander', asset.id), /Reconnect/);
   await f.render().connect(f.wallet); await f.settle();
   assert.equal(f.render().flagship.id, asset.id); assert.equal(f.render().ownershipReady, true);
 });
 
 test('wallet switch while a holding signature is pending cannot restore an old utility token', async () => {
   const f = fixture(); await f.connected(); const gate = f.holdSignature();
+  const verified = f.requests.filter(value => value.action === 'ufo-verify').length;
   const auth = f.render().verifyUtility('commander', asset.id); await f.settle();
   f.change('holder-b'); await f.settle(); gate.resolve();
   await assert.rejects(auth, /Holding wallet changed/);
-  assert.equal(f.requests.filter(value => value.action === 'ufo-verify').length, 0);
+  assert.equal(f.requests.filter(value => value.action === 'ufo-verify').length, verified);
 });
 
 test('commander selection change while signing invalidates the previous UFO authorization', async () => {
@@ -166,8 +179,42 @@ test('owner response mismatch fails closed and cannot replace the verified holdi
 });
 
 test('silent restore reads current mainnet ownership and never authorizes utility or sends a game command', async () => {
-  const f = fixture(); f.storage.set('reader', 'Solflare'); f.storage.set('selection:holder-a', asset.id);
-  f.render(); await f.settle(); await f.settle();
+  const chain = {record: {commander:'commander',owner:'holder-a',asset:asset.id,nonce:1n,verifiedAt:1n}};
+  const f = fixture(chain); await f.bind();
   assert.equal(f.render().flagship.id, asset.id);
   assert.equal(f.requests.some(value => ['ufo-challenge', 'ufo-verify', 'ufo-attest'].includes(value.action)), false);
+  assert.equal(f.render().holdingConnected, false); assert.equal(f.saveCount(), 0);
+});
+
+test('a fresh browser restores only the on-chain selection, never a local preference', async () => {
+  const first = fixture(); await first.connected();
+  const second = fixture(first.chain); await second.bind();
+  assert.equal(second.storage.size, 0); assert.equal(second.render().flagship.id, asset.id);
+  assert.equal(second.saveCount(), 0);
+  await first.render().assign(null); await first.settle();
+  const third = fixture(first.chain); third.storage.set('selection:holder-a', asset.id); await third.bind();
+  assert.equal(third.render().flagship, null);
+});
+
+test('failed save retains the last confirmed selection and reports an actionable error', async () => {
+  const f = fixture(); await f.connected(); f.failSave(Error('Quick Play is off. Turn it on first.'));
+  await f.render().assign(null); await f.settle();
+  assert.equal(f.render().flagship.id, asset.id); assert.match(f.render().error, /Quick Play/);
+  assert.equal(f.saveCount(), 1);
+});
+
+test('wallet change during avatar signing stops submission and duplicate clicks cannot save twice', async () => {
+  const f = fixture(); await f.connected(); const baseline = f.saveCount();
+  const gate = f.holdSignature(); const save = f.render().assign(asset.id); await f.settle();
+  await f.render().assign(asset.id); assert.equal(f.saveCount(), baseline);
+  f.change('holder-b'); await f.settle(); gate.resolve(); await save; await f.settle();
+  assert.equal(f.saveCount(), baseline); assert.equal(f.render().flagship, null);
+});
+
+test('a saved avatar cleared elsewhere disappears on refresh without reconnecting a wallet', async () => {
+  const chain = {record: {commander:'commander',owner:'holder-a',asset:asset.id,nonce:1n,verifiedAt:1n}};
+  const f = fixture(chain); await f.bind(); assert.equal(f.render().flagship.id,asset.id);
+  chain.record = {...chain.record,asset:'zero',verifiedAt:0n,nonce:2n};
+  await f.render().refresh(); await f.settle(); assert.equal(f.render().flagship,null);
+  assert.equal(f.saveCount(),0);
 });

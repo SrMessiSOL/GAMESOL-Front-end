@@ -17,7 +17,7 @@ async function ufoTransactionFixture(action = 'start', protocolFees = true) {
   const client = new LazorKitClient({ getAccountInfo: async () => protocolFees ? { data: configData } : null });
   const commander = client.findVault(wallet)[0];
   const proof = Buffer.concat([owner.toBuffer(), asset.toBuffer(), Buffer.alloc(8), Buffer.from([4, 2]), Buffer.alloc(64), Buffer.alloc(8)]);
-  const message = Buffer.concat([Buffer.from('gamesol:ufo:devnet:v1'), game.toBuffer(), new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb').toBuffer(), commander.toBuffer(), proof]);
+  const message = Buffer.concat([Buffer.from(action === 'set' ? 'gamesol:commander:devnet:v1' : 'gamesol:ufo:devnet:v1'), game.toBuffer(), new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb').toBuffer(), commander.toBuffer(), proof]);
   const precompile = Ed25519Program.createInstructionWithPublicKey({ publicKey: new PublicKey('9XEL6rVQ2GK85ic1j2Nf6kykybsAtsP8nYzNnNCMun4a').toBytes(), signature: Buffer.alloc(64), message });
   const keys = [{ pubkey: commander, isSigner: true, isWritable: action === 'start' }];
   if (action === 'start') keys.push({ pubkey: pda('player_profile', commander), isSigner: false, isWritable: false });
@@ -25,9 +25,13 @@ async function ufoTransactionFixture(action = 'start', protocolFees = true) {
   if (action === 'start') keys.push({ pubkey: pda('ufo_asset_use', asset), isSigner: false, isWritable: true }, { pubkey: pda('ufo_owner_use', owner), isSigner: false, isWritable: true });
   keys.push({ pubkey: SYSVAR_INSTRUCTIONS_PUBKEY, isSigner: false, isWritable: false });
   if (action === 'start') keys.push({ pubkey: SystemProgram.programId, isSigner: false, isWritable: false });
-  const names = { start: 'start_ufo_expedition', advance: 'advance_ufo_expedition', claim: 'claim_ufo_loot' };
+  if (action === 'set') keys.splice(0, keys.length,
+    { pubkey: commander, isSigner: true, isWritable: true }, { pubkey: pda('player_profile', commander), isSigner: false, isWritable: false },
+    { pubkey: pda('ufo_config'), isSigner: false, isWritable: false }, { pubkey: pda('commander_identity', commander), isSigner: false, isWritable: true },
+    { pubkey: SYSVAR_INSTRUCTIONS_PUBKEY, isSigner: false, isWritable: false }, { pubkey: SystemProgram.programId, isSigner: false, isWritable: false });
+  const names = { start: 'start_ufo_expedition', advance: 'advance_ufo_expedition', claim: 'claim_ufo_loot', set: 'set_commander_identity' };
   const inner = [new TransactionInstruction({ programId: game, keys, data: Buffer.concat([discriminator(names[action]), proof, ...(action === 'advance' ? [Buffer.from([0, 1])] : [])]) })];
-  if (action === 'start') inner.unshift(new TransactionInstruction({ programId: game, keys: [{ pubkey: sponsor.publicKey, isSigner: true, isWritable: true }, { pubkey: commander, isSigner: false, isWritable: true }, { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }], data: Buffer.concat([discriminator('sponsor_account_rent'), Buffer.alloc(8)]) }));
+  if (action === 'start' || action === 'set') inner.unshift(new TransactionInstruction({ programId: game, keys: [{ pubkey: sponsor.publicKey, isSigner: true, isWritable: true }, { pubkey: commander, isSigner: false, isWritable: true }, { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }], data: Buffer.concat([discriminator('sponsor_account_rent'), Buffer.alloc(8)]) }));
   const wrapped = await client.execute({ payer: sponsor.publicKey, walletPda: wallet, signer: { type: 'session', sessionPda: client.findSession(wallet, session.publicKey.toBytes())[0], sessionKeyPubkey: session.publicKey }, instructions: inner });
   const instructions = [precompile, ...wrapped.instructions];
   const table = new AddressLookupTableAccount({ key: new PublicKey(manifest.table), state: { deactivationSlot: 18446744073709551615n, lastExtendedSlot: 0, lastExtendedSlotStartIndex: 0, authority: undefined, addresses: manifest.addresses.map(address => new PublicKey(address)) } });

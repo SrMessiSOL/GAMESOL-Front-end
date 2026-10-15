@@ -33,15 +33,17 @@ function proofBytes(proof) {
   return Buffer.concat([new PublicKey(proof.owner).toBuffer(),new PublicKey(proof.asset).toBuffer(),nonce,
     Buffer.from([proof.doctrine,proof.route]),Buffer.from(proof.accessory),Buffer.from(proof.hair),expires]);
 }
-function attestationMessage(commander, proof) {
-  return Buffer.concat([DOMAIN,PROGRAM.toBuffer(),new PublicKey(nft.COLLECTION).toBuffer(),new PublicKey(commander).toBuffer(),proofBytes(proof)]);
+function attestationMessage(commander, proof, purpose='expedition') {
+  if (!['expedition','commander'].includes(purpose)) throw new Error('Invalid UFO authorization purpose.');
+  const domain=purpose==='commander'?Buffer.from('gamesol:commander:devnet:v1'):DOMAIN;
+  return Buffer.concat([domain,PROGRAM.toBuffer(),new PublicKey(nft.COLLECTION).toBuffer(),new PublicKey(commander).toBuffer(),proofBytes(proof)]);
 }
 function holdingMessage(data) {
-  return ['GAMESOL: Activate my UFO PvE utility',`Site: ${data.origin}`,`Game commander (devnet): ${data.commander}`,
+  return [data.purpose==='commander'?'GAMESOL: Save my commander avatar':'GAMESOL: Activate my UFO PvE utility',`Site: ${data.origin}`,`Game commander (devnet): ${data.commander}`,
     `NFT holding wallet (mainnet): ${data.owner}`,`Crypto UFO asset: ${data.asset}`,`Collection: ${nft.COLLECTION}`,
     `Nonce: ${data.nonce}`,`Challenge expires: ${new Date(data.expires).toISOString()}`,
     `Utility authorization expires: ${new Date(data.issuedAt+3600000).toISOString()}`,
-    'Allow ownership attestations for this commander for one hour. No NFT transfer, delegation, token reward or PvP bonus.'].join('\n');
+    data.purpose==='commander'?'Allow avatar-selection attestations for this commander for one hour. No expedition authorization, NFT transfer, delegation, token reward or PvP bonus.':'Allow ownership attestations for this commander for one hour. No NFT transfer, delegation, token reward or PvP bonus.'].join('\n');
 }
 function issuerKey(env) {
   if (!env.GAMESOL_UFO_ATTESTOR_KEY) throw new Error('UFO ownership attestor is not configured.');
@@ -78,8 +80,10 @@ function createAttestationService({ env=process.env, das, connection, now=Date.n
     if (current.attestor!==issuer.publicKey.toBase58()) throw new Error('UFO attestor does not match the on-chain configuration.');
     const key=nft.signingKey(env);
     if (body.action==='ufo-challenge') {
+      const purpose=body.purpose??'expedition';
+      if (!['expedition','commander'].includes(purpose)) throw new Error('Invalid UFO authorization purpose.');
       const data={v:1,kind:'ufo-challenge',origin,commander:address(body.commander),smartWallet:address(body.commander),
-        owner:address(body.owner),asset:address(body.asset),nonce:crypto.randomBytes(24).toString('base64url'),issuedAt:now(),expires:now()+300000};
+        owner:address(body.owner),asset:address(body.asset),purpose,nonce:crypto.randomBytes(24).toString('base64url'),issuedAt:now(),expires:now()+300000};
       policy(await owned(data.owner,data.asset));
       return {challengeToken:nft.seal(data,key),message:holdingMessage(data)};
     }
@@ -90,18 +94,20 @@ function createAttestationService({ env=process.env, das, connection, now=Date.n
       const expiresAt = data.issuedAt + 3600000;
       return {utilityToken:nft.seal({...data,kind:'ufo-authorization',expires:expiresAt},key),expiresAt};
     }
-    if (body.action==='ufo-attest') {
+    if (body.action==='ufo-attest' || body.action==='ufo-commander-attest') {
       const data=nft.unseal(body.utilityToken,key,'ufo-authorization',origin,now());
+      const purpose=body.action==='ufo-commander-attest'?'commander':'expedition';
+      if ((data.purpose??'expedition')!==purpose) throw new Error('UFO authorization belongs to a different action.');
       const asset=await owned(data.owner,data.asset);
-      const loadout=await rpc.getAccountInfo(pda(Buffer.from('ufo_loadout'),new PublicKey(data.commander).toBuffer()),'confirmed');
+      const loadout=await rpc.getAccountInfo(pda(Buffer.from(purpose==='commander'?'commander_identity':'ufo_loadout'),new PublicKey(data.commander).toBuffer()),'confirmed');
       let nonce=0n;
       if (loadout) {
-        if (!loadout.owner.equals(PROGRAM) || loadout.data.length<48 || !loadout.data.subarray(0,8).equals(discriminator('UfoLoadout'))
+        if (!loadout.owner.equals(PROGRAM) || (purpose==='commander'?loadout.data.length!==120:loadout.data.length<48) || !loadout.data.subarray(0,8).equals(discriminator(purpose==='commander'?'CommanderIdentity':'UfoLoadout'))
           || !loadout.data.subarray(8,40).equals(new PublicKey(data.commander).toBuffer())) throw new Error('Invalid on-chain commander loadout.');
         nonce=loadout.data.readBigUInt64LE(40);
       }
       const proof={owner:data.owner,asset:data.asset,nonce:nonce.toString(),...policy(asset),expires:Math.floor(now()/1000)+90};
-      const message=attestationMessage(data.commander,proof);
+      const message=attestationMessage(data.commander,proof,purpose);
       const privateKey=crypto.createPrivateKey({key:Buffer.concat([Buffer.from('302e020100300506032b657004220420','hex'),Buffer.from(issuer.secretKey.subarray(0,32))]),format:'der',type:'pkcs8'});
       return {proof:{...proof,accessory:[...proof.accessory],hair:[...proof.hair]},message:message.toString('base64'),
         signature:crypto.sign(null,message,privateKey).toString('base64'),attestor:issuer.publicKey.toBase58()};

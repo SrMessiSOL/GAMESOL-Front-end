@@ -22,7 +22,10 @@ test('commander avatar is available inside both game views with ownership-backed
   assert.match(ui, /export function CommanderAvatar\(/);
   assert.match(ui, /flagship \? <NftImage asset=\{flagship\}/);
   assert.match(ui, /result\.assets\.some\(\(asset\) => asset\.id === selected\)/);
-  assert.match(ui, /savedPreference\(selectionKey\(account\.address\)\)/);
+  assert.match(ui, /fetchCommanderIdentity\(binding\.game\.getConnection\(\), binding\.commander\)/);
+  assert.match(ui, /saveCommanderSelection\(active\.game, active\.commander/);
+  assert.doesNotMatch(ui, /selectionKey|cryptoufos:cosmetic/);
+  assert.match(game, /bindGame\(client, publicKey\?\.toBase58\(\)/);
   assert.match(game, /createPortal\(<CommanderAvatarDialog/);
   assert.equal((game.match(/setAvatarPickerOpen\(true\)/g) || []).length, 2);
   assert.match(read('PlanetWorld.tsx'), /<CommanderAvatar fallback=\{wallet\.label/);
@@ -86,9 +89,9 @@ test('direct holding-wallet connection calls connect only, never signing', async
   assert.equal(module.exports.holdingAccount([]), null);
   const ui = fs.readFileSync(require('node:path').join(__dirname, '../src/CryptoUfos.tsx'), 'utf8');
   assert.doesNotMatch(ui, /DialogManager|useLazorWallet|passkeyProof|holdingSignature|linkToken/);
-  const galleryFlow = ui.slice(ui.indexOf('const connect ='), ui.indexOf('const verifyUtility ='));
+  const galleryFlow = ui.slice(ui.indexOf('const connect ='), ui.indexOf('const refresh ='));
   assert.doesNotMatch(galleryFlow, /signMessage|ufo-challenge|ufo-verify/);
-  assert.match(ui, /const verifyUtility = async/);
+  assert.match(ui, /const verifyUtility = .*signOwnership\(commander, asset, 'expedition'\)/);
   assert.doesNotMatch(ui, /action: 'collection'|The collection|collectionBusy|setCollection/);
   assert.match(ui, /const assets = nft\.link\?\.assets \?\? \[\]/);
 });

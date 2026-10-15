@@ -20,8 +20,8 @@ function setup() {
   const configPda=PublicKey.findProgramAddressSync([Buffer.from('ufo_config')],utility.PROGRAM)[0];
   const rpc={getGenesisHash:async()=>state.genesis,getAccountInfo:async key=>key.equals(configPda)?{owner:utility.PROGRAM,data:Buffer.concat([config.subarray(0,40),Buffer.from([state.enabled?1:0])])}:state.loadout};
   const service=utility.createAttestationService({env:{GAMESOL_NFT_LINK_SECRET:'test-only-secret-at-least-thirty-two-characters',GAMESOL_UFO_ATTESTOR_KEY:Buffer.from(issuer.secretKey).toString('base64')},connection:rpc,das:async()=>state.asset,now:()=>state.now});
-  async function authorize() {
-    const challenge=await service({action:'ufo-challenge',commander,owner,asset:asset.id},origin);
+  async function authorize(purpose) {
+    const challenge=await service({action:'ufo-challenge',commander,owner,asset:asset.id,purpose},origin);
     const signature=crypto.sign(null,Buffer.from(challenge.message),holder.privateKey).toString('base64');
     return {...await service({action:'ufo-verify',challengeToken:challenge.challengeToken,signature},origin),challenge,signature};
   }
@@ -36,6 +36,33 @@ function loadFrontend() {
   return mod.exports;
 }
 const frontend=loadFrontend();
+
+test('avatar authorization and independent nonce cannot be substituted for expedition utility',async()=>{
+  const ctx=setup();
+  const expedition=await ctx.authorize();
+  await assert.rejects(ctx.service({action:'ufo-commander-attest',utilityToken:expedition.utilityToken},origin),/different action/);
+  const avatar=await ctx.authorize('commander');
+  assert.match(avatar.challenge.message,/Save my commander avatar/);
+  await assert.rejects(ctx.service({action:'ufo-attest',utilityToken:avatar.utilityToken},origin),/different action/);
+  const data=Buffer.alloc(120);utility.discriminator('CommanderIdentity').copy(data);new PublicKey(ctx.commander).toBuffer().copy(data,8);data.writeBigUInt64LE(19n,40);
+  ctx.state.loadout={owner:utility.PROGRAM,data};
+  const result=await ctx.service({action:'ufo-commander-attest',utilityToken:avatar.utilityToken,nonce:'999'},origin);
+  assert.equal(result.proof.nonce,'19');
+  assert(Buffer.from(result.message,'base64').equals(utility.attestationMessage(ctx.commander,result.proof,'commander')));
+  assert(!Buffer.from(result.message,'base64').equals(utility.attestationMessage(ctx.commander,result.proof)));
+  const instructions=await frontend.commanderIdentityInstructions(ctx.commander,'set',result);
+  assert.equal(instructions[1].keys.length,6);
+  assert.equal(instructions[1].data.length,154);
+  await assert.rejects(frontend.ufoInstructions(ctx.commander,'start',result),/another game account/);
+  await assert.rejects(frontend.commanderIdentityInstructions(ctx.owner,'set',result),/does not authorize/);
+  const read=await frontend.fetchCommanderIdentity({getAccountInfo:async()=>ctx.state.loadout},ctx.commander);
+  assert.equal(read.nonce,19n);
+  assert.equal((await frontend.commanderIdentityInstructions(ctx.commander,'clear'))[0].keys.length,2);
+  ctx.state.loadout.data=Buffer.alloc(119);
+  await assert.rejects(ctx.service({action:'ufo-commander-attest',utilityToken:avatar.utilityToken},origin),/Invalid on-chain/);
+  ctx.state.asset={...ctx.asset,ownership:{owner:ctx.commander}};
+  await assert.rejects(ctx.service({action:'ufo-commander-attest',utilityToken:avatar.utilityToken},origin),/no longer owned/);
+});
 
 test('holder signature activates only domain-bound UFO utility, never a Lazor signature',async()=>{
   const ctx=setup(); const auth=await ctx.authorize();

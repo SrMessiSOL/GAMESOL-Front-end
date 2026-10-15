@@ -1417,7 +1417,7 @@ function empireWorldSummary(state: PlayerState, nowTs: number) {
 }
 
 export default function UniverseGame() {
-  const { flagship } = useCryptoUfos();
+  const { flagship, bindGame } = useCryptoUfos();
   const productionPreview = typeof window !== "undefined" && window.location.pathname === "/next";
   const { connection } = useConnection();
   const { publicKey } = useWallet();
@@ -1560,6 +1560,7 @@ export default function UniverseGame() {
       : null,
     [anchorWallet, client, connection],
   );
+  useEffect(() => bindGame(client, publicKey?.toBase58() ?? ''), [bindGame, client, publicKey]);
   useEffect(() => {
     if (!client) return;
     client.setGameplayVaultExecutor(passkey.executor);

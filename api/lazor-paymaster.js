@@ -45,7 +45,7 @@ const UFO_DOMAIN = Buffer.from('gamesol:ufo:devnet:v1');
 const UFO_PROGRAM = require('../server/ufo-attestations.cjs').PROGRAM;
 const UFO_COLLECTION = new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb');
 const UFO_ISSUER = new PublicKey('9XEL6rVQ2GK85ic1j2Nf6kykybsAtsP8nYzNnNCMun4a');
-const UFO_ACTIONS = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot'].map(name => crypto.createHash('sha256').update(`global:${name}`).digest().subarray(0,8));
+const UFO_ACTIONS = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot', 'set_commander_identity'].map(name => crypto.createHash('sha256').update(`global:${name}`).digest().subarray(0,8));
 const UFO_LOOKUP = require('../src/ufo-lookup-table.json');
 let cachedUfoTable = null;
 
@@ -87,19 +87,23 @@ async function fetchTransactionTables(connection, message) {
 
 function assertUfoPrecompile(instruction) {
   const data = Buffer.from(instruction.data);
-  const messageLength = UFO_DOMAIN.length + 32 * 5 + 8 + 2 + 32 * 2 + 8;
+  const commanderDomain = Buffer.from('gamesol:commander:devnet:v1');
+  const domain = data.subarray(112, 112 + commanderDomain.length).equals(commanderDomain) ? commanderDomain : UFO_DOMAIN;
+  const messageLength = domain.length + 32 * 5 + 8 + 2 + 32 * 2 + 8;
   if (instruction.accountKeyIndexes.length || data.length !== 112 + messageLength || data[0] !== 1 || data[1] !== 0
     || data.readUInt16LE(2) !== 48 || data.readUInt16LE(4) !== 65535
     || data.readUInt16LE(6) !== 16 || data.readUInt16LE(8) !== 65535
     || data.readUInt16LE(10) !== 112 || data.readUInt16LE(12) !== messageLength || data.readUInt16LE(14) !== 65535
     || !data.subarray(16,48).equals(UFO_ISSUER.toBuffer())
-    || !data.subarray(112,112+UFO_DOMAIN.length+64).equals(Buffer.concat([UFO_DOMAIN,UFO_PROGRAM.toBuffer(),UFO_COLLECTION.toBuffer()]))) {
+    || !data.subarray(112,112+domain.length+64).equals(Buffer.concat([domain,UFO_PROGRAM.toBuffer(),UFO_COLLECTION.toBuffer()]))) {
     throw new Error('Only canonical GAMESOL UFO ownership proofs may be sponsored.');
   }
+  return domain.equals(commanderDomain) ? 'commander' : 'expedition';
 }
 const rateWindows = new Map();
 const RENT_SPONSOR_DISCRIMINATOR = Buffer.from([87, 113, 100, 97, 218, 156, 201, 21]);
 const RENT_CREATING_DISCRIMINATORS = [
+  crypto.createHash('sha256').update('global:set_commander_identity').digest().subarray(0,8),
   crypto.createHash('sha256').update('global:start_ufo_expedition').digest().subarray(0,8),
   // Permanent player + worlds.
   Buffer.from([189, 138, 205, 113, 18, 169, 30, 95]),
@@ -362,6 +366,8 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   let hasLazorInstruction = false;
   let ufoPrecompiles = 0;
   let hasUfoAction = false;
+  let proofPurpose = null;
+  let hasCommanderAction = false;
   let passkeyPrecompiles = 0;
   let executeCount = 0;
   let lazorCount = 0;
@@ -378,7 +384,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
       throw new Error(`Program ${programAddress} is not allowed by the GAMESOL devnet sponsor.`);
     }
     if (program.equals(Ed25519Program.programId)) {
-      assertUfoPrecompile(instruction);
+      proofPurpose = assertUfoPrecompile(instruction);
       if (++ufoPrecompiles > 1 || hasLazorInstruction) throw new Error('UFO proof must execute once before the Lazor command.');
     }
     if (program.equals(SECP256R1_PROGRAM_ID)) {
@@ -395,7 +401,8 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
         executeCount += 1;
         const innerInstructions = parseCompactInstructions(message, instruction, keys);
         hasCompressedStore = isCompressedStoreBundle(innerInstructions, sponsor);
-        hasUfoAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && UFO_ACTIONS.some(discriminator => isDiscriminator(inner.data,discriminator)));
+        hasUfoAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && UFO_ACTIONS.slice(0,3).some(discriminator => isDiscriminator(inner.data,discriminator)));
+        hasCommanderAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && isDiscriminator(inner.data,UFO_ACTIONS[3]));
         const rentPolicy = approvedRentPolicy(innerInstructions);
         if (rentPolicy) {
           approvedRentBundle = true;
@@ -407,8 +414,9 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
     }
   }
   if (!hasLazorInstruction) throw new Error("A sponsored transaction must contain a Lazor wallet instruction.");
-  if (ufoPrecompiles && !hasUfoAction) throw new Error('UFO ownership proof requires a matching UFO gameplay action.');
-  if (tables.length && !(ufoPrecompiles && hasUfoAction)
+  const matchingUfoAction = proofPurpose === 'commander' ? hasCommanderAction : hasUfoAction;
+  if (ufoPrecompiles && !matchingUfoAction) throw new Error('UFO ownership proof requires a matching UFO gameplay action.');
+  if (tables.length && !(ufoPrecompiles && matchingUfoAction)
     && !(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedStore)) {
     throw new Error('Address tables are restricted to verified UFO gameplay or passkey store purchases.');
   }

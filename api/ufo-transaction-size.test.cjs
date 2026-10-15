@@ -4,6 +4,29 @@ const { AddressLookupTableAccount, Keypair } = require('@solana/web3.js');
 const { _test } = require('./lazor-paymaster.js');
 const { ufoTransactionFixture } = require('../server/ufo-transaction-fixture.cjs');
 
+test('commander save fits the real Lazor session packet with bounded identity rent', async () => {
+  for (const fees of [false, true]) {
+    const f = await ufoTransactionFixture('set', fees);
+    assert(f.compressed.serialize().length <= 1232);
+    const policy = _test.assertTransactionPolicy(f.compressed, f.sponsor, [f.table]);
+    assert.equal(policy.approvedRentBundle, true);
+    assert.equal(f.inner[1].keys.length, 6);
+  }
+});
+
+test('sponsor refuses proof domains paired with the other action', async () => {
+  const crypto = require('node:crypto');
+  for (const action of ['set', 'start']) {
+    const f = await ufoTransactionFixture(action);
+    const name = action === 'set' ? 'start_ufo_expedition' : 'set_commander_identity';
+    const wrong = crypto.createHash('sha256').update(`global:${name}`).digest().subarray(0,8);
+    const outer = f.compressed.message.compiledInstructions[1];
+    const index = Buffer.from(outer.data).indexOf(f.inner[1].data);
+    assert(index >= 0); wrong.copy(outer.data, index);
+    assert.throws(() => _test.assertTransactionPolicy(f.compressed, f.sponsor, [f.table]), /matching/);
+  }
+});
+
 test('real Lazor session launch exceeds the packet limit without compression and fits with the pinned table', async () => {
   const f = await ufoTransactionFixture();
   assert.equal(f.plain.serialize().length, 1335);

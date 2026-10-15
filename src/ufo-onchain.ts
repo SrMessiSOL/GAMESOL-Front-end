@@ -26,6 +26,41 @@ export async function fetchUfoLoadout(connection: Connection, commander: string)
   if (state.commander !== commander) throw new Error('UFO loadout belongs to another commander.');
   return state;
 }
+export type CommanderIdentity = { commander: string; nonce: bigint; owner: string; asset: string; verifiedAt: bigint };
+export async function fetchCommanderIdentity(connection: Connection, commander: string): Promise<CommanderIdentity | null> {
+  const account = await connection.getAccountInfo(ufoPda('commander_identity', commander), 'confirmed');
+  if (!account) return null;
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('account:CommanderIdentity'));
+  const data = account.data;
+  if (!account.owner.equals(GAME_STATE_PROGRAM_ID) || data.length !== 120
+    || !data.subarray(0, 8).equals(Buffer.from(hash).subarray(0, 8))
+    || !new PublicKey(data.subarray(8, 40)).equals(new PublicKey(commander))) {
+    throw new Error('Invalid on-chain commander identity.');
+  }
+  return { commander, nonce: data.readBigUInt64LE(40), owner: new PublicKey(data.subarray(48, 80)).toBase58(),
+    asset: new PublicKey(data.subarray(80, 112)).toBase58(), verifiedAt: data.readBigInt64LE(112) };
+}
+
+export async function commanderIdentityInstructions(commander: string, action: 'set' | 'clear', attestation?: UfoAttestation) {
+  const player = new PublicKey(commander);
+  const identity = { pubkey: ufoPda('commander_identity', commander), isSigner: false, isWritable: true };
+  if (action === 'clear') return [new TransactionInstruction({ programId: GAME_STATE_PROGRAM_ID,
+    keys: [{ pubkey: player, isSigner: true, isWritable: false }, identity],
+    data: await instructionData('clear_commander_identity', Buffer.alloc(0)) })];
+  if (!attestation) throw new Error('Missing commander ownership proof.');
+  const proof = proofData(attestation);
+  const expected = Buffer.concat([Buffer.from('gamesol:commander:devnet:v1'), GAME_STATE_PROGRAM_ID.toBuffer(),
+    new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb').toBuffer(), player.toBuffer(), proof]);
+  if (!Buffer.from(attestation.message, 'base64').equals(expected)) throw new Error('Ownership proof does not authorize this commander selection.');
+  return [Ed25519Program.createInstructionWithPublicKey({ publicKey: new PublicKey(attestation.attestor).toBytes(),
+    message: expected, signature: Buffer.from(attestation.signature, 'base64') }), new TransactionInstruction({
+    programId: GAME_STATE_PROGRAM_ID, keys: [{ pubkey: player, isSigner: true, isWritable: true },
+      { pubkey: ufoPda('player_profile', commander), isSigner: false, isWritable: false },
+      { pubkey: ufoPda('ufo_config'), isSigner: false, isWritable: false }, identity,
+      { pubkey: SYSVAR_INSTRUCTIONS_PUBKEY, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }],
+    data: await instructionData('set_commander_identity', proof) })];
+}
 async function instructionData(name: string, bytes: Buffer) {
   const hash = await crypto.subtle.digest('SHA-256',new TextEncoder().encode(`global:${name}`));
   return Buffer.concat([Buffer.from(hash).subarray(0,8),bytes]);
@@ -37,20 +72,20 @@ export async function isUfoSessionBundle(instructions: TransactionInstruction[],
   if (!verification.programId.equals(Ed25519Program.programId) || verification.keys.length
     || !action.programId.equals(GAME_STATE_PROGRAM_ID) || !action.keys[0]?.pubkey.equals(commander)
     || !action.keys[0]?.isSigner) return false;
-  const names = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot'];
+  const names = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot', 'set_commander_identity'];
   const discriminators = await Promise.all(names.map(name => instructionData(name, Buffer.alloc(0))));
   const kind = discriminators.findIndex(bytes => action.data.subarray(0, 8).equals(bytes));
   if (kind < 0 || action.data.length !== (kind === 1 ? 156 : 154)
     || (kind === 1 && (action.data[154] > 2 || action.data[155] > 1))) return false;
   if (instructions.length === 3) {
     const rent = instructions[1];
-    if (kind !== 0 || !rent.programId.equals(GAME_STATE_PROGRAM_ID) || rent.data.length !== 16
+    if ((kind !== 0 && kind !== 3) || !rent.programId.equals(GAME_STATE_PROGRAM_ID) || rent.data.length !== 16
       || !rent.data.subarray(0, 8).equals(await instructionData('sponsor_account_rent', Buffer.alloc(0)))
       || rent.keys.length !== 3 || !rent.keys[0].isSigner || !rent.keys[1].pubkey.equals(commander)
       || !rent.keys[2].pubkey.equals(SystemProgram.programId)) return false;
   }
   const data = Buffer.from(verification.data);
-  const message = Buffer.concat([Buffer.from('gamesol:ufo:devnet:v1'), GAME_STATE_PROGRAM_ID.toBuffer(),
+  const message = Buffer.concat([Buffer.from(kind === 3 ? 'gamesol:commander:devnet:v1' : 'gamesol:ufo:devnet:v1'), GAME_STATE_PROGRAM_ID.toBuffer(),
     new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMHTb').toBuffer(), commander.toBuffer(), action.data.subarray(8, 154)]);
   return data.length === 112 + message.length && data[0] === 1 && data[1] === 0
     && data.readUInt16LE(2) === 48 && data.readUInt16LE(4) === 65535

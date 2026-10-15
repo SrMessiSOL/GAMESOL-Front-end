@@ -20,7 +20,7 @@ test('cosmetic inventory decoder and equipment come from a program-owned command
 test('ownership refresh does not revoke a still-connected wallet utility message',()=>{
   const source=read('CryptoUfos.tsx');
   const refresh=source.slice(source.indexOf('const refresh ='),source.indexOf('const assign ='));
-  const utility=source.slice(source.indexOf('const verifyUtility ='),source.indexOf('return <Context.Provider'));
+  const utility=source.slice(source.indexOf('const signOwnership ='),source.indexOf('const verifyUtility ='));
   assert.match(utility,/verificationRevision\.current/);
   assert.doesNotMatch(utility,/\brevision\.current/);
   assert.match(refresh,/invalidateVerification\(\)/);
