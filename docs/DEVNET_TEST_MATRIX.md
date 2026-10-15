@@ -108,6 +108,14 @@ with rent. TypeScript passed; 180 full-suite tests plus the separately added
 client-route test passed (181 total). Actual paid creation and membership
 remain unexecuted pending publication and the user's new passkey approval.
 
+Code commit `9eac84a` was pushed to the existing branch. Production deployment
+`https://frontend-d48xoches-srmessisols-projects.vercel.app` completed its cloud
+TypeScript/Vite build and the public `chained-universe.vercel.app` alias was
+assigned explicitly. Live `/app` returned 200 with `index-CVx65aDH.js`, and the
+live sponsor endpoint returned the expected existing sponsor. Actual alliance
+creation and membership still require the user-approved game transactions;
+deployment and synthetic packet tests do not establish their completion.
+
 The user funded the game wallet and authorized exactly 100 devnet USDC plus
 5,000 devnet ANTIMATTER for one alliance and the NewAccount membership test.
 Verified configured-mint balances: 110.5 USDC and 5,000,000 ANTIMATTER.
