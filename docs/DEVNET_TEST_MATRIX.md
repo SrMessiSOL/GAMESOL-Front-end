@@ -85,7 +85,48 @@ and defender Quick Play sessions were separately approved by the user.
 
 ### Remaining gates at this checkpoint
 
+Latest alliance result: paid creation, NewAccount application, leader approval,
+application closure and regular-member UI checks are complete on devnet. See
+the finalized evidence below. Alliance contributions/upgrades, rejection,
+leave/expel/leadership transfer and governance execution are NOT certified by
+this membership test. Market buyer settlement and planet sales also remain open.
+
 #### Approved alliance creation packet blocker
+
+Live retry succeeded after the user's owner-passkey approval. Finalized
+transaction `2X7373JkuZMYPG1E1xstP1BKRLrnNndKR8j9qmf78tti5youz4gZFomALyZifQuuzYiQ2w3YtziojaJSNUjX8bbG`
+has `meta.err === null`, `SponsorAccountRent` and `CreateAlliance` logs.
+Program-owned alliance `7EJgwFu4wckh1wY2fxCfmfvi7EFmeEorMuwYQA8iC4Kp`
+is visible in the actual game as `GAMESOL Devnet QA`, one member. Token deltas
+confirm exactly 100 USDC and 5,000 ANTIMATTER charged: 2,500 AM transferred
+to the configured DAO treasury and 2,500 burned. Remaining founder balances
+are 10.5 USDC and 4,995,000 AM. No second paid creation was attempted.
+NewAccount membership request and leader approval are next, with a separate
+sign-in so the original leader session remains intact.
+
+Membership follow-up completed: NewAccount `Fv9xRN5wqkQMWUqgDL7LPfXmhWkXnZS9ttcXW9oyRvdd`
+requested membership with finalized successful transaction
+`4ABoJtLGMoUZKVZFuPk2nToCLTbnmMuwDqcF9kScMwE5kWMojvTTnwfqnKDL7CweWaxTb7QVa8MV7d9QiMBPQ8LD`.
+Independent read before approval confirmed the program-owned request existed
+and membership did not. The actual applicant UI showed pending approval.
+The user approved from the original leader account; finalized successful
+transaction `4Mu3dJhkxu16uXn9q4VrYhTC2H5vHMqTe5DNb2gtNsGt53FBx2g7xu8erqbe4unSPmoMnwEXeWP4xsURCdWuysnm`
+logs `SponsorAccountRent` and `ApproveJoinRequest`, with no token-balance entries.
+Independent current read confirms request closed, membership authority equals
+NewAccount, alliance matches the tested alliance, role 1 (regular member),
+and alliance member count 2. Both leader and member UIs show the correct roster.
+Member UI disables all four leader-only infrastructure upgrades and omits
+approve/reject, expel and leadership-transfer controls. These UI checks do not
+replace adversarial on-chain permission tests. No further token spend was made.
+
+Known UX issue retained for follow-up: immediately after signing into the new
+origin and enabling Quick Play, membership attempts still failed locally with
+"Passkey vault is not active." On-chain player/profile/vault records were
+present and valid (self-vault, not revoked, no expiry). One page refresh restored
+the active execution path and allowed the request. The precise async client
+state race is not yet proven or fixed. The alliance panels also required
+reopening to load changes made by the other account. Do not classify this as
+a clean first-session UX pass.
 
 Compression follow-up: the user approved a dedicated frozen table, at most
 0.02 test SOL from the existing sponsor, and tested GitHub/Vercel publication.
