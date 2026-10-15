@@ -75,6 +75,21 @@ function createVerifiedIpfsFetch({ fetchImpl = fetch } = {}) {
               signal.throwIfAborted();
               if (totalBytes > MAX_TOTAL_BYTES) throw new Error('NFT block byte limit exceeded.');
               if (candidate?.hash.equals(Buffer.from(cid.multihash.digest))) return candidate.bytes;
+              // Directory routing can work even when a gateway cannot serve a
+              // leaf CID. The alternate bytes still have to match that leaf.
+              try {
+                const response = await fetchImpl(`https://trustless-gateway.link/ipfs/${root.toV1()}/${url.pathname.slice(1)}`, {
+                  headers: { accept: 'application/octet-stream' }, redirect: 'error',
+                  signal: AbortSignal.any([signal, AbortSignal.timeout(12000)]),
+                });
+                const bytes = await boundedBody(response, MAX_BLOCK_BYTES);
+                totalBytes += bytes.length;
+                if (totalBytes > MAX_TOTAL_BYTES) throw new Error('NFT block byte limit exceeded.');
+                if (createHash('sha256').update(bytes).digest().equals(Buffer.from(cid.multihash.digest))) return bytes;
+              } catch (error) {
+                signal.throwIfAborted();
+                if (totalBytes > MAX_TOTAL_BYTES) throw error;
+              }
             }
             let lastError;
             for (const gateway of GATEWAYS) {

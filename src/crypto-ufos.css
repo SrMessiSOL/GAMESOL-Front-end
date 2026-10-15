@@ -9,6 +9,9 @@
 .commander-avatar{display:inline-flex;flex:0 0 auto;width:40px;height:40px;align-items:center;justify-content:center;overflow:hidden;border-radius:5px;background:#18232c;vertical-align:middle}
 .commander-avatar img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
 .commander-avatar .nft-image-missing{font-size:8px;line-height:1.2;text-align:center}
+.nft-flagship-art,.commander-avatar{position:relative}
+.nft-image-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#142029;color:#b5c9d3;font:11px Arial,Helvetica,sans-serif;pointer-events:none}
+.commander-avatar .nft-image-loading>span{display:none}
 .ug-wallet-trigger{display:flex;align-items:center;gap:10px}
 .pw-wallet-trigger .commander-avatar{width:32px;height:32px;margin-right:8px}
 .nft-sidebar{display:flex;flex-direction:column;align-self:start}

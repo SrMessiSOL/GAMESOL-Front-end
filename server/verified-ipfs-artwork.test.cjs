@@ -106,6 +106,20 @@ test('forged full-path response cannot bypass the resolved raw leaf hash', async
   await assert.rejects(fetchArtwork(data.resource), /CID verification/);
 });
 
+test('alternate directory gateway recovers a missing original without trusting its bytes', async () => {
+  const data = await fixture({ chunked: false });
+  const fetchArtwork = createVerifiedIpfsFetch({ fetchImpl: async (url, options) => {
+    if (options.headers.accept === 'application/octet-stream') {
+      return new URL(url).hostname === 'gateway.pinata.cloud'
+        ? new Response('unavailable', { status: 503 }) : new Response(data.image);
+    }
+    const cid = requestedCid(url);
+    assert.equal(cid, data.root, 'standalone leaf should not be needed');
+    return new Response(data.blocks.get(cid));
+  } });
+  assert.deepEqual(Buffer.from(await (await fetchArtwork(data.resource)).arrayBuffer()), data.image);
+});
+
 test('artwork retrieval rejects invalid resources and respects cancellation', async () => {
   const data = await fixture();
   const fetchArtwork = createVerifiedIpfsFetch({ fetchImpl: () => { throw Error('must not fetch'); } });
