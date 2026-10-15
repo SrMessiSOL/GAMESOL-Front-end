@@ -47,16 +47,19 @@ const UFO_COLLECTION = new PublicKey('53UVubjHQpC4RmUnDGU1PV3f2bYFk6GcWb3SgtYFMH
 const UFO_ISSUER = new PublicKey('9XEL6rVQ2GK85ic1j2Nf6kykybsAtsP8nYzNnNCMun4a');
 const UFO_ACTIONS = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot', 'set_commander_identity'].map(name => crypto.createHash('sha256').update(`global:${name}`).digest().subarray(0,8));
 const UFO_LOOKUP = require('../src/ufo-lookup-table.json');
-let cachedUfoTable = null;
+const ALLIANCE_LOOKUP = require('../src/alliance-lookup-table.json');
+const cachedTables = new Map();
+const lookupManifest = key => [UFO_LOOKUP, ALLIANCE_LOOKUP].find(item => item.table === key.toBase58());
 
 function resolvedTransactionKeys(message, tables = []) {
   if (!message.addressTableLookups?.length) return message.staticAccountKeys;
   if (message.addressTableLookups.length !== 1 || tables.length !== 1) throw new Error('Only the verified UFO address table may be used.');
   const lookup = message.addressTableLookups[0];
   const table = tables[0];
-  if (lookup.accountKey.toBase58() !== UFO_LOOKUP.table || table.key.toBase58() !== UFO_LOOKUP.table
-    || table.state.authority || !table.isActive() || table.state.addresses.length !== UFO_LOOKUP.addresses.length
-    || table.state.addresses.some((address, index) => address.toBase58() !== UFO_LOOKUP.addresses[index])) {
+  const manifest = lookupManifest(lookup.accountKey);
+  if (!manifest || !table.key.equals(lookup.accountKey)
+    || table.state.authority || !table.isActive() || table.state.addresses.length !== manifest.addresses.length
+    || table.state.addresses.some((address, index) => address.toBase58() !== manifest.addresses[index])) {
     throw new Error('UFO address table failed verification.');
   }
   const indexes = [...lookup.writableIndexes, ...lookup.readonlyIndexes];
@@ -71,18 +74,19 @@ function resolvedTransactionKeys(message, tables = []) {
 
 async function fetchTransactionTables(connection, message) {
   if (!message.addressTableLookups?.length) return [];
-  if (message.addressTableLookups.length !== 1 || message.addressTableLookups[0].accountKey.toBase58() !== UFO_LOOKUP.table) {
+  const manifest = lookupManifest(message.addressTableLookups[0].accountKey);
+  if (message.addressTableLookups.length !== 1 || !manifest) {
     throw new Error('Only the verified UFO address table may be used.');
   }
-  if (!cachedUfoTable) {
-    const key = new PublicKey(UFO_LOOKUP.table);
+  if (!cachedTables.has(manifest.table)) {
+    const key = new PublicKey(manifest.table);
     const account = await connection.getAccountInfo(key, 'confirmed');
     if (!account || !account.owner.equals(AddressLookupTableProgram.programId)) throw new Error('UFO address table is unavailable.');
     const table = new AddressLookupTableAccount({ key, state: AddressLookupTableAccount.deserialize(account.data) });
     resolvedTransactionKeys(message, [table]);
-    cachedUfoTable = table;
+    cachedTables.set(manifest.table, table);
   }
-  return [cachedUfoTable];
+  return [cachedTables.get(manifest.table)];
 }
 
 function assertUfoPrecompile(instruction) {
@@ -358,6 +362,39 @@ function isCompressedStoreBundle(inner, sponsor) {
     && rent.accounts[2].equals(SystemProgram.programId);
 }
 
+function isCompressedAllianceBundle(inner, sponsor) {
+  if (inner.length < 1 || inner.length > 2) return false;
+  const create = inner.at(-1);
+  const data = create.data;
+  if (!create.programId.equals(GAME_STATE_PROGRAM_ID) || create.accounts.length !== 15
+    || !isDiscriminator(data, Buffer.from([201, 92, 183, 64, 131, 82, 174, 203]))) return false;
+  let offset = 8;
+  const strings = [];
+  for (const max of [32, 3, 160]) {
+    if (offset + 4 > data.length) return false;
+    const size = data.readUInt32LE(offset); offset += 4;
+    if (size > max || offset + size > data.length) return false;
+    const bytes = data.subarray(offset, offset + size);
+    const value = bytes.toString('utf8');
+    if (!Buffer.from(value).equals(bytes)) return false;
+    strings.push(value); offset += size;
+  }
+  if (offset !== data.length || !strings[0].trim() || strings[0] !== strings[0].trim() || !/^[A-Z]{3}$/.test(strings[1])) return false;
+  const owner = create.accounts[0];
+  const pda = (seed, account) => PublicKey.findProgramAddressSync([Buffer.from(seed), ...(account ? [account.toBuffer()] : [])], GAME_STATE_PROGRAM_ID)[0];
+  const am = new PublicKey(ALLIANCE_LOOKUP.antimatterMint), usdc = new PublicKey(ALLIANCE_LOOKUP.usdcMint);
+  const ata = mint => PublicKey.findProgramAddressSync([owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()], ASSOCIATED_TOKEN_PROGRAM_ID)[0];
+  const alliance = pda('alliance', owner);
+  const expected = [owner, pda('player_profile', owner), alliance, pda('alliance_metadata', alliance), pda('alliance_membership', owner),
+    pda('game_config'), pda('store_config'), am, ata(am), new PublicKey(ALLIANCE_LOOKUP.treasuryAntimatter),
+    usdc, ata(usdc), new PublicKey(ALLIANCE_LOOKUP.treasuryUsdc), TOKEN_PROGRAM_ID, SystemProgram.programId];
+  if (expected.some((key, index) => !create.accounts[index].equals(key))) return false;
+  if (inner.length === 1) return true;
+  const rent = inner[0];
+  return Boolean(approvedRentPolicy(inner)) && rent.data.length === 16 && rent.accounts.length === 3
+    && rent.accounts[0].equals(sponsor.publicKey) && rent.accounts[1].equals(owner) && rent.accounts[2].equals(SystemProgram.programId);
+}
+
 function assertTransactionPolicy(transaction, sponsor, tables = []) {
   const message = transaction.message;
   const keys = resolvedTransactionKeys(message, tables);
@@ -372,6 +409,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   let executeCount = 0;
   let lazorCount = 0;
   let hasCompressedStore = false;
+  let hasCompressedAlliance = false;
   let maximumDebit = MAX_ROUTINE_DEBIT_LAMPORTS;
   let approvedRentBundle = false;
   let approvedRentOwnerAddresses = [];
@@ -401,6 +439,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
         executeCount += 1;
         const innerInstructions = parseCompactInstructions(message, instruction, keys);
         hasCompressedStore = isCompressedStoreBundle(innerInstructions, sponsor);
+        hasCompressedAlliance = isCompressedAllianceBundle(innerInstructions, sponsor);
         hasUfoAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && UFO_ACTIONS.slice(0,3).some(discriminator => isDiscriminator(inner.data,discriminator)));
         hasCommanderAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && isDiscriminator(inner.data,UFO_ACTIONS[3]));
         const rentPolicy = approvedRentPolicy(innerInstructions);
@@ -416,7 +455,11 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   if (!hasLazorInstruction) throw new Error("A sponsored transaction must contain a Lazor wallet instruction.");
   const matchingUfoAction = proofPurpose === 'commander' ? hasCommanderAction : hasUfoAction;
   if (ufoPrecompiles && !matchingUfoAction) throw new Error('UFO ownership proof requires a matching UFO gameplay action.');
-  if (tables.length && !(ufoPrecompiles && matchingUfoAction)
+  if (tables.length && tables[0].key.toBase58() === ALLIANCE_LOOKUP.table) {
+    if (!(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedAlliance)) {
+      throw new Error('Alliance address table requires one canonical passkey-approved alliance creation.');
+    }
+  } else if (tables.length && !(ufoPrecompiles && matchingUfoAction)
     && !(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedStore)) {
     throw new Error('Address tables are restricted to verified UFO gameplay or passkey store purchases.');
   }

@@ -15,7 +15,7 @@ visit(source);
 assert.ok(launch);
 const code = ts.transpileModule(`module.exports = ${launch};`, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS } }).outputText;
 
-async function exercise(missionType, owner, lookupFails = false) {
+async function exercise(missionType, owner, lookupFails = false, overrides = {}) {
   const calls = { submitted: 0, lookups: 0, error: '', checking: false };
   const module = { exports: {} };
   const context = {
@@ -27,7 +27,7 @@ async function exercise(missionType, owner, lookupFails = false) {
     game: { isCoordFree: async () => false, getPublicPlanetInfoByCoordinates: async () => {
       calls.lookups++;
       if (lookupFails) throw Error('Target lookup unavailable');
-      return owner === null ? null : { owner, protectionUntilTs: 0, lastAttackedTs: 0 };
+      return owner === null ? null : { owner, protectionUntilTs: 0, lastAttackedTs: 0, ...overrides.target };
     } },
     setMissionChecking: value => { calls.checking = value; },
     setMissionError: value => { calls.error = value; },
@@ -36,6 +36,10 @@ async function exercise(missionType, owner, lookupFails = false) {
     ATTACK_LAUNCH_COOLDOWN_SECONDS: 0, TARGET_ATTACK_COOLDOWN_SECONDS: 0,
     FLEET_LAUNCH_KEY: { lightFighter: 'lf' }, run: async () => { calls.submitted++; },
   };
+  if (overrides.ships) context.missionShips = overrides.ships;
+  if (overrides.minimum !== undefined) context.MIN_ATTACK_COMBAT_POINTS = overrides.minimum;
+  if (overrides.targetCooldown !== undefined) context.TARGET_ATTACK_COOLDOWN_SECONDS = overrides.targetCooldown;
+  if (overrides.planet) Object.assign(context.state.planet, overrides.planet);
   vm.runInNewContext(code, context);
   await module.exports();
   return calls;
@@ -64,4 +68,30 @@ test('transport to our other planet remains allowed without hostile owner checks
   const result = await exercise(2, 'our-commander');
   assert.equal(result.submitted, 1);
   assert.equal(result.lookups, 0);
+});
+
+test('protected defender rejects attacks before a wallet command and still permits espionage', async () => {
+  const target = { protectionUntilTs: Math.floor(Date.now() / 1000) + 604800 };
+  const attack = await exercise(1, 'controlled-defender', false, { target });
+  assert.equal(attack.submitted, 0);
+  assert.match(attack.error, /Target is protected/);
+  assert.equal(attack.checking, false);
+  assert.equal((await exercise(6, 'controlled-defender', false, { target })).submitted, 1);
+});
+
+test('combat minimum rejects 19 fighters and permits exactly 20 against an eligible target', async () => {
+  const weak = await exercise(1, 'controlled-defender', false, { ships: { lightFighter: 19 }, minimum: 1000 });
+  assert.equal(weak.submitted, 0);
+  assert.match(weak.error, /fleet too weak/);
+  assert.equal((await exercise(1, 'controlled-defender', false, { ships: { lightFighter: 20 }, minimum: 1000 })).submitted, 1);
+});
+
+test('defender cooldown and attacker unlock reject without submitting', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const cooled = await exercise(1, 'controlled-defender', false, { target: { lastAttackedTs: now }, targetCooldown: 3600 });
+  assert.equal(cooled.submitted, 0);
+  assert.match(cooled.error, /Target cooldown/);
+  const locked = await exercise(1, 'controlled-defender', false, { planet: { attackUnlockedAt: now + 3600 } });
+  assert.equal(locked.submitted, 0);
+  assert.match(locked.error, /Attack launches unlock/);
 });

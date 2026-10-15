@@ -85,6 +85,102 @@ and defender Quick Play sessions were separately approved by the user.
 
 ### Remaining gates at this checkpoint
 
+#### Approved alliance creation packet blocker
+
+Compression follow-up: the user approved a dedicated frozen table, at most
+0.02 test SOL from the existing sponsor, and tested GitHub/Vercel publication.
+Table `75BH1eVqgoUm3UK5bW9GSQgQdsE7QV1Jcsw244xsuqPv` contains 29 pinned
+public addresses and is independently confirmed immutable and active. Creation
+and freeze signatures are preserved in `src/alliance-lookup-table.json`.
+Finalized sponsor debit across both setup transactions totals 5,658,960 lamports
+(0.00565896 test SOL), below the 0.02 cap. The initial WebSocket confirmation
+failed through the HTTP proxy; the already-finalized creation was reconciled
+before freezing with HTTP polling. No duplicate table was created.
+
+The client selects this table only for owner-passkey alliance creation. Sponsor
+policy verifies the exact table, game/profile/alliance PDAs, configured mints,
+user ATAs, treasury destinations, bounded canonical arguments and optional
+matched rent. It rejects unrelated commands, substituted accounts, missing or
+reordered passkeys, repeated wallet executes and mutable/altered tables.
+Existing signature-verified simulation and rent/debit limits remain intact.
+Real-SDK synthetic packet sizes are now 1,055 bytes without rent and 1,078
+with rent. TypeScript passed; 180 full-suite tests plus the separately added
+client-route test passed (181 total). Actual paid creation and membership
+remain unexecuted pending publication and the user's new passkey approval.
+
+The user funded the game wallet and authorized exactly 100 devnet USDC plus
+5,000 devnet ANTIMATTER for one alliance and the NewAccount membership test.
+Verified configured-mint balances: 110.5 USDC and 5,000,000 ANTIMATTER.
+The live creation attempt for `GAMESOL Devnet QA [TST]` stopped locally with
+the Solana transaction-size error; no command was submitted. Independent
+read confirms the expected alliance PDA
+`7EJgwFu4wckh1wY2fxCfmfvi7EFmeEorMuwYQA8iC4Kp` does not exist and both
+token balances are unchanged.
+
+`node server/alliance-transaction-fixture.cjs` reproduces the synthetic real-SDK
+packet: uncompressed serialization exceeds the limit; the existing table
+still yields 1,272 bytes without rent and 1,295 with rent (limit 1,232).
+Fixture signatures are synthetic and never submitted. A dedicated, frozen
+public-address table and scoped client/sponsor representation changes are
+needed before retry; no authority, fee or economy change is necessary.
+For a table with up to 40 addresses, live rent quote is 0.00743712 test SOL,
+excluding setup transaction fees. Setup/publication approval remains pending.
+
+#### October 14 market round trip and alliance gate
+
+The actual published game created one sell offer: 1,000 metal for 1
+ANTIMATTER (1,000,000 base units). The user approved the Lazor owner prompt.
+Finalized successful creation:
+`2nMacMe3FQzH7w6eiM3KDu97Kk1c6vhWtvifLe8PRyZq8paxUCGWh5pd2zAaDJscEwjb2ZRNAMHRmigSD1gRKdi2`.
+Logs include `CreateOffer`, `LockResourcesForMarket` and the exact amount/price.
+The user's second approval cancelled offer 0. Finalized successful cancellation:
+`3NhZnGrPqVStfLQUmmN8bz74SQFnWUXq46u1f7AvnnN4ZEohtUqgL3eFEPDFX2CeSpmNejptSzTYFB943MjzpBZx`.
+Logs include `CancelOffer`, `ReleaseResourcesFromMarket`, and `offer_id=0`.
+Both transactions have no pre/post token-balance entries. The live UI returned
+to zero resource offers, zero personal listings and the released 1,000 metal
+(plus ordinary accrued production). No USDC or ANTIMATTER purchase occurred.
+This certifies resource listing/cancellation, not buyer settlement or planet sales.
+
+The live alliance directory returned zero available alliances and zero requests.
+Creation requires 100 USDC and 5,000 ANTIMATTER; the account displays 11.5 USDC
+and zero ANTIMATTER. The creation button is disabled. No alliance was created,
+no membership requested and no funding, minting, fee change or token spending
+was performed. Creation and membership remain gated on separately approved
+devnet funding; the standing no-more-USDC limit was retained.
+
+#### October 14 combat preparation recheck
+
+Independent reads through the live devnet RPC confirmed the original commander
+has one returned probe, one fighter, one cargo ship, zero active missions and
+zero occupied mission entries. NewAccount remains at `6:35:11`, with no ships
+or defenses and protection until `2026-10-21T19:28:55Z` (16:28:55 Buenos Aires).
+The existing reconnaissance transaction was reread at finalized: successful,
+with the expected 235-byte espionage event. No duplicate espionage was launched.
+After reloading the current public deployment, the actual Activity reports UI
+shows one level-4 espionage report for `9:427:13 -> 6:35:11`, signal/counter
+625/0, resources 515/510/106 and probes 1/1. The old preview's empty report
+history was not reproduced on production. Report text "PROBES RETURNING"
+describes the recorded arrival; the independent current read confirms the
+probe has already returned and its mission slot is clear.
+
+The attack minimum is 1,000 combat points. One fighter provides 50, so 19
+additional fighters were ordered through the actual game command UI using
+57,000 existing metal and 19,000 crystal. Finalized successful transaction:
+`55HJXRAdgRC49pya1oKhqrW8F4U2LuqnM9v5JZ2nnYqvjzcu7udGRHQi2bshkW5YjrtZ7HMAgf6iycvRjJZBWPsu`.
+The independent read shows ship item 2, quantity 19, finish timestamp
+`1792030629` (October 14, 23:17:09 Buenos Aires). These ships are queued,
+not yet collected. The transaction has no pre/post token-balance entries.
+No USDC purchase, ANTIMATTER acceleration, attack launch, protection bypass
+or mainnet action occurred.
+
+The focused frontend preflight suite passes 10 tests, including protected
+targets versus espionage, exactly 19/20 fighters at the combat minimum,
+attacker unlock, target cooldown, same-owner rejection and failed reads.
+These are callback fixture tests, not executed on-chain combat. Actual combat
+resolution, losses/loot, return and battle-report visibility remain pending
+until the controlled defender becomes eligible. No program upgrade is needed
+or authorized to bypass that waiting period.
+
 Controlled combat, fresh ownership-transfer/expiry safeguards,
 market settlement/cancel flows, alliance flows, and bounded deposit/withdrawal
 checks remain separate release gates. Their completion is not implied by this

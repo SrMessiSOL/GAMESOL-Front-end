@@ -11,6 +11,7 @@ import {
 } from "@solana/web3.js";
 import { Buffer } from "buffer";
 import { fetchUfoLookupTable } from './ufo-lookup-table';
+import { fetchAllianceLookupTable } from './alliance-lookup-table';
 import { signWithPopupRecovery, withPreparationTimeout } from './passkey-connect-recovery';
 import {
   createAssociatedTokenAccountInstruction,
@@ -361,13 +362,14 @@ async function sendSponsored(
   instructions: TransactionInstruction[],
   signers: Keypair[] = [],
   initialLatest?: LatestBlockhash,
-  compressStore = false,
+  compressStore: boolean | 'alliance' = false,
 ): Promise<string> {
   const [payer, latest] = await Promise.all([
     getSponsorPayer(),
     initialLatest ? Promise.resolve(initialLatest) : takeLatestBlockhash(rpc),
   ]);
-  const lookupTables = compressStore || instructions.some(instruction => instruction.programId.equals(Ed25519Program.programId))
+  const lookupTables = compressStore === 'alliance' ? [await fetchAllianceLookupTable(rpc, payer)]
+    : compressStore || instructions.some(instruction => instruction.programId.equals(Ed25519Program.programId))
     ? [await fetchUfoLookupTable(rpc, payer)] : [];
   const message = new TransactionMessage({
     payerKey: payer,
@@ -726,7 +728,19 @@ export async function executeWithPlayerSession(
   const displayTransaction = await buildDisplayTransaction(rpc, sponsorPayer, instructions, displayBlockhash.blockhash);
   const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId, displayTransaction);
   const { instructions: wrapped } = resolved.client.finalizeExecute(prepared, response);
-  return sendSponsored(rpc, [...precompiles, ...wrapped], [], displayBlockhash, isStorePurchaseBundle(instructions));
+  return sendSponsored(rpc, [...precompiles, ...wrapped], [], displayBlockhash,
+    isAllianceCreationBundle(instructions) ? 'alliance' : isStorePurchaseBundle(instructions));
+}
+
+function isAllianceCreationBundle(instructions: TransactionInstruction[]): boolean {
+  const create = instructions[instructions.length - 1];
+  if (!create || instructions.length > 2 || !create.programId.equals(GAME_STATE_PROGRAM_ID)
+    || create.keys.length !== 15 || create.data.length < 23 || create.data.length > 215
+    || !create.data.subarray(0, 8).equals(Buffer.from([201, 92, 183, 64, 131, 82, 174, 203]))) return false;
+  if (instructions.length === 1) return true;
+  const rent = instructions[0];
+  return rent.programId.equals(GAME_STATE_PROGRAM_ID) && rent.keys.length === 3 && rent.data.length === 16
+    && rent.data.subarray(0, 8).equals(Buffer.from([87, 113, 100, 97, 218, 156, 201, 21]));
 }
 
 function isStorePurchaseBundle(instructions: TransactionInstruction[]): boolean {
