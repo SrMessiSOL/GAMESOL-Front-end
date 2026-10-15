@@ -110,6 +110,13 @@ USDC/ANTIMATTER spending, withdrawal, NFT transfer or mainnet action was used
 for this check. Actual wall-clock expiry and revocation were not forced on the
 user's live session; their off-state and stale-result behavior have unit coverage.
 
+Publication: code commit `36e29fe` was pushed to the existing branch. Production
+deployment `https://frontend-hvrvi6jl7-srmessisols-projects.vercel.app` completed
+its cloud build, and the public `chained-universe.vercel.app` alias was explicitly
+assigned. Live `/app` returned 200 with `index-E2JM6QZW.js`; the new
+`UniverseGame-h1azrbQy.js` bundle also returned 200. No program upgrade,
+authority change, extended session duration or token purchase was involved.
+
 Latest alliance result: paid creation, NewAccount application, leader approval,
 application closure and regular-member UI checks are complete on devnet. See
 the finalized evidence below. Alliance contributions/upgrades, rejection,
