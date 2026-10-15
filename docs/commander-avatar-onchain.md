@@ -1,7 +1,19 @@
 # Persistent commander avatar integration
 
-Status: real devnet avatar save and independent-origin restoration verified;
-172 regression tests and the final cloud build passed. Publication is in progress.
+Status: published and verified on the existing public game. Real devnet avatar
+save, independent-origin restoration, 172 regression tests and cloud builds passed.
+
+## Published Release
+
+- Code commit: ed06d4c6783cf694c411e228a4c725dde1a0cbf9.
+- Production deployment: dpl_7MXkjm6PwSiVHvsuwGcekrLV3Mvj (READY).
+- Deployment URL: https://frontend-3jga3i5eu-srmessisols-projects.vercel.app.
+- Public alias: https://chained-universe.vercel.app, explicitly assigned to this release.
+- Public /app restored #513 and showed Saved on-chain without another save or
+  ownership signature. The account UI still showed 11.5 test USDC.
+- Live API checks passed: enabled devnet attestor, rejection of unauthenticated
+  commander proofs, 15 owned UFOs, exact verified #513 image hash, devnet genesis.
+- Existing build warnings about large chunks/deprecated optimizer settings remain.
 
 ## Behavior
 
