@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet as useLazorWallet } from "@lazorkit/wallet";
 import { PublicKey } from "@solana/web3.js";
 import { GAME_STATE_PROGRAM_ID, MARKET_PROGRAM_ID, type GameplayVaultExecutor } from "./game-state";
@@ -16,7 +16,10 @@ export function usePasskeyGameplayVault() {
   const lazor = useLazorWallet();
   const walletPda = lazor.wallet?.smartWallet ?? null;
   const vaultAddress = lazor.wallet?.vaultPda ?? null;
-  const [hasSession, setHasSession] = useState(() => hasPlayerFundedSession(walletPda ?? undefined));
+  const [hasSession, setHasSession] = useState(false);
+  const walletRef = useRef(walletPda);
+  walletRef.current = walletPda;
+  const revision = useRef(0);
   const [sessionFeeAddress, setSessionFeeAddress] = useState<string | null>(null);
   const [sessionFeeBalance, setSessionFeeBalance] = useState(0n);
   const [sponsorPayerAddress, setSponsorPayerAddress] = useState<string | null>(null);
@@ -28,6 +31,7 @@ export function usePasskeyGameplayVault() {
   );
 
   const refreshSessionFunding = useCallback(async () => {
+    const request = ++revision.current;
     if (!walletPda) {
       setSessionFeeAddress(null);
       setSessionFeeBalance(0n);
@@ -38,6 +42,7 @@ export function usePasskeyGameplayVault() {
       return null;
     }
     const state = await refreshPlayerFundedSession(walletPda);
+    if (walletRef.current !== walletPda || request !== revision.current) return null;
     setSessionFeeAddress(state.publicKey);
     setSessionFeeBalance(state.balanceLamports);
     setSessionExpiresAtSlot(state.expiresAtSlot);
@@ -48,6 +53,10 @@ export function usePasskeyGameplayVault() {
   }, [walletPda]);
 
   useEffect(() => {
+    setHasSession(false);
+    setSponsorPayerAddress(null);
+    setPaymasterReady(false);
+    setSessionExpiresAtSlot(null);
     if (!walletPda) {
       setSessionFeeAddress(null);
       setSessionFeeBalance(0n);
@@ -57,6 +66,7 @@ export function usePasskeyGameplayVault() {
     const stored = ensurePlayerFeeSession(walletPda);
     setSessionFeeAddress(stored.publicKey);
     void refreshSessionFunding().catch(() => undefined);
+    return () => { revision.current++; };
   }, [refreshSessionFunding, walletPda]);
 
   const connect = useCallback(async () => {
@@ -68,7 +78,9 @@ export function usePasskeyGameplayVault() {
 
   const createGameplaySession = useCallback(async () => {
     if (!lazor.wallet) throw new Error("Sign in to your game account first.");
+    const request = ++revision.current;
     const state = await activatePlayerFundedSession(lazor.wallet);
+    if (walletRef.current !== lazor.wallet.smartWallet || request !== revision.current) throw new Error("Your game account or Quick Play session changed. Check the current account before retrying.");
     setSessionFeeAddress(state.publicKey);
     setSessionFeeBalance(state.balanceLamports);
     setSessionExpiresAtSlot(state.expiresAtSlot);
@@ -79,7 +91,9 @@ export function usePasskeyGameplayVault() {
 
   const revokeGameplaySession = useCallback(async () => {
     if (!lazor.wallet) throw new Error("Sign in to your game account first.");
+    const request = ++revision.current;
     const state = await revokePlayerFundedSession(lazor.wallet);
+    if (walletRef.current !== lazor.wallet.smartWallet || request !== revision.current) return;
     setSessionFeeAddress(state.publicKey);
     setSessionFeeBalance(state.balanceLamports);
     setSessionExpiresAtSlot(state.expiresAtSlot);
@@ -89,6 +103,7 @@ export function usePasskeyGameplayVault() {
   }, [lazor.wallet]);
 
   const disconnect = useCallback(async () => {
+    revision.current++;
     await lazor.disconnect();
     setHasSession(false);
     setSessionFeeAddress(null);

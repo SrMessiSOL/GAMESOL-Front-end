@@ -1806,21 +1806,24 @@ export default function UniverseGame() {
       Number(amount / 1_000_000n) +
       Number(amount % 1_000_000n) / 1_000_000
     ).toLocaleString(undefined, { maximumFractionDigits: 2 });
-  const unlockVault = async () => {
+  const unlockVault = async (isCurrent = () => true) => {
     if (!client || !publicKey) return;
     setVaultPasswordError("");
     setBusy(true);
     try {
       const restored = await client.restoreExistingVault();
+      if (!isCurrent()) return;
       if (restored) {
         client.setPreferVaultSigning(true);
         setVaultStatus("ready");
         return;
       }
       const nextStatus = await client.getVaultStatus();
+      if (!isCurrent()) return;
       client.setPreferVaultSigning(false);
       setVaultStatus(nextStatus);
     } catch (error) {
+      if (!isCurrent()) return;
       client.setPreferVaultSigning(false);
       setStatus(
         error instanceof Error ? error.message : "Vault unlock failed.",
@@ -1992,17 +1995,19 @@ export default function UniverseGame() {
     }
   };
   useEffect(() => {
+    let current = true;
     if (!client || !publicKey) {
       setVaultStatus("loading");
       return;
     }
     if (passkey.executor) {
       void client.isLazorPlayerInitialized().then((authorized) => {
-        setVaultStatus(authorized ? "ready" : "not_initialized");
-      }).catch(() => setVaultStatus("not_initialized"));
-      return;
+        if (current) setVaultStatus(authorized ? "ready" : "not_initialized");
+      }).catch(() => { if (current) setVaultStatus("not_initialized"); });
+      return () => { current = false; };
     }
-    void unlockVault();
+    void unlockVault(() => current);
+    return () => { current = false; };
   }, [client, passkey.executor, publicKey]);
   useEffect(() => {
     void refreshVaultBalance();

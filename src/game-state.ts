@@ -3227,7 +3227,7 @@ export class GameClient {
   }
 
   setPreferVaultSigning(value: boolean): void {
-    this.preferVaultSigning = value;
+    this.preferVaultSigning = Boolean(this.gameplayVaultExecutor) || value;
   }
 
   getPreferVaultSigning(): boolean {

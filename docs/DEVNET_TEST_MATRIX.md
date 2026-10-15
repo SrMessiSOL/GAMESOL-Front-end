@@ -85,6 +85,31 @@ and defender Quick Play sessions were separately approved by the user.
 
 ### Remaining gates at this checkpoint
 
+#### Quick Play restoration correction and browser check
+
+The user authorized fixing refresh persistence, a Preview check with NewAccount,
+and GitHub/Vercel publication after checks pass. The command client now retains
+smart-wallet signing preference while its executor is bound. Cancelled legacy
+wallet reads cannot overwrite current commander state. Hook restoration and
+activation results are guarded by wallet identity and request revision; a stored
+active flag alone is not displayed as verified authorization before the existing
+on-chain session check completes. Session duration, scope and expiry rules are
+unchanged. Restoration is for the same browser and site origin, not shared
+private session keys across devices or deployment addresses.
+
+TypeScript and all 187 regression tests passed, including six restoration/race
+checks. Preview `https://frontend-ar8kc5n03-srmessisols-projects.vercel.app`
+completed its TypeScript/Vite cloud build. The user signed into existing
+NewAccount and enabled one limited 8-hour devnet session on this new origin.
+The actual UI showed Commander READY and Quick Play ON. After a full page reload,
+the same account/world restored, and the account modal again showed READY / ON
+without a new sign-in or approval popup. Only the game tab remained open.
+Screenshots: `.vercel/ui-check/quick-play-before-refresh.png` and
+`.vercel/ui-check/quick-play-after-refresh.png`. No purchase, resource command,
+USDC/ANTIMATTER spending, withdrawal, NFT transfer or mainnet action was used
+for this check. Actual wall-clock expiry and revocation were not forced on the
+user's live session; their off-state and stale-result behavior have unit coverage.
+
 Latest alliance result: paid creation, NewAccount application, leader approval,
 application closure and regular-member UI checks are complete on devnet. See
 the finalized evidence below. Alliance contributions/upgrades, rejection,
