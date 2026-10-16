@@ -4510,7 +4510,7 @@ export class GameClient {
         { pubkey: leader, isSigner: true, isWritable: true },
         { pubkey: alliancePda, isSigner: false, isWritable: false },
         { pubkey: deriveAllianceMembershipPda(leader), isSigner: false, isWritable: false },
-        { pubkey: applicant, isSigner: false, isWritable: false },
+        { pubkey: applicant, isSigner: false, isWritable: true },
         { pubkey: deriveAllianceJoinRequestPda(alliancePda, applicant), isSigner: false, isWritable: true },
       ],
       data: encodeInstruction(IX.rejectJoinRequest),

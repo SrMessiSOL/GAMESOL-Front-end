@@ -1,5 +1,139 @@
 # Live Devnet Test Matrix
 
+## Completed membership cycle October 16
+
+Final approval finalized with no error:
+`3ukW5UbK2xLbsYpeuvUin4E79tAUu979yTECiB8GuLXikCRRtj8WxF1twfihuJTqL5b1MSBKQKdtJw4zW52dHKMY`.
+Independent finalized reads confirm alliance member count 2, NewAccount role 1,
+join request closed and treasury metal still 1,000. Applicant UI again shows
+two members and four disabled LEADER ONLY infrastructure actions.
+
+The real controlled cycle is complete: leave, reapply, reject, reapply, approve.
+The first rejection exposed and led to the tested writable-applicant fix;
+expired owner approvals were retried only after terminal failure, not while
+pending. Original account retains 10.5 USDC and 4,995,000 ANTIMATTER; NewAccount
+has no USDC/ANTIMATTER token accounts. No token spending, program upgrade,
+authority change or combat was involved. Full regression suite: 193 passed.
+The later chronological notes below retain earlier pending checkpoints.
+
+## Contribution UI correction staged October 15
+
+After confirmed rejection, NewAccount successfully recreated its request with
+finalized transaction
+`3phEFt1kwLuGYXKTxqUQxAMi1sY5Rfq5pWgS3HewJjzftB7Cgc2nYCsRdaiRTQiAJqkeaRHYBpc1TLpgC3hRPsYC`.
+Independent read confirms request present. The leader's final APPROVE command
+has been opened for owner approval; membership restoration is not yet claimed.
+
+Corrected rejection executed successfully after owner approval. Finalized
+signature `4NBSKvK9jB4g5eEhcPkB3jH74UJwtbfsa425EGi1tGPgvnQXU3g8Fjz71KEhd7DA9bekhpzvkFnkrXxnzYMVe3Bw`
+has no error; independent finalized read confirms the request account closed.
+Leader UI shows one member and no pending applications. The writable-recipient
+correction is now real devnet execution evidence, not only simulation proof.
+Second reapplication and final membership approval remain the next test steps.
+
+Latest membership checkpoint: after session renewal, reapplication finalized as
+`4Lo3mZHGnrbNH6ZA63PoqrQqT54nTAKztupEkFasoNpPn3zqQFfCT3RnL6Bn9jrKJm4P9JatmdQ7Tr7Zswz1KbUr`.
+The request exists on-chain and applicant UI shows PENDING. The owner-approved
+leader rejection then failed simulation with ConstraintMut 2000 on applicant;
+the client marked this rent-refund recipient read-only. `rejectJoinRequest`
+now marks applicant writable, matching the existing deployed Anchor context.
+The dedicated `check-alliance-rejection.cjs` reproduces ConstraintMut with the
+old flag and succeeds with the corrected flag in unsigned simulation. All
+involved account hashes and lamports remain unchanged; the request is not
+consumed by this check. Preview correction is at
+`https://frontend-dgyikpy3t-srmessisols-projects.vercel.app/app`; real rejection
+retry still needs the leader's sign-in and owner approval. No program upgrade,
+token payment or production publication is involved.
+
+October 16 follow-up: NewAccount signed into the corrected Preview. The live
+leave confirmation was visually checked at desktop size and 390x844 mobile;
+the mobile buttons are fully inside the viewport and the overlay is above the
+command panel. User-approved leave finalized successfully:
+`2wpyBpvkiB4kfYD4PzsrabGyJUKqMqytf66TpRLrCPoZFt4DroB3jBkZNVLAcT7BZaFxK9g6g7LJQMiHw9Z1xn5t`.
+Independent finalized read shows member count 1 and NewAccount's retained
+membership record at role 0 (inactive), not a closed account. Recruitment UI
+shows the alliance with one member and REQUEST MEMBERSHIP.
+
+The first reapplication attempt stopped locally because this Preview's Quick
+Play session was inactive, with an explicit nothing-changed message. The
+account modal confirms correct NewAccount identity, Commander READY, Quick
+Play OFF, zero USDC and zero ANTIMATTER. Reapplication/rejection/final approval
+remain pending user renewal; no second leave was submitted. Production and
+GitHub publication remain gated. No USDC or ANTIMATTER was spent.
+
+The live PlanetWorld contribution buttons now use membership claimed masks
+only when their stored UTC period matches the current day, Monday-based week,
+or calendar month. Completed entries display COMPLETED and are disabled; the
+click handler independently refuses a completed entry. Period rollover restores
+availability without clearing or altering on-chain state.
+
+The membership rehearsal found a separate blocker: alliance confirmation
+styles were scoped to `.production-preview`, leaving the real leave dialog
+behind the command panel. Those styles now apply in the live game, retaining
+the existing confirmation, cancel, focus and mobile layout behavior.
+
+TypeScript passed and all 192 frontend/server regression tests passed. Preview
+`https://frontend-on8k8e8rt-srmessisols-projects.vercel.app/app` completed its
+cloud build. Desktop/mobile visual confirmation and the real leave/reapply,
+reject/reapply/approve cycle are still pending NewAccount sign-in. No successful
+leave is claimed. Finalized checkpoint remains two members, NewAccount role 1,
+no pending join request. No USDC or ANTIMATTER was spent, and production/GitHub
+publication remains gated on completing these checks.
+
+## Confirmed metal contribution and follow-up guards
+
+The user authorized one 1,000-metal contribution with no USDC or ANTIMATTER.
+The live Quick Play flow initialized the alliance treasury and deposited once.
+Both transactions finalized with `meta.err === null`:
+
+- Treasury initialization: `MsotKJMF1Z3S5oHM6ELKa8J6GSePw2TPMWX4gZ1kCHJMt1qxXCWJvj5k1bcUhvVA8Ghq2E1M7YDCuo1DLgysjWW`.
+- Metal contribution: `dR3YHD4nTZNnxhk1cQvRZBknPqitvtRuLzsB9YYnodx1izTejgVeboim96UMtRxfaPA3ZsQkcYrjpsEJ1Re139b`.
+
+Treasury `H9fmLJwno49ejr6txrA9jBK5hxR4yiJT3Z7CML7wWtAY` was absent before;
+afterward it held exactly 1,000 metal, total metal deposited 1,000, and zero
+crystal, deuterium and ANTIMATTER. The live command panel agrees. Planet metal
+dropped by 1,000 against its accrued display. Finalized token balances remained
+10,500,000 USDC base units and 4,995,000,000,000 ANTIMATTER base units.
+
+`server/check-alliance-deposit-guards.cjs` reconstructs this confirmed inner
+instruction and only simulates it, without signing or submission. Duplicate
+daily contribution rejects with `AllianceMissionAlreadyClaimed`; 999 metal
+rejects with `AllianceMissionRequirementsNotMet`; empty and nonzero-ANTIMATTER
+vault contributions reject with `InvalidArgs`. All referenced account-data
+hashes remain unchanged. These prove program guards, not wallet authentication.
+
+Duplicate fighter collection was also simulated from finalized collection
+`2NrjpCe4KsEB2GNuaW9LMddr2ZseTxRNbAeCwThXBo5j9xRaDLrh4ogX3YSZSCHU6q8vD454D25qbY3yykwT4VGP`.
+It rejects with `NoShipBuild`; before/after retain 20 fighters, queue item 255
+and zero missions. No duplicate collection was submitted.
+
+Known UI gap: the completed daily metal card still offers DEPOSIT instead of
+a completed/disabled state. The deployed program prevents a duplicate debit;
+the client display has not been corrected or published in this test run.
+Alliance upgrades require ANTIMATTER and remain excluded. Controlled combat
+remains pending beginner-protection expiry. No extra contribution was made.
+
+## Latest alliance permission checks
+
+The 19 queued Light Fighters finished naturally and were collected through
+the live Shipyard Finish command. Independent confirmed account read and
+the live UI agree: 20 Light Fighters total, shipBuildItem 255, quantity 0,
+activeMissions 0 and occupied mission entries 0. No acceleration, relaunch,
+USDC purchase or ANTIMATTER spending. Controlled combat remains pending
+NewAccount's protection expiry; no attack was launched.
+
+`node server/check-alliance-permission-guards.cjs` checked the deployed devnet
+program against the existing two-member GAMESOL Devnet QA alliance. A regular
+member's expulsion and leadership-transfer attempts both rejected with
+`AllianceLeaderRequired` (6076). The leader's leave attempt rejected with
+`AllianceFounderCannotLeave` (6070). Alliance and membership account hashes
+were unchanged before and after all three checks.
+
+These are unsigned simulations (`sigVerify: false`), not submitted actions or
+proof of wallet authentication. No USDC or ANTIMATTER was spent. The live
+contribution screen supports fixed deposits, starting at 1,000 metal, rather
+than an arbitrary 10-metal contribution; no deposit was submitted.
+
 Current checkpoint: October 14, 2026. Gameplay evidence below was collected
 on frontend `87790c5`; the consolidation release adds the two preflight fixes
 and the updated evidence without a program upgrade.

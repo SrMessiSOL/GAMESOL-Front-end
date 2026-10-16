@@ -414,16 +414,16 @@
 @media(prefers-reduced-motion:reduce){.production-preview .pw-command-state-icon svg,.production-preview .pw-command-state-progress i::after{animation:none!important}}
 
 /* Confirmation layer for irreversible alliance membership changes. */
-.production-preview .pw-confirm-backdrop{position:fixed;z-index:2400;inset:0;display:grid;place-items:center;padding:22px;background:rgba(0,6,14,.76);backdrop-filter:blur(10px)}
-.production-preview .pw-confirm-dialog{width:min(480px,100%);padding:26px;border:1px solid rgba(255,131,108,.38);border-radius:12px;background:linear-gradient(155deg,rgba(12,37,53,.99),rgba(3,15,27,.99));box-shadow:inset 3px 0 #ff836c,0 30px 90px rgba(0,0,0,.62)}
-.production-preview .pw-confirm-kicker{display:block;margin-bottom:9px;color:#ff9b86;font:800 8px 'DM Mono',monospace;letter-spacing:1.25px}
-.production-preview .pw-confirm-dialog h2{margin:0;color:#f4fbff;font:700 clamp(22px,4vw,31px)/1.12 Outfit,system-ui,sans-serif}
-.production-preview .pw-confirm-dialog p{margin:13px 0 24px;color:#a7c2cf;font:13px/1.65 Outfit,system-ui,sans-serif}
-.production-preview .pw-confirm-dialog>div{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.production-preview .pw-confirm-dialog button{min-height:44px;border:1px solid rgba(104,210,245,.24);border-radius:6px;background:rgba(13,55,78,.78);color:#cbeaf5;font:800 8px 'DM Mono',monospace;letter-spacing:.65px;cursor:pointer}
-.production-preview .pw-confirm-dialog button.danger{border-color:rgba(255,131,108,.42);background:rgba(104,35,31,.6);color:#ffc0b3}
-.production-preview .pw-confirm-dialog button:hover{filter:brightness(1.17)}.production-preview .pw-confirm-dialog button:focus-visible{outline:2px solid #76e3ff;outline-offset:3px}.production-preview .pw-confirm-dialog button:disabled{cursor:wait;opacity:.55}
-@media(max-width:560px){.production-preview .pw-confirm-backdrop{align-items:end;padding:0}.production-preview .pw-confirm-dialog{width:100%;padding:22px 18px max(22px,env(safe-area-inset-bottom));border-right:0;border-bottom:0;border-left:0;border-radius:14px 14px 0 0}.production-preview .pw-confirm-dialog>div{grid-template-columns:1fr}}
+.pw-confirm-backdrop{position:fixed;z-index:2400;inset:0;display:grid;place-items:center;padding:22px;background:rgba(0,6,14,.76);backdrop-filter:blur(10px)}
+.pw-confirm-dialog{width:min(480px,100%);padding:26px;border:1px solid rgba(255,131,108,.38);border-radius:8px;background:linear-gradient(155deg,rgba(12,37,53,.99),rgba(3,15,27,.99));box-shadow:inset 3px 0 #ff836c,0 30px 90px rgba(0,0,0,.62)}
+.pw-confirm-kicker{display:block;margin-bottom:9px;color:#ff9b86;font:800 8px 'DM Mono',monospace;letter-spacing:1.25px}
+.pw-confirm-dialog h2{margin:0;color:#f4fbff;font:700 24px/1.12 Outfit,system-ui,sans-serif}
+.pw-confirm-dialog p{margin:13px 0 24px;color:#a7c2cf;font:13px/1.65 Outfit,system-ui,sans-serif}
+.pw-confirm-dialog>div{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pw-confirm-dialog button{min-height:44px;border:1px solid rgba(104,210,245,.24);border-radius:6px;background:rgba(13,55,78,.78);color:#cbeaf5;font:800 8px 'DM Mono',monospace;letter-spacing:.65px;cursor:pointer}
+.pw-confirm-dialog button.danger{border-color:rgba(255,131,108,.42);background:rgba(104,35,31,.6);color:#ffc0b3}
+.pw-confirm-dialog button:hover{filter:brightness(1.17)}.pw-confirm-dialog button:focus-visible{outline:2px solid #76e3ff;outline-offset:3px}.pw-confirm-dialog button:disabled{cursor:wait;opacity:.55}
+@media(max-width:560px){.pw-confirm-backdrop{align-items:end;padding:0}.pw-confirm-dialog{width:100%;padding:22px 18px max(22px,env(safe-area-inset-bottom));border-right:0;border-bottom:0;border-left:0;border-radius:8px 8px 0 0}.pw-confirm-dialog>div{grid-template-columns:1fr}}
 
 /* Unified production command center ------------------------------------- */
 .production-preview .pw-world-identity{
