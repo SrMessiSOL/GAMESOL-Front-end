@@ -106,14 +106,22 @@ async function withRateLimitBackoff<T>(operation: () => Promise<T>, attempts = 4
   throw new Error("The test network is temporarily busy. Wait a moment and try again.");
 }
 
-function readStoredSession(): StoredPlayerSession | null {
+function sessionStorageKey(walletPda: string): string {
+  return `gamesol:quick-play:v2:${GAME_STATE_PROGRAM_ID.toBase58()}:${MARKET_PROGRAM_ID.toBase58()}:${walletPda}`;
+}
+
+function readStoredSession(walletPda: string): StoredPlayerSession | null {
   try {
-    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    const key = sessionStorageKey(walletPda);
+    const current = window.localStorage.getItem(key);
+    const raw = current ?? window.localStorage.getItem(SESSION_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredPlayerSession;
-    if (!Array.isArray(parsed.secretKey) || typeof parsed.publicKey !== "string" || typeof parsed.walletPda !== "string") {
+    if (!Array.isArray(parsed.secretKey) || typeof parsed.publicKey !== "string" || parsed.walletPda !== walletPda) {
       return null;
     }
+    keypairFromStored(parsed);
+    if (current === null) window.localStorage.setItem(key, JSON.stringify(parsed));
     return parsed;
   } catch {
     return null;
@@ -121,7 +129,7 @@ function readStoredSession(): StoredPlayerSession | null {
 }
 
 function writeStoredSession(session: StoredPlayerSession): void {
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.setItem(sessionStorageKey(session.walletPda), JSON.stringify(session));
 }
 
 function keypairFromStored(session: StoredPlayerSession): Keypair {
@@ -142,7 +150,7 @@ function sessionPolicyMatchesCurrentUniverse(session: StoredPlayerSession): bool
 }
 
 export function ensurePlayerFeeSession(walletPda: string): StoredPlayerSession {
-  const existing = readStoredSession();
+  const existing = readStoredSession(walletPda);
   if (existing?.walletPda === walletPda) {
     keypairFromStored(existing);
     return existing;
@@ -160,8 +168,8 @@ export function ensurePlayerFeeSession(walletPda: string): StoredPlayerSession {
   return created;
 }
 
-export function hasPlayerFundedSession(walletPda?: string): boolean {
-  const stored = readStoredSession();
+export function hasPlayerFundedSession(walletPda: string): boolean {
+  const stored = readStoredSession(walletPda);
   return Boolean(
     stored
     && (!walletPda || stored.walletPda === walletPda)
@@ -517,7 +525,7 @@ export async function refreshPlayerFundedSession(walletPda: string, retry = 0): 
 
   // Activation/revocation can finish while this RPC read is pending. Never
   // overwrite the newer session with the snapshot taken before the request.
-  const current = readStoredSession();
+  const current = readStoredSession(walletPda);
   if (current?.walletPda !== walletPda) throw new Error("Your game account changed while checking Quick Play. Please retry.");
   if (JSON.stringify(current) !== JSON.stringify(stored)) {
     if (retry >= 2) throw new Error("Quick Play changed while checking its status. Please retry.");
@@ -679,7 +687,7 @@ export async function executeWithPlayerSession(
   // Signature precompiles must execute at the transaction level, never as CPIs.
   const precompiles = instructions.filter(instruction => instruction.programId.equals(Ed25519Program.programId));
   instructions = instructions.filter(instruction => !instruction.programId.equals(Ed25519Program.programId));
-  const stored = readStoredSession();
+  const stored = readStoredSession(wallet.smartWallet);
   if (!stored || stored.walletPda !== wallet.smartWallet) {
     throw new Error("This device is not ready to submit account actions. Sign out, reconnect, and try again.");
   }
@@ -895,7 +903,7 @@ export async function returnPlayerFeeTokenToVault(
 }
 
 export async function revokePlayerFundedSession(wallet: LazorWalletInfo): Promise<PlayerFundedSessionState> {
-  const stored = readStoredSession();
+  const stored = readStoredSession(wallet.smartWallet);
   if (!stored || stored.walletPda !== wallet.smartWallet) {
     throw new Error("Quick Play has not been set up for this account.");
   }
