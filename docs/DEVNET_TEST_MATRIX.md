@@ -2,6 +2,18 @@
 
 ## Completed membership cycle October 16
 
+Publication: tested code/evidence commit `7c2be9f` is pushed to
+`feat/crypto-ufos-wallet-link`. Production deployment
+`https://frontend-cs4xewjan-srmessisols-projects.vercel.app` completed its cloud
+build; `chained-universe.vercel.app` was explicitly assigned to it. Public
+`/app` and new `/assets/index-Buh5iwXm.js` both return HTTP 200. The contribution
+panel was visually checked on desktop and 390x844 mobile (374-pixel dialog,
+no horizontal overflow, 44-pixel deposit buttons). The earlier daily metal
+claim correctly appears available after its UTC reset; no additional deposit
+was made merely to recreate a completed state. Current-period completed state
+and reset boundaries are covered by the focused regression tests. The live
+confirmation overlay was checked visually on both desktop and mobile.
+
 Final approval finalized with no error:
 `3ukW5UbK2xLbsYpeuvUin4E79tAUu979yTECiB8GuLXikCRRtj8WxF1twfihuJTqL5b1MSBKQKdtJw4zW52dHKMY`.
 Independent finalized reads confirm alliance member count 2, NewAccount role 1,
