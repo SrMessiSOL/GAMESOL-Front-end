@@ -1553,8 +1553,8 @@ function checkShipRequirements(shipKey: string, research: Research, planet: Plan
     destroyer: [req("Shipyard", planet.shipyard, 9), req("Hyperspace Drive", research.hyperspaceDrive, 6), req("Armor Technology", research.armorTechnology, 6)],
     deathstar: [req("Shipyard", planet.shipyard, 12), req("Hyperspace Drive", research.hyperspaceDrive, 7), req("Weapons Technology", research.weaponsTechnology, 10), req("Energy Technology", research.energyTech, 12)],
     recycler: [req("Shipyard", planet.shipyard, 4), req("Combustion Drive", research.combustionDrive, 6), req("Shielding Technology", research.shieldingTechnology, 2)],
-    espionageProbe: [req("Shipyard", planet.shipyard, 3), req("Combustion Drive", research.combustionDrive, 3)],
-    colonyShip: [req("Shipyard", planet.shipyard, 4), req("Impulse Drive", research.impulseDrive, 3), req("Astrophysics", research.astrophysics, 4)],
+    espionageProbe: [req("Shipyard", planet.shipyard, 3), req("Computer Technology", research.computerTech, 2)],
+    colonyShip: [req("Shipyard", planet.shipyard, 4), req("Impulse Drive", research.impulseDrive, 3), req("Astrophysics", research.astrophysics, 3)],
     solarSatellite: [req("Shipyard", planet.shipyard, 1)],
   };
   const requirements = requirementsByShip[shipKey] ?? [req("Shipyard", planet.shipyard, 1)];

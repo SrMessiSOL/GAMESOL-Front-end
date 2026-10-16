@@ -212,7 +212,7 @@ const SHIP_REQUIREMENTS: Record<string, Array<[string, string, number]>> = {
   deathstar: [["Shipyard", "shipyard", 12], ["Hyperspace Drive", "hyperspaceDrive", 7], ["Weapons Technology", "weaponsTechnology", 10], ["Energy Technology", "energyTech", 12]],
   recycler: [["Shipyard", "shipyard", 4], ["Combustion Drive", "combustionDrive", 6], ["Shielding Technology", "shieldingTechnology", 2]],
   espionageProbe: [["Shipyard", "shipyard", 3], ["Computer Technology", "computerTech", 2]],
-  colonyShip: [["Shipyard", "shipyard", 4], ["Impulse Drive", "impulseDrive", 3], ["Astrophysics", "astrophysics", 4]],
+  colonyShip: [["Shipyard", "shipyard", 4], ["Impulse Drive", "impulseDrive", 3], ["Astrophysics", "astrophysics", 3]],
   solarSatellite: [["Shipyard", "shipyard", 1]],
 };
 

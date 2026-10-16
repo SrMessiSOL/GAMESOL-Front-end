@@ -14,6 +14,9 @@ function compile(name) {
 const viewModule = { exports: {} };
 vm.runInNewContext(compile('nft-reader-state.ts'), { exports: viewModule.exports, Date, Infinity });
 const { nftReaderView } = viewModule.exports;
+const restorationModule = { exports: {} };
+vm.runInNewContext(compile('commander-restoration.ts'), { exports: restorationModule.exports });
+const { restoredCommanderAsset } = restorationModule.exports;
 const file = fs.readFileSync(path.join(__dirname, '../src/CryptoUfos.tsx'), 'utf8');
 const ast = ts.createSourceFile('reader.tsx', file, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const provider = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'CryptoUfosProvider');
@@ -55,7 +58,7 @@ function fixture(chain = {record: null}) {
     getWallets: () => ({ get: () => [wallet], on: () => () => {} }),
     connectHoldingWallet: async (value, silent) => { const result = await value.features['standard:connect'].connect({ silent }); const a = result.accounts[0]; if (!a) throw Error('Disconnected'); return a; },
     holdingAccount: accounts => accounts.find(value => value.chains.includes('solana:mainnet')) || null,
-    cryptoUfosRequest: api, nftReaderView: (link, busy, error) => nftReaderView(link, busy, error, now),
+    cryptoUfosRequest: api, restoredCommanderAsset, nftReaderView: (link, busy, error) => nftReaderView(link, busy, error, now),
     fetchCommanderIdentity: async () => chain.record,
     saveCommanderSelection: async (_game, commander, id, attest, assertCurrent) => {
       if (id) await attest(); assertCurrent();
@@ -91,6 +94,15 @@ function fixture(chain = {record: null}) {
     holdSignature: () => { signatureGate = deferred(); return signatureGate; },
   };
 }
+
+test('holding wallet account restoration reselects the on-chain avatar after a wallet event', async () => {
+  const f = fixture(); await f.connected();
+  f.change('holder-b'); await f.settle(); await f.settle();
+  assert.equal(f.render().flagship, null);
+  f.change('holder-a'); await f.settle(); await f.settle();
+  assert.equal(f.render().flagship?.id, asset.id);
+  assert.equal(f.saveCount(), 1, 'Restoring must not submit another avatar save');
+});
 
 test('cached real portrait remains visible while ownership is checking, failed or expired, but utility is blocked', () => {
   const link = { assets: [asset], selectedAsset: asset.id, checkedAt: 1000 };

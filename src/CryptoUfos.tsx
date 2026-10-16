@@ -14,6 +14,7 @@ import { nftReaderView, type NftOwnershipStatus } from './nft-reader-state';
 import type { GameClient } from './game-state';
 import { fetchCommanderIdentity, type CommanderIdentity, type UfoAttestation } from './ufo-onchain';
 import { saveCommanderSelection } from './commander-identity';
+import { restoredCommanderAsset } from './commander-restoration';
 
 export type CryptoUfo = { id: string; name: string; image: string | null; originalImage?: string | null; traits: { name: string; value: string }[]; compressed: boolean };
 type LinkState = { owner: string; assets: CryptoUfo[]; selectedAsset: string | null; checkedAt: number; identityVerified: false };
@@ -83,7 +84,10 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
       const result = await cryptoUfosRequest<{ owner: string; assets: CryptoUfo[]; checkedAt: number; identityVerified: false }>({ action: 'owner-assets', owner });
       if (revision.current !== expected) return false;
       if (result.owner !== owner) throw new Error('The NFT service returned another holding wallet.');
-      const selectedAsset = result.assets.some((asset) => asset.id === selected) ? selected : null;
+      // Reconnect and chain reads can finish in either order. Resolve against
+      // the current chain record, not only the selection captured before fetch.
+      const selectedAsset = restoredCommanderAsset(result.assets, owner, selected,
+        chainRef.current, bindingRef.current?.commander ?? '');
       selectedRef.current = selectedAsset;
       const next = { ...result, selectedAsset };
       linkRef.current = next;

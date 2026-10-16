@@ -21,7 +21,7 @@ test('commander avatar is available inside both game views with ownership-backed
   const game = read('UniverseGame.tsx');
   assert.match(ui, /export function CommanderAvatar\(/);
   assert.match(ui, /flagship \? <NftImage asset=\{flagship\}/);
-  assert.match(ui, /result\.assets\.some\(\(asset\) => asset\.id === selected\)/);
+  assert.match(ui, /restoredCommanderAsset\(result\.assets, owner, selected/);
   assert.match(ui, /fetchCommanderIdentity\(binding\.game\.getConnection\(\), binding\.commander\)/);
   assert.match(ui, /saveCommanderSelection\(active\.game, active\.commander/);
   assert.doesNotMatch(ui, /selectionKey|cryptoufos:cosmetic/);
