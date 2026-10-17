@@ -737,7 +737,18 @@ export async function executeWithPlayerSession(
   const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId, displayTransaction);
   const { instructions: wrapped } = resolved.client.finalizeExecute(prepared, response);
   return sendSponsored(rpc, [...precompiles, ...wrapped], [], displayBlockhash,
-    isAllianceCreationBundle(instructions) ? 'alliance' : isStorePurchaseBundle(instructions));
+    isAllianceCreationBundle(instructions) ? 'alliance' : isStorePurchaseBundle(instructions) || isMarketListingBundle(instructions));
+}
+
+function isMarketListingBundle(instructions: TransactionInstruction[]): boolean {
+  const create = instructions[instructions.length - 1];
+  if (!create || instructions.length > 2 || !create.programId.equals(MARKET_PROGRAM_ID)
+    || create.keys.length !== 9 || create.data.length !== 25
+    || !create.data.subarray(0, 8).equals(Buffer.from([237, 233, 192, 168, 248, 7, 249, 241]))) return false;
+  if (instructions.length === 1) return true;
+  const rent = instructions[0];
+  return rent.programId.equals(GAME_STATE_PROGRAM_ID) && rent.keys.length === 3 && rent.data.length === 16
+    && rent.data.subarray(0, 8).equals(Buffer.from([87, 113, 100, 97, 218, 156, 201, 21]));
 }
 
 function isAllianceCreationBundle(instructions: TransactionInstruction[]): boolean {

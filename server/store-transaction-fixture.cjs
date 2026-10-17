@@ -8,7 +8,7 @@ const discriminator = name => crypto.createHash('sha256').update(`global:${name}
 const pda = (seed, owner) => PublicKey.findProgramAddressSync([Buffer.from(seed), ...(owner ? [owner.toBuffer()] : [])], program)[0];
 
 // Packet-layout fixture only: synthetic signatures are never submitted.
-async function storeTransactionFixture(sponsoredRent, mutateInner) {
+async function storeTransactionFixture(sponsoredRent, mutateInner, topOrigin = 'https://chained-universe.vercel.app') {
   const payer = new PublicKey(manifest.sponsor);
   const wallet = Keypair.generate().publicKey;
   const config = Buffer.alloc(88);
@@ -36,7 +36,7 @@ async function storeTransactionFixture(sponsoredRent, mutateInner) {
   if (mutateInner) mutateInner(inner);
   const prepared = await client.prepareExecute({ payer, walletPda: wallet,
     secp256r1: { credentialIdHash: Buffer.alloc(32), publicKeyBytes: Buffer.concat([Buffer.from([2]), Buffer.alloc(32)]), authorityPda: Keypair.generate().publicKey, slotOverride: 100n }, instructions: inner });
-  const json = Buffer.from(JSON.stringify({ type: 'webauthn.get', challenge: Buffer.from(prepared.challenge).toString('base64url'), origin: 'https://portal.lazorkit.com', crossOrigin: true, topOrigin: 'https://chained-universe.vercel.app' }));
+  const json = Buffer.from(JSON.stringify({ type: 'webauthn.get', challenge: Buffer.from(prepared.challenge).toString('base64url'), origin: 'https://portal.lazorkit.com', crossOrigin: true, topOrigin }));
   const wrapped = client.finalizeExecute(prepared, { signature: Buffer.alloc(64), authenticatorData: Buffer.alloc(37), clientDataJsonHash: crypto.createHash('sha256').update(json).digest(), clientDataJson: json });
   const transaction = new VersionedTransaction(new TransactionMessage({ payerKey: payer, recentBlockhash: PublicKey.default.toBase58(), instructions: wrapped.instructions }).compileToV0Message());
   const table = new AddressLookupTableAccount({ key: new PublicKey(manifest.table), state: { deactivationSlot: 18446744073709551615n, lastExtendedSlot: 0, lastExtendedSlotStartIndex: 0, authority: undefined, addresses: manifest.addresses.map(address => new PublicKey(address)) } });
