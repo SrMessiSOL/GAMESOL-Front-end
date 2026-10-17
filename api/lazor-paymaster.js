@@ -48,8 +48,9 @@ const UFO_ISSUER = new PublicKey('9XEL6rVQ2GK85ic1j2Nf6kykybsAtsP8nYzNnNCMun4a')
 const UFO_ACTIONS = ['start_ufo_expedition', 'advance_ufo_expedition', 'claim_ufo_loot', 'set_commander_identity'].map(name => crypto.createHash('sha256').update(`global:${name}`).digest().subarray(0,8));
 const UFO_LOOKUP = require('../src/ufo-lookup-table.json');
 const ALLIANCE_LOOKUP = require('../src/alliance-lookup-table.json');
+const MARKET_LOOKUP = require('../src/market-lookup-table.json');
 const cachedTables = new Map();
-const lookupManifest = key => [UFO_LOOKUP, ALLIANCE_LOOKUP].find(item => item.table === key.toBase58());
+const lookupManifest = key => [UFO_LOOKUP, ALLIANCE_LOOKUP, MARKET_LOOKUP].find(item => item.table === key.toBase58());
 
 function resolvedTransactionKeys(message, tables = []) {
   if (!message.addressTableLookups?.length) return message.staticAccountKeys;
@@ -362,6 +363,30 @@ function isCompressedStoreBundle(inner, sponsor) {
     && rent.accounts[2].equals(SystemProgram.programId);
 }
 
+function isCompressedMarketPurchaseBundle(inner, sponsor) {
+  if (inner.length < 1 || inner.length > 3) return false;
+  const purchase = inner.at(-1), data = purchase.data;
+  const market = new PublicKey('6hPzaemT1siozGVM7MUHvjFK79WNGCrKruEBMEKA1DjA');
+  if (!purchase.programId.equals(market) || purchase.accounts.length !== 17
+    || data.length !== 8 || !isDiscriminator(data, Buffer.from([227,82,234,131,1,18,48,2]))) return false;
+  const a = purchase.accounts, buyer = a[0], seller = a[1], planet = a[14];
+  const pda = (seed,key) => PublicKey.findProgramAddressSync([Buffer.from(seed),...(key?[key.toBuffer()]:[])],market)[0];
+  if (buyer.equals(seller) || !a[2].equals(pda('market_config')) || !a[4].equals(pda('seller_counter',seller))
+    || !a[5].equals(new PublicKey(MARKET_LOOKUP.antimatterMint)) || !a[8].equals(pda('market_escrow'))
+    || !a[9].equals(new PublicKey(MARKET_LOOKUP.treasuryAntimatter)) || !a[10].equals(pda('market_authority'))
+    || !a[11].equals(TOKEN_PROGRAM_ID) || !a[12].equals(SystemProgram.programId)
+    || !a[13].equals(GAME_STATE_PROGRAM_ID) || !a[15].equals(pda('planet_market_obligation',planet))) return false;
+  if (inner.length === 1) return true;
+  const ata = inner[inner.length - 2], canonical = canonicalAssociatedTokenAccount(ata);
+  if (!canonical || !canonical.payer.equals(buyer) || !canonical.ata.equals(a[7])
+    || !ata.accounts[2].equals(seller) || !ata.accounts[3].equals(a[5])) return false;
+  if (inner.length === 2) return true;
+  const rent = inner[0];
+  return Boolean(approvedRentPolicy(inner)) && rent.data.length === 16 && rent.accounts.length === 3
+    && rent.accounts[0].equals(sponsor.publicKey) && rent.accounts[1].equals(buyer)
+    && rent.accounts[2].equals(SystemProgram.programId);
+}
+
 function isCompressedMarketListingBundle(inner, sponsor) {
   if (inner.length < 1 || inner.length > 2) return false;
   const create = inner.at(-1), data = create.data;
@@ -431,6 +456,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   let hasCompressedStore = false;
   let hasCompressedAlliance = false;
   let hasCompressedMarketListing = false;
+  let hasCompressedMarketPurchase = false;
   let maximumDebit = MAX_ROUTINE_DEBIT_LAMPORTS;
   let approvedRentBundle = false;
   let approvedRentOwnerAddresses = [];
@@ -462,6 +488,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
         hasCompressedStore = isCompressedStoreBundle(innerInstructions, sponsor);
         hasCompressedAlliance = isCompressedAllianceBundle(innerInstructions, sponsor);
         hasCompressedMarketListing = isCompressedMarketListingBundle(innerInstructions, sponsor);
+        hasCompressedMarketPurchase = isCompressedMarketPurchaseBundle(innerInstructions, sponsor);
         hasUfoAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && UFO_ACTIONS.slice(0,3).some(discriminator => isDiscriminator(inner.data,discriminator)));
         hasCommanderAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && isDiscriminator(inner.data,UFO_ACTIONS[3]));
         const rentPolicy = approvedRentPolicy(innerInstructions);
@@ -477,13 +504,17 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   if (!hasLazorInstruction) throw new Error("A sponsored transaction must contain a Lazor wallet instruction.");
   const matchingUfoAction = proofPurpose === 'commander' ? hasCommanderAction : hasUfoAction;
   if (ufoPrecompiles && !matchingUfoAction) throw new Error('UFO ownership proof requires a matching UFO gameplay action.');
-  if (tables.length && tables[0].key.toBase58() === ALLIANCE_LOOKUP.table) {
+  if (tables.length && tables[0].key.toBase58() === MARKET_LOOKUP.table) {
+    if (!(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedMarketPurchase)) {
+      throw new Error('Market address table requires one canonical passkey-approved resource purchase.');
+    }
+  } else if (tables.length && tables[0].key.toBase58() === ALLIANCE_LOOKUP.table) {
     if (!(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedAlliance)) {
       throw new Error('Alliance address table requires one canonical passkey-approved alliance creation.');
     }
   } else if (tables.length && !(ufoPrecompiles && matchingUfoAction)
     && !(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && (hasCompressedStore || hasCompressedMarketListing))) {
-    throw new Error('Address tables require verified UFO gameplay or a canonical passkey store purchase or market listing.');
+    throw new Error('Address tables are restricted to verified UFO gameplay or a canonical passkey store purchase or market listing.');
   }
   return { maximumDebit, approvedRentBundle, approvedRentOwnerAddresses, approvedRentAccountAddresses };
 }

@@ -1,0 +1,60 @@
+{
+  "network": "devnet",
+  "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "sponsor": "F8HniT2KZspe6AGDQKvVrmkFt9LwZkctPVVQF8XZz6ub",
+  "table": "27YmCszGdf22GGz9rw2Ab41knv2V9ecwP3XSzCvScuzC",
+  "addresses": [
+    "J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq",
+    "GYgPnxr1LqQ1ujmBjiJeTT1YuDxZWqHd8nGjBkH61dvZ",
+    "11111111111111111111111111111111",
+    "Sysvar1nstructions1111111111111111111111111",
+    "DJifiVwF7wGDRVYL677K3BokdCjwRBAASDSbKvtQLCRo",
+    "13NsaRBq4BUevrps7MjCH9rAg9Phi5dVW9ZZuvicbfih",
+    "FF8g6qFDDHumfr4DgSdEDY6LcoJBwBsJgeDmUkh1wWVH",
+    "EbaqAoJtcrB67kUnqYnWP846FR2x3oLcBveDKrvBaVyY",
+    "7CqbmEsW45E9rWtmKmLs8pgDWgNoM9xdL2CjdvtK22mK",
+    "8cCEfAA6QiLJyZVpcEa5Z1zZgepmrzWHGMfhdgiRTJaN",
+    "8uAbxgecwCBQGv6CDg3quLhfujkgmdxj5iWN3LMLcaeB",
+    "35Ede7ZW3CSMmvwx5oUZigwo6XUjWhnj5YwDqXoMw5Ub",
+    "8YHpkcb5vk42Ydynotry5US7BUA4KUYdMqY2RTs4XxDd",
+    "6pZvCE5L9wgAci7vw7BDdawkDnxsh3LXj2kBBDxnX1Kz",
+    "8Ld5t1GsvBRoSRynpepELjnEjuL8E1qeGSv5Fn5B483k",
+    "BJh9VjQgqzAQRQRzQKbG6DH2tCcvD5Jhs2RLPhZJM5zF",
+    "DegZ8D4WngbnLgRf9HKmmyaqw12ZGdK9KJPK6AqnprRD",
+    "CA1FHuG7E4oTJGiqyTgob8d9RwB744GfuRFzXRyW1GZy",
+    "4urJQC9H6QiHezXJjvsCGhcAbP8GXx93Q6NUmQvC1LLY",
+    "AiUadNJoqfBZKpqTESb3EXrasZuTeV2yHd1m6fPdBSUm",
+    "BDSayDDKPFkeUqKmbmVRs9xBfWnntq1fidah51dj2pj6",
+    "Fb1q9PQrdKkz2ZnU4DCbXzUxTHaxxTo8HLRmA9BYuDKe",
+    "FH31LJHWZMaFPYFQz6tMPjMzEoH7iYfy5eZCppRyEEB7",
+    "64SBDDso9t3CfpJrqfC4r72M4yakMoFSHLJTHMtQYVAS",
+    "FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh",
+    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    "6vKcUEQmNze94EDP8mWYoiuYNkVMFS1uFqK3Z1Vpv3i2",
+    "79yUJWLDkkaWSHR6cfXYD8MxvxcUC9XnnimYKyHfGBGd",
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "6hPzaemT1siozGVM7MUHvjFK79WNGCrKruEBMEKA1DjA",
+    "5SQMy5MEk6jmTXbo9DrHyBPHPWyDo2FFRKz3UAvzB6bn",
+    "DmQgMNm8Q1QWdgkxwghpp2fH2GeF2h7wfcVX3s7BNaWN",
+    "BoQdcWmS7t6FdgJpqryXhgunU3dx4dxyAdXrNAbz71PL",
+    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+  ],
+  "antimatterMint": "FAeZLeqohcxNBpwGrbYBLj2TavFqt4353mT6qY6Z7YFh",
+  "treasuryAntimatter": "6vKcUEQmNze94EDP8mWYoiuYNkVMFS1uFqK3Z1Vpv3i2",
+  "signatures": [
+    {
+      "label": "create and extend",
+      "signature": "2FeSJs5384TGFkkpWvEjyByuEmxGuHsyGq9HvVgJ5Q6T2eTBVdaYj4qdZUCVSHQK8mUBzZnN3eHLo6JYKvTfA5Pp"
+    },
+    {
+      "label": "extend remaining",
+      "signature": "2pAVeZ3M1acG9V4L3zWo4foEovht3nJBUfQXm9RyF4k7WzKtaKqfs4kLkDPZ9fGyuHoMHhNdSxiwGnS9YFpytk1b"
+    },
+    {
+      "label": "freeze",
+      "signature": "22wfSMbpF3e9osuWV8Go7DpDm3ku6RThMFNbt96QqQDKs5ocHAQTkevrAgVHtKnmnkdyu7ckktwB8YRDLBfBhksB"
+    }
+  ],
+  "verifiedFrozen": true,
+  "spentLamports": 6476760
+}

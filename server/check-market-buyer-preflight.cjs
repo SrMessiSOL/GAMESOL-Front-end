@@ -1,0 +1,33 @@
+const assert=require('node:assert/strict');
+const crypto=require('node:crypto');
+const {Connection,PublicKey,SystemProgram,TransactionInstruction,TransactionMessage,VersionedTransaction}=require('@solana/web3.js');
+const {TOKEN_PROGRAM_ID,getAssociatedTokenAddressSync,createAssociatedTokenAccountInstruction}=require('@solana/spl-token');
+const {decoder}=require('./read-devnet-game-checkpoint.cjs');
+const manifest=require('../src/market-lookup-table.json');
+async function main() {
+  const rpc=new Connection('https://chained-universe.vercel.app/api/solana-rpc','confirmed');
+  assert.equal(await rpc.getGenesisHash(),manifest.genesis);
+  const market=new PublicKey('6hPzaemT1siozGVM7MUHvjFK79WNGCrKruEBMEKA1DjA');
+  const game=new PublicKey(manifest.addresses[0]);
+  const buyer=new PublicKey('G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r'),seller=new PublicKey('Fv9xRN5wqkQMWUqgDL7LPfXmhWkXnZS9ttcXW9oyRvdd');
+  const pda=(seed,...keys)=>PublicKey.findProgramAddressSync([Buffer.from(seed),...keys.map(k=>k instanceof PublicKey?k.toBuffer():k)],market)[0];
+  const id=Buffer.alloc(4),offer=pda('market_offer',seller,id),mint=new PublicKey(manifest.antimatterMint);
+  const buyerAta=getAssociatedTokenAddressSync(mint,buyer,true),sellerAta=getAssociatedTokenAddressSync(mint,seller,true);
+  const d=decoder(),planet=d.derivePlanetStatePda(seller,0),destination=d.derivePlanetStatePda(buyer,0);
+  const keys=[buyer,seller,pda('market_config'),offer,pda('seller_counter',seller),mint,buyerAta,sellerAta,pda('market_escrow'),new PublicKey(manifest.treasuryAntimatter),pda('market_authority'),TOKEN_PROGRAM_ID,SystemProgram.programId,game,planet,pda('planet_market_obligation',planet),destination];
+  const account=await rpc.getAccountInfo(offer);assert(account?.owner.equals(market),'Existing seller offer required');
+  const tracked=[...keys];
+  const snapshot=async()=> (await rpc.getMultipleAccountsInfo(tracked)).map(a=>a&&({lamports:a.lamports,hash:crypto.createHash('sha256').update(a.data).digest('hex')}));
+  const before=await snapshot();
+  const ix=new TransactionInstruction({programId:market,keys:keys.map((pubkey,i)=>({pubkey,isSigner:i===0,isWritable:![10,11,12,13].includes(i)})),data:Buffer.from([227,82,234,131,1,18,48,2])});
+  const instructions=[];
+  if(!await rpc.getAccountInfo(sellerAta)) instructions.push(createAssociatedTokenAccountInstruction(buyer,sellerAta,seller,mint));
+  instructions.push(ix);
+  const {blockhash}=await rpc.getLatestBlockhash();
+  const tx=new VersionedTransaction(new TransactionMessage({payerKey:buyer,recentBlockhash:blockhash,instructions}).compileToV0Message());
+  const result=await rpc.simulateTransaction(tx,{sigVerify:false,commitment:'confirmed'});
+  assert.equal(result.value.err,null,JSON.stringify(result.value.logs));
+  assert.deepEqual(await snapshot(),before,'Simulation changed accounts');
+  console.log(JSON.stringify({network:'devnet',submitted:false,signatureVerification:false,offer:offer.toBase58(),success:true,computeUnits:result.value.unitsConsumed,accountsUnchanged:true,boundary:'Unsigned direct instruction simulation, not Lazor signing or settled payment',logs:result.value.logs.filter(x=>/Instruction:|purchased|accepted|transfer/i.test(x))}));
+}
+main().catch(e=>{console.error(e.message);process.exitCode=1});

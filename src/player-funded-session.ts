@@ -12,6 +12,7 @@ import {
 import { Buffer } from "buffer";
 import { fetchUfoLookupTable } from './ufo-lookup-table';
 import { fetchAllianceLookupTable } from './alliance-lookup-table';
+import { fetchMarketLookupTable } from './market-lookup-table';
 import { signWithPopupRecovery, withPreparationTimeout } from './passkey-connect-recovery';
 import {
   createAssociatedTokenAccountInstruction,
@@ -370,13 +371,14 @@ async function sendSponsored(
   instructions: TransactionInstruction[],
   signers: Keypair[] = [],
   initialLatest?: LatestBlockhash,
-  compressStore: boolean | 'alliance' = false,
+  compressStore: boolean | 'alliance' | 'market' = false,
 ): Promise<string> {
   const [payer, latest] = await Promise.all([
     getSponsorPayer(),
     initialLatest ? Promise.resolve(initialLatest) : takeLatestBlockhash(rpc),
   ]);
-  const lookupTables = compressStore === 'alliance' ? [await fetchAllianceLookupTable(rpc, payer)]
+  const lookupTables = compressStore === 'market' ? [await fetchMarketLookupTable(rpc, payer)]
+    : compressStore === 'alliance' ? [await fetchAllianceLookupTable(rpc, payer)]
     : compressStore || instructions.some(instruction => instruction.programId.equals(Ed25519Program.programId))
     ? [await fetchUfoLookupTable(rpc, payer)] : [];
   const message = new TransactionMessage({
@@ -736,8 +738,21 @@ export async function executeWithPlayerSession(
   const displayTransaction = await buildDisplayTransaction(rpc, sponsorPayer, instructions, displayBlockhash.blockhash);
   const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId, displayTransaction);
   const { instructions: wrapped } = resolved.client.finalizeExecute(prepared, response);
-  return sendSponsored(rpc, [...precompiles, ...wrapped], [], displayBlockhash,
-    isAllianceCreationBundle(instructions) ? 'alliance' : isStorePurchaseBundle(instructions) || isMarketListingBundle(instructions));
+  // Passkey approval can outlive the display transaction's blockhash.
+  const submissionBlockhash = await withRateLimitBackoff(() => rpc.getLatestBlockhash('confirmed'));
+  return sendSponsored(rpc, [...precompiles, ...wrapped], [], submissionBlockhash,
+    isMarketPurchaseBundle(instructions) ? 'market' : isAllianceCreationBundle(instructions) ? 'alliance' : isStorePurchaseBundle(instructions) || isMarketListingBundle(instructions));
+}
+
+function isMarketPurchaseBundle(instructions: TransactionInstruction[]): boolean {
+  const purchase = instructions[instructions.length - 1];
+  if (!purchase || instructions.length > 3 || !purchase.programId.equals(MARKET_PROGRAM_ID)
+    || purchase.keys.length !== 17 || purchase.data.length !== 8
+    || !purchase.data.equals(Buffer.from([227, 82, 234, 131, 1, 18, 48, 2]))) return false;
+  return instructions.slice(0, -1).every(ix =>
+    (ix.programId.equals(GAME_STATE_PROGRAM_ID) && ix.keys.length === 3 && ix.data.length === 16
+      && ix.data.subarray(0, 8).equals(Buffer.from([87, 113, 100, 97, 218, 156, 201, 21])))
+    || (ix.programId.toBase58() === 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' && ix.keys.length === 6 && ix.data.length === 0));
 }
 
 function isMarketListingBundle(instructions: TransactionInstruction[]): boolean {
