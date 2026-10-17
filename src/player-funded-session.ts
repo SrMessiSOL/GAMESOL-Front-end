@@ -741,7 +741,17 @@ export async function executeWithPlayerSession(
   // Passkey approval can outlive the display transaction's blockhash.
   const submissionBlockhash = await withRateLimitBackoff(() => rpc.getLatestBlockhash('confirmed'));
   return sendSponsored(rpc, [...precompiles, ...wrapped], [], submissionBlockhash,
-    isMarketPurchaseBundle(instructions) ? 'market' : isAllianceCreationBundle(instructions) ? 'alliance' : isStorePurchaseBundle(instructions) || isMarketListingBundle(instructions));
+    isMarketPurchaseBundle(instructions) ? 'market' : isAllianceCreationBundle(instructions) || isAllianceDepositBundle(instructions) ? 'alliance' : isStorePurchaseBundle(instructions) || isMarketListingBundle(instructions));
+}
+
+function isAllianceDepositBundle(instructions: TransactionInstruction[]): boolean {
+  const deposit = instructions[0];
+  return instructions.length === 1 && deposit.programId.equals(GAME_STATE_PROGRAM_ID)
+    && deposit.keys.length === 11 && deposit.data.length === 42
+    && deposit.data.subarray(0, 8).equals(Buffer.from([64, 70, 103, 74, 35, 162, 164, 162]))
+    && deposit.data[8] === 1 && deposit.data[9] === 3
+    && deposit.data.subarray(10, 34).equals(Buffer.alloc(24))
+    && deposit.data.readBigUInt64LE(34) === 100_000_000n;
 }
 
 function isMarketPurchaseBundle(instructions: TransactionInstruction[]): boolean {

@@ -24,6 +24,6 @@ test('client compression selects only the existing passkey store bundle', async 
     assert.equal(accepts(f.inner), false);
   }
   assert.equal(accepts([]), false);
-  assert.match(source, /isAllianceCreationBundle\(instructions\) \? 'alliance' : isStorePurchaseBundle\(instructions\)/);
+  assert.match(source, /isAllianceCreationBundle\(instructions\) \|\| isAllianceDepositBundle\(instructions\) \? 'alliance' : isStorePurchaseBundle\(instructions\)/);
   assert.match(source, /sendSponsored\(rpc, \[\.\.\.precompiles, \.\.\.wrapped\], \[sessionKeypair\], latest\)/);
 });

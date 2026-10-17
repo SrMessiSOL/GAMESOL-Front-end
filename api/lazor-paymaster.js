@@ -407,7 +407,25 @@ function isCompressedMarketListingBundle(inner, sponsor) {
     && rent.accounts[2].equals(SystemProgram.programId);
 }
 
+function isCompressedAllianceDeposit(inner) {
+  if (inner.length !== 1) return false;
+  const ix = inner[0], data = ix.data, a = ix.accounts;
+  const discriminator = crypto.createHash('sha256').update('global:deposit_alliance_resources').digest().subarray(0, 8);
+  if (!ix.programId.equals(GAME_STATE_PROGRAM_ID) || a.length !== 11 || data.length !== 42
+    || !isDiscriminator(data, discriminator) || data[8] !== 1 || data[9] !== 3
+    || !data.subarray(10, 34).equals(Buffer.alloc(24)) || data.readBigUInt64LE(34) !== 100_000_000n) return false;
+  const pda = (seed, key) => PublicKey.findProgramAddressSync([Buffer.from(seed), ...(key ? [key.toBuffer()] : [])], GAME_STATE_PROGRAM_ID)[0];
+  const mint = new PublicKey(ALLIANCE_LOOKUP.antimatterMint);
+  const ata = PublicKey.findProgramAddressSync([a[0].toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()], ASSOCIATED_TOKEN_PROGRAM_ID)[0];
+  // The program validates the supplied alliance and planet ownership on-chain.
+  return a[2].equals(pda('alliance_membership', a[0])) && a[3].equals(pda('alliance_treasury', a[1]))
+    && a[5].equals(pda('game_config')) && a[6].equals(pda('store_config'))
+    && a[7].equals(mint) && a[8].equals(ata)
+    && a[9].equals(new PublicKey(ALLIANCE_LOOKUP.treasuryAntimatter)) && a[10].equals(TOKEN_PROGRAM_ID);
+}
+
 function isCompressedAllianceBundle(inner, sponsor) {
+  if (isCompressedAllianceDeposit(inner)) return true;
   if (inner.length < 1 || inner.length > 2) return false;
   const create = inner.at(-1);
   const data = create.data;
@@ -510,7 +528,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
     }
   } else if (tables.length && tables[0].key.toBase58() === ALLIANCE_LOOKUP.table) {
     if (!(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedAlliance)) {
-      throw new Error('Alliance address table requires one canonical passkey-approved alliance creation.');
+      throw new Error('Alliance address table requires one canonical passkey-approved alliance creation or daily ANTIMATTER deposit.');
     }
   } else if (tables.length && !(ufoPrecompiles && matchingUfoAction)
     && !(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && (hasCompressedStore || hasCompressedMarketListing))) {
