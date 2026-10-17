@@ -25,3 +25,9 @@ passed; the Vercel Preview production build passed before publication.
 
 The real Research Grid level-2 discount receipt and raw observed snapshots are
 recorded separately in TRADE_NETWORK_DEVNET_PROOF_2026-10-17.md and JSON.
+
+Published code 914c925. Production frontend-2j335oygg-srmessisols-projects.vercel.app
+is Ready and chained-universe.vercel.app points to it. Both /app pages and entry
+/assets/index-y98D159U.js return HTTP 200. The public game restored Default/#513
+and all four exact quotes above were asserted again in its rendered DOM.
+Live screenshot: alliance-quotes-production.png.

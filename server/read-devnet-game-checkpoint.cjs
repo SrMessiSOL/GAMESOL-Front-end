@@ -11,11 +11,13 @@ function decoder() {
   const source = ts.createSourceFile(filename, fs.readFileSync(filename, 'utf8'), ts.ScriptTarget.Latest, true);
   const functions = new Set(['readU8', 'readU16', 'readU32', 'readU64', 'readI16', 'readI64', 'readPubkeyRaw', 'readFixedString', 'deserializeMission', 'deserializePlanetState', 'derivePlanetStatePda', 'deriveStoreConfigPda', 'deserializeStoreConfig']);
   const constants = new Set(['PLANET_STATE_DISCRIMINATOR', 'MAX_PLANET_NAME_LEN', 'MAX_MISSION_COLONY_NAME_LEN', 'MAX_MISSIONS', 'STORE_CONFIG_DISCRIMINATOR']);
+  for (const name of ['deriveAlliancePda', 'deriveAllianceMembershipPda', 'deriveAllianceTreasuryPda', 'deserializeAllianceState', 'deserializeAllianceMembership', 'deserializeAllianceTreasuryState']) functions.add(name);
+  for (const name of ['ALLIANCE_STATE_DISCRIMINATOR', 'ALLIANCE_MEMBERSHIP_DISCRIMINATOR', 'ALLIANCE_TREASURY_STATE_DISCRIMINATOR', 'MAX_ALLIANCE_NAME_LEN']) constants.add(name);
   const declarations = source.statements.filter(node =>
     ts.isFunctionDeclaration(node) && functions.has(node.name?.text) ||
     ts.isVariableStatement(node) && node.declarationList.declarations.some(item => constants.has(item.name.getText(source)))
   ).map(node => node.getText(source));
-  const code = ts.transpileModule(declarations.join('\n') + '\nmodule.exports = { deserializePlanetState, derivePlanetStatePda, deriveStoreConfigPda, deserializeStoreConfig };', {
+  const code = ts.transpileModule(declarations.join('\n') + '\nmodule.exports = { deserializePlanetState, derivePlanetStatePda, deriveStoreConfigPda, deserializeStoreConfig, deriveAlliancePda, deriveAllianceMembershipPda, deriveAllianceTreasuryPda, deserializeAllianceState, deserializeAllianceMembership, deserializeAllianceTreasuryState };', {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText;
   const module = { exports: {} };
