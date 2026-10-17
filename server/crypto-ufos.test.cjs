@@ -91,7 +91,9 @@ test('direct holding-wallet connection calls connect only, never signing', async
   assert.doesNotMatch(ui, /DialogManager|useLazorWallet|passkeyProof|holdingSignature|linkToken/);
   const galleryFlow = ui.slice(ui.indexOf('const connect ='), ui.indexOf('const refresh ='));
   assert.doesNotMatch(galleryFlow, /signMessage|ufo-challenge|ufo-verify/);
-  assert.match(ui, /const verifyUtility = .*signOwnership\(commander, asset, 'expedition'\)/);
+  const utilityFlow = ui.slice(ui.indexOf('const verifyUtility ='), ui.indexOf('signOwnershipRef.current ='));
+  assert.match(utilityFlow, /action:'ufo-linked-verify'/);
+  assert.doesNotMatch(utilityFlow, /signOwnership\(|signMessage|ufo-challenge/);
   assert.doesNotMatch(ui, /action: 'collection'|The collection|collectionBusy|setCollection/);
   assert.match(ui, /const assets = nft\.link\?\.assets \?\? \[\]/);
 });

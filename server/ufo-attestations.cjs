@@ -67,6 +67,18 @@ function createAttestationService({ env=process.env, das, connection, now=Date.n
     if (asset?.id!==assetId || !nft.ownedCollectionAsset(asset,owner)) throw new Error('This UFO is no longer owned by the verified holding wallet.');
     return asset;
   }
+  async function linkedIdentity(commander, owner, asset, nonce) {
+    const account = await rpc.getAccountInfo(pda(Buffer.from('commander_identity'),new PublicKey(commander).toBuffer()),'confirmed');
+    if (!account || !account.owner.equals(PROGRAM) || account.data.length !== 120
+      || !account.data.subarray(0,8).equals(discriminator('CommanderIdentity'))
+      || !account.data.subarray(8,40).equals(new PublicKey(commander).toBuffer())
+      || !account.data.subarray(48,80).equals(new PublicKey(owner).toBuffer())
+      || !account.data.subarray(80,112).equals(new PublicKey(asset).toBuffer())
+      || account.data.readBigInt64LE(112) <= 0n) throw new Error('Save this UFO as your on-chain commander before using its utility.');
+    const currentNonce = account.data.readBigUInt64LE(40).toString();
+    if (nonce !== undefined && nonce !== currentNonce) throw new Error('Your saved commander changed. Refresh UFO ownership.');
+    return currentNonce;
+  }
   return async function service(body,origin) {
     if (body.action==='ufo-status') {
       const current=await config();
@@ -79,6 +91,14 @@ function createAttestationService({ env=process.env, das, connection, now=Date.n
     const issuer=issuerKey(env);
     if (current.attestor!==issuer.publicKey.toBase58()) throw new Error('UFO attestor does not match the on-chain configuration.');
     const key=nft.signingKey(env);
+    if (body.action==='ufo-linked-verify') {
+      const commander=address(body.commander),owner=address(body.owner),asset=address(body.asset);
+      const linkedNonce=await linkedIdentity(commander,owner,asset);
+      policy(await owned(owner,asset));
+      const expiresAt=now()+3600000;
+      return {utilityToken:nft.seal({v:1,kind:'ufo-authorization',origin,commander,smartWallet:commander,
+        owner,asset,purpose:'expedition',linkedNonce,issuedAt:now(),expires:expiresAt},key),expiresAt};
+    }
     if (body.action==='ufo-challenge') {
       const purpose=body.purpose??'expedition';
       if (!['expedition','commander'].includes(purpose)) throw new Error('Invalid UFO authorization purpose.');
@@ -98,6 +118,7 @@ function createAttestationService({ env=process.env, das, connection, now=Date.n
       const data=nft.unseal(body.utilityToken,key,'ufo-authorization',origin,now());
       const purpose=body.action==='ufo-commander-attest'?'commander':'expedition';
       if ((data.purpose??'expedition')!==purpose) throw new Error('UFO authorization belongs to a different action.');
+      if (data.linkedNonce !== undefined) await linkedIdentity(data.commander,data.owner,data.asset,data.linkedNonce);
       const asset=await owned(data.owner,data.asset);
       const loadout=await rpc.getAccountInfo(pda(Buffer.from(purpose==='commander'?'commander_identity':'ufo_loadout'),new PublicKey(data.commander).toBuffer()),'confirmed');
       let nonce=0n;

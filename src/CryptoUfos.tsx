@@ -14,7 +14,7 @@ import { nftReaderView, type NftOwnershipStatus } from './nft-reader-state';
 import type { GameClient } from './game-state';
 import { fetchCommanderIdentity, type CommanderIdentity, type UfoAttestation } from './ufo-onchain';
 import { saveCommanderSelection } from './commander-identity';
-import { restoredCommanderAsset } from './commander-restoration';
+import { restoredCommanderAsset, savedCommanderPortrait } from './commander-restoration';
 
 export type CryptoUfo = { id: string; name: string; image: string | null; originalImage?: string | null; traits: { name: string; value: string }[]; compressed: boolean };
 type LinkState = { owner: string; assets: CryptoUfo[]; selectedAsset: string | null; checkedAt: number; identityVerified: false };
@@ -79,7 +79,12 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
 
   const readOwner = useCallback(async (owner: string, expected: number, selected = selectedRef.current) => {
     setBusy(true); setError(''); setStage('Reading mainnet Crypto UFOs');
-    setLink((value) => value?.owner === owner ? value : null);
+    const portrait = savedCommanderPortrait(chainRef.current, bindingRef.current?.commander ?? '', owner);
+    setLink((value) => {
+      if (value?.owner === owner && (!portrait || value.selectedAsset === portrait.id)) return value;
+      // Cosmetic restoration is not proof of present ownership or utility access.
+      return portrait ? { owner, assets: [portrait], selectedAsset: portrait.id, checkedAt: 0, identityVerified: false } : null;
+    });
     try {
       const result = await cryptoUfosRequest<{ owner: string; assets: CryptoUfo[]; checkedAt: number; identityVerified: false }>({ action: 'owner-assets', owner });
       if (revision.current !== expected) return false;
@@ -89,7 +94,8 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
       const selectedAsset = restoredCommanderAsset(result.assets, owner, selected,
         chainRef.current, bindingRef.current?.commander ?? '');
       selectedRef.current = selectedAsset;
-      const next = { ...result, selectedAsset };
+      // UI freshness uses one clock; server proof expiry is validated separately.
+      const next = { ...result, selectedAsset, checkedAt: Date.now() };
       linkRef.current = next;
       setLink(next);
       return true;
@@ -287,7 +293,23 @@ export function CryptoUfosProvider({ children }: PropsWithChildren) {
     if (verificationRevision.current !== expected || holdingAccount(wallet.accounts)?.address !== account.address || (purpose === 'expedition' && linkRef.current?.selectedAsset !== asset)) throw new Error('Holding wallet or commander changed. Retry verification.');
     return result;
   };
-  const verifyUtility = (commander: string, asset: string) => signOwnership(commander, asset, 'expedition');
+  const verifyUtility = async (commander: string, asset: string) => {
+    const current = linkRef.current;
+    const active = bindingRef.current;
+    const expected = verificationRevision.current;
+    if (!active || active.commander !== commander || !ownershipReady || !current
+      || current.selectedAsset !== asset || !current.assets.some(value => value.id === asset)) {
+      throw new Error('Refresh ownership and choose your saved UFO commander.');
+    }
+    const result = await cryptoUfosRequest<{utilityToken: string; expiresAt: number}>({
+      action:'ufo-linked-verify',commander,owner:current.owner,asset,
+    });
+    if (bindingRef.current !== active || verificationRevision.current !== expected
+      || linkRef.current?.owner !== current.owner || linkRef.current?.selectedAsset !== asset) {
+      throw new Error('Holding wallet or commander changed. Retry verification.');
+    }
+    return result;
+  };
   signOwnershipRef.current = signOwnership;
   return <Context.Provider value={{ link, flagship, ownershipReady, ownershipStatus, ownershipEpoch, wallets, busy: busy || saving, error, stage, connect, refresh, assign, unlink, verifyUtility, utilityEnabled,
     gameCommander: binding?.commander ?? '', identityReady: Boolean(binding && identityCommander === binding.commander), saving, holdingConnected: Boolean(holdingWallet), bindGame,
@@ -305,12 +327,13 @@ function NftImage({ asset, revision = 0 }: { asset: CryptoUfo; revision?: number
   const [loaded, setLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const retry = useRef<number | undefined>();
+  const image = useRef<HTMLImageElement | null>(null);
   useEffect(() => {
-    setFailed(false); setLoaded(false); setAttempt(0);
+    setFailed(false); setLoaded(Boolean(image.current?.complete && image.current.naturalWidth > 0)); setAttempt(0);
     return () => window.clearTimeout(retry.current);
   }, [asset.image, revision]);
   const source = asset.image && (attempt > 0 || revision > 0) ? `${asset.image}${asset.image.includes('?') ? '&' : '?'}retry=${revision}-${attempt}` : asset.image;
-  return source && !failed ? <><img src={source} alt={asset.name} loading="lazy" referrerPolicy="no-referrer" onLoad={() => setLoaded(true)} onError={() => {
+  return source && !failed ? <><img ref={image} src={source} alt={asset.name} loading="lazy" referrerPolicy="no-referrer" onLoad={() => setLoaded(true)} onError={() => {
     setLoaded(false);
     if (attempt < 2) {
       window.clearTimeout(retry.current);
@@ -320,9 +343,9 @@ function NftImage({ asset, revision = 0 }: { asset: CryptoUfo; revision?: number
 }
 
 export function CommanderAvatar({ className = '', fallback = 'CO' }: { className?: string; fallback?: string }) {
-  const { flagship, ownershipStatus } = useCryptoUfos();
+  const { flagship } = useCryptoUfos();
   const frame = useUfoFrame(flagship);
-  return <span className={`commander-avatar ${className}`} data-ownership={ownershipStatus} style={{ '--commander-accent': frame.accent } as React.CSSProperties} title={flagship ? `${flagship.name}${ownershipStatus === 'verified' ? '' : ` (${ownershipStatus})`}` : 'Commander'}>
+  return <span className={`commander-avatar ${className}`} style={{ '--commander-accent': frame.accent } as React.CSSProperties} title={flagship?.name ?? 'Commander'}>
     {flagship ? <NftImage asset={flagship} /> : <span aria-hidden="true">{fallback}</span>}
   </span>;
 }

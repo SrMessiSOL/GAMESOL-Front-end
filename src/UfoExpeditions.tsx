@@ -123,6 +123,9 @@ export function UfoExpeditions({ game, commander, loadout, refresh, readError, b
   }, action);
   const remaining = Math.max(0,(loadout?.nextActionAt || 0)-now);
   const cooldown = Math.max(0,(loadout?.lastStarted ? loadout.lastStarted+86400 : 0)-now);
+  useEffect(() => {
+    if (game && available === true && nft.ownershipReady && nft.flagship && !tokenReady && (active || cooldown === 0)) void authorize();
+  }, [game, available, identity, nft.ownershipReady, tokenReady, Boolean(active), cooldown === 0]);
   const sameAsset = !active || (loadout.asset === nft.flagship?.id && loadout.owner === nft.link?.owner);
   const stage = loadout?.stage || 0;
   const doctrine = loadout?.doctrine || 1;
@@ -132,7 +135,7 @@ export function UfoExpeditions({ game, commander, loadout, refresh, readError, b
   const utilityDisabled = disabled || !nft.ownershipReady;
   const ownershipLabel = nft.ownershipStatus === 'checking' ? 'Checking ownership'
     : !nft.ownershipReady ? 'Ownership check required' : tokenReady ? 'Utility verified'
-      : !active && cooldown > 0 ? 'Ownership checked' : 'Wallet verification required';
+      : 'Checking saved commander';
   const cooldownMinutes = Math.ceil(cooldown/60);
   const cooldownLabel = `${Math.floor(cooldownMinutes/60)}h ${cooldownMinutes%60}m`;
   return <section className="ufo-expeditions" aria-label="UFO expeditions">
@@ -140,7 +143,7 @@ export function UfoExpeditions({ game, commander, loadout, refresh, readError, b
     {(error || readError) && <p className="ufo-mission-error" role="alert">{error || readError}</p>}
     {available === null ? <p role="status">Checking on-chain expedition configuration...</p> : !available ? <p className="ufo-mission-status">Program activation pending</p> : <>
       <div className="ufo-mission-identity"><CommanderAvatar className="ufo-commander-portrait"/><div className="ufo-identity-copy"><b>{nft.flagship?.name || 'Choose a UFO commander'}</b><small className={`ufo-ownership-status ${nft.ownershipStatus}`}><span aria-hidden="true"/>{ownershipLabel}</small>{nft.link?.owner && <small>{shortNftAddress(nft.link.owner)}</small>}</div><button className="ufo-change-commander" disabled={disabled || nft.busy} onClick={() => setPicker(true)}><UserRound size={16}/>Change commander</button></div>
-      {!tokenReady && (active || cooldown === 0) && <button className="ufo-mission-primary" disabled={utilityDisabled || !nft.flagship || !game} onClick={() => void authorize()}>{pendingAction === 'verify' ? <LoaderCircle size={18} className="ufo-spin"/> : <ShieldCheck size={18}/>} {pendingAction === 'verify' ? 'Verifying...' : 'Verify UFO utility'}</button>}
+      {!tokenReady && (active || cooldown === 0) && <button className="ufo-mission-primary" disabled={utilityDisabled || !nft.flagship || !game} onClick={() => void authorize()}>{pendingAction === 'verify' ? <LoaderCircle size={18} className="ufo-spin"/> : <ShieldCheck size={18}/>} {pendingAction === 'verify' ? 'Checking ownership...' : 'Check ownership'}</button>}
       {nft.error && <p className="ufo-mission-error" role="alert">{nft.error}</p>}
       {active ? <div className="ufo-mission-active"><div className="ufo-mission-meta"><b>{UFO_ROLES[doctrine]} expedition</b><span>Encounter {Math.min(stage+1,3)}/3 · {loadout.mistakes}/3 hazards</span></div>
         <ol className="ufo-mission-progress" aria-label="Expedition progress">{[0,1,2].map(step => <li key={step} className={step < stage ? 'complete' : step === stage ? 'current' : ''} aria-current={step === stage ? 'step' : undefined}><span>{step < stage ? <Check size={14}/> : step+1}</span><b>Encounter {step+1}</b></li>)}</ol>

@@ -16,9 +16,10 @@ function setup() {
   const issuer=Keypair.generate();
   const asset={id:Keypair.generate().publicKey.toBase58(),ownership:{owner},compression:{compressed:true},grouping:[{group_key:'collection',group_value:nft.COLLECTION}],content:{metadata:{name:'Crypto UFO #7541',attributes:[{trait_type:'Body',value:'Silver UFO'},{trait_type:'Eyes',value:'Small Eyes'},{trait_type:'Accesory',value:'Frown'},{trait_type:'Hair',value:'Tiara'}]}}};
   const config=Buffer.concat([utility.discriminator('UfoConfig'),issuer.publicKey.toBuffer(),Buffer.from([1])]);
-  const state={now:1000000,asset,nonce:0n,enabled:true,genesis:utility.DEVNET_GENESIS,loadout:null};
+  const state={now:1000000,asset,nonce:0n,enabled:true,genesis:utility.DEVNET_GENESIS,loadout:null,identity:null};
   const configPda=PublicKey.findProgramAddressSync([Buffer.from('ufo_config')],utility.PROGRAM)[0];
-  const rpc={getGenesisHash:async()=>state.genesis,getAccountInfo:async key=>key.equals(configPda)?{owner:utility.PROGRAM,data:Buffer.concat([config.subarray(0,40),Buffer.from([state.enabled?1:0])])}:state.loadout};
+  const identityPda=PublicKey.findProgramAddressSync([Buffer.from('commander_identity'),new PublicKey(commander).toBuffer()],utility.PROGRAM)[0];
+  const rpc={getGenesisHash:async()=>state.genesis,getAccountInfo:async key=>key.equals(configPda)?{owner:utility.PROGRAM,data:Buffer.concat([config.subarray(0,40),Buffer.from([state.enabled?1:0])])}:key.equals(identityPda)&&state.identity?state.identity:state.loadout};
   const service=utility.createAttestationService({env:{GAMESOL_NFT_LINK_SECRET:'test-only-secret-at-least-thirty-two-characters',GAMESOL_UFO_ATTESTOR_KEY:Buffer.from(issuer.secretKey).toString('base64')},connection:rpc,das:async()=>state.asset,now:()=>state.now});
   async function authorize(purpose) {
     const challenge=await service({action:'ufo-challenge',commander,owner,asset:asset.id,purpose},origin);
@@ -36,6 +37,53 @@ function loadFrontend() {
   return mod.exports;
 }
 const frontend=loadFrontend();
+
+function saveLink(ctx) {
+  const data=Buffer.alloc(120);
+  utility.discriminator('CommanderIdentity').copy(data);
+  new PublicKey(ctx.commander).toBuffer().copy(data,8);
+  data.writeBigUInt64LE(7n,40);
+  new PublicKey(ctx.owner).toBuffer().copy(data,48);
+  new PublicKey(ctx.asset.id).toBuffer().copy(data,80);
+  data.writeBigInt64LE(1n,112);
+  ctx.state.identity={owner:utility.PROGRAM,data};
+}
+
+test('existing on-chain link silently authorizes utility with fresh DAS ownership and no holder signature',async()=>{
+  const ctx=setup(); saveLink(ctx);
+  const auth=await ctx.service({action:'ufo-linked-verify',commander:ctx.commander,owner:ctx.owner,asset:ctx.asset.id},origin);
+  const result=await ctx.service({action:'ufo-attest',utilityToken:auth.utilityToken},origin);
+  assert.equal(result.proof.asset,ctx.asset.id);
+  assert.equal(result.proof.owner,ctx.owner);
+  assert.equal(result.proof.nonce,'0');
+  assert(Buffer.from(result.message,'base64').equals(utility.attestationMessage(ctx.commander,result.proof)));
+  await assert.rejects(ctx.service({action:'ufo-commander-attest',utilityToken:auth.utilityToken},origin),/different action/);
+  await assert.rejects(ctx.service({action:'ufo-attest',utilityToken:auth.utilityToken},'https://other.example'));
+});
+
+test('a public address cannot silently establish or substitute an unverified commander link',async()=>{
+  for(const change of [ctx=>{ctx.state.identity=null;},ctx=>{ctx.state.identity.owner=new PublicKey(ctx.owner);},
+    ctx=>{ctx.state.identity.data=Buffer.alloc(119);},ctx=>{ctx.state.identity.data[0]^=1;},
+    ctx=>{ctx.state.identity.data.writeBigInt64LE(0n,112);},
+    ctx=>{new PublicKey(ctx.owner).toBuffer().copy(ctx.state.identity.data,8);},
+    ctx=>{new PublicKey(ctx.commander).toBuffer().copy(ctx.state.identity.data,48);},
+    ctx=>{new PublicKey(ctx.commander).toBuffer().copy(ctx.state.identity.data,80);}]){
+    const ctx=setup();saveLink(ctx);change(ctx);
+    await assert.rejects(ctx.service({action:'ufo-linked-verify',commander:ctx.commander,owner:ctx.owner,asset:ctx.asset.id},origin),/on-chain commander/);
+  }
+});
+
+test('silent tokens cannot outlive link revocation, replacement, NFT transfer or their expiry',async()=>{
+  for(const change of [ctx=>{ctx.state.identity.data.writeBigUInt64LE(8n,40);},
+    ctx=>{ctx.state.identity.data.writeBigInt64LE(0n,112);},
+    ctx=>{ctx.state.asset={...ctx.asset,ownership:{owner:ctx.commander}};},
+    ctx=>{ctx.state.now+=3600001;}]){
+    const ctx=setup();saveLink(ctx);
+    const auth=await ctx.service({action:'ufo-linked-verify',commander:ctx.commander,owner:ctx.owner,asset:ctx.asset.id},origin);
+    change(ctx);
+    await assert.rejects(ctx.service({action:'ufo-attest',utilityToken:auth.utilityToken},origin));
+  }
+});
 
 test('avatar authorization and independent nonce cannot be substituted for expedition utility',async()=>{
   const ctx=setup();
