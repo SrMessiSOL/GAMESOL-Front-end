@@ -39,3 +39,25 @@ creation/extension/freeze receipts. No token or program authority changed.
 
 Approved round cap: 2 test ANTIMATTER and 1 test USDC. Spent before the real
 buyer retry: zero. No mainnet action, NFT transfer, withdrawal or planet sale.
+
+## Real Settlement - October 17
+
+Published commit `35b6fd7` passed the production build and the public alias check.
+The real user-approved Default purchase finalized:
+`2vGNgoTQbkiMN3bjjfTA1CSHRWi5KGdZwkuiEfAtnhYwZz42ujpn7kB52F9W6sA64TAP5i3bjL1VN8aSmM72gDGA`.
+
+Receipt and baseline checks passed: buyer -1,000,000 base units, seller +997,500,
+treasury +2,500; the mint has 6 decimals. AcceptOffer executed once, logged 1,000
+metal credited to the buyer, and closed the offer. The first-seller ATA was
+created by the purchase bundle. Transaction fee: 10,000 lamports.
+
+Unsigned replay of this completed AcceptOffer rejects AccountNotInitialized and
+leaves all tracked accounts unchanged. This is closed-offer rejection, not proof
+of every invalid-buyer business rule. The live UI shows zero remaining offers.
+
+Round spending is now 1 test ANTIMATTER and zero test USDC. Remaining approved
+allowance: 1 test ANTIMATTER and 1 test USDC. No second payment was submitted.
+Evidence: release `.validation/devnet-smoke-2026-10-16/market-buyer-before.json`,
+`market-buyer-settled.json` and `market-settlement-complete.jpg`.
+Reproduce receipt verification with `node server/verify-market-settlement.cjs`
+followed by the signature above; it only reads chain state and writes evidence.
