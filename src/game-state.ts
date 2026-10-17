@@ -4665,7 +4665,8 @@ export class GameClient {
     if (this.preferVaultSigning && preparedVault === null && antimatterRaw === 0n) {
       throw new Error("Vault is locked or not ready. Unlock the vault before depositing alliance resources.");
     }
-    if (useVault) await this.ensureVaultLamports(preparedVault, VAULT_MIN_BALANCE_LAMPORTS);
+    // Fee-sponsored deposits do not need the legacy vault's SOL reserve.
+    if (useVault && !this.gameplayVaultExecutor) await this.ensureVaultLamports(preparedVault, VAULT_MIN_BALANCE_LAMPORTS);
     const tokenOwner = useVault ? preparedVault : authority;
     const tokenSetup = useVault
       ? await this.getOrCreateVaultTokenAccountInstructions(tokenOwner, antimatterMint, antimatterRaw)
