@@ -412,8 +412,9 @@ function isCompressedAllianceDeposit(inner) {
   const ix = inner[0], data = ix.data, a = ix.accounts;
   const discriminator = crypto.createHash('sha256').update('global:deposit_alliance_resources').digest().subarray(0, 8);
   if (!ix.programId.equals(GAME_STATE_PROGRAM_ID) || a.length !== 11 || data.length !== 42
-    || !isDiscriminator(data, discriminator) || data[8] !== 1 || data[9] !== 3
-    || !data.subarray(10, 34).equals(Buffer.alloc(24)) || data.readBigUInt64LE(34) !== 100_000_000n) return false;
+    || !isDiscriminator(data, discriminator) || ![1, 2].includes(data[8]) || data[9] !== 3
+    || !data.subarray(10, 34).equals(Buffer.alloc(24))
+    || data.readBigUInt64LE(34) !== (data[8] === 1 ? 100_000_000n : 1_000_000_000n)) return false;
   const pda = (seed, key) => PublicKey.findProgramAddressSync([Buffer.from(seed), ...(key ? [key.toBuffer()] : [])], GAME_STATE_PROGRAM_ID)[0];
   const mint = new PublicKey(ALLIANCE_LOOKUP.antimatterMint);
   const ata = PublicKey.findProgramAddressSync([a[0].toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()], ASSOCIATED_TOKEN_PROGRAM_ID)[0];
@@ -528,7 +529,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
     }
   } else if (tables.length && tables[0].key.toBase58() === ALLIANCE_LOOKUP.table) {
     if (!(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedAlliance)) {
-      throw new Error('Alliance address table requires one canonical passkey-approved alliance creation or daily ANTIMATTER deposit.');
+      throw new Error('Alliance address table requires one canonical passkey-approved alliance creation or daily/weekly ANTIMATTER deposit.');
     }
   } else if (tables.length && !(ufoPrecompiles && matchingUfoAction)
     && !(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && (hasCompressedStore || hasCompressedMarketListing))) {

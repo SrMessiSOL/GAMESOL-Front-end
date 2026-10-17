@@ -12,12 +12,12 @@ const manifest = require('../src/alliance-lookup-table.json');
 const game = new PublicKey(manifest.addresses[0]);
 const pda = (seed, key) => PublicKey.findProgramAddressSync([Buffer.from(seed), ...(key ? [key.toBuffer()] : [])], game)[0];
 
-async function fixture(mutate = () => {}, origin = 'https://chained-universe.vercel.app') {
+async function fixture(mutate = () => {}, origin = 'https://chained-universe.vercel.app', period = 1) {
   const f = await storeTransactionFixture(false, inner => {
     const owner = inner[0].keys[0].pubkey, alliance = pda('alliance', owner), mint = new PublicKey(manifest.antimatterMint);
     const data = Buffer.alloc(42);
     crypto.createHash('sha256').update('global:deposit_alliance_resources').digest().copy(data, 0, 0, 8);
-    data[8] = 1; data[9] = 3; data.writeBigUInt64LE(100_000_000n, 34);
+    data[8] = period; data[9] = 3; data.writeBigUInt64LE(period === 1 ? 100_000_000n : 1_000_000_000n, 34);
     inner[0] = new TransactionInstruction({ programId: game,
       keys: [owner, alliance, pda('alliance_membership', owner), pda('alliance_treasury', alliance), Keypair.generate().publicKey,
         pda('game_config'), pda('store_config'), mint, getAssociatedTokenAddressSync(mint, owner, true),
@@ -29,9 +29,9 @@ async function fixture(mutate = () => {}, origin = 'https://chained-universe.ver
   return { ...f, table, compressed };
 }
 
-test('daily AM deposit fits public and long preview packets with existing frozen table', async () => {
-  for (const origin of ['https://chained-universe.vercel.app', 'https://frontend-5qbez2oeb-srmessisols-projects.vercel.app']) {
-    const f = await fixture(undefined, origin);
+test('daily and weekly AM deposits fit public and long preview packets with existing frozen table', async () => {
+  for (const period of [1, 2]) for (const origin of ['https://chained-universe.vercel.app', 'https://frontend-5qbez2oeb-srmessisols-projects.vercel.app']) {
+    const f = await fixture(undefined, origin, period);
     let raw;
     try { raw = f.transaction.serialize().length; } catch (error) {
       assert.match(error.message, /encoding overruns/);
@@ -46,11 +46,23 @@ test('daily AM deposit fits public and long preview packets with existing frozen
   }
 });
 
+test('weekly compression rejects daily amounts, monthly periods, wrong recipients and extra commands', async () => {
+  for (const mutate of [
+    inner => { inner[0].data.writeBigUInt64LE(100_000_000n, 34); },
+    inner => { inner[0].data[8] = 3; },
+    inner => { inner[0].keys[9].pubkey = Keypair.generate().publicKey; },
+    inner => { inner.push(inner[0]); },
+  ]) {
+    const f = await fixture(mutate, undefined, 2);
+    assert.throws(() => _test.assertTransactionPolicy(f.compressed, { publicKey: f.payer }, [f.table]));
+  }
+});
+
 test('deposit rejects changed fixed accounts, amount, period, resource payload, and extra actions', async () => {
   const mutations = [
     ...[2,3,5,6,7,8,9,10].map(i => inner => { inner[0].keys[i].pubkey = Keypair.generate().publicKey; }),
     inner => { inner[0].data[0] ^= 1; },
-    inner => { inner[0].data[8] = 2; },
+    inner => { inner[0].data[8] = 3; },
     inner => { inner[0].data[9] = 0; },
     inner => { inner[0].data[10] = 1; },
     inner => { inner[0].data.writeBigUInt64LE(101_000_000n, 34); },
@@ -74,14 +86,16 @@ test('deposit requires exactly one preceding passkey, one execute, and frozen ex
   }
 });
 
-test('frontend selects only canonical daily 100-AM deposits for alliance compression', async () => {
+test('frontend selects only canonical daily 100-AM and weekly 1000-AM deposits for alliance compression', async () => {
   const source = ts.createSourceFile('session.ts', fs.readFileSync(require.resolve('../src/player-funded-session.ts'), 'utf8'), ts.ScriptTarget.Latest, true);
   const declaration = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'isAllianceDepositBundle');
   const js = ts.transpileModule(declaration.getText(source) + '\nmodule.exports = isAllianceDepositBundle;', { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
   const module = { exports: {} };
   vm.runInNewContext(js, { module, Buffer, GAME_STATE_PROGRAM_ID: game });
-  const f = await fixture();
-  assert.equal(module.exports(f.inner), true);
-  f.inner[0].data[34] ^= 1;
-  assert.equal(module.exports(f.inner), false);
+  for (const period of [1, 2]) {
+    const f = await fixture(undefined, undefined, period);
+    assert.equal(module.exports(f.inner), true);
+    f.inner[0].data[34] ^= 1;
+    assert.equal(module.exports(f.inner), false);
+  }
 });

@@ -749,9 +749,9 @@ function isAllianceDepositBundle(instructions: TransactionInstruction[]): boolea
   return instructions.length === 1 && deposit.programId.equals(GAME_STATE_PROGRAM_ID)
     && deposit.keys.length === 11 && deposit.data.length === 42
     && deposit.data.subarray(0, 8).equals(Buffer.from([64, 70, 103, 74, 35, 162, 164, 162]))
-    && deposit.data[8] === 1 && deposit.data[9] === 3
+    && (deposit.data[8] === 1 || deposit.data[8] === 2) && deposit.data[9] === 3
     && deposit.data.subarray(10, 34).equals(Buffer.alloc(24))
-    && deposit.data.readBigUInt64LE(34) === 100_000_000n;
+    && deposit.data.readBigUInt64LE(34) === (deposit.data[8] === 1 ? 100_000_000n : 1_000_000_000n);
 }
 
 function isMarketPurchaseBundle(instructions: TransactionInstruction[]): boolean {
