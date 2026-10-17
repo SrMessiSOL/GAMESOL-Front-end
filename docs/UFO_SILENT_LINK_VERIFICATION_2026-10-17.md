@@ -49,5 +49,14 @@ desktop and 390x844 mobile checks: actual #513 image is 256x256, complete, with
 no loading overlay and title Crypto UFO #513 (no expired label). After sign-in
 on that fresh origin, the avatar and Utility verified state restored without a
 Solflare connection or signature. Mobile refresh repeated both successfully.
-Screenshots: avatar-final-desktop.png and avatar-final-mobile.png. Publication
-is authorized after these checks; production deployment verification follows.
+Screenshots: avatar-final-desktop.png and avatar-final-mobile.png.
+
+Published code: 410417b on feat/crypto-ufos-wallet-link. Production deployment
+frontend-l23wbfpy4-srmessisols-projects.vercel.app is Ready and the public alias
+chained-universe.vercel.app points to it. Both return HTTP 200 and the matching
+entry /assets/index-CNMXKYO2.js (HTTP 200). Live utility is enabled; the linked
+verification endpoint authorized the canonical saved commander without a holder
+signature. Real #513 artwork returns image/jpeg, 3873 bytes, HTTP 200. Production
+Chrome restored #513 and Mission Control reached Utility verified silently. Its
+256x256 image was complete with no loading overlay or expired title. No tokens
+were spent or game expeditions launched during these checks.
