@@ -1,0 +1,105 @@
+{
+  "network": "Solana devnet",
+  "commitment": "finalized",
+  "upgradeSignature": "5WmzGZvqGVbN7EE6aT9D85Tojnwt5aNxXaM9cgb8Dp8y1s5bwVa3yvE8do6oHFm5JgY4tp1pSDafb4Ru9oZjCZ8T",
+  "upgradeSlot": 512199141,
+  "depositSignature": "2FW31wVJgW5CvbNGWLqpztUapFRNA9aofe58pr1DUivZzF17ziCmycAHeDFfhaYYADSK2VoMVULqpWCKQrfoMFek",
+  "packSignature": "vBqwiV7HFEmN2qkdSJUXL7rBT7db4w9wkwmuXRkawkvN6tNi1YZ8mKB86cmUz85ggeQykRH8BPqbPaGDu9VgSHA",
+  "before": {
+    "alliance": {
+      "publicKey": "7EJgwFu4wckh1wY2fxCfmfvi7EFmeEorMuwYQA8iC4Kp",
+      "founder": "G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r",
+      "name": "GAMESOL Devnet QA",
+      "level": 4,
+      "xp": "7282",
+      "memberCount": 2,
+      "maxMembers": 14,
+      "totalMissionsCompleted": "11",
+      "createdAt": 1792027236,
+      "bump": 255
+    },
+    "treasury": {
+      "publicKey": "H9fmLJwno49ejr6txrA9jBK5hxR4yiJT3Z7CML7wWtAY",
+      "alliance": "7EJgwFu4wckh1wY2fxCfmfvi7EFmeEorMuwYQA8iC4Kp",
+      "metal": "64000",
+      "crystal": "41000",
+      "deuterium": "21545",
+      "antimatter": "815000000",
+      "logisticsHub": 1,
+      "researchGrid": 1,
+      "defenseCoordination": 1,
+      "tradeNetwork": 1,
+      "totalMetalDeposited": "78000",
+      "totalCrystalDeposited": "55000",
+      "totalDeuteriumDeposited": "29000",
+      "totalAntimatterDeposited": "1100000000",
+      "bump": 252
+    },
+    "membership": {
+      "authority": "G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r",
+      "alliance": "7EJgwFu4wckh1wY2fxCfmfvi7EFmeEorMuwYQA8iC4Kp",
+      "role": 2,
+      "joinedAt": 1792027236,
+      "dailyEpoch": 20743,
+      "weeklyEpoch": 2963,
+      "monthlyEpoch": 24321,
+      "dailyClaimedMask": "15",
+      "weeklyClaimedMask": "15",
+      "monthlyClaimedMask": "1",
+      "bump": 254
+    }
+  },
+  "after": {
+    "alliance": {
+      "publicKey": "7EJgwFu4wckh1wY2fxCfmfvi7EFmeEorMuwYQA8iC4Kp",
+      "founder": "G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r",
+      "name": "GAMESOL Devnet QA",
+      "level": 4,
+      "xp": "7912",
+      "memberCount": 2,
+      "maxMembers": 14,
+      "totalMissionsCompleted": "11",
+      "createdAt": 1792027236,
+      "bump": 255
+    },
+    "treasury": {
+      "publicKey": "H9fmLJwno49ejr6txrA9jBK5hxR4yiJT3Z7CML7wWtAY",
+      "alliance": "7EJgwFu4wckh1wY2fxCfmfvi7EFmeEorMuwYQA8iC4Kp",
+      "metal": "56080",
+      "crystal": "21200",
+      "deuterium": "13665",
+      "antimatter": "666500000",
+      "logisticsHub": 1,
+      "researchGrid": 2,
+      "defenseCoordination": 1,
+      "tradeNetwork": 1,
+      "totalMetalDeposited": "78000",
+      "totalCrystalDeposited": "55000",
+      "totalDeuteriumDeposited": "29000",
+      "totalAntimatterDeposited": "1100000000",
+      "bump": 252
+    },
+    "membership": {
+      "authority": "G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r",
+      "alliance": "7EJgwFu4wckh1wY2fxCfmfvi7EFmeEorMuwYQA8iC4Kp",
+      "role": 2,
+      "joinedAt": 1792027236,
+      "dailyEpoch": 20743,
+      "weeklyEpoch": 2963,
+      "monthlyEpoch": 24321,
+      "dailyClaimedMask": "15",
+      "weeklyClaimedMask": "15",
+      "monthlyClaimedMask": "1",
+      "bump": 254
+    }
+  },
+  "charged": {
+    "metal": "7920",
+    "crystal": "19800",
+    "deuterium": "7880",
+    "antimatter": "148500000"
+  },
+  "xpIncrease": "630",
+  "upgradeWalletTokenBalancesUnchanged": true,
+  "packTestUsdcSpent": 30
+}

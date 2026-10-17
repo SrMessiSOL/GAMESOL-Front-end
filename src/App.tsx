@@ -1048,12 +1048,12 @@ function allianceBoosts(treasury: AllianceTreasuryStateAccount | null | undefine
   return {
     logisticsXpBonusBps: logistics * 500,
     researchXpBonusBps: research * 500,
-    defenseDeuteriumDiscountBps: defense * 400,
-    tradeCostDiscountBps: trade * 300,
+    defenseDeuteriumDiscountBps: defense * 150,
+    tradeCostDiscountBps: trade * 100,
   };
 }
 
-function discountedAllianceBuildingCost(
+export function discountedAllianceBuildingCost(
   buildingId: number,
   nextLevel: number,
   treasury: AllianceTreasuryStateAccount | null | undefined,

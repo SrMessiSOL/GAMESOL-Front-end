@@ -12,9 +12,9 @@ action or program/token authority change occurred.
 ## Current verified baseline
 
 - Public game: https://chained-universe.vercel.app/app.
-- Published frontend code: `35b6fd7` (buyer packet compression and post-approval
-  blockhash refresh); includes per-account Quick Play, avatar restoration and
-  prerequisite parity.
+- Published frontend code: `410417b`, with verification documentation `958afb0`;
+  includes silent linked-wallet ownership checks, on-chain avatar restoration,
+  cached-image handling, per-account Quick Play and prerequisite parity.
 - Game program: `J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq`.
 - Market program: `6hPzaemT1siozGVM7MUHvjFK79WNGCrKruEBMEKA1DjA`.
 - Both are executable on verified Solana devnet. Their current upgrade authority
@@ -32,7 +32,9 @@ action or program/token authority change occurred.
 
 ## Checks refreshed now
 
-- Full frontend/server regression suite: 210 tests passed.
+- Published avatar release: 230 frontend/server tests passed. Subsequent local
+  alliance-quote consistency fixes pass 233 tests and the production build;
+  those new quote fixes have not yet been published or visually rechecked.
 - Real buyer settlement finalized in transaction
   `2vGNgoTQbkiMN3bjjfTA1CSHRWi5KGdZwkuiEfAtnhYwZz42ujpn7kB52F9W6sA64TAP5i3bjL1VN8aSmM72gDGA`.
   Independent receipt and baseline checks verify buyer -1 ANTIMATTER, seller
@@ -63,7 +65,7 @@ action or program/token authority change occurred.
 | Controlled combat | Real attack, resolution, losses/loot, return, report and replay checks against the controlled defender | NewAccount protection ends October 21 at 16:28:55 Buenos Aires; no bypass. Review same-alliance targeting rules before that test. |
 | Market adversarial coverage | Live success, first-seller ATA setup, exact token deltas, delivery, closure and closed-offer replay passed. Retain separate local-validator invalid-buyer and rollback evidence; broader live adversarial cases are not certified. | Round spent 1 of 2 approved test ANTIMATTER and 0 of 1 test USDC. Do not create another order just to consume the allowance. |
 | Planet sales | Ownership transfer, registry/index updates, outstanding obligation restrictions and seller access revocation | Not executed; requires a separately bounded transfer test. |
-| Alliance infrastructure | Real contributions for other resources, upgrade cost/balance/benefit checks and leadership transfer/expulsion | Upgrades require ANTIMATTER and remain excluded. Membership lifecycle is complete. |
+| Alliance infrastructure | Leadership transfer/expulsion and any launch-scoped governance permissions | All four infrastructure bonuses have finalized evidence. Research Grid reached level 2 with verified 1% Trade discounts; see TRADE_NETWORK_DEVNET_PROOF_2026-10-17.md. |
 | Governance/sovereignty | Decide launch scope; if included, rehearse proposal lifecycle, executor permissions and failure paths | Source feature flags default off. No governance activation or authority change authorized. |
 | NFT ownership transitions | Real transfer-out/transfer-back or equivalent approved two-wallet rehearsal, expiry/revocation and cross-account checks | Unit coverage exists; no NFT transfer or forced live expiry was performed here. |
 | Wallet funds | Bounded real deposit/withdrawal and cancellation/reconciliation checks | Requires explicit destination, amount and owner approval; not part of no-spend tests. |
@@ -104,3 +106,47 @@ Without token spending, continue backend parity review, final-binary review and
 test preparation, moderation of the remaining advisory findings, and mainnet
 configuration/runbook preparation. Do not mark buyer settlement, upgrades,
 withdrawal or controlled combat complete from unsigned rejection simulations.
+
+## October 17 Follow-Up
+
+Refreshed finalized state: alliance XP 5,266, two members; each infrastructure
+building level 1. Treasury 4,000 metal / 1,000 crystal / 1,545 deuterium /
+815 test AM. Research Grid level 2 should charge 7,920 metal / 19,800 crystal /
+7,880 deuterium / 148.5 test AM. Its upgrade XP should be 630. These are expected
+values, not an executed Trade Network bonus result.
+
+Source review found two frontend quote defects: PlanetWorld shows base prices,
+while App's existing boost helper used 3% Trade and 4% Defense rates instead of
+the backend's 1% and 1.5%. Local fixes share the discounted quote across both
+views and match the backend rates. Three focused tests and the full 233-test
+suite pass; the production build passes. No backend/economy change is needed.
+
+Funding plan: request 20 free devnet USDC, then buy the available 30-test-USDC
+Weekly Expansion Pack using Default's existing 10.5 plus the refill. Its rewards
+fit current storage. A monthly Sector Reserve contribution would then fund the
+Research Grid upgrade. The faucet request failed to connect to reCAPTCHA;
+the on-chain USDC balance remains 10.5. No pack purchase, resource contribution
+or infrastructure upgrade was submitted in this follow-up.
+
+Quick Play passed refresh, closed/reopened tab and user-performed full Chrome
+restart. #513 is finalized as commander identity nonce 3 and restored on a fresh
+Preview origin and Production. Utility ownership checks completed silently on
+desktop/mobile without holder reconnection/signatures. These are not a real
+NFT transfer-out/transfer-back test. Production audit refreshed: zero high,
+zero critical, 13 moderate findings. Default has one returned small cargo,
+20 fighters, two probes and zero active missions. NewAccount protection still
+ends October 21, 2026 at 16:28:55 America/Argentina/Buenos_Aires.
+
+Mainnet remains blocked on controlled combat; the outstanding leadership tests;
+planet-sale ownership and obligation handling; bounded
+wallet withdrawal/reconciliation; real NFT ownership transitions; a launch-scope
+decision and rehearsal for governance/sovereignty; independent security review;
+final mainnet IDs/mints/configuration/custody; mainnet-specific sponsor,
+attestor and lookup-table policy; and deployment/monitoring/recovery signoff.
+
+Later October 17 execution supersedes the funding blocker above: the faucet
+refill arrived, the 30-test-USDC pack purchase finalized, the monthly Sector
+Reserve funded the treasury, and Research Grid reached level 2. Exact observed
+charges match 1% Trade discounts on metal/crystal/AM and 1.5% Defense discount
+on deuterium. Upgrade XP was +630 and wallet token balances were unchanged.
+See TRADE_NETWORK_DEVNET_PROOF_2026-10-17.md and its raw JSON evidence.
