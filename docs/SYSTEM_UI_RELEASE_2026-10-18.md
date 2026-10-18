@@ -79,3 +79,21 @@ opens/closes. Orbital selection correctly identifies Devnet Colony and Homeworld
 Verified screenshots: system-final-desktop.jpg, system-final-mobile.jpg,
 system-final-mobile-slots.jpg, system-final-survey.jpg, system-wallet-mobile.jpg,
 and alliance-sync-newaccount.jpg. Production receipt is appended after deployment.
+
+### Published And Checked
+
+- Source commit: 0911511 on feat/crypto-ufos-wallet-link, pushed to GitHub.
+- Production deployment: https://frontend-pqz9ibwz0-srmessisols-projects.vercel.app.
+- Public alias: https://chained-universe.vercel.app/app, explicitly assigned.
+- Production TypeScript, Vite and server build completed successfully.
+- Public HTML and canonical entry assets return 200; entry is
+  /assets/index-CcrWaFDf.js on the production deployment host.
+- RPC returns the devnet genesis EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG.
+- Real #513 image endpoint returns 200, image/jpeg, 3,873 bytes.
+- Existing public game session restores Default and #513 without another sign-in.
+  Artwork natural width 256; compact desktop and narrow responsive orbital
+  controls verified again on the published page. Viewport overrides reset.
+- Final production screenshots: system-production-desktop.jpg and
+  system-production-mobile.jpg. Production narrow-page DOM width/scrollWidth
+  both 585 with 32px-tall orbital buttons; QA's explicit 390x844 check is above.
+- No mainnet action, authority change, USDC or ANTIMATTER payment.
