@@ -12,6 +12,14 @@ function motion(window) {
   return context.exports;
 }
 const { transitReducer: reduce, INITIAL_TRANSIT, easeSceneProgress } = motion();
+test('portrait scenes fit the horizontal field without changing desktop camera distances', () => {
+  const { sceneAspectDistanceScale } = motion();
+  assert.equal(sceneAspectDistanceScale(1280, 720), 1);
+  assert.equal(sceneAspectDistanceScale(390, 844), 844 / 390);
+  assert.equal(sceneAspectDistanceScale(100, 1000), 2.8);
+  assert.equal(sceneAspectDistanceScale(0, 844), 1);
+  assert.equal(sceneAspectDistanceScale(NaN, 844), 1);
+});
 const begin = { type: 'begin', id: 1, title: 'Planet', detail: '1:1:1' };
 
 test('hidden tabs do not consume the scene loading timeout or remove readiness gates', () => {

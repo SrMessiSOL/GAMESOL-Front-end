@@ -2032,8 +2032,8 @@ export default function UniverseGame() {
       {avatarPickerOpen && createPortal(<CommanderAvatarDialog onClose={closeAvatarPicker} />, document.body)}
       {!planetWorldState && <UniverseLab
         embedded
-        productionUi={productionPreview}
-        initialEmpireOpen={!returnSystem}
+        productionUi
+        initialEmpireOpen={false}
         onNavigationLevelChange={setExplorationLevel}
         onSceneReady={planetTransit.ready}
         onOpenCommand={(planet) => {

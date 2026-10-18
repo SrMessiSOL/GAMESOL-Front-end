@@ -2068,13 +2068,20 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
     return () => { ++storeReadRevision.current; };
   }, [modal, game]);
   useEffect(() => { setReviewPack(null); }, [state.entityPda]);
-  const refreshAlliance = async () => {
+  const allianceReadRevision = useRef(0);
+  const allianceGameRef = useRef(game);
+  allianceGameRef.current = game;
+  const refreshAlliance = async (silent = false) => {
     if (!game) return;
-    setAllianceLoading(true);
+    const request = ++allianceReadRevision.current;
+    const current = () => request === allianceReadRevision.current && game === allianceGameRef.current;
+    if (!silent) setAllianceLoading(true);
     try {
       const rootGovernance = await game.getGamesolGovernanceConfig();
+      if (!current()) return;
       setGamesolGovernance(rootGovernance);
       const membership = await game.getAllianceMembership();
+      if (!current()) return;
       setAllianceMembership(membership);
       if (!membership || membership.role === 0) {
         setAlliance(null);
@@ -2084,15 +2091,18 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
         setAllianceGovernance(null);
         setAllianceDecisions([]);
         const directory = await game.fetchAlliances();
+        if (!current()) return;
         const requestStates = await Promise.all(directory.map(async (item) => ({
           item,
           request: await game.getAllianceJoinRequest(new PublicKey(item.publicKey)),
         })));
+        if (!current()) return;
         setPendingAllianceDirectory(requestStates.filter(({ request }) => request !== null).map(({ item }) => item));
         setAllianceDirectory(requestStates.filter(({ request }) => request === null).map(({ item }) => item));
         return;
       }
       const loadedAlliance = await game.getAlliance(new PublicKey(membership.alliance));
+      if (!current()) return;
       setAlliance(loadedAlliance);
       setAllianceDirectory([]);
       setPendingAllianceDirectory([]);
@@ -2112,17 +2122,37 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
         game.getAllianceGovernanceConfig(allianceKey),
         game.fetchAllianceDecisions(allianceKey),
       ]);
+      if (!current()) return;
       setAllianceTreasury(treasury);
       setAllianceMembers(members);
       setAllianceJoinRequests(requests);
       setAllianceGovernance(governance);
       setAllianceDecisions(decisions);
     } finally {
-      setAllianceLoading(false);
+      if (current()) setAllianceLoading(false);
     }
   };
   useEffect(() => {
-    if (modal === "alliance") void refreshAlliance();
+    if (modal !== "alliance") return;
+    let reading = false;
+    const refresh = async (silent = true) => {
+      if (reading || document.visibilityState === "hidden") return;
+      reading = true;
+      try { await refreshAlliance(silent); }
+      catch { /* Keep the last confirmed alliance view available for retry. */ }
+      finally { reading = false; }
+    };
+    const onReturn = () => { void refresh(); };
+    void refresh(false);
+    window.addEventListener("focus", onReturn);
+    document.addEventListener("visibilitychange", onReturn);
+    const timer = window.setInterval(onReturn, 15000);
+    return () => {
+      ++allianceReadRevision.current;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onReturn);
+      document.removeEventListener("visibilitychange", onReturn);
+    };
   }, [modal, game]);
   const building = BUILDINGS[selected];
   const level = Number((state.planet as unknown as Record<string, number>)[building.key] ?? 0);

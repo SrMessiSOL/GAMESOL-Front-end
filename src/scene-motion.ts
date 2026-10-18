@@ -20,6 +20,11 @@ export function easeSceneProgress(progress: number) {
   return t * t * (3 - 2 * t);
 }
 
+export function sceneAspectDistanceScale(width: number, height: number) {
+  if (width <= 0 || height <= 0 || !Number.isFinite(width) || !Number.isFinite(height)) return 1;
+  return Math.min(2.8, Math.max(1, height / width));
+}
+
 export function motionDuration(milliseconds: number) {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : milliseconds;
 }

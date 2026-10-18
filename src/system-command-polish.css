@@ -1,0 +1,64 @@
+/* Shared by the live client and the staged presentation. */
+.universe-lab.production-ui .universe-view-context { max-height:calc(100dvh - 180px); overflow-y:auto; scrollbar-width:thin; }
+.universe-lab.production-ui .universe-view-context-title h2 { font-size:22px; letter-spacing:0; }
+.universe-lab.production-ui .universe-view-context>header span,
+.universe-lab.production-ui .universe-view-context-title small,
+.universe-lab.production-ui .universe-view-context dt { font-size:11px; letter-spacing:0; }
+.universe-lab.production-ui .universe-view-context dd { font-size:13px; letter-spacing:0; }
+.universe-lab.production-ui .universe-view-context footer { display:none; }
+.universe-lab.production-ui .system-orbit-scanner>header { flex-wrap:wrap; }
+.universe-lab.production-ui .system-orbit-scanner>header span { font-size:11px; letter-spacing:0; }
+.universe-lab.production-ui .system-orbit-scanner>header small { font-size:10px; letter-spacing:0; color:#a2b9c7; }
+.universe-lab.production-ui .system-orbit-scanner>div { grid-template-columns:repeat(15,minmax(0,1fr)); gap:3px; }
+.universe-lab.production-ui .system-orbit-scanner>div>button { height:30px; font-size:10px; letter-spacing:0; }
+.universe-lab.production-ui .system-orbit-scanner button:focus-visible { outline:2px solid #b9f5dd; outline-offset:2px; }
+.universe-lab.production-ui .orbit-selection { padding:10px; gap:10px; }
+.universe-lab.production-ui .orbit-selection small { font-size:10px; letter-spacing:0; white-space:normal; }
+.universe-lab.production-ui .orbit-selection b { font-size:15px; white-space:normal; overflow-wrap:anywhere; }
+.universe-lab.production-ui .orbit-selection>button { min-width:84px; height:44px!important; font-size:11px!important; letter-spacing:0; }
+.universe-lab.production-ui .empire-heading>button { border-radius:6px; }
+.universe-lab.production-ui .empire-heading p { font-size:12px; line-height:1.5; letter-spacing:0; }
+.universe-lab.production-ui .empire-world-name { overflow-wrap:anywhere; }
+.universe-lab.production-ui .market-directory-copy strong { font-size:11px; letter-spacing:0; }
+.universe-lab.production-ui .market-directory-copy small { font-size:10px; letter-spacing:0; }
+.universe-lab.production-ui .camera-survey { min-width:44px; min-height:44px; }
+.universe-lab.production-ui .camera-controls:has(.camera-survey) { grid-template-columns:repeat(3,minmax(0,1fr))!important; }
+@media(min-width:701px) {
+  .universe-lab.production-ui.embedded .navigation-console {
+    top:12px!important; left:78px!important; right:190px!important;
+    display:flex!important; align-items:center; flex-wrap:wrap;
+    width:auto!important; min-width:0!important; gap:6px!important;
+  }
+  .universe-lab.production-ui.embedded .navigation-rail-toggle {
+    width:40px!important; min-width:40px!important; height:44px!important;
+    min-height:44px!important; justify-content:center!important; padding:0!important;
+  }
+  .universe-lab.production-ui.embedded .navigation-console.is-collapsed { width:auto!important; min-width:0!important; }
+  .universe-lab.production-ui.embedded .camera-controls { width:138px!important; }
+  .universe-lab.production-ui.embedded .coordinate-jump { width:168px!important; }
+  .universe-lab.production-ui.embedded .level-controls {
+    display:flex!important; width:270px!important; gap:4px!important;
+  }
+  .universe-lab.production-ui.embedded .level-controls button,
+  .universe-lab.production-ui.embedded .level-controls b {
+    display:flex!important; justify-content:center!important; gap:4px;
+    width:auto!important; flex:1 1 0; height:44px!important; font-size:11px!important; letter-spacing:0!important;
+  }
+  .universe-lab.production-ui.embedded .sovereignty-toggle { bottom:88px; }
+}
+@media(min-width:701px) and (max-width:1000px) {
+  .universe-lab.production-ui.embedded .navigation-console { right:180px!important; }
+  .universe-lab.production-ui.embedded .level-controls { width:240px!important; }
+}
+@media(max-width:700px) {
+  .universe-lab.production-ui .universe-view-context { max-height:calc(100dvh - 260px); }
+  .universe-lab.production-ui .system-orbit-scanner>div { grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px; }
+  .universe-lab.production-ui .system-orbit-scanner>div>button { height:32px; font-size:11px; }
+  .universe-lab.production-ui .system-orbit-scanner>header small { display:flex; }
+  .universe-lab.production-ui .orbit-selection>button { min-width:78px!important; }
+  .universe-lab.production-ui .empire-world-state b,
+  .universe-lab.production-ui .empire-world-state em { font-size:10px!important; letter-spacing:0; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .universe-lab.production-ui .system-orbit-scanner button { transition:none; }
+}

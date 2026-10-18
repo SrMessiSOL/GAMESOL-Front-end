@@ -5274,6 +5274,9 @@ const App: React.FC = () => {
   const [battleReports, setBattleReports] = useState<BattleReport[]>([]);
   const [spyReports, setSpyReports] = useState<SpyReport[]>([]);
   const clientRef = useRef<GameClient | null>(null);
+  const allianceReadRef = useRef(0);
+  const allianceWalletRef = useRef<string | null>(null);
+  allianceWalletRef.current = publicKey?.toBase58() ?? null;
   const marketClientRef = useRef<MarketClient | null>(null);
   const selectedPdaRef = useRef<string | null>(null);
   const vaultPromptResolverRef = useRef<{ resolve: (v: string) => void; reject: (r?: unknown) => void } | null>(null);
@@ -5499,6 +5502,11 @@ const App: React.FC = () => {
     return config;
   }, [connection, publicKey]);
   const refreshAllianceState = useCallback(async () => {
+    const revision = ++allianceReadRef.current;
+    const client = clientRef.current;
+    const wallet = publicKey?.toBase58() ?? null;
+    const isCurrent = () => revision === allianceReadRef.current
+      && client === clientRef.current && wallet === allianceWalletRef.current;
     if (!clientRef.current || !publicKey) {
       setAllianceState(null);
       setAllianceTreasury(null);
@@ -5510,34 +5518,59 @@ const App: React.FC = () => {
       return null;
     }
     const [joined, directory] = await Promise.all([
-      clientRef.current.getMyAlliance(),
-      clientRef.current.fetchAlliances(),
+      client!.getMyAlliance(),
+      client!.fetchAlliances(),
     ]);
-    setAllianceState(joined?.alliance ?? null);
-    setAllianceMembership(joined?.membership ?? null);
-    setAllianceDirectory(directory);
+    if (!isCurrent()) return null;
     if (joined?.alliance) {
       const alliancePda = new PublicKey(joined.alliance.publicKey);
       const [requests, members, treasury] = await Promise.all([
-        joined.membership.role === 2 ? clientRef.current.fetchAllianceJoinRequests(alliancePda) : Promise.resolve([]),
-        clientRef.current.fetchAllianceMembers(alliancePda),
-        clientRef.current.getAllianceTreasury(alliancePda),
+        joined.membership.role === 2 ? client!.fetchAllianceJoinRequests(alliancePda) : Promise.resolve([]),
+        client!.fetchAllianceMembers(alliancePda),
+        client!.getAllianceTreasury(alliancePda),
       ]);
+      if (!isCurrent()) return null;
       setAllianceJoinRequests(requests);
       setMyAllianceJoinRequests([]);
       setAllianceMembers(members);
       setAllianceTreasury(treasury);
     } else {
       const pendingRequests = await Promise.all(
-        directory.map(item => clientRef.current!.getAllianceJoinRequest(new PublicKey(item.publicKey), publicKey)),
+        directory.map(item => client!.getAllianceJoinRequest(new PublicKey(item.publicKey), publicKey)),
       );
+      if (!isCurrent()) return null;
       setAllianceJoinRequests([]);
       setMyAllianceJoinRequests(pendingRequests.filter((request): request is AllianceJoinRequestAccount => !!request));
       setAllianceMembers([]);
       setAllianceTreasury(null);
     }
+    setAllianceState(joined?.alliance ?? null);
+    setAllianceMembership(joined?.membership ?? null);
+    setAllianceDirectory(directory);
     return joined;
   }, [publicKey]);
+  useEffect(() => {
+    if (!publicKey) return;
+    let disposed = false;
+    let reading = false;
+    const refresh = async () => {
+      if (disposed || reading || document.visibilityState === "hidden") return;
+      reading = true;
+      try { await refreshAllianceState(); } catch { /* Retain the last confirmed view during RPC outages. */ }
+      finally { reading = false; }
+    };
+    const onReturn = () => { void refresh(); };
+    window.addEventListener("focus", onReturn);
+    document.addEventListener("visibilitychange", onReturn);
+    if (tab === "alliance") void refresh();
+    const timer = tab === "alliance" ? window.setInterval(onReturn, 15000) : null;
+    return () => {
+      disposed = true;
+      window.removeEventListener("focus", onReturn);
+      document.removeEventListener("visibilitychange", onReturn);
+      if (timer !== null) window.clearInterval(timer);
+    };
+  }, [publicKey, tab, refreshAllianceState]);
   const replacePlanetState = useCallback((nextState: PlayerState) => {
     setPlanets(prev => {
       const idx = prev.findIndex(p => p.planetPda === nextState.planetPda);

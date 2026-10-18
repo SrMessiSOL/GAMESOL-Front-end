@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
 import { createRequire } from 'node:module'
 
+const { deploymentAssetBase } = createRequire(import.meta.url)('./server/deployment-assets.cjs')
+
 function cryptoUfosGateway(env: Record<string, string>) {
   const require = createRequire(import.meta.url)
   const { createService } = require('./server/crypto-ufos.cjs')
@@ -155,6 +157,7 @@ export default defineConfig(({ mode }) => {
   const wsUrl = new URL(rpcUrl.toString().replace(/^https:/, 'wss:').replace(/^http:/, 'ws:'))
 
   return {
+    base: deploymentAssetBase(process.env),
     plugins: [react(), resilientRpcGateway(rpcUrl, privateRpcTarget ? 6 : 2), cryptoUfosGateway(nftEnv)],
     assetsInclude: ['**/*.glb'],
     server: {

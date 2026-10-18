@@ -15,8 +15,9 @@ import { buyDecisionMarketSide, estimateDecisionMarketBuyMinimum, estimateDecisi
 import WalletConnectControl from "./WalletConnectControl";
 import { GameButton, GameIconButton, GameEmptyState, GameWorkspace } from "./design-system/game-ui";
 import "./universe-lab.css";
+import "./system-command-polish.css";
 import { SceneReady, SceneTransition, useSceneTransit, useCameraInputCancel } from './SceneTransition';
-import { easeSceneProgress, motionDuration } from './scene-motion';
+import { easeSceneProgress, motionDuration, sceneAspectDistanceScale } from './scene-motion';
 import './game-polish.css';
 import stellarCorona from "./assets/universe-lab/stellar-corona.webp";
 import galaxyStellarFlare from "./assets/universe-lab/stellar-flare-v2.webp";
@@ -2117,7 +2118,7 @@ function FocusedLevelCamera({ controls, enabled, target, offset }: { controls: R
 }
 
 function SystemCameraComposition({ controls, enabled, star, focusPlanet, compositionKey }: { controls: React.MutableRefObject<any>; enabled: boolean; star?: StarDefinition; focusPlanet: UniversePlanet | null; compositionKey: string }) {
-  const { camera, clock } = useThree();
+  const { camera, clock, size } = useThree();
   const activeLevel = useRef(false);
   const transition = useRef<{ startedAt: number; fromPosition: THREE.Vector3; fromTarget: THREE.Vector3; toPosition: THREE.Vector3; toTarget: THREE.Vector3 } | null>(null);
   useCameraInputCancel(controls, transition);
@@ -2129,7 +2130,7 @@ function SystemCameraComposition({ controls, enabled, star, focusPlanet, composi
     if (focusPlanet) {
       const target = livePlanetPosition(focusPlanet, clock.getElapsedTime());
       const planetRadius = occupiedSystemPlanetRadius(focusPlanet);
-      const distance = THREE.MathUtils.clamp(planetRadius * 7.5, 24, 54);
+      const distance = THREE.MathUtils.clamp(planetRadius * 7.5, 24, 54) * sceneAspectDistanceScale(size.width, size.height);
       const radial = radialDirection(target);
       const tangent = new THREE.Vector3(-radial.z, 0, radial.x);
       toTarget = target;
@@ -2138,7 +2139,7 @@ function SystemCameraComposition({ controls, enabled, star, focusPlanet, composi
         .addScaledVector(tangent, distance * .28)
         .add(new THREE.Vector3(0, distance * .38, 0));
     } else {
-      const distance = systemSurveyCameraDistance(star);
+      const distance = systemSurveyCameraDistance(star) * sceneAspectDistanceScale(size.width, size.height);
       toPosition = new THREE.Vector3(0, distance * .492, distance * .871);
     }
     if (!activeLevel.current) {
@@ -2155,7 +2156,7 @@ function SystemCameraComposition({ controls, enabled, star, focusPlanet, composi
       toPosition,
       toTarget,
     };
-  }, [camera, clock, compositionKey, controls, enabled, star?.label]);
+  }, [camera, clock, compositionKey, controls, enabled, star?.label, size.width, size.height]);
   useFrame(() => {
     const active = transition.current;
     const orbit = controls.current;
@@ -2583,7 +2584,7 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
   const empireOpenedByControlRef = useRef(false);
   const empireRestoreFocusRef = useRef(false);
   const [viewContextOpen, setViewContextOpen] = useState(() => typeof window === "undefined" || !window.matchMedia("(max-width: 700px)").matches);
-  const [navigationRailOpen, setNavigationRailOpen] = useState(() => !productionUi);
+  const [navigationRailOpen, setNavigationRailOpen] = useState(true);
   const [zoomLevel, commitZoomLevel] = useState<ZoomLevel>(initialGalaxy && initialSystem || localSystemDemo ? "system" : "universe");
   const mapTransit = useSceneTransit();
   const setZoomLevel = (level: ZoomLevel) => {
@@ -3247,6 +3248,7 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
           {navigationRailOpen ? <X aria-hidden="true" /> : <Navigation2 aria-hidden="true" />}
         </button>
         <div className="camera-controls" aria-label="Camera zoom">
+          {zoomLevel === "system" && <GameIconButton className="camera-survey polished-control" label="Survey system" onClick={() => setSelected(null)}><Navigation2 aria-hidden="true" /></GameIconButton>}
           <GameIconButton className="camera-zoom polished-control" label="Zoom camera out" disabled={graphicsMode === "compat"} onClick={() => setCameraZoom(({ id }) => ({ id: id + 1, direction: "out" }))}><ZoomOut aria-hidden="true" /></GameIconButton>
           <GameIconButton className="camera-zoom polished-control" label="Zoom camera in" disabled={graphicsMode === "compat"} onClick={() => setCameraZoom(({ id }) => ({ id: id + 1, direction: "in" }))}><ZoomIn aria-hidden="true" /></GameIconButton>
         </div>
