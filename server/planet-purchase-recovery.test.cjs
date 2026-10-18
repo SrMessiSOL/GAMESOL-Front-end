@@ -73,3 +73,16 @@ test('uncertain authorization errors retain the intent instead of asking for ano
   await assert.rejects(runPlanetPurchase('A', 'purchase', f.callbacks, 110), /confirmation check/);
   assert.deepEqual(f.calls, ['prepare']);
 });
+test('a late confirmed previous purchase cannot lock a different new purchase', async () => {
+  const f = fixture({version: 1, wallet: 'A', intent: 'old-purchase', executionSignature: 'old-confirmed', payload: 'old-payload', createdAt: 100});
+  assert.equal(await runPlanetPurchase('A', 'purchase', f.callbacks, 110), 'execution');
+  assert.deepEqual(f.calls, ['prepare','authorize','execute']); assert.equal(f.state.pending, null);
+});
+test('an unresolved previous purchase still blocks a different new purchase', async () => {
+  for (const status of ['pending', 'failed']) {
+    const f = fixture({version: 1, wallet: 'A', intent: 'old-purchase', executionSignature: 'old', payload: 'old-payload', createdAt: 100});
+    f.state.status = status;
+    await assert.rejects(runPlanetPurchase('A', 'purchase', f.callbacks, 110), /No second purchase|needs review/);
+    assert.deepEqual(f.calls, []);
+  }
+});

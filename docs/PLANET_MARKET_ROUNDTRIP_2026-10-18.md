@@ -59,6 +59,12 @@ After the first purchase, refreshed UI showed Original with one world and NewAcc
 
 Screenshots: `planet-purchase-newaccount-empire.jpg`, `planet-return-purchase-review.jpg`, `planet-roundtrip-desktop.jpg`, `planet-roundtrip-mobile.jpg`, `planet-market-empty-mobile.jpg`.
 
+## Public Release and Final Recovery Check
+
+The successful flow and receipts were published in `e4ff33b`. The public deployment was checked for HTTP 200 page/entry delivery, the expected devnet sponsor, restored Original ownership, and access to operate the returned colony. `planet-roundtrip-public.jpg` captures the public empire after the return.
+
+A final review added a narrow late-confirmation recovery correction: an old purchase that is already confirmed clears its saved pending record before a different new purchase begins. A still-pending or failed unresolved purchase continues to block a different command. Two added regression tests bring the final suite to 269 passing tests; the production build also passed. This correction required no additional on-chain transaction or token spending.
+
 ## Validation Boundaries
 
 267 frontend/server tests and the TypeScript/Vite production build passed before Preview execution. Packet-size, authorization substitution, invalid companions, replay prevention in the client coordinator, account switching, interrupted confirmation, expired-approval recovery and payload persistence have local automated coverage. The live chain tests above prove the successful two-way sale, ownership transfer, fee settlement, and successful-execution rent refunds; forced network interruption and expired deferred-account reclamation were not separately exercised on devnet. No mainnet readiness or independent security-audit claim is made.

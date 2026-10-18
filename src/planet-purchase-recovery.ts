@@ -23,18 +23,24 @@ type PurchaseCallbacks = {
 // Retain the exact approved command across errors; never replace it with a new purchase on retry.
 export async function runPlanetPurchase(wallet: string, intent: string, callbacks: PurchaseCallbacks, now = Date.now()): Promise<string> {
   let record = callbacks.load();
-  if (record && (record.version !== 1 || record.wallet !== wallet || record.intent !== intent)) {
+  if (record && (record.version !== 1 || record.wallet !== wallet)) {
     throw new Error('Another planet purchase needs review before starting this one. No new purchase was submitted.');
   }
   if (record?.executionSignature) {
     const status = await callbacks.status(record.executionSignature);
     if (status === 'confirmed') {
       callbacks.save(null);
-      return record.executionSignature;
+      if (record.intent === intent) return record.executionSignature;
+      record = null;
     }
     if (status === 'pending') throw new Error('Your purchase is awaiting confirmation. No second purchase was submitted.');
-    delete record.executionSignature;
-    callbacks.save(record);
+    if (record) {
+      delete record.executionSignature;
+      callbacks.save(record);
+    }
+  }
+  if (record && record.intent !== intent) {
+    throw new Error('Another planet purchase needs review before starting this one. No new purchase was submitted.');
   }
   if (record) {
     const exists = await callbacks.exists(record);
