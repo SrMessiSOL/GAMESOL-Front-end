@@ -31,4 +31,4 @@ Screenshots: `planet-listing-confirmed.jpg`, `planet-listing-cancelled.jpg`.
 
 ## Remaining
 
-Planet purchase and return purchase between accounts are not yet tested. This release verifies listing/cancellation only, not settlement, transferred ownership indexes, or seller access revocation.
+The initial listing release verified listing/cancellation only. Subsequent purchase and return-purchase results, ownership indexes, fees, and remaining proof boundaries are recorded in [the round-trip report](PLANET_MARKET_ROUNDTRIP_2026-10-18.md).

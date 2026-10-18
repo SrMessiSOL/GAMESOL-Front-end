@@ -151,8 +151,8 @@ const CONDITIONAL_VAULT_ATA_COMPANION_DISCRIMINATORS = [
 let cachedGenesisHash = null;
 let cachedGenesisAt = 0;
 
-function jsonRpcError(res, id, code, message, status = 400) {
-  return res.status(status).json({ jsonrpc: "2.0", error: { code, message }, id: id ?? null });
+function jsonRpcError(res, id, code, message, status = 400, data) {
+  return res.status(status).json({ jsonrpc: "2.0", error: { code, message, ...(data ? {data} : {}) }, id: id ?? null });
 }
 
 function requestOriginMatchesHost(req) {
@@ -218,7 +218,7 @@ function decodeTransaction(encoded) {
 
 function parseCompactInstructions(message, outerInstruction, keys = message.staticAccountKeys) {
   const data = Buffer.from(outerInstruction.data);
-  if (data.length < 2 || data[0] !== 4) return [];
+  if (data.length < 2 || ![4, 7].includes(data[0])) return [];
   const count = data[1];
   const parsed = [];
   let offset = 2;
@@ -245,6 +245,7 @@ function parseCompactInstructions(message, outerInstruction, keys = message.stat
     parsed.push({ programId, accounts, data: data.subarray(offset, offset + dataLength) });
     offset += dataLength;
   }
+  if (data[0] === 7 && offset !== data.length) throw new Error('Unexpected deferred execution data.');
   return parsed;
 }
 
@@ -367,19 +368,26 @@ function isCompressedMarketPurchaseBundle(inner, sponsor) {
   if (inner.length < 1 || inner.length > 3) return false;
   const purchase = inner.at(-1), data = purchase.data;
   const market = new PublicKey('6hPzaemT1siozGVM7MUHvjFK79WNGCrKruEBMEKA1DjA');
-  if (!purchase.programId.equals(market) || purchase.accounts.length !== 17
-    || data.length !== 8 || !isDiscriminator(data, Buffer.from([227,82,234,131,1,18,48,2]))) return false;
+  const planetPurchase = purchase.accounts.length === 21 && data.length === 8
+    && isDiscriminator(data, Buffer.from([48,116,122,166,251,1,167,31]));
+  if (!purchase.programId.equals(market) || !(planetPurchase || (purchase.accounts.length === 17
+    && data.length === 8 && isDiscriminator(data, Buffer.from([227,82,234,131,1,18,48,2]))))) return false;
   const a = purchase.accounts, buyer = a[0], seller = a[1], planet = a[14];
   const pda = (seed,key) => PublicKey.findProgramAddressSync([Buffer.from(seed),...(key?[key.toBuffer()]:[])],market)[0];
-  if (buyer.equals(seller) || !a[2].equals(pda('market_config')) || !a[4].equals(pda('seller_counter',seller))
-    || !a[5].equals(new PublicKey(MARKET_LOOKUP.antimatterMint)) || !a[8].equals(pda('market_escrow'))
-    || !a[9].equals(new PublicKey(MARKET_LOOKUP.treasuryAntimatter)) || !a[10].equals(pda('market_authority'))
-    || !a[11].equals(TOKEN_PROGRAM_ID) || !a[12].equals(SystemProgram.programId)
-    || !a[13].equals(GAME_STATE_PROGRAM_ID) || !a[15].equals(pda('planet_market_obligation',planet))) return false;
+  const offset = planetPurchase ? 1 : 0;
+  if (buyer.equals(seller) || !a[2].equals(pda('market_config')) || !a[4 + offset].equals(pda('seller_counter',seller))
+    || !a[5 + offset].equals(new PublicKey(MARKET_LOOKUP.antimatterMint)) || !a[8 + offset].equals(pda('market_escrow'))
+    || !a[9 + offset].equals(new PublicKey(MARKET_LOOKUP.treasuryAntimatter)) || !a[10 + offset].equals(pda('market_authority'))
+    || !a[11 + offset].equals(TOKEN_PROGRAM_ID) || !a[13].equals(GAME_STATE_PROGRAM_ID)) return false;
+  if (planetPurchase) {
+    const gamePda = (seed, key) => PublicKey.findProgramAddressSync([Buffer.from(seed), key.toBuffer()], GAME_STATE_PROGRAM_ID)[0];
+    if (!a[4].equals(pda('planet_listing_index',planet)) || !a[16].equals(gamePda('planet_ownership',planet))
+      || !a[17].equals(gamePda('player_profile',buyer)) || !a[18].equals(SystemProgram.programId)) return false;
+  } else if (!a[12].equals(SystemProgram.programId) || !a[15].equals(pda('planet_market_obligation',planet))) return false;
   if (inner.length === 1) return true;
   const ata = inner[inner.length - 2], canonical = canonicalAssociatedTokenAccount(ata);
-  if (!canonical || !canonical.payer.equals(buyer) || !canonical.ata.equals(a[7])
-    || !ata.accounts[2].equals(seller) || !ata.accounts[3].equals(a[5])) return false;
+  if (!canonical || !canonical.payer.equals(buyer) || !canonical.ata.equals(a[7 + offset])
+    || !ata.accounts[2].equals(seller) || !ata.accounts[3].equals(a[5 + offset])) return false;
   if (inner.length === 2) return true;
   const rent = inner[0];
   return Boolean(approvedRentPolicy(inner)) && rent.data.length === 16 && rent.accounts.length === 3
@@ -475,10 +483,51 @@ function isCompressedAllianceBundle(inner, sponsor) {
     && rent.accounts[0].equals(sponsor.publicKey) && rent.accounts[1].equals(owner) && rent.accounts[2].equals(SystemProgram.programId);
 }
 
-function assertTransactionPolicy(transaction, sponsor, tables = []) {
+function assertDeferredMarketAuthorization(transaction, sponsor, intent) {
+  if (!intent) throw new Error('Deferred market authorization requires its exact execution intent.');
+  const message = transaction.message, keys = resolvedTransactionKeys(message);
+  const instructions = message.compiledInstructions;
+  if (message.header.numRequiredSignatures !== 1 || instructions.length !== 2
+    || !keys[0].equals(sponsor.publicKey) || !keys[instructions[0].programIdIndex].equals(SECP256R1_PROGRAM_ID)
+    || !keys[instructions[1].programIdIndex].equals(LAZOR_PROGRAM_ID)) throw new Error('Invalid deferred approval envelope.');
+  const authorize = instructions[1], data = Buffer.from(authorize.data);
+  const a = Array.from(authorize.accountKeyIndexes, i => keys[i]);
+  if (a.length !== 7 || data.length < 122 || data[0] !== 6 || data[79] !== 6 || data[80] !== 128
+    || !a[0].equals(sponsor.publicKey) || !a[4].equals(SystemProgram.programId)
+    || !a[5].equals(SYSVAR_RENT_PUBKEY) || !a[6].equals(new PublicKey('Sysvar1nstructions1111111111111111111111111'))
+    || data.readUInt16LE(65) < 1 || data.readUInt16LE(65) > 300) throw new Error('Invalid deferred approval accounts or expiry.');
+  const authLength = data.readUInt16LE(81), jsonLengthOffset = 83 + authLength;
+  if (authLength < 37 || authLength > 256 || jsonLengthOffset + 2 > data.length
+    || jsonLengthOffset + 2 + data.readUInt16LE(jsonLengthOffset) !== data.length) throw new Error('Invalid deferred passkey payload.');
+  const counter = data.subarray(75, 79);
+  const expected = PublicKey.findProgramAddressSync([Buffer.from('deferred'), a[1].toBuffer(), a[2].toBuffer(), counter], LAZOR_PROGRAM_ID)[0];
+  if (!a[3].equals(expected)) throw new Error('Invalid deferred approval address.');
+  const executionPolicy = assertTransactionPolicy(intent.transaction, sponsor, intent.tables);
+  const executionMessage = intent.transaction.message;
+  const execution = executionMessage.compiledInstructions[0];
+  const executionKeys = resolvedTransactionKeys(executionMessage, intent.tables);
+  const ea = Array.from(execution.accountKeyIndexes, i => executionKeys[i]);
+  if (executionPolicy.deferredMarketExecution !== true || !a[1].equals(ea[1]) || !a[3].equals(ea[3])) {
+    throw new Error('Deferred approval does not match the purchase wallet or record.');
+  }
+  const inner = parseCompactInstructions(executionMessage, execution, executionKeys);
+  const instructionsHash = crypto.createHash('sha256').update(Buffer.from(execution.data).subarray(1)).digest();
+  const accountsHash = crypto.createHash('sha256').update(Buffer.concat(inner.flatMap(ix => [ix.programId, ...ix.accounts]).map(key => key.toBuffer()))).digest();
+  if (!data.subarray(1, 33).equals(instructionsHash) || !data.subarray(33, 65).equals(accountsHash)) {
+    throw new Error('Deferred approval does not match the exact purchase instructions and accounts.');
+  }
+  return {maximumDebit: MAX_LAZOR_ACCOUNT_DEBIT_LAMPORTS, approvedRentBundle: true,
+    approvedRentOwnerAddresses: [LAZOR_PROGRAM_ID.toBase58()], approvedRentAccountAddresses: []};
+}
+
+function assertTransactionPolicy(transaction, sponsor, tables = [], deferredIntent = null) {
   const message = transaction.message;
   const keys = resolvedTransactionKeys(message, tables);
   if (!keys?.[0]?.equals(sponsor.publicKey)) throw new Error("The configured sponsor must be the transaction fee payer.");
+  if (message.compiledInstructions.some(ix => keys[ix.programIdIndex].equals(LAZOR_PROGRAM_ID) && ix.data[0] === 6)) {
+    if (tables.length) throw new Error('Deferred approval must not use an address table.');
+    return assertDeferredMarketAuthorization(transaction, sponsor, deferredIntent);
+  }
 
   let hasLazorInstruction = false;
   let ufoPrecompiles = 0;
@@ -492,6 +541,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   let hasCompressedAlliance = false;
   let hasCompressedMarketListing = false;
   let hasCompressedMarketPurchase = false;
+  let deferredMarketExecution = false;
   let maximumDebit = MAX_ROUTINE_DEBIT_LAMPORTS;
   let approvedRentBundle = false;
   let approvedRentOwnerAddresses = [];
@@ -517,13 +567,28 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
       const discriminator = Buffer.from(instruction.data)[0];
       if (discriminator === 0 || discriminator === 1 || discriminator === 5) {
         maximumDebit = Math.max(maximumDebit, MAX_LAZOR_ACCOUNT_DEBIT_LAMPORTS);
-      } else if (discriminator === 4) {
+      } else if (discriminator === 8) {
+        const a = Array.from(instruction.accountKeyIndexes, i => keys[i]);
+        if (tables.length || message.compiledInstructions.length !== 1 || message.header.numRequiredSignatures !== 1
+          || instruction.data.length !== 1 || a.length !== 3 || !a[0].equals(sponsor.publicKey) || !a[2].equals(sponsor.publicKey)) {
+          throw new Error('Expired purchase rent can only be reclaimed to its original sponsor.');
+        }
+      } else if (discriminator === 4 || discriminator === 7) {
         executeCount += 1;
         const innerInstructions = parseCompactInstructions(message, instruction, keys);
         hasCompressedStore = isCompressedStoreBundle(innerInstructions, sponsor);
         hasCompressedAlliance = isCompressedAllianceBundle(innerInstructions, sponsor);
         hasCompressedMarketListing = isCompressedMarketListingBundle(innerInstructions, sponsor);
         hasCompressedMarketPurchase = isCompressedMarketPurchaseBundle(innerInstructions, sponsor);
+        if (discriminator === 7) {
+          const a = Array.from(instruction.accountKeyIndexes, i => keys[i]);
+          deferredMarketExecution = hasCompressedMarketPurchase && innerInstructions.at(-1).accounts.length === 21;
+          const vault = PublicKey.findProgramAddressSync([Buffer.from('vault'), a[1].toBuffer()], LAZOR_PROGRAM_ID)[0];
+          if (!deferredMarketExecution || !innerInstructions.at(-1).accounts[0].equals(vault) || !a[0].equals(sponsor.publicKey) || !a[4].equals(sponsor.publicKey)
+            || !a[2].equals(vault) || message.header.numRequiredSignatures !== 1 || message.compiledInstructions.length !== 1) {
+            throw new Error('Deferred execution is restricted to one canonical planet purchase with sponsor rent refund.');
+          }
+        }
         hasUfoAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && UFO_ACTIONS.slice(0,3).some(discriminator => isDiscriminator(inner.data,discriminator)));
         hasCommanderAction ||= innerInstructions.some(inner => inner.programId.equals(UFO_PROGRAM) && isDiscriminator(inner.data,UFO_ACTIONS[3]));
         const rentPolicy = approvedRentPolicy(innerInstructions);
@@ -540,8 +605,8 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
   const matchingUfoAction = proofPurpose === 'commander' ? hasCommanderAction : hasUfoAction;
   if (ufoPrecompiles && !matchingUfoAction) throw new Error('UFO ownership proof requires a matching UFO gameplay action.');
   if (tables.length && tables[0].key.toBase58() === MARKET_LOOKUP.table) {
-    if (!(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedMarketPurchase)) {
-      throw new Error('Market address table requires one canonical passkey-approved resource purchase.');
+    if (!(ufoPrecompiles === 0 && passkeyPrecompiles === (deferredMarketExecution ? 0 : 1) && lazorCount === 1 && executeCount === 1 && hasCompressedMarketPurchase)) {
+      throw new Error('Market address table requires one canonical passkey-approved market purchase.');
     }
   } else if (tables.length && tables[0].key.toBase58() === ALLIANCE_LOOKUP.table) {
     if (!(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && hasCompressedAlliance)) {
@@ -551,7 +616,7 @@ function assertTransactionPolicy(transaction, sponsor, tables = []) {
     && !(ufoPrecompiles === 0 && passkeyPrecompiles === 1 && lazorCount === 1 && executeCount === 1 && (hasCompressedStore || hasCompressedMarketListing))) {
     throw new Error('Address tables are restricted to verified UFO gameplay or a canonical passkey store purchase or market listing.');
   }
-  return { maximumDebit, approvedRentBundle, approvedRentOwnerAddresses, approvedRentAccountAddresses };
+  return { maximumDebit, approvedRentBundle, approvedRentOwnerAddresses, approvedRentAccountAddresses, deferredMarketExecution };
 }
 
 async function simulateAndMeasure(connection, transaction, sponsor, policy, tables = []) {
@@ -624,6 +689,7 @@ module.exports = async function handler(req, res) {
     return jsonRpcError(res, null, -32700, "Invalid JSON.");
   }
   const id = payload.id ?? null;
+  let submissionAttempted = false;
 
   try {
     const sponsor = sponsorFromEnv();
@@ -657,9 +723,15 @@ module.exports = async function handler(req, res) {
     }
     const { transaction } = decodeTransaction(encoded);
     const tables = await fetchTransactionTables(connection, transaction.message);
-    const policy = assertTransactionPolicy(transaction, sponsor, tables);
+    let deferredIntent = null;
+    if (payload.params?.deferred_execution) {
+      const execution = decodeTransaction(payload.params.deferred_execution).transaction;
+      deferredIntent = {transaction: execution, tables: await fetchTransactionTables(connection, execution.message)};
+    }
+    const policy = assertTransactionPolicy(transaction, sponsor, tables, deferredIntent);
     transaction.sign([sponsor]);
     await simulateAndMeasure(connection, transaction, sponsor, policy, tables);
+    submissionAttempted = true;
     const signature = await connection.sendRawTransaction(transaction.serialize(), {
       skipPreflight: true,
       maxRetries: 4,
@@ -671,7 +743,7 @@ module.exports = async function handler(req, res) {
     // Kora-compatible clients read the JSON-RPC error body only for successful
     // HTTP responses. Keep policy/simulation failures at HTTP 200 so the UI
     // receives the real on-chain diagnostic instead of an empty status text.
-    return jsonRpcError(res, id, -32000, message, rateLimited ? 429 : 200);
+    return jsonRpcError(res, id, -32000, message, rateLimited ? 429 : 200, {submissionAttempted});
   }
 };
 

@@ -13,6 +13,8 @@ import { Buffer } from "buffer";
 import { fetchUfoLookupTable } from './ufo-lookup-table';
 import { fetchAllianceLookupTable } from './alliance-lookup-table';
 import { fetchMarketLookupTable } from './market-lookup-table';
+import { runPlanetPurchase, type PendingPlanetPurchase } from './planet-purchase-recovery';
+import { serializeDeferredPayload, deserializeDeferredPayload } from './lazor-deferred-payload';
 import { signWithPopupRecovery, withPreparationTimeout } from './passkey-connect-recovery';
 import {
   createAssociatedTokenAccountInstruction,
@@ -372,6 +374,7 @@ async function sendSponsored(
   signers: Keypair[] = [],
   initialLatest?: LatestBlockhash,
   compressStore: boolean | 'alliance' | 'market' = false,
+  options?: { deferredExecution?: VersionedTransaction; submitted?: (signature: string) => void },
 ): Promise<string> {
   const [payer, latest] = await Promise.all([
     getSponsorPayer(),
@@ -397,8 +400,25 @@ async function sendSponsored(
   try {
     // Policy errors cannot recover by resubmitting the same transaction. Keep
     // the UI responsive and surface the exact sponsor blocker immediately.
-    signature = await paymasterClient().signAndSendVersionedTransaction(transaction, 1);
+    if (options?.deferredExecution) {
+      const response = await fetch(PAYMASTER_URL, {
+        method: 'POST', headers: {'Content-Type': 'application/json', ...(PAYMASTER_API_KEY ? {'x-api-key': PAYMASTER_API_KEY} : {})},
+        body: JSON.stringify({jsonrpc: '2.0', id: 1, method: 'signAndSendTransaction', params: {
+          transaction: Buffer.from(transaction.serialize()).toString('base64'), signer_key: payer.toBase58(),
+          deferred_execution: Buffer.from(options.deferredExecution.serialize()).toString('base64'),
+        }}),
+      });
+      const result = await response.json();
+      if (!response.ok || result.error || typeof result.result?.signature !== 'string') {
+        throw Object.assign(new Error(result.error?.message || 'Purchase authorization was not submitted.'),
+          {purchaseNotSubmitted: result.error?.data?.submissionAttempted === false});
+      }
+      signature = result.result.signature;
+    } else {
+      signature = await paymasterClient().signAndSendVersionedTransaction(transaction, 1);
+    }
   } catch (error) {
+    if (error instanceof Error && 'purchaseNotSubmitted' in error && error.purchaseNotSubmitted) throw error;
     const message = error instanceof Error ? error.message : String(error);
     if (/allowed list|allowlist|not allowed/i.test(message)) {
       const rejectedProgram = message.match(/Program\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i)?.[1];
@@ -411,6 +431,7 @@ async function sendSponsored(
     throw new Error(`Sponsored transaction failed: ${message}`);
   }
 
+  options?.submitted?.(signature);
   const deadline = Date.now() + 24_000;
   while (Date.now() < deadline) {
     const status = (await withRateLimitBackoff(() => rpc.getSignatureStatuses([signature]))).value[0];
@@ -724,6 +745,56 @@ export async function executeWithPlayerSession(
     takeLatestBlockhash(rpc),
   ]);
   const signatureSlot = await freshPasskeySlot(rpc);
+  if (isPlanetPurchaseBundle(instructions)) {
+    const intent = JSON.stringify(instructions.slice(-1).map(ix => ({program: ix.programId.toBase58(),
+      accounts: ix.keys.map(key => key.pubkey.toBase58()), data: Array.from(ix.data)})));
+    const storageKey = `gamesol:planet-purchase:devnet:${wallet.smartWallet}`;
+    let authorization: TransactionInstruction[] | null = null;
+    const execution = async (record: PendingPlanetPurchase) => resolved.client.executeDeferredFromPayload({
+      payer: sponsorPayer, deferredPayload: deserializeDeferredPayload(record.payload, wallet.smartWallet), refundDestination: sponsorPayer,
+    });
+    return runPlanetPurchase(wallet.smartWallet, intent, {
+      load: () => { const raw = localStorage.getItem(storageKey); return raw ? JSON.parse(raw) as PendingPlanetPurchase : null; },
+      save: record => { if (record) localStorage.setItem(storageKey, JSON.stringify(record)); else localStorage.removeItem(storageKey); },
+      prepare: async () => {
+        const prepared = await resolved.client.authorizePrepare({payer: sponsorPayer, walletPda,
+          authorityPda: resolved.authorityPda, publicKeyBytes: resolved.publicKeyBytes,
+          instructions, expiryOffset: 300, slotOverride: signatureSlot});
+        const display = await buildDisplayTransaction(rpc, sponsorPayer, instructions, displayBlockhash.blockhash);
+        const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId, display);
+        authorization = prepared.finalize(response).instructions;
+        return {version: 1, wallet: wallet.smartWallet, intent, createdAt: Date.now(), payload: serializeDeferredPayload(prepared.deferredPayload)};
+      },
+      authorize: async (record, submitted) => {
+        if (!authorization) throw new Error('Purchase approval is missing.');
+        const {instructions: execute} = await execution(record);
+        const table = await fetchMarketLookupTable(rpc, sponsorPayer);
+        const intentTransaction = new VersionedTransaction(new TransactionMessage({payerKey: sponsorPayer,
+          recentBlockhash: (await rpc.getLatestBlockhash('confirmed')).blockhash, instructions: execute}).compileToV0Message([table]));
+        if (intentTransaction.serialize().length > 1232) throw new Error('Purchase exceeds the transaction limit. No authorization was submitted.');
+        await sendSponsored(rpc, authorization, [], undefined, false, {deferredExecution: intentTransaction, submitted});
+      },
+      execute: async (record, submitted) => {
+        const {instructions: execute} = await execution(record);
+        return sendSponsored(rpc, execute, [], undefined, 'market', {submitted});
+      },
+      exists: async record => {
+        const payload = deserializeDeferredPayload(record.payload, wallet.smartWallet);
+        const account = await rpc.getAccountInfo(payload.deferredExecPda, 'confirmed');
+        if (account && !account.owner.equals(resolved.client.programId)) throw new Error('Purchase approval account failed verification.');
+        return Boolean(account);
+      },
+      status: async signature => {
+        const status = (await rpc.getSignatureStatuses([signature], {searchTransactionHistory: true})).value[0];
+        return status?.err ? 'failed' : status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized' ? 'confirmed' : 'pending';
+      },
+      reclaim: async record => {
+        const payload = deserializeDeferredPayload(record.payload, wallet.smartWallet);
+        const {instructions: reclaim} = resolved.client.reclaimDeferred({payer: sponsorPayer, deferredExecPda: payload.deferredExecPda, refundDestination: sponsorPayer});
+        await sendSponsored(rpc, reclaim);
+      },
+    });
+  }
   const prepared = await resolved.client.prepareExecute({
     payer: sponsorPayer,
     walletPda,
@@ -757,12 +828,17 @@ function isAllianceDepositBundle(instructions: TransactionInstruction[]): boolea
 function isMarketPurchaseBundle(instructions: TransactionInstruction[]): boolean {
   const purchase = instructions[instructions.length - 1];
   if (!purchase || instructions.length > 3 || !purchase.programId.equals(MARKET_PROGRAM_ID)
-    || purchase.keys.length !== 17 || purchase.data.length !== 8
-    || !purchase.data.equals(Buffer.from([227, 82, 234, 131, 1, 18, 48, 2]))) return false;
+    || purchase.data.length !== 8
+    || !((purchase.keys.length === 17 && purchase.data.equals(Buffer.from([227, 82, 234, 131, 1, 18, 48, 2])))
+      || (purchase.keys.length === 21 && purchase.data.equals(Buffer.from([48, 116, 122, 166, 251, 1, 167, 31]))))) return false;
   return instructions.slice(0, -1).every(ix =>
     (ix.programId.equals(GAME_STATE_PROGRAM_ID) && ix.keys.length === 3 && ix.data.length === 16
       && ix.data.subarray(0, 8).equals(Buffer.from([87, 113, 100, 97, 218, 156, 201, 21])))
     || (ix.programId.toBase58() === 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' && ix.keys.length === 6 && ix.data.length === 0));
+}
+
+function isPlanetPurchaseBundle(instructions: TransactionInstruction[]): boolean {
+  return isMarketPurchaseBundle(instructions) && instructions[instructions.length - 1]?.keys.length === 21;
 }
 
 function isMarketListingBundle(instructions: TransactionInstruction[]): boolean {
