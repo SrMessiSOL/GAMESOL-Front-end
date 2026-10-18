@@ -62,4 +62,18 @@ review remain separate gates. The final signing-age preparation change has unit
 and build coverage; a new passkey purchase was not required to verify this
 wallet-identity correction against the already-finalized live receipt.
 
-Publication and final main-URL checks are recorded below after completion.
+## Publication
+
+- Runtime commit `f757f4a` pushed to `feat/crypto-ufos-wallet-link`.
+- Production build passed with `VITE_DEVNET_PAYMENT_QA=0`.
+- Existing public URL `https://chained-universe.vercel.app/app` now points to
+  `frontend-dbq3ot59n-srmessisols-projects.vercel.app`.
+- Verified both public HTML and the actual refreshed browser script load
+  `assets/index-BjOQnqnG.js` from that immutable deployment.
+- Public RPC genesis remains devnet. Default's account and commander #513
+  restored after refresh; the sold colony appears as NewAccount's allied world.
+- Public desktop and narrow responsive views checked. Narrow body measured
+  390 CSS pixels wide, scroll width 390, height 845 after accounting for browser
+  scaling. No horizontal page overflow; temporary viewport override reset.
+- Screenshots: `payment-public-desktop.jpg`, `payment-public-mobile.jpg`.
+- These release checks made no further purchase or wallet transaction.
