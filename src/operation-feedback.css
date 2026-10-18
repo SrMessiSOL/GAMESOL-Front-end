@@ -22,5 +22,8 @@
 .ug-operation-modal :is(button,summary):focus-visible{outline:2px solid #9addba;outline-offset:3px}
 .ug-operation-backdrop.success{place-items:end;background:none;backdrop-filter:none;pointer-events:none}
 .ug-operation-backdrop.success .ug-operation-modal{pointer-events:auto;border-color:#7aaca7}
+.ug-operation-backdrop.pending{place-items:end;background:none;backdrop-filter:none;pointer-events:none}
+.ug-operation-backdrop.pending .ug-operation-modal{pointer-events:auto;border-color:#7aaca7}
+@media(max-width:600px){.ug-operation-backdrop.pending{padding-bottom:calc(80px + env(safe-area-inset-bottom))}.ug-operation-backdrop.pending .ug-operation-modal{max-height:calc(100dvh - 112px)}}
 @media(max-width:600px){.ug-operation-modal{padding:20px}.ug-operation-modal button{width:100%}.ug-operation-backdrop.success{padding-bottom:calc(80px + env(safe-area-inset-bottom))}.ug-operation-backdrop.success .ug-operation-modal{max-height:calc(100dvh - 112px)}}
 @media(prefers-reduced-motion:reduce){.ug-operation-modal,.ug-operation-modal *{animation:none!important;transition:none!important}}

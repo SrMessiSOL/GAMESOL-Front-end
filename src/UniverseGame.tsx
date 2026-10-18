@@ -40,6 +40,7 @@ import { useCryptoUfos, CommanderAvatar, CommanderAvatarDialog } from "./CryptoU
 import { SceneTransition, useSceneTransit } from "./SceneTransition";
 import { resolveGameArt } from "./ui-art";
 import { BUILDING_REQUIREMENTS } from "./combat-engine";
+import { reconcileSubmittedPlanetPurchase, type PendingPlanetPurchase } from './planet-purchase-recovery';
 
 const PlanetWorld = React.lazy(() => import("./PlanetWorld"));
 
@@ -169,7 +170,7 @@ class PlanetWorldBoundary extends React.Component<React.PropsWithChildren, { fai
 type OperationState = {
   label: string;
   detail: string;
-  phase: "processing" | "success" | "error";
+  phase: "processing" | "pending" | "success" | "error";
   nextAction?: string;
   recovery?: string;
   technicalDetail?: string;
@@ -210,7 +211,7 @@ function commandSuccessGuidance(label: string): Pick<OperationState, "detail" | 
 function OperationModal({ operation, onClose }: { operation: OperationState | null; onClose: () => void }) {
   const active = operation?.phase === "processing";
   const operationOpen = operation !== null;
-  const blocking = operation?.phase !== "success";
+  const blocking = operation?.phase === "processing" || operation?.phase === "error";
   const modalRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -270,14 +271,14 @@ function OperationModal({ operation, onClose }: { operation: OperationState | nu
   if (!operation) return null;
   return <div className={`ug-operation-backdrop ${operation.phase}`}>
     <section ref={modalRef} className={`ug-operation-modal ${operation.phase}`} role={blocking ? "dialog" : "status"} aria-modal={blocking ? "true" : undefined} aria-live="polite" aria-busy={active} aria-labelledby="ug-operation-title" aria-describedby="ug-operation-detail" tabIndex={blocking ? -1 : undefined}>
-      <div className="ug-operation-mark" aria-hidden="true">{active ? <LoaderCircle /> : operation.phase === "success" ? <CheckCircle2 /> : <TriangleAlert />}</div>
-      <span>{active ? "WAITING FOR DEVNET" : operation.phase === "success" ? "COMMAND CONFIRMED" : "COMMAND NEEDS ATTENTION"}</span>
+      <div className="ug-operation-mark" aria-hidden="true">{active || operation.phase === "pending" ? <LoaderCircle /> : operation.phase === "success" ? <CheckCircle2 /> : <TriangleAlert />}</div>
+      <span>{active ? "WAITING FOR DEVNET" : operation.phase === "pending" ? "PURCHASE STATUS" : operation.phase === "success" ? "COMMAND CONFIRMED" : "COMMAND NEEDS ATTENTION"}</span>
       <h2 id="ug-operation-title">{operation.label}</h2>
       <p id="ug-operation-detail">{operation.detail}</p>
       {operation.phase === "success" && operation.nextAction && <div className="ug-operation-next"><b>NEXT MOVE</b><span>{operation.nextAction}</span></div>}
       {operation.phase === "error" && operation.recovery && <div className="ug-operation-recovery"><b>WHAT TO DO</b><span>{operation.recovery}</span></div>}
       {operation.phase === "error" && operation.technicalDetail && <details className="ug-operation-technical"><summary>Technical details</summary><code>{operation.technicalDetail}</code></details>}
-      {active ? <div className="ug-operation-progress"><i /><b>Keep GAMESOL open while Solana confirms this command.</b></div> : <button ref={closeRef} type="button" title="Close (Esc)" onClick={onClose}>{operation.phase === "success" ? "RETURN TO WORLD" : "CLOSE AND REVIEW"}</button>}
+      {active ? <div className="ug-operation-progress"><i /><b>Keep GAMESOL open while Solana confirms this command.</b></div> : <button ref={closeRef} type="button" title="Close (Esc)" onClick={onClose}>{operation.phase === "pending" ? "CONTINUE" : operation.phase === "success" ? "RETURN TO WORLD" : "CLOSE AND REVIEW"}</button>}
     </section>
   </div>;
 }
@@ -614,7 +615,7 @@ const readRememberedVaultPassword = (wallet: string) => {
   }
 };
 
-type PlayerError = { detail: string; recovery: string; technicalDetail?: string };
+type PlayerError = { detail: string; recovery: string; technicalDetail?: string; phase?: "pending" | "success"; label?: string };
 
 function playerError(error: unknown, fallback: string): PlayerError {
   const raw = (error instanceof Error ? error.message : String(error || "")).trim();
@@ -623,6 +624,18 @@ function playerError(error: unknown, fallback: string): PlayerError {
     recovery,
     technicalDetail: raw && raw !== detail ? raw.slice(0, 2_000) : undefined,
   });
+  if (/planet purchase was submitted|Devnet recovery test paused after payment submission|purchase is awaiting confirmation/i.test(raw)) {
+    return {...result("Purchase submitted. Waiting for confirmation.", "Do not buy again. Reopen your worlds to check the colony."), phase: "pending"};
+  }
+  if (/Devnet recovery test paused after confirmed approval/i.test(raw)) {
+    return {...result("The devnet test paused after approval. No payment was sent.", "Continue the recovery test without starting another purchase."), phase: "pending"};
+  }
+  if (/previous purchase approval expired.*temporary rent was returned/i.test(raw)) {
+    return {...result("The purchase approval expired and its temporary rent was returned.", "No payment was made. You can start a new purchase when ready."), phase: "success"};
+  }
+  if (/Purchase approval expired before submission/i.test(raw)) {
+    return {...result("The approval expired. No payment was sent.", "Review the purchase again when you are ready."), phase: "pending", label: "Review purchase"};
+  }
   if (/429|rate limit|too many requests|connection rate limits/i.test(raw)) {
     return result("Solana devnet is receiving too many requests right now. Your command was not applied.", "Wait a few seconds, then try the command again.");
   }
@@ -630,7 +643,7 @@ function playerError(error: unknown, fallback: string): PlayerError {
     return result("The transaction approval expired before Solana accepted it. Your command was not applied.", "Try the command again to create a fresh transaction.");
   }
   if (/InvalidSignatureAge|custom program error:\s*0xbbf|\"Custom\"\s*:\s*3007/i.test(raw)) {
-    return result("The secure approval expired before devnet accepted it. Nothing was changed.", "Try again and approve the passkey promptly when your device asks.");
+    return {...result("The approval expired before submission. No payment was sent.", "Review the purchase again when you are ready."), phase: "pending", label: "Review purchase"};
   }
   if (/failed to fetch|networkerror|network request failed|offline|fetch failed|\bRPC\b/i.test(raw)) {
     return result("GAMESOL could not reach Solana devnet. Your command was not applied.", "Check your connection and retry. If devnet is busy, wait a moment first.");
@@ -1585,6 +1598,50 @@ export default function UniverseGame() {
       setLoadingPlanets(false);
     }
   }, [client, publicKey]);
+  useEffect(() => {
+    if (!IS_DEVNET || !publicKey || !passkey.wallet
+      || passkey.wallet.vaultPda !== publicKey.toBase58()) return;
+    const wallet = passkey.wallet.smartWallet;
+    const key = `gamesol:planet-purchase:devnet:${wallet}`;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = Date.now() + 60_000;
+    const check = async () => {
+      try {
+        const status = await reconcileSubmittedPlanetPurchase(wallet, {
+          load: () => {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) as PendingPlanetPurchase : null;
+          },
+          save: () => { if (!cancelled) localStorage.removeItem(key); },
+          status: async signature => {
+            if (await connection.getGenesisHash() !== 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG') throw new Error('Devnet required.');
+            const receipt = (await connection.getSignatureStatuses([signature], {searchTransactionHistory: true})).value[0];
+            return receipt?.err ? 'failed' : receipt?.confirmationStatus === 'confirmed' || receipt?.confirmationStatus === 'finalized' ? 'confirmed' : 'pending';
+          },
+        });
+        if (cancelled) return;
+        if (status === 'confirmed') {
+          setStatus('Planet purchase confirmed.');
+          setOperation({label: 'Planet acquired', detail: 'Your colony purchase is confirmed.', phase: 'success'});
+          void refresh().catch(() => undefined);
+          return;
+        }
+        if (status === 'failed') {
+          setStatus('The purchase was not completed.');
+          setOperation({label: 'Purchase not completed', detail: 'Solana rejected this purchase. It was not settled.',
+            recovery: 'Review your worlds and balances before retrying.', phase: 'error'});
+          return;
+        }
+        if (status === null) return;
+      } catch {
+        // Keep the saved intent and neutral status when the RPC is unavailable.
+      }
+      if (!cancelled && Date.now() < deadline) timer = setTimeout(() => void check(), 1_500);
+    };
+    void check();
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [connection, publicKey, passkey.wallet?.smartWallet, passkey.wallet?.vaultPda, operation?.phase, refresh]);
   const refreshActivity = useCallback(async () => {
     if (!client || !publicKey || planets.length === 0) {
       setBattleReports([]);
@@ -2117,7 +2174,7 @@ export default function UniverseGame() {
               if (error) {
                 const failure = playerError(error, "The marketplace command could not be completed.");
                 setStatus(failure.detail);
-                setOperation({ label: "Marketplace command", ...failure, phase: "error" });
+                setOperation({ label: failure.phase === "pending" ? "Purchase pending" : "Marketplace command", ...failure, phase: failure.phase ?? "error" });
                 return;
               }
               setStatus("Marketplace transaction confirmed.");

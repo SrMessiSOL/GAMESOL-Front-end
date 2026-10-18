@@ -19,7 +19,14 @@ const sandbox = { module: { exports: {} }, require, useRef: React.useRef, useEff
 sandbox.exports = sandbox.module.exports;
 vm.runInNewContext(moduleCode, sandbox, { filename });
 const render = operation => renderToStaticMarkup(React.createElement(sandbox.module.exports, { operation, onClose() {} }));
+const errorFunction = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'playerError');
+const errorSandbox = {module: {exports: {}}, Error, String};
+vm.runInNewContext(ts.transpileModule(errorFunction.getText(source) + '\nmodule.exports = playerError;', {
+  compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020},
+}).outputText, errorSandbox);
+const playerError = errorSandbox.module.exports;
 const fixtures = {
+  pending: { phase: 'pending', label: 'Purchase pending', detail: 'Purchase submitted. Waiting for confirmation.' },
   success: { phase: 'success', label: 'Research Lab completed', detail: 'Research Lab is now level 1.', nextAction: 'Open Research to choose your next technology.' },
   processing: { phase: 'processing', label: 'Upgrade Research Lab', detail: 'Waiting for devnet confirmation.' },
   error: { phase: 'error', label: 'Mission needs attention', detail: 'Choose another destination.', recovery: 'Your fleet has not departed. Review the destination and try again.', technicalDetail: '<script>not executable</script>\nInvalidDestination' },
@@ -38,6 +45,39 @@ test('pending and failed commands retain their real accessibility and recovery s
   assert.match(html, /role="dialog" aria-modal="true"/);
   assert.match(html, /class="ug-operation-recovery"/);
   assert.match(html, /&lt;script&gt;not executable&lt;\/script&gt;/);
+});
+
+test('submitted purchases never claim a network failure means no payment or encourage buying again', () => {
+  for (const raw of [
+    'Your planet purchase was submitted and needs a confirmation check. Do not buy again. RPC unavailable',
+    'Devnet recovery test paused after payment submission. Reconcile the saved signature before retrying.',
+    'Your purchase is awaiting confirmation. No second purchase was submitted.',
+  ]) {
+    const result = playerError(new Error(raw), 'Failed');
+    assert.match(result.detail, /submitted/i);
+    assert.equal(result.phase, 'pending');
+    assert.match(result.recovery, /Do not buy again/);
+    assert.doesNotMatch(result.detail, /not applied|Nothing was changed|could not be completed/);
+  }
+});
+
+test('submitted payment status is neutral and nonblocking, never an error dialog', () => {
+  const html = render({phase: 'pending', label: 'Purchase pending', detail: 'Purchase submitted. Waiting for confirmation.'});
+  assert.match(html, /role="status"/);
+  assert.match(html, /PURCHASE STATUS/);
+  assert.doesNotMatch(html, /COMMAND NEEDS ATTENTION|Technical details|WHAT TO DO|CLOSE AND REVIEW|aria-modal="true"/);
+});
+
+test('intentional pre-payment pause and completed rent recovery have explicit outcomes', () => {
+  assert.match(playerError(new Error('Devnet recovery test paused after confirmed approval. No purchase payment was submitted.'), 'Failed').detail, /No payment was sent/);
+  assert.match(playerError(new Error('The previous purchase approval expired. Its temporary rent was returned; you can try again.'), 'Failed').detail, /rent was returned/);
+});
+
+test('expired signing proofs are neutral and explicitly state that no payment was sent', () => {
+  for (const raw of ['Purchase approval expired before submission. No payment was sent.', 'Transaction simulation failed ({"Custom":3007})']) {
+    const result = playerError(new Error(raw), 'Failed');
+    assert.equal(result.phase, 'pending'); assert.match(result.detail, /No payment was sent/);
+  }
 });
 
 if (process.argv.includes('--fixtures')) {

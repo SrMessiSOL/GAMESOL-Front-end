@@ -15,6 +15,8 @@ import { fetchAllianceLookupTable } from './alliance-lookup-table';
 import { fetchMarketLookupTable } from './market-lookup-table';
 import { runPlanetPurchase, type PendingPlanetPurchase } from './planet-purchase-recovery';
 import { serializeDeferredPayload, deserializeDeferredPayload } from './lazor-deferred-payload';
+import { paymentTestPhase } from './payment-recovery-qa';
+import { assertFreshPasskeyApproval } from './passkey-approval-age';
 import { signWithPopupRecovery, withPreparationTimeout } from './passkey-connect-recovery';
 import {
   createAssociatedTokenAccountInstruction,
@@ -746,10 +748,14 @@ export async function executeWithPlayerSession(
   ]);
   const signatureSlot = await freshPasskeySlot(rpc);
   if (isPlanetPurchaseBundle(instructions)) {
+    const testPause = env.VITE_DEVNET_PAYMENT_QA === '1' && typeof window !== 'undefined'
+      ? paymentTestPhase(env.VITE_DEVNET_PAYMENT_QA, window.location.hostname, window.location.search, await rpc.getGenesisHash()) : null;
     const intent = JSON.stringify(instructions.slice(-1).map(ix => ({program: ix.programId.toBase58(),
       accounts: ix.keys.map(key => key.pubkey.toBase58()), data: Array.from(ix.data)})));
     const storageKey = `gamesol:planet-purchase:devnet:${wallet.smartWallet}`;
+    const table = await fetchMarketLookupTable(rpc, sponsorPayer);
     let authorization: TransactionInstruction[] | null = null;
+    let approvalSlot: bigint | null = null;
     const execution = async (record: PendingPlanetPurchase) => resolved.client.executeDeferredFromPayload({
       payer: sponsorPayer, deferredPayload: deserializeDeferredPayload(record.payload, wallet.smartWallet), refundDestination: sponsorPayer,
     });
@@ -757,26 +763,33 @@ export async function executeWithPlayerSession(
       load: () => { const raw = localStorage.getItem(storageKey); return raw ? JSON.parse(raw) as PendingPlanetPurchase : null; },
       save: record => { if (record) localStorage.setItem(storageKey, JSON.stringify(record)); else localStorage.removeItem(storageKey); },
       prepare: async () => {
+        const display = await buildDisplayTransaction(rpc, sponsorPayer, instructions, displayBlockhash.blockhash);
+        approvalSlot = await freshPasskeySlot(rpc);
         const prepared = await resolved.client.authorizePrepare({payer: sponsorPayer, walletPda,
           authorityPda: resolved.authorityPda, publicKeyBytes: resolved.publicKeyBytes,
-          instructions, expiryOffset: 300, slotOverride: signatureSlot});
-        const display = await buildDisplayTransaction(rpc, sponsorPayer, instructions, displayBlockhash.blockhash);
+          instructions, expiryOffset: 300, slotOverride: approvalSlot});
         const response = await requestPasskeySignature(prepared.challenge, wallet.credentialId, display);
+        assertFreshPasskeyApproval(approvalSlot, BigInt(await withPreparationTimeout(rpc.getSlot('processed'))));
         authorization = prepared.finalize(response).instructions;
         return {version: 1, wallet: wallet.smartWallet, intent, createdAt: Date.now(), payload: serializeDeferredPayload(prepared.deferredPayload)};
       },
       authorize: async (record, submitted) => {
         if (!authorization) throw new Error('Purchase approval is missing.');
         const {instructions: execute} = await execution(record);
-        const table = await fetchMarketLookupTable(rpc, sponsorPayer);
         const intentTransaction = new VersionedTransaction(new TransactionMessage({payerKey: sponsorPayer,
           recentBlockhash: (await rpc.getLatestBlockhash('confirmed')).blockhash, instructions: execute}).compileToV0Message([table]));
         if (intentTransaction.serialize().length > 1232) throw new Error('Purchase exceeds the transaction limit. No authorization was submitted.');
+        if (approvalSlot === null) throw new Error('Purchase approval is missing.');
+        assertFreshPasskeyApproval(approvalSlot, BigInt(await withPreparationTimeout(rpc.getSlot('processed'))));
         await sendSponsored(rpc, authorization, [], undefined, false, {deferredExecution: intentTransaction, submitted});
+        if (testPause === 'approval') throw new Error('Devnet recovery test paused after confirmed approval. No purchase payment was submitted.');
       },
       execute: async (record, submitted) => {
         const {instructions: execute} = await execution(record);
-        return sendSponsored(rpc, execute, [], undefined, 'market', {submitted});
+        return sendSponsored(rpc, execute, [], undefined, 'market', {submitted: signature => {
+          submitted(signature);
+          if (testPause === 'execution') throw new Error('Devnet recovery test paused after payment submission. Reconcile the saved signature before retrying.');
+        }});
       },
       exists: async record => {
         const payload = deserializeDeferredPayload(record.payload, wallet.smartWallet);
