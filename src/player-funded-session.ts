@@ -768,8 +768,10 @@ function isMarketPurchaseBundle(instructions: TransactionInstruction[]): boolean
 function isMarketListingBundle(instructions: TransactionInstruction[]): boolean {
   const create = instructions[instructions.length - 1];
   if (!create || instructions.length > 2 || !create.programId.equals(MARKET_PROGRAM_ID)
-    || create.keys.length !== 9 || create.data.length !== 25
-    || !create.data.subarray(0, 8).equals(Buffer.from([237, 233, 192, 168, 248, 7, 249, 241]))) return false;
+    || !((create.keys.length === 9 && create.data.length === 25
+      && create.data.subarray(0, 8).equals(Buffer.from([237, 233, 192, 168, 248, 7, 249, 241])))
+      || (create.keys.length === 10 && create.data.length === 16
+        && create.data.subarray(0, 8).equals(Buffer.from([168, 189, 82, 35, 166, 138, 116, 61]))))) return false;
   if (instructions.length === 1) return true;
   const rent = instructions[0];
   return rent.programId.equals(GAME_STATE_PROGRAM_ID) && rent.keys.length === 3 && rent.data.length === 16

@@ -391,6 +391,22 @@ function isCompressedMarketListingBundle(inner, sponsor) {
   if (inner.length < 1 || inner.length > 2) return false;
   const create = inner.at(-1), data = create.data;
   const market = new PublicKey('6hPzaemT1siozGVM7MUHvjFK79WNGCrKruEBMEKA1DjA');
+  if (create.programId.equals(market) && create.accounts.length === 10 && data.length === 16
+    && isDiscriminator(data, Buffer.from([168,189,82,35,166,138,116,61]))) {
+    const a = create.accounts, owner = a[0], planet = a[6];
+    const pda = (seed, key) => PublicKey.findProgramAddressSync([Buffer.from(seed), ...(key ? [key.toBuffer()] : [])], market)[0];
+    const registry = PublicKey.findProgramAddressSync([Buffer.from('planet_ownership'), planet.toBuffer()], GAME_STATE_PROGRAM_ID)[0];
+    if (data.readBigUInt64LE(8) < 1000000n || !a[1].equals(pda('market_config'))
+      || !a[2].equals(pda('seller_counter', owner)) || !a[4].equals(pda('planet_listing_index', planet))
+      || !a[5].equals(pda('planet_market_obligation', planet)) || !a[8].equals(registry)
+      || !a[9].equals(SystemProgram.programId)) return false;
+    if (inner.length === 1) return true;
+    const rent = inner[0];
+    return Boolean(approvedRentPolicy(inner)) && rent.programId.equals(GAME_STATE_PROGRAM_ID)
+      && isDiscriminator(rent.data, RENT_SPONSOR_DISCRIMINATOR) && rent.data.length === 16
+      && rent.accounts.length === 3 && rent.accounts[0].equals(sponsor.publicKey)
+      && rent.accounts[1].equals(owner) && rent.accounts[2].equals(SystemProgram.programId);
+  }
   if (!create.programId.equals(market) || create.accounts.length !== 9 || data.length !== 25
     || !isDiscriminator(data, Buffer.from([237, 233, 192, 168, 248, 7, 249, 241]))
     || data[8] > 2 || data.readBigUInt64LE(9) < 1000n || data.readBigUInt64LE(17) < 1000000n) return false;
