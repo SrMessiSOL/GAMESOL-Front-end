@@ -30,6 +30,8 @@ Sponsor policy requires the exact paired purchase intent for authorization, vali
 
 All listed receipts have null transaction errors. Each purchase's authorization cost 10,000 devnet lamports in network fees and execution cost 5,000, totaling 30,000 lamports for the two purchases, excluding listing and test-funding fees. Each temporary deferred account received 1,544,320 lamports of rent and closed after execution, returning the rent to the sponsor.
 
+Separately, each buyer-funded permanent 78-byte ownership-index account holds 1,046,480 devnet lamports (0.00104648 test SOL). Those index accounts remain allocated, including NewAccount's now-inactive index; that permanent account rent was not refunded by selling the planet back. It is distinct from the refunded temporary authorization rent and from marketplace AM fees.
+
 ## Exact AM Settlement
 
 Balances are raw six-decimal token amounts. The baseline is after a 0.01-test-AM transfer from Original to NewAccount; its prior 0.9975 balance was below the 1-AM minimum. The free faucet was unavailable and did not provide funds.
@@ -64,6 +66,8 @@ Screenshots: `planet-purchase-newaccount-empire.jpg`, `planet-return-purchase-re
 The successful flow and receipts were published in `e4ff33b`. The public deployment was checked for HTTP 200 page/entry delivery, the expected devnet sponsor, restored Original ownership, and access to operate the returned colony. `planet-roundtrip-public.jpg` captures the public empire after the return.
 
 A final review added a narrow late-confirmation recovery correction: an old purchase that is already confirmed clears its saved pending record before a different new purchase begins. A still-pending or failed unresolved purchase continues to block a different command. Two added regression tests bring the final suite to 269 passing tests; the production build also passed. This correction required no additional on-chain transaction or token spending.
+
+Final runtime source: `fb7e256`. Production deployment: `frontend-iwy2x7j4n-srmessisols-projects.vercel.app`, assigned to `chained-universe.vercel.app`. Final public page and deployment-pinned JavaScript entry both returned HTTP 200, and the paymaster reported the unchanged devnet sponsor. The canonical entry was `assets/index-BQoqhZ6M.js`.
 
 ## Validation Boundaries
 
