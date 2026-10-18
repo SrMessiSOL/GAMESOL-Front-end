@@ -43,4 +43,26 @@ outside this UI-only pass. Mainnet readiness is not implied.
 
 ## Publication
 
-Final deployment and public smoke results will be recorded after completion.
+- Runtime commit `471024b` pushed to `feat/crypto-ufos-wallet-link`.
+- Production build passed with QA interruption disabled. Public alias now points
+  to `frontend-ecwi9wb35-srmessisols-projects.vercel.app`; actual browser entry
+  verified as `assets/index-DziAFesN.js` on that immutable host.
+- Public Default account restored #513 and both worlds. Opening Player account
+  showed 4,728,251.98 AM and 100.5 USDC without manual balance refresh.
+- Live cargo form checked on desktop and 390-CSS-pixel mobile viewport. In one
+  simultaneous snapshot the header, cargo labels and input max values all agreed:
+  35,963 metal, 79,273 crystal, 21,635 deuterium. Subsequent estimates advanced
+  together normally. No ships selected or mission launched.
+- Funded Default store review inspected on desktop/mobile. Mobile Escape and
+  desktop Cancel each dismissed only the inner review and restored the Review
+  button focus. Buy was never clicked. Temporary viewport reset afterward.
+- Finalized slot 512538084: Default AM 4728251982500 raw, NewAccount 1000000,
+  treasury 9476422017500, unchanged from the pretest checkpoint. Default USDC
+  remains 100500000 raw. Latest colony purchase signature is unchanged.
+- Evidence: `modal-fixes-public-fleet-desktop.jpg`,
+  `modal-fixes-public-fleet-mobile.jpg`, `modal-fixes-public-review-desktop.jpg`,
+  `modal-fixes-public-review-mobile.jpg`.
+- The original three findings are resolved by this release. No new live market
+  purchase was submitted to recheck the post-payment refresh trigger; that path
+  has regression coverage, while account-opening and modal/cargo behavior have
+  the live evidence above. No USDC or ANTIMATTER spent.
