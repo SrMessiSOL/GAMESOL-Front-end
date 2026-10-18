@@ -27,6 +27,7 @@ async function fixture({linkedVault = 'game-vault', commander = 'game-vault', ca
         return {value: [{err: null, confirmationStatus: 'finalized'}]};}},
     reconcileSubmittedPlanetPurchase: recoveryModule.exports.reconcileSubmittedPlanetPurchase,
     setStatus: () => {}, setOperation: value => operations.push(value), refresh: async () => {refreshed++;},
+    setBalanceRefreshVersion: () => {},
     setTimeout: () => {throw new Error('confirmed receipt must not keep polling');}, clearTimeout: () => {}, Date, Error,
     module: {exports: {}}};
   vm.runInNewContext(ts.transpileModule(`module.exports = ${effect};`, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020}}).outputText, context);

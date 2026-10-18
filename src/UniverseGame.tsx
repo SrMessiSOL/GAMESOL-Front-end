@@ -323,6 +323,7 @@ function FundsModal({
   antimatterAvailable,
   usdcAvailable,
   returnFocusTo,
+  fallbackFocusTo,
   onClose,
   onSend,
   onClaimDevnetAntimatter,
@@ -335,6 +336,7 @@ function FundsModal({
   antimatterAvailable: boolean;
   usdcAvailable: boolean;
   returnFocusTo?: HTMLElement | null;
+  fallbackFocusTo?: () => HTMLElement | null;
   onClose: () => void;
   onSend: (asset: FundsAsset, rawAmount: bigint, destination: PublicKey) => Promise<void>;
   onClaimDevnetAntimatter?: () => Promise<void>;
@@ -393,8 +395,9 @@ function FundsModal({
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
-      window.requestAnimationFrame(() => {
-        if (returnFocusTo?.isConnected) returnFocusTo.focus();
+      queueMicrotask(() => {
+        const target = returnFocusTo?.isConnected ? returnFocusTo : fallbackFocusTo?.();
+        target?.focus({ preventScroll: true });
       });
     };
   }, []);
@@ -1471,6 +1474,11 @@ export default function UniverseGame() {
   const [usdcBalance, setUsdcBalance] = useState(0n);
   const [antimatterMint, setAntimatterMint] = useState<string | null>(null);
   const [usdcMint, setUsdcMint] = useState<string | null>(null);
+  const [balanceRefreshVersion, setBalanceRefreshVersion] = useState(0);
+  const balanceWalletRef = useRef(publicKey?.toBase58());
+  balanceWalletRef.current = publicKey?.toBase58();
+  const tokenBalanceRequestRef = useRef(0);
+  const solBalanceRequestRef = useRef(0);
   const [battleReports, setBattleReports] = useState<BattleResolvedEventRecord[]>([]);
   const [spyReports, setSpyReports] = useState<EspionageReportEventRecord[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -1507,7 +1515,7 @@ export default function UniverseGame() {
     return () => {
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", onKeyDown);
-      window.requestAnimationFrame(() => {
+      queueMicrotask(() => {
         if (previouslyFocused?.isConnected) previouslyFocused.focus();
         else playerTriggerRef.current?.focus();
       });
@@ -1624,6 +1632,7 @@ export default function UniverseGame() {
         if (status === 'confirmed') {
           setStatus('Planet purchase confirmed.');
           setOperation({label: 'Planet acquired', detail: 'Your colony purchase is confirmed.', phase: 'success'});
+          setBalanceRefreshVersion(version => version + 1);
           void refresh().catch(() => undefined);
           return;
         }
@@ -1683,6 +1692,9 @@ export default function UniverseGame() {
     };
   }, [refresh]);
   const refreshWalletTokenBalances = useCallback(async () => {
+    const request = ++tokenBalanceRequestRef.current;
+    const walletAddress = publicKey?.toBase58();
+    const isCurrent = () => request === tokenBalanceRequestRef.current && walletAddress === balanceWalletRef.current;
     if (!client || !publicKey) {
       setAntimatterBalance(0n);
       setUsdcBalance(0n);
@@ -1696,8 +1708,6 @@ export default function UniverseGame() {
     ]);
     const nextAntimatterMint = gameConfig?.antimatterMint ?? null;
     const nextUsdcMint = storeConfig?.usdcMint ?? null;
-    setAntimatterMint(nextAntimatterMint);
-    setUsdcMint(nextUsdcMint);
     const loadOwnerBalances = async (owner: PublicKey | null) => {
       const balances = new Map<string, bigint>();
       if (!owner) return balances;
@@ -1717,6 +1727,9 @@ export default function UniverseGame() {
     const walletBalances = await loadOwnerBalances(publicKey);
     const antimatter = nextAntimatterMint ? (walletBalances.get(nextAntimatterMint) ?? 0n) : 0n;
     const usdc = nextUsdcMint ? (walletBalances.get(nextUsdcMint) ?? 0n) : 0n;
+    if (!isCurrent()) return;
+    setAntimatterMint(nextAntimatterMint);
+    setUsdcMint(nextUsdcMint);
     setAntimatterBalance(antimatter);
     setUsdcBalance(usdc);
   }, [client, connection, publicKey]);
@@ -1890,16 +1903,24 @@ export default function UniverseGame() {
     }
   };
   const refreshVaultBalance = useCallback(async () => {
+    const request = ++solBalanceRequestRef.current;
+    const walletAddress = publicKey?.toBase58();
+    const isCurrent = () => request === solBalanceRequestRef.current && walletAddress === balanceWalletRef.current;
     if (!client) {
       setVaultBalance(0n);
       return;
     }
     try {
-      setVaultBalance(BigInt(await client.getVaultBalanceLamports()));
+      const balance = BigInt(await client.getVaultBalanceLamports());
+      if (isCurrent()) setVaultBalance(balance);
     } catch {
-      setVaultBalance(0n);
+      // A failed read must not replace a previously confirmed balance with zero.
     }
-  }, [client]);
+  }, [client, publicKey]);
+  useEffect(() => {
+    if (!walletMenuOpen && !fundsOpen && balanceRefreshVersion === 0) return;
+    void Promise.allSettled([refreshVaultBalance(), refreshWalletTokenBalances()]);
+  }, [walletMenuOpen, fundsOpen, balanceRefreshVersion, refreshVaultBalance, refreshWalletTokenBalances]);
   const checkOnboardingFunding = async () => {
     if (!client) return;
     setBalanceRefreshBusy(true);
@@ -2179,6 +2200,7 @@ export default function UniverseGame() {
               }
               setStatus("Marketplace transaction confirmed.");
               setOperation({ label: "Marketplace command", detail: "The transaction was confirmed and market state is refreshing.", phase: "success" });
+              setBalanceRefreshVersion(version => version + 1);
               void refresh().catch(() => undefined);
             },
           }}
@@ -2616,6 +2638,7 @@ export default function UniverseGame() {
         antimatterAvailable={Boolean(antimatterMint)}
         usdcAvailable={Boolean(usdcMint)}
         returnFocusTo={fundsOpenerRef.current}
+        fallbackFocusTo={() => document.querySelector<HTMLElement>('.pw-wallet-trigger') ?? playerTriggerRef.current}
         onClose={() => setFundsOpen(false)}
         onSend={sendPlayerFunds}
         onClaimDevnetAntimatter={IS_DEVNET ? claimDevnetAntimatter : undefined}

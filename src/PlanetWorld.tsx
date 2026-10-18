@@ -7,6 +7,7 @@ import { ALLIANCE_CREATE_ANTIMATTER_COST, ALLIANCE_CREATE_USDC_COST, BUILDINGS, 
 import { PublicKey } from "@solana/web3.js";
 import { TRANSPORT_CARGO_CAPACITY } from './game-state';
 import { projectResources } from "./resource-projection";
+import { restorePlanetCommandFocus } from './command-focus';
 import { allianceContributionCompleted } from './alliance-contribution';
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { activeQuestDefinitions, discountedAllianceBuildingCost, ALLIANCE_BUILDINGS, ALLIANCE_DEPOSIT_DEFINITIONS, hasQuestBit, questClaimedMask, questGroupResetSeconds, questRewardTargetForRequirement, STORE_PACKS, storePurchasedMask, tutorialQuestsComplete, type QuestDefinition } from "./App";
@@ -1820,6 +1821,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   const modalCloseRef = useRef<HTMLButtonElement>(null);
   const modalPanelRef = useRef<HTMLElement>(null);
   const modalOpenerRef = useRef<HTMLElement | null>(null);
+  const operationsRef = useRef<HTMLElement>(null);
   const walletTriggerRef = useRef<HTMLButtonElement>(null);
   const walletCloseRef = useRef<HTMLButtonElement>(null);
   const walletPanelRef = useRef<HTMLElement>(null);
@@ -1868,6 +1870,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
   useEffect(() => {
     if (!commandModalOpen) return;
     const opener = modalOpenerRef.current;
+    const openedCommand = modal!;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const focusFrame = window.requestAnimationFrame(() => modalCloseRef.current?.focus());
@@ -1901,8 +1904,8 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
       modalOpenerRef.current = null;
-      window.requestAnimationFrame(() => {
-        if (opener?.isConnected) opener.focus();
+      queueMicrotask(() => {
+        restorePlanetCommandFocus(opener, operationsRef.current, openedCommand);
       });
     };
   }, [commandModalOpen]);
@@ -2624,7 +2627,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
       <div className="pw-objective-facts"><span>{growthFacilityCost[0].toLocaleString()} M</span><span>{growthFacilityCost[1].toLocaleString()} C</span>{growthFacilityCost[2] > 0 && <span>{growthFacilityCost[2].toLocaleString()} D</span>}<span>{queueTime(growthBuildSeconds)}</span></div>
       <div className="pw-objective-action"><span className={growthFacilityReady ? "ready" : "gathering"}>{growthFacilityReady ? "READY TO BUILD" : "GATHER RESOURCES"}</span><button type="button" onClick={() => selectFacility(growthFacilityIndex)}>OPEN COMMAND <ChevronRight /></button></div>
     </aside>}
-    <nav className={`pw-operations${earlyWorldGuidance ? " is-guided" : ""}`} aria-label="Planet operations">
+    <nav ref={operationsRef} className={`pw-operations${earlyWorldGuidance ? " is-guided" : ""}`} aria-label="Planet operations">
       <button className={`${modal === "buildingSelect" || modal === "building" ? "active" : ""}${showGrowthObjective ? " is-recommended" : ""}`} aria-label={showGrowthObjective ? "Buildings, recommended next objective" : "Buildings"} title={showGrowthObjective ? `Next objective: upgrade ${growthFacility.name}` : "Buildings"} aria-haspopup="dialog" aria-expanded={modal === "buildingSelect" || modal === "building"} onClick={(event) => openPlanetCommand("buildingSelect", event.currentTarget)}><Building2 /><span>BUILD</span></button>
       <button className={modal === "research" ? "active" : ""} aria-label="Research" title="Research" aria-haspopup="dialog" aria-expanded={modal === "research"} onClick={(event) => openPlanetCommand("research", event.currentTarget)}><FlaskConical /><span>RESEARCH</span></button>
       <button className={modal === "ships" ? "active" : ""} aria-label="Shipyard" title="Shipyard" aria-haspopup="dialog" aria-expanded={modal === "ships"} onClick={(event) => openPlanetCommand("ships", event.currentTarget)}><Rocket /><span>SHIPYARD</span></button>
@@ -2786,7 +2789,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
           <div className="pw-launch-section-head"><h4>Destination and speed</h4><span>G:S:P coordinates</span></div><div className="pw-launch-grid pw-destination-grid">{(["galaxy", "system", "position", "speed"] as const).map((field) => <label key={field}><span>{field}</span><input inputMode="numeric" type="number" min={field === "speed" ? 10 : 1} max={field === "galaxy" || field === "system" ? 999 : field === "position" ? 15 : 100} value={missionTarget[field]} onChange={(event) => setMissionTarget((current) => ({ ...current, [field]: Math.max(field === "speed" ? 10 : 1, Number(event.target.value) || 1) }))} /><small>{field === "speed" ? "10–100%" : field === "position" ? "1–15" : "1–999"}</small></label>)}</div>
           {missionType === 5 && <label className="pw-colony-name"><span>Colony name</span><input value={missionTarget.colonyName} maxLength={32} onChange={(event) => setMissionTarget((current) => ({ ...current, colonyName: event.target.value }))} /><small>{missionTarget.colonyName.length}/32</small></label>}
           <div className="pw-launch-section-head"><h4>Assign fleet</h4><span>{selectedMissionShips.toLocaleString()} selected</span></div><div className="pw-fleet-grid">{SHIPS.filter((ship) => ship.key !== "solarSatellite" && Number((state.fleet as any)[ship.key] ?? 0) > 0).map((ship) => { const available = Number((state.fleet as any)[ship.key] ?? 0); const assigned = missionShips[ship.key] ?? 0; return <label key={ship.key} className={assigned > 0 ? "is-selected" : ""}><span>{ship.name}<b>{available.toLocaleString()} available</b></span><input aria-label={`${ship.name} assignment`} inputMode="numeric" type="number" min="0" max={available} value={assigned || ""} placeholder="0" onChange={(event) => setMissionShips((current) => ({ ...current, [ship.key]: Math.min(available, Math.max(0, Number(event.target.value) || 0)) }))} /></label>; })}</div>
-          {missionType !== 5 && missionType !== 6 && <><div className="pw-launch-section-head"><h4>Load cargo</h4><span>{selectedCargoTotal.toLocaleString()} / {selectedCargoCapacity.toLocaleString()} capacity</span></div><div className="pw-launch-grid pw-cargo-grid">{(["metal", "crystal", "deuterium"] as const).map((field) => <label key={field}><span>{field}</span><input inputMode="numeric" type="number" min="0" max={Number((state.resources as any)[field] ?? 0)} value={missionCargo[field]} placeholder="0" onChange={(event) => setMissionCargo((current) => ({ ...current, [field]: event.target.value }))} /><small>{Number((state.resources as any)[field] ?? 0).toLocaleString()} available</small></label>)}</div></>}
+          {missionType !== 5 && missionType !== 6 && <><div className="pw-launch-section-head"><h4>Load cargo</h4><span>{selectedCargoTotal.toLocaleString()} / {selectedCargoCapacity.toLocaleString()} capacity</span></div><div className="pw-launch-grid pw-cargo-grid">{(["metal", "crystal", "deuterium"] as const).map((field) => <label key={field}><span>{field}</span><input inputMode="numeric" type="number" min="0" max={resource[field].toString()} value={missionCargo[field]} placeholder="0" onChange={(event) => setMissionCargo((current) => ({ ...current, [field]: event.target.value }))} /><small>{resource[field].toLocaleString()} available</small></label>)}</div></>}
           </fieldset>
           <section className={`pw-mission-preflight${canLaunchMission && !missionError ? " is-ready" : " is-blocked"}`} aria-live="polite"><header><div><span>MISSION PREFLIGHT</span><strong>{canLaunchMission && !missionError ? "READY TO LAUNCH" : "ACTION REQUIRED"}</strong></div><b>{availableMissionSlots}/{usableMissionSlots} SLOTS FREE</b></header><div className="pw-mission-preflight-grid"><span><small>ORDER</small><b>{missionName(missionType)}</b></span><span><small>DESTINATION</small><b>{missionTarget.galaxy}:{missionTarget.system}:{missionTarget.position}</b></span><span><small>FLEET</small><b>{selectedMissionShips.toLocaleString()} SHIPS</b></span><span><small>CARGO</small><b>{selectedCargoTotal.toLocaleString()} / {selectedCargoCapacity.toLocaleString()}</b></span><span><small>FUEL</small><b>{estimatedMissionFuel.toLocaleString()} D</b></span><span><small>SPEED</small><b>{missionTarget.speed}%</b></span></div><p className={missionError ? "command-preflight-error" : undefined} role={missionError ? "alert" : undefined}>{missionError || (canLaunchMission ? "Preflight checks passed. Final target checks run before signing." : "Complete the mission requirements above.")}</p></section>
           <CommandActionButton tone="primary" className="pw-launch-action" icon={<Rocket />} pending={pendingCommand === 'launch'} pendingLabel={busy ? 'Launching...' : 'Checking target...'} disabled={busy || pendingCommand !== null || missionChecking || !canLaunchMission} onClick={() => void trackCommand('launch', launchMission)}>{canLaunchMission ? `Launch ${missionName(missionType).toLowerCase()}` : 'Complete preflight'}</CommandActionButton>
