@@ -20,6 +20,7 @@ export function usePasskeyGameplayVault() {
   const walletRef = useRef(walletPda);
   walletRef.current = walletPda;
   const revision = useRef(0);
+  const sessionMutation = useRef(false);
   const [sessionFeeAddress, setSessionFeeAddress] = useState<string | null>(null);
   const [sessionFeeBalance, setSessionFeeBalance] = useState(0n);
   const [sponsorPayerAddress, setSponsorPayerAddress] = useState<string | null>(null);
@@ -41,7 +42,13 @@ export function usePasskeyGameplayVault() {
       setHasSession(false);
       return null;
     }
-    const state = await refreshPlayerFundedSession(walletPda);
+    let state;
+    try {
+      state = await refreshPlayerFundedSession(walletPda);
+    } catch (error) {
+      if (walletRef.current === walletPda && request === revision.current) setHasSession(false);
+      throw error;
+    }
     if (walletRef.current !== walletPda || request !== revision.current) return null;
     setSessionFeeAddress(state.publicKey);
     setSessionFeeBalance(state.balanceLamports);
@@ -69,6 +76,32 @@ export function usePasskeyGameplayVault() {
     return () => { revision.current++; };
   }, [refreshSessionFunding, walletPda]);
 
+  useEffect(() => {
+    if (!walletPda) return;
+    let stopped = false;
+    let pending = false;
+    const check = async () => {
+      if (stopped || pending || sessionMutation.current || document.visibilityState === "hidden") return;
+      pending = true;
+      try {
+        await refreshSessionFunding();
+      } catch {
+        // The refresh clears only the current account's unverified status.
+      } finally {
+        pending = false;
+      }
+    };
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    const timer = window.setInterval(check, 30_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [refreshSessionFunding, walletPda]);
+
   const connect = useCallback(async () => {
     // The permanent passkey vault owns the player account. Lazor's paymaster
     // covers network fees; the restricted browser session only authorizes
@@ -79,7 +112,13 @@ export function usePasskeyGameplayVault() {
   const createGameplaySession = useCallback(async () => {
     if (!lazor.wallet) throw new Error("Sign in to your game account first.");
     const request = ++revision.current;
-    const state = await activatePlayerFundedSession(lazor.wallet);
+    sessionMutation.current = true;
+    let state;
+    try {
+      state = await activatePlayerFundedSession(lazor.wallet);
+    } finally {
+      sessionMutation.current = false;
+    }
     if (walletRef.current !== lazor.wallet.smartWallet || request !== revision.current) throw new Error("Your game account or Quick Play session changed. Check the current account before retrying.");
     setSessionFeeAddress(state.publicKey);
     setSessionFeeBalance(state.balanceLamports);
@@ -92,7 +131,13 @@ export function usePasskeyGameplayVault() {
   const revokeGameplaySession = useCallback(async () => {
     if (!lazor.wallet) throw new Error("Sign in to your game account first.");
     const request = ++revision.current;
-    const state = await revokePlayerFundedSession(lazor.wallet);
+    sessionMutation.current = true;
+    let state;
+    try {
+      state = await revokePlayerFundedSession(lazor.wallet);
+    } finally {
+      sessionMutation.current = false;
+    }
     if (walletRef.current !== lazor.wallet.smartWallet || request !== revision.current) return;
     setSessionFeeAddress(state.publicKey);
     setSessionFeeBalance(state.balanceLamports);
@@ -134,9 +179,13 @@ export function usePasskeyGameplayVault() {
           setHasSession(false);
           throw new Error("Quick Play is off. Turn it on with your passkey first.");
         }
-        const signature = await executeWithPlayerSession(wallet, instructions, effectiveAuthorization);
-        void refreshSessionFunding().catch(() => undefined);
-        return signature;
+        try {
+          return await executeWithPlayerSession(wallet, instructions, effectiveAuthorization);
+        } finally {
+          if (walletRef.current === wallet.smartWallet) {
+            void refreshSessionFunding().catch(() => undefined);
+          }
+        }
       },
     };
   }, [lazor.wallet, refreshSessionFunding, sponsorPayerAddress, vaultPublicKey]);
