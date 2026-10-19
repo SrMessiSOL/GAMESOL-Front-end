@@ -4,8 +4,9 @@
 
 NOT CLEARED FOR MAINNET. This is the latest checklist, supplementing the
 October 18 evidence rather than treating historical passes as fresh tests.
-This pass made no mainnet changes, submitted no game transactions and spent
-no USDC, ANTIMATTER or SOL. No deployment or authority change was performed.
+The initial read-only pass submitted no transactions. The completed follow-up
+below collected the ship and published a frontend fix, with sponsored devnet
+fees and no USDC/ANTIMATTER spending. No mainnet or authority change occurred.
 
 ## Fresh devnet results
 
@@ -89,7 +90,7 @@ Retained from the October 18 checklist and linked receipts, not rerun today:
 
 | Area | Still required | Boundary |
 | --- | --- | --- |
-| Quick Play | Fix stale ON state; expiry, revocation, idle-tab return, browser restart and account isolation on final release | Fresh live failure above |
+| Quick Play | Stale ON fix published; remaining final-release browser restart, live elapsed expiry/revocation and isolation cases | Refresh passed live; expiry/race logic covered in automated tests |
 | Ready ship | Completed: inventory 1, queue empty, duplicate collection rejected | Finalized collection plus unsigned rejection simulation |
 | Controlled combat | Eligible attack, arrival, outcomes, losses, loot, reports, return, duplicate resolution | Protection ends October 21 at 19:28:55 UTC / 16:28:55 Buenos Aires per prior checkpoint; re-read before attacking; check same-alliance restrictions |
 | Market races | Live purchase/cancel and stale-price races with exact-one settlement | Local-validator races already passed, not live Lazor proof |
