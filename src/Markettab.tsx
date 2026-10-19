@@ -764,6 +764,7 @@ const BuyConfirmModal: React.FC<{
   const [localErr, setLocalErr] = useState<string | null>(null);
   const canAfford = antimatterBalance >= offer.priceAntimatter;
   const storageError = marketStorageError(offer.resourceType, offer.resourceAmount, resources);
+  const canConfirm = !storageError && canAfford && marketUnlocked && !submitting && !txBusy;
 
   const handleConfirm = async () => {
     if (storageError || !canAfford || !marketUnlocked || submitting || txBusy) return;
@@ -855,10 +856,10 @@ const BuyConfirmModal: React.FC<{
             disabled={Boolean(storageError) || !canAfford || !marketUnlocked || submitting || txBusy}
             style={{
               flex: 2, padding: "12px 16px", borderRadius: 2,
-              border: `1px solid ${canAfford ? "var(--cyan)" : "var(--border)"}`,
-              background: canAfford ? "rgba(0,245,212,0.12)" : "transparent",
-              color: canAfford ? "var(--cyan)" : "var(--dim)",
-              cursor: canAfford && !submitting ? "pointer" : "not-allowed",
+              border: `1px solid ${canConfirm ? "var(--cyan)" : "var(--border)"}`,
+              background: canConfirm ? "rgba(0,245,212,0.12)" : "transparent",
+              color: canConfirm ? "var(--cyan)" : "var(--dim)",
+              cursor: canConfirm ? "pointer" : "not-allowed",
               fontFamily: "Outfit, system-ui, sans-serif", fontSize: 12, letterSpacing: 0,
             }}
           >

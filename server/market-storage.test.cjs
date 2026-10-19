@@ -57,3 +57,21 @@ test('actual client rejects overflowing delivery before building or sending paym
   await assert.rejects(client.acceptOffer({resourceType:1,resourceAmount:28000n}),/Not enough crystal storage/);
   assert.equal(reads,1); assert.equal(prepared,0); assert.equal(sent,0);
 });
+
+test('buy button colours and cursor use every actual confirmation requirement',()=>{
+  const source=fs.readFileSync(require.resolve('../src/Markettab.tsx'),'utf8');
+  const tree=ts.createSourceFile('Markettab.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  let expression;
+  function visit(node){
+    if(ts.isVariableDeclaration(node)&&node.name.getText(tree)==='canConfirm') expression=node.initializer.getText(tree);
+    ts.forEachChild(node,visit);
+  }
+  visit(tree); assert(expression);
+  for(let mask=0;mask<32;mask++){
+    const input={storageError:mask&1?'overflow':null,canAfford:Boolean(mask&2),marketUnlocked:Boolean(mask&4),submitting:Boolean(mask&8),txBusy:Boolean(mask&16)};
+    const allowed=vm.runInNewContext(expression,input);
+    assert.equal(allowed,!input.storageError&&input.canAfford&&input.marketUnlocked&&!input.submitting&&!input.txBusy);
+  }
+  const review=source.slice(source.indexOf('const BuyConfirmModal'),source.indexOf('const BuyConfirmModal')+8500);
+  assert.match(review,/background: canConfirm \?/); assert.match(review,/cursor: canConfirm \?/);
+});

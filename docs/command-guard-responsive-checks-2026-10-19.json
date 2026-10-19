@@ -662,5 +662,52 @@
     ],
     "pageOverflow": false,
     "width": 390
+  },
+  {
+    "slug": "market",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 513.3333435058594,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "+ CONFIRM BUY"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "market",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 513.3333435058594,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "+ CONFIRM BUY"
+    ],
+    "pageOverflow": false,
+    "width": 1280,
+    "invalidCapture": "Viewport override applied to another selected tab; superseded by market-final."
+  },
+  {
+    "slug": "market-final",
+    "mode": "desktop",
+    "background": "transparent",
+    "cursor": "not-allowed",
+    "disabled": true,
+    "width": 1280
+  },
+  {
+    "slug": "market-final",
+    "mode": "mobile",
+    "background": "transparent",
+    "cursor": "not-allowed",
+    "disabled": true,
+    "width": 390
   }
 ]

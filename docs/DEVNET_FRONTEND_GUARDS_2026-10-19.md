@@ -30,7 +30,9 @@
 
 ## Verification
 
-- Full frontend/server/API suite: 365 passed, zero failures or skipped tests.
+- Full frontend/server/API suite: 366 passed, zero failures or skipped tests.
+- Disabled purchase colours and cursor use the same readiness conditions as
+  confirmation; regression covers all 32 combinations of the five blockers.
 - TypeScript/Vite Preview builds passed.
 - 26 read-only devnet rehearsals, including 8 allowed commands and 18 blocked
   cases, using the actual frontend client builders; no wallet signing or send
