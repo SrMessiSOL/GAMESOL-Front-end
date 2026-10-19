@@ -5976,8 +5976,10 @@ const App: React.FC = () => {
   };
 
   const handleUpgradeAllianceBuilding = async (buildingId: number) => {
-    if (!clientRef.current) return;
-    await withTx("Upgrade alliance building", () => clientRef.current!.upgradeAllianceBuilding(buildingId), async () => { await refreshAllianceState(); });
+    if (!clientRef.current || !allianceTreasury) return;
+    const expectedLevel = [allianceTreasury.logisticsHub, allianceTreasury.researchGrid, allianceTreasury.defenseCoordination, allianceTreasury.tradeNetwork][buildingId];
+    const quote = { expectedLevel, ...discountedAllianceBuildingCost(buildingId, expectedLevel + 1, allianceTreasury) };
+    await withTx("Upgrade alliance building", () => clientRef.current!.upgradeAllianceBuilding(buildingId, quote), async () => { await refreshAllianceState(); });
   };
   const handlePurchaseStorePack = async (period: StorePeriod, packId: number) => {
     if (!clientRef.current || !state) return;

@@ -11,6 +11,27 @@ const code = ast.statements.filter(n => ts.isFunctionDeclaration(n) && names.inc
 const target = {exports: {}};
 vm.runInNewContext(ts.transpileModule(code, {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText, {exports:target.exports});
 const cost = target.exports.discountedAllianceBuildingCost;
+const quoteModule = {exports: {}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/alliance-upgrade.ts'), 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText, {
+  exports: quoteModule.exports,
+  require: name => { assert.equal(name, './alliance-contribution'); return {ALLIANCE_BUILDING_MAX_LEVEL:25}; },
+});
+
+test('signed SDK quote matches displayed costs for every upgrade level and discount boundaries', () => {
+  for (let id=0; id<4; id++) for(let level=0;level<25;level++) for(const trade of [0,1,25]) for(const defense of [0,1,25]) {
+    const treasury={logisticsHub:0,researchGrid:0,defenseCoordination:defense,tradeNetwork:trade};
+    treasury[['logisticsHub','researchGrid','defenseCoordination','tradeNetwork'][id]]=level;
+    const quote=quoteModule.exports.allianceUpgradeQuote(id,treasury);
+    const {expectedLevel,...amounts}=quote;
+    assert.equal(expectedLevel,level);assert.deepEqual({...amounts},{...cost(id,level+1,treasury)});
+  }
+});
+
+test('both UI actions bind the displayed quote rather than silently accepting a refreshed higher level', () => {
+  const world=fs.readFileSync(path.join(__dirname,'../src/PlanetWorld.tsx'),'utf8');
+  assert.ok(world.includes('client.upgradeAllianceBuilding(building.id, { expectedLevel: currentLevel, ...cost })'));
+  assert.ok(app.includes('upgradeAllianceBuilding(buildingId, quote)'));
+});
 
 test('research upgrade quote matches level-one Trade and Defense on-chain discounts', () => {
   const actual = cost(1, 2, {tradeNetwork:1,defenseCoordination:1});

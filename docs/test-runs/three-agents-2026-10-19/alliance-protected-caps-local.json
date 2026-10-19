@@ -1,0 +1,1443 @@
+{
+  "network": "isolated-local-validator",
+  "genesis": "3yjfvwUvbNd4ewdsq5x5KNpdCt6KC7kCgetnxy6E2kDS",
+  "passed": [
+    {
+      "label": "building-0-level-1",
+      "signature": "4MuZJxW1gBuWEQX33jtdZ3DY9zYTXA89Ns11MiLtwEPbtjWsDgErSL2s4AdKYMM439z838ygmgnqt5pJmhwVxHjj",
+      "index": 0,
+      "level": 1,
+      "cost": [
+        "5000",
+        "2000",
+        "1000",
+        "50000000"
+      ],
+      "xp": "250"
+    },
+    {
+      "label": "building-1-level-1",
+      "signature": "23MBpQEaxBRMJqaG6ZHcG3wNvvwDByRKgtZVboFBJAyu3ih6WsnKY189GUSbZvmYSGTC4CLMQTQfdyHn39haaVpx",
+      "index": 1,
+      "level": 1,
+      "cost": [
+        "2000",
+        "5000",
+        "2000",
+        "75000000"
+      ],
+      "xp": "300"
+    },
+    {
+      "label": "building-2-level-1",
+      "signature": "tSBKUdcizFc6CMdCNn1jKzzWyXrQwthQH7kUKKjnygEMRQwb74u2Yeb9s9UbHHJRpJNxy8dnGSPgrfiNgJFFHpj",
+      "index": 2,
+      "level": 1,
+      "cost": [
+        "4000",
+        "4000",
+        "1500",
+        "60000000"
+      ],
+      "xp": "288"
+    },
+    {
+      "label": "building-3-level-1",
+      "signature": "3Kh6CkC2yJ2rt8jvUqXiw44uhY7C3No9sa2YLFdbnd64wRapNzHmfUY9am7iS8SWyAELU9EgJMN2G4NW3yHyg2rv",
+      "index": 3,
+      "level": 1,
+      "cost": [
+        "3000",
+        "3000",
+        "2955",
+        "100000000"
+      ],
+      "xp": "367"
+    },
+    {
+      "label": "building-0-level-2",
+      "signature": "4KuFYhwjqxHgh4LEG5tPWy8BJHQja1g7y6YVf4Gq2mrLmkgsVU5KKeHquFukfx4YpDfogzb73eDMW7embMV8GvFT",
+      "index": 0,
+      "level": 2,
+      "cost": [
+        "19800",
+        "7920",
+        "3940",
+        "99000000"
+      ],
+      "xp": "525"
+    },
+    {
+      "label": "building-1-level-2",
+      "signature": "5xBtiJPhcrJr7SyxUFUuuUKV3zYL7njPenCp7BhGFZVGVr3wMicRqUzwpX8KLANb2xjsmiJpJM4bYwChMuRXh3Cc",
+      "index": 1,
+      "level": 2,
+      "cost": [
+        "7920",
+        "19800",
+        "7880",
+        "148500000"
+      ],
+      "xp": "630"
+    },
+    {
+      "label": "building-2-level-2",
+      "signature": "28NfTT4b2PxMv2hcRB9GKwPneg6Zxy9ohALbf3qGbkhEcp2VAc9NHU3R2QQ4xR7gEMhUqYVzDcUqvZjXZdEvg4Tk",
+      "index": 2,
+      "level": 2,
+      "cost": [
+        "15840",
+        "15840",
+        "5910",
+        "118800000"
+      ],
+      "xp": "605"
+    },
+    {
+      "label": "building-3-level-2",
+      "signature": "66fL5CzLs5UhSX1p9cmmcyxaNEx6Z3jkzu7cC3Vsjeuk7oKp7MKZLX3zSaKQEtZ2J9XZGCd4J6E5CxYRGZvECK2e",
+      "index": 3,
+      "level": 2,
+      "cost": [
+        "11880",
+        "11880",
+        "11640",
+        "198000000"
+      ],
+      "xp": "770"
+    },
+    {
+      "label": "building-0-level-3",
+      "signature": "5vKmrTiQNZRqYNxkRsRAYmcRZV1u5NZqhtargzaSHyMoH4CxjVL9QPywftN5JpxxhjfyUvXDpj3MLddptPk3Cjnw",
+      "index": 0,
+      "level": 3,
+      "cost": [
+        "44100",
+        "17640",
+        "8730",
+        "147000000"
+      ],
+      "xp": "825"
+    },
+    {
+      "label": "building-1-level-3",
+      "signature": "23pJ42F9Epw5pMCUrJzn982aYSziJ9kcjRSTfrAHWpXwN8TNE2TJz4pvhbMUHAGCGRyG69MBtJCq2BKy7ZcCx7zZ",
+      "index": 1,
+      "level": 3,
+      "cost": [
+        "17640",
+        "44100",
+        "17460",
+        "220500000"
+      ],
+      "xp": "990"
+    },
+    {
+      "label": "building-2-level-3",
+      "signature": "4xJJPJRqjxu6EQTCWKW2NYenQwJeXj6SfkpChATTW1m7arc2d8BhGmJesrmVL3PpFswbXBqKVKMyYhWzKx9jfS1o",
+      "index": 2,
+      "level": 3,
+      "cost": [
+        "35280",
+        "35280",
+        "13095",
+        "176400000"
+      ],
+      "xp": "948"
+    },
+    {
+      "label": "building-3-level-3",
+      "signature": "3P7MsUCxY1SmJXymCkpJeJwdVhHfwjc6uSU8hoxbT3JeAdeuMLD4dfmN7a2P9W94cnsy9ENnd8Vcci8TCUP1z7Uj",
+      "index": 3,
+      "level": 3,
+      "cost": [
+        "26460",
+        "26460",
+        "25785",
+        "294000000"
+      ],
+      "xp": "1207"
+    },
+    {
+      "label": "building-0-level-4",
+      "signature": "22UeKWCgZ2Ua2BBEPrwyJ89v8wMnCxdkUc3no8yiGMRVVkeykxhf2HvpMhX63nn3k6tSLV2U9qP8vHL9hBZAAVRk",
+      "index": 0,
+      "level": 4,
+      "cost": [
+        "77600",
+        "31040",
+        "15280",
+        "194000000"
+      ],
+      "xp": "1150"
+    },
+    {
+      "label": "building-1-level-4",
+      "signature": "2jn2bStXN9wJkHiL3NtPMoBrNuHphcdgipsawz7kT4UoMpzbx4yk5uWp458J16Y9qpPQzGrHVhBMovTvuoaET9Nn",
+      "index": 1,
+      "level": 4,
+      "cost": [
+        "31040",
+        "77600",
+        "30560",
+        "291000000"
+      ],
+      "xp": "1380"
+    },
+    {
+      "label": "building-2-level-4",
+      "signature": "5ezuUqwuyu3DVqDFqCSM9dZCKwUYfesawNgo22wH8RBs38nbMoQW8Buty8o9vSuScEi14SyAkZmkezrrB3ScNUH2",
+      "index": 2,
+      "level": 4,
+      "cost": [
+        "62080",
+        "62080",
+        "22920",
+        "232800000"
+      ],
+      "xp": "1320"
+    },
+    {
+      "label": "building-3-level-4",
+      "signature": "4p4Vw77XnVZDcmjB2SJVbfbQtxQbL7phH2pibEoRL3SygNvNC6kxNwMxHuwc6Cv2zggSAR8JUkPR87jfxyHSeF6P",
+      "index": 3,
+      "level": 4,
+      "cost": [
+        "46560",
+        "46560",
+        "45120",
+        "388000000"
+      ],
+      "xp": "1680"
+    },
+    {
+      "label": "building-0-level-5",
+      "signature": "51zgUc9XigaPzDx6BbcKv9BJyRpYvZKWAZyayeVrbcVg19Yr4ByfsCALUH3kiwdwxiMk3AujmikUMcH9ph3wzmNM",
+      "index": 0,
+      "level": 5,
+      "cost": [
+        "120000",
+        "48000",
+        "23500",
+        "240000000"
+      ],
+      "xp": "1500"
+    },
+    {
+      "label": "building-1-level-5",
+      "signature": "gEQryD5nAjwEcx5WCt9rD8RbK97XR1cv6b1DHGYkWr65K9Dq8akojoMgrU5BWG9BZ1MccJoqecEzLeiuL3vMxyd",
+      "index": 1,
+      "level": 5,
+      "cost": [
+        "48000",
+        "120000",
+        "47000",
+        "360000000"
+      ],
+      "xp": "1800"
+    },
+    {
+      "label": "building-2-level-5",
+      "signature": "2GeEBuf1fah2T8ELH7Cjs79cDaA8q48m6P8rwBLGYTidd35cQwk15gLRznLGQ7GLoNZ9Yyd9f6ivjGL4w9awAqq4",
+      "index": 2,
+      "level": 5,
+      "cost": [
+        "96000",
+        "96000",
+        "35250",
+        "288000000"
+      ],
+      "xp": "1718"
+    },
+    {
+      "label": "building-3-level-5",
+      "signature": "5mumvZC9ntqdYDG1vJpPAe5y7NVXdn7AkUiuZ3tAhSu4q9wY8nb5WuaGudpEKJGTavZyGvhzPqHB8WNHbJbJbqBj",
+      "index": 3,
+      "level": 5,
+      "cost": [
+        "72000",
+        "72000",
+        "69375",
+        "480000000"
+      ],
+      "xp": "2187"
+    },
+    {
+      "label": "building-0-level-6",
+      "signature": "3LNZ44GxwiGqD39tGTKH8fQNeFLGhdwQ3b7dJxARrPe6X9WGRZWMuswaPktg45VFvHTg93566LXA5vYdsuU6GLNJ",
+      "index": 0,
+      "level": 6,
+      "cost": [
+        "171000",
+        "68400",
+        "33300",
+        "285000000"
+      ],
+      "xp": "1875"
+    },
+    {
+      "label": "building-1-level-6",
+      "signature": "4sYgW4mSapWDgbvS1oYfqNYLSTqwY54TL7d87S34LYiZdvfigtThceae4qApjNr4AaVqAM8Am4swz6epB9wNxtUL",
+      "index": 1,
+      "level": 6,
+      "cost": [
+        "68400",
+        "171000",
+        "66600",
+        "427500000"
+      ],
+      "xp": "2250"
+    },
+    {
+      "label": "building-2-level-6",
+      "signature": "4L7aA9zhXbSJAzNuP5Ko1m4sBjjqbaoREZ4mieAUosLBoZPC4P3XtxBMQ6KNme8pWSd5SjaYXcmfKuXoFQ2Fudac",
+      "index": 2,
+      "level": 6,
+      "cost": [
+        "136800",
+        "136800",
+        "49950",
+        "342000000"
+      ],
+      "xp": "2145"
+    },
+    {
+      "label": "building-3-level-6",
+      "signature": "5SNajmzbWdvSvQBkxtuACQdWmHzNykfBLDb6Vnqyz7omFQSR3Dj3XTtrt1Tt1um2kEPMSiKf2QXC5EnUukduLwTP",
+      "index": 3,
+      "level": 6,
+      "cost": [
+        "102600",
+        "102600",
+        "98280",
+        "570000000"
+      ],
+      "xp": "2730"
+    },
+    {
+      "label": "building-0-level-7",
+      "signature": "3PB5kZSbk6aSepJgU4tGPFhJxe2ksxT1t45KU4abxVDPk6DbDHmZPpy14TGZ2pPHz2NHqbzRs9fJ3GuhuFfCC2Yq",
+      "index": 0,
+      "level": 7,
+      "cost": [
+        "230300",
+        "92120",
+        "44590",
+        "329000000"
+      ],
+      "xp": "2275"
+    },
+    {
+      "label": "building-1-level-7",
+      "signature": "45R7vuekdKXHCq69YvTgims5ccK8ZK7Qq6ci7A9xtkBtBo3rrYts2Hyy1w3gYi2CMAUt3rEwCEJKL6BakkuiTYL6",
+      "index": 1,
+      "level": 7,
+      "cost": [
+        "92120",
+        "230300",
+        "89180",
+        "493500000"
+      ],
+      "xp": "2730"
+    },
+    {
+      "label": "building-2-level-7",
+      "signature": "9JxMGGkr8UYCmtnFPx8kQXS2nWNgMPVx7cBuscYxhvt2Dr7pAjjTmcpKBhvKtpieXSiKG5n7fPmtv8EWdEEeDhE",
+      "index": 2,
+      "level": 7,
+      "cost": [
+        "184240",
+        "184240",
+        "66885",
+        "394800000"
+      ],
+      "xp": "2598"
+    },
+    {
+      "label": "building-3-level-7",
+      "signature": "5eHggAUDcfFGWJ8WkNReyMxshwEd3fdNSVniKRsvjVsh3ZYbs3t4EA1nzZdgy7iPs8Kn1xkpv5nfVZ8XoHU8D1XE",
+      "index": 3,
+      "level": 7,
+      "cost": [
+        "138180",
+        "138180",
+        "131565",
+        "658000000"
+      ],
+      "xp": "3307"
+    },
+    {
+      "label": "building-0-level-8",
+      "signature": "5gQVnXRDezne2j3UxaSPNHS8ixjYky6FMsyyCpQ557uPmhDtbY1sQ5Vcuvp2sLXFNrDH84TrBSW8chkW295h4DLK",
+      "index": 0,
+      "level": 8,
+      "cost": [
+        "297600",
+        "119040",
+        "57280",
+        "372000000"
+      ],
+      "xp": "2700"
+    },
+    {
+      "label": "building-1-level-8",
+      "signature": "FcaKfBVD2SdqRerNk83KLJQhvgRR8Sn4CgPYafxZMRr2cWfFWfBsMXpSNV4PdFiw5C77nVCHLvd82iK9Fafga4Q",
+      "index": 1,
+      "level": 8,
+      "cost": [
+        "119040",
+        "297600",
+        "114560",
+        "558000000"
+      ],
+      "xp": "3240"
+    },
+    {
+      "label": "building-2-level-8",
+      "signature": "2xWDrkypYZgcazNcndfVEmaxM3h6MFgmsijxFnpSpyzxqUBKdHVCnNLNsuLprtGhSmtxEayqVVrS11sLkf4qAy9J",
+      "index": 2,
+      "level": 8,
+      "cost": [
+        "238080",
+        "238080",
+        "85920",
+        "446400000"
+      ],
+      "xp": "3080"
+    },
+    {
+      "label": "building-3-level-8",
+      "signature": "4LVd3JcpNN3A9at3CapDkbyNtw9AUorBPr6FSQahWbo4cjQUXxR2N64LfF7NjvdsFP4tuXFtWHrihYfbtESDvqq6",
+      "index": 3,
+      "level": 8,
+      "cost": [
+        "178560",
+        "178560",
+        "168960",
+        "744000000"
+      ],
+      "xp": "3920"
+    },
+    {
+      "label": "building-0-level-9",
+      "signature": "5oRa6NXwWPJth3zTEPZwktiuWriATHiQreeTBSgGaomhAJLLY1YMoD1WDre43isUrppzTGhoLc7fkBCfnTBDQt6g",
+      "index": 0,
+      "level": 9,
+      "cost": [
+        "372600",
+        "149040",
+        "71280",
+        "414000000"
+      ],
+      "xp": "3150"
+    },
+    {
+      "label": "building-1-level-9",
+      "signature": "4RQYjJkWXJN4TUNdkuNGcGpByRdZWgkLKjDVyCSRX3dQjnt6Daar7wuvBgEr1Ex5xmRtq4zv2UdPLcU8Tzaqvjkz",
+      "index": 1,
+      "level": 9,
+      "cost": [
+        "149040",
+        "372600",
+        "142560",
+        "621000000"
+      ],
+      "xp": "3780"
+    },
+    {
+      "label": "building-2-level-9",
+      "signature": "4rijRh2hirgyWUvLzW2UL5TY24dzfnCaZSJGwzdqCtoiiAAb1XU6wkPKUfa7jAD2pfxxFrdFfWZimF8jZ2iNStbB",
+      "index": 2,
+      "level": 9,
+      "cost": [
+        "298080",
+        "298080",
+        "106920",
+        "496800000"
+      ],
+      "xp": "3588"
+    },
+    {
+      "label": "building-3-level-9",
+      "signature": "33TDtLZSHCVahkhA7xf2No1AWTVgVwR2oMRCvCNvpXYqEK7W6pwogQpvX65MaEgmrMNmFkkUsezNc2vabVGoFe78",
+      "index": 3,
+      "level": 9,
+      "cost": [
+        "223560",
+        "223560",
+        "210195",
+        "828000000"
+      ],
+      "xp": "4567"
+    },
+    {
+      "label": "building-0-level-10",
+      "signature": "2R5vsB6vbRsWJTQcARXaLTZ4fa6xFaUx4u6w7GdrYtSenzq26sg3kN2yz7t3Wb9GRrSYxNWzHWv52zJTJqEWDh5w",
+      "index": 0,
+      "level": 10,
+      "cost": [
+        "455000",
+        "182000",
+        "86500",
+        "455000000"
+      ],
+      "xp": "3625"
+    },
+    {
+      "label": "building-1-level-10",
+      "signature": "4djZxtz2sJLnceWJZRkwpHHqmY6ZVx5ximb8uA5gmzMaDLTEAAfpY1PmPKuDihy5cBxMYimWiNupndx9scawtQvG",
+      "index": 1,
+      "level": 10,
+      "cost": [
+        "182000",
+        "455000",
+        "173000",
+        "682500000"
+      ],
+      "xp": "4350"
+    },
+    {
+      "label": "building-2-level-10",
+      "signature": "2g3DdNX8bf1piNjP9riehL9Tchr6xwySj4DYxautq3nJ4D7uXwwr7oDrHQfkEzY1aAJP7449JbSQmALQaxTLc98i",
+      "index": 2,
+      "level": 10,
+      "cost": [
+        "364000",
+        "364000",
+        "129750",
+        "546000000"
+      ],
+      "xp": "4125"
+    },
+    {
+      "label": "building-3-level-10",
+      "signature": "4qhJ5SVTTEbdQUqmRZ64Q3yEr7Wv8S6VGv2a3kuEkLwFmBiggSFE4KTKUaokDVeKMvgbp8t5nYVwL2LwEQFkG9JE",
+      "index": 3,
+      "level": 10,
+      "cost": [
+        "273000",
+        "273000",
+        "255000",
+        "910000000"
+      ],
+      "xp": "5250"
+    },
+    {
+      "label": "building-0-level-11",
+      "signature": "S8HmBUykcpjYjyNU2utzRGGuPzhkGm1XN5L4bAGiRxBNdEcJLWzBGHCALcazDewDZwhgUeJCzWgjwoeH6LTCED7",
+      "index": 0,
+      "level": 11,
+      "cost": [
+        "544500",
+        "217800",
+        "102850",
+        "495000000"
+      ],
+      "xp": "4125"
+    },
+    {
+      "label": "building-1-level-11",
+      "signature": "27XjFSBGKHwTznkseajHNnd8kaT1oddNRTfRwUo8zJJzwRQQGzUJfQCHrSvA3mizeEUd4jNUqz9FGAE9bQ2sCetF",
+      "index": 1,
+      "level": 11,
+      "cost": [
+        "217800",
+        "544500",
+        "205700",
+        "742500000"
+      ],
+      "xp": "4950"
+    },
+    {
+      "label": "building-2-level-11",
+      "signature": "3EsBC2Erq8p3arfxGchvPJM87ug2edd9sFy2D6FsX98ND1DtNS4JQHYmhKgCbXMy9RoMQtTLjRDv6RU679Se1hZt",
+      "index": 2,
+      "level": 11,
+      "cost": [
+        "435600",
+        "435600",
+        "154275",
+        "594000000"
+      ],
+      "xp": "4688"
+    },
+    {
+      "label": "building-3-level-11",
+      "signature": "5ziE2eZnZ8B9sdGM1NJxfDQFSgmmibByiw62VSvQqZxYbYDc6EG6vyQr7nmcrrScdEVz1nZBWWYGDvbDdLt78Qas",
+      "index": 3,
+      "level": 11,
+      "cost": [
+        "326700",
+        "326700",
+        "303105",
+        "990000000"
+      ],
+      "xp": "5967"
+    },
+    {
+      "label": "building-0-level-12",
+      "signature": "5BW1Ls4YDBw9wqHiuHxdRWUgrxv2LSGtjLx5ETNPNqgtnbAUNsXwSHye1E9SUKoyvrZ1Wyx5K519QcvKxDXzpruo",
+      "index": 0,
+      "level": 12,
+      "cost": [
+        "640800",
+        "256320",
+        "120240",
+        "534000000"
+      ],
+      "xp": "4650"
+    },
+    {
+      "label": "building-1-level-12",
+      "signature": "4Kp23wrtrtcMTfARaCKq2VzEwddk2wWzSmWCX1SJMhZnhuiUz3WB6hyRtE827yE7FoLwJ2przEt5Df5NhrX1xnYR",
+      "index": 1,
+      "level": 12,
+      "cost": [
+        "256320",
+        "640800",
+        "240480",
+        "801000000"
+      ],
+      "xp": "5580"
+    },
+    {
+      "label": "building-2-level-12",
+      "signature": "3m4WYjG2oc1vC4G5VD77cVLfXRQMdGAc1zhHKPBPSj1p4gJ5Ekx7d45NJUXkCyYrRTdi4UPhEj49UuiQxddsVK5R",
+      "index": 2,
+      "level": 12,
+      "cost": [
+        "512640",
+        "512640",
+        "180360",
+        "640800000"
+      ],
+      "xp": "5280"
+    },
+    {
+      "label": "building-3-level-12",
+      "signature": "5Kt6k3AC1XMPSuwtfbEnEySkb7NnJE4eeER4tYHVZ9PEWfp1mc9iWk8WxLxpbsQnf764z9yinA6fBKb652BKDiDK",
+      "index": 3,
+      "level": 12,
+      "cost": [
+        "384480",
+        "384480",
+        "354240",
+        "1068000000"
+      ],
+      "xp": "6720"
+    },
+    {
+      "label": "building-0-level-13",
+      "signature": "2pCV1mNx4GtWRir61LuzYpUNAuCaLVs6sa6PDTGc5tcwiJKpSqTyHrt64Qk2NscU4Ebb7WP1FQd8ZbCKfhenG8N5",
+      "index": 0,
+      "level": 13,
+      "cost": [
+        "743600",
+        "297440",
+        "138580",
+        "572000000"
+      ],
+      "xp": "5200"
+    },
+    {
+      "label": "building-1-level-13",
+      "signature": "5CEodXiUXDdFoyCMmoMDuFqq7sA4Gwk6bKmw7kMsz5nT4HNkUKKRY3DoMy6M6ZMfFBBaF2HaeHLxXZvbWEGNPwW6",
+      "index": 1,
+      "level": 13,
+      "cost": [
+        "297440",
+        "743600",
+        "277160",
+        "858000000"
+      ],
+      "xp": "6240"
+    },
+    {
+      "label": "building-2-level-13",
+      "signature": "377p96zdrFS6EEn2kaFYMRK9b3gb3jBhYE4h26VTU5Phtdn4oT4mUeysXPrKJshyCeLQuYQxm748tWd4cetDc11q",
+      "index": 2,
+      "level": 13,
+      "cost": [
+        "594880",
+        "594880",
+        "207870",
+        "686400000"
+      ],
+      "xp": "5898"
+    },
+    {
+      "label": "building-3-level-13",
+      "signature": "2s3TDwpDVf6EmAuKy5r72x2vnaDEg5RhB9BVXurAhz97YawdXTzaij1fo9CttXzV7NgNGFC4bNJP7Z3aPqUcwNCR",
+      "index": 3,
+      "level": 13,
+      "cost": [
+        "446160",
+        "446160",
+        "408135",
+        "1144000000"
+      ],
+      "xp": "7507"
+    },
+    {
+      "label": "building-0-level-14",
+      "signature": "8JSPFoQBA1eWMuMjankjUd2ob4dai38ijHToVoHvtVegCWSRv7qSfUjGQMe5LgNxAX5SMZdFHx6MMtKicNnPrGb",
+      "index": 0,
+      "level": 14,
+      "cost": [
+        "852600",
+        "341040",
+        "157780",
+        "609000000"
+      ],
+      "xp": "5775"
+    },
+    {
+      "label": "building-1-level-14",
+      "signature": "3xDjoWCW15Zb7WZ15XRafL9hLteAXAhDEfYtaxLf9vxu6xiQUhxcRSRbx3Np6vZyDik1H8BEhdQWW2rFeXry7osk",
+      "index": 1,
+      "level": 14,
+      "cost": [
+        "341040",
+        "852600",
+        "315560",
+        "913500000"
+      ],
+      "xp": "6930"
+    },
+    {
+      "label": "building-2-level-14",
+      "signature": "3hBsQQuiuyFmjR2bvRM77qofqKTWQ45tdcczZNmjjmhBx1S6Nvo13hEZutnGvZkXYwHD9qPC5LynLP6gVAaSAoCv",
+      "index": 2,
+      "level": 14,
+      "cost": [
+        "682080",
+        "682080",
+        "236670",
+        "730800000"
+      ],
+      "xp": "6545"
+    },
+    {
+      "label": "building-3-level-14",
+      "signature": "57cYAP3nytnpieygmr8VmsnLpLagnvMzJDGaovj8nUNz14pzr7sabsgPfzjQNvYw4h5vXbfc8thuf7CctdTBFHn9",
+      "index": 3,
+      "level": 14,
+      "cost": [
+        "511560",
+        "511560",
+        "464520",
+        "1218000000"
+      ],
+      "xp": "8330"
+    },
+    {
+      "label": "building-0-level-15",
+      "signature": "YsnpwVt2GRhJdGqXoPdNcbmwT7s6v5JRqS7oWG8N7bQzcSZy9zjE2c59Ud1hRKfdnQddZtogmpxyYUTV8wAj3Tx",
+      "index": 0,
+      "level": 15,
+      "cost": [
+        "967500",
+        "387000",
+        "177750",
+        "645000000"
+      ],
+      "xp": "6375"
+    },
+    {
+      "label": "building-1-level-15",
+      "signature": "51jzmMjSnsTSgSGs6tn218evkBX5fgeX2oKpekMN8HzKX2Zan3y2Z5iECSbg66fLWuXXX4nLeGWi3u6shPb4kbjH",
+      "index": 1,
+      "level": 15,
+      "cost": [
+        "387000",
+        "967500",
+        "355500",
+        "967500000"
+      ],
+      "xp": "7650"
+    },
+    {
+      "label": "building-2-level-15",
+      "signature": "123ZfNEW7qhEuXzv3b2o633zryy112Cu88F4udKsDy3oj2U2qLteMEDTGEEx2qDzcjt67dwBLvi8cFchcbi4PbXw",
+      "index": 2,
+      "level": 15,
+      "cost": [
+        "774000",
+        "774000",
+        "266625",
+        "774000000"
+      ],
+      "xp": "7218"
+    },
+    {
+      "label": "building-3-level-15",
+      "signature": "4MA9KoTyqHLaHDAG9VvU8f3X76E96NW15fG7zkKk6BFCngZWCmLChdd2qq4cmhxMK6y6KMHEPpnLz37aNXe7wRWY",
+      "index": 3,
+      "level": 15,
+      "cost": [
+        "580500",
+        "580500",
+        "523125",
+        "1290000000"
+      ],
+      "xp": "9187"
+    },
+    {
+      "label": "building-0-level-16",
+      "signature": "76QrFR7zWqmst1RKDeCmFHoAQNurvBY1NDasZPLZSVEaNTjK48razmA7HVxNbruYAJ996oqz1mKwQ6DjzsGdnCa",
+      "index": 0,
+      "level": 16,
+      "cost": [
+        "1088000",
+        "435200",
+        "198400",
+        "680000000"
+      ],
+      "xp": "7000"
+    },
+    {
+      "label": "building-1-level-16",
+      "signature": "5Jnna4JD1c8ktVbznUAB5D4ijh7PAkyWr7Q6t4jmHYoSgPX2SreRdJ89SvAR66k4FZxGSsqJhJ4bhetjM5vemYV9",
+      "index": 1,
+      "level": 16,
+      "cost": [
+        "435200",
+        "1088000",
+        "396800",
+        "1020000000"
+      ],
+      "xp": "8400"
+    },
+    {
+      "label": "building-2-level-16",
+      "signature": "2V3RyaxrdY4TA898ktyKydpWnyFGZwUHxP9uf9UExX2ciJBD9XazNYvX2QGcjJWemHpqBAjETbrme6gK6WTgmsHN",
+      "index": 2,
+      "level": 16,
+      "cost": [
+        "870400",
+        "870400",
+        "297600",
+        "816000000"
+      ],
+      "xp": "7920"
+    },
+    {
+      "label": "building-3-level-16",
+      "signature": "59ELqRM4XRHiYomqBEboUkVUakwrzEZkthF3giSfZzre2kn8ZNUxvRAip7tZTDb8KzTy7LLb2Tqq8b34TgHTm6qq",
+      "index": 3,
+      "level": 16,
+      "cost": [
+        "652800",
+        "652800",
+        "583680",
+        "1360000000"
+      ],
+      "xp": "10080"
+    },
+    {
+      "label": "building-0-level-17",
+      "signature": "47jaWPWyCD7UWqhZrinCpz73mEb7GfUEDQDsPPDtp1jJKAbtNALFK1xK3sp7TYTrVFgbTycqYixa5Z7rSQBBH8wq",
+      "index": 0,
+      "level": 17,
+      "cost": [
+        "1213800",
+        "485520",
+        "219640",
+        "714000000"
+      ],
+      "xp": "7650"
+    },
+    {
+      "label": "building-1-level-17",
+      "signature": "3V64eumBg9BCaUB5hM8bJ8Ya7FviQkpJqdsAcJg1UroqiWmMPR4xoegQMiHZdpTHUjuFjSAeyRDSXDEDe32HbAk",
+      "index": 1,
+      "level": 17,
+      "cost": [
+        "485520",
+        "1213800",
+        "439280",
+        "1071000000"
+      ],
+      "xp": "9180"
+    },
+    {
+      "label": "building-2-level-17",
+      "signature": "5Eo2kjSPwCvtdCWxgxpykrKGh5FD98QN5pwcvkSFuNJCdhF1SVBkibjSoPvvhWstRr1x2ZGAh4WJhFCAmpB1wqNU",
+      "index": 2,
+      "level": 17,
+      "cost": [
+        "971040",
+        "971040",
+        "329460",
+        "856800000"
+      ],
+      "xp": "8648"
+    },
+    {
+      "label": "building-3-level-17",
+      "signature": "4nAY5799vtywuxCTMYHTsyhAFBkWrF3XWF47qfkgpLDPHzH3trRfoLhctLroJNb7WLwnRERA8fdnYomw3MDPACYu",
+      "index": 3,
+      "level": 17,
+      "cost": [
+        "728280",
+        "728280",
+        "645915",
+        "1428000000"
+      ],
+      "xp": "11007"
+    },
+    {
+      "label": "building-0-level-18",
+      "signature": "3LsCBWPsSBVQwEkojxMCf8LVoqhmYF2SCrGGuVeihbjjxvaWTn936vQBUqqtnwyzNhMu7LM3nQCEUMxrq5r3S6HJ",
+      "index": 0,
+      "level": 18,
+      "cost": [
+        "1344600",
+        "537840",
+        "241380",
+        "747000000"
+      ],
+      "xp": "8325"
+    },
+    {
+      "label": "building-1-level-18",
+      "signature": "5tJEkAzWQH6YU2quPFKXhXw9GbvhYvutmwWuk27YC9AaHqSe1LdDPNSxFURUPfdKeffEznuN3xh3Qgg79TMf3jGG",
+      "index": 1,
+      "level": 18,
+      "cost": [
+        "537840",
+        "1344600",
+        "482760",
+        "1120500000"
+      ],
+      "xp": "9990"
+    },
+    {
+      "label": "building-2-level-18",
+      "signature": "3iNFUbEFuYeGxVhwg12PwqWCaxKwp9heKSTsZvn29KvDaCtR3ZG5B1LodxUA6n9Zd2CH6HKeQ4TdECUW1ZmDVQF1",
+      "index": 2,
+      "level": 18,
+      "cost": [
+        "1075680",
+        "1075680",
+        "362070",
+        "896400000"
+      ],
+      "xp": "9405"
+    },
+    {
+      "label": "building-3-level-18",
+      "signature": "4ZbsbNNETUNmDHT3KmqqW8nXUcr4XQwr7bNYxsP52nocfDUK7EEDkqd4xbazNV5mavBCBnJG9RJab8F1XxZs9vLk",
+      "index": 3,
+      "level": 18,
+      "cost": [
+        "806760",
+        "806760",
+        "709560",
+        "1494000000"
+      ],
+      "xp": "11970"
+    },
+    {
+      "label": "building-0-level-19",
+      "signature": "4xtv5NSDYRJJ9FmDzP1iRB4VoBm69mbhQV7Zye83bqH4C8kYfun4X9wvEVMcuSCyyACsytt6aD1fiVkZ1Y4yPKT6",
+      "index": 0,
+      "level": 19,
+      "cost": [
+        "1480100",
+        "592040",
+        "263530",
+        "779000000"
+      ],
+      "xp": "9025"
+    },
+    {
+      "label": "building-1-level-19",
+      "signature": "5kfMaVcCSWo8apUnfihe7SbLDHJ1FbTEp96pkSyXT3Spjh9DK6fkXMYT3HGr9KHUQVy1MbrxUDm9AHb9fJKgyLS1",
+      "index": 1,
+      "level": 19,
+      "cost": [
+        "592040",
+        "1480100",
+        "527060",
+        "1168500000"
+      ],
+      "xp": "10830"
+    },
+    {
+      "label": "building-2-level-19",
+      "signature": "4oqUhpdVQt77YRDT11GgNd8YD4vrPdrm9RiJYqnEoAn56pz3hhF4R1TrX7NM5XNPr7SmpQ4ZuewhsZMZx7vsbpXN",
+      "index": 2,
+      "level": 19,
+      "cost": [
+        "1184080",
+        "1184080",
+        "395295",
+        "934800000"
+      ],
+      "xp": "10188"
+    },
+    {
+      "label": "building-3-level-19",
+      "signature": "5dGgTGKXCzJ7JdyTz6U4duYALSJ4e86MFqFrgqqHuFq3MSRJysPzipH7Ejm1jKZF8FE6b6fZpgkUE7Lz6MTd84CD",
+      "index": 3,
+      "level": 19,
+      "cost": [
+        "888060",
+        "888060",
+        "774345",
+        "1558000000"
+      ],
+      "xp": "12967"
+    },
+    {
+      "label": "building-0-level-20",
+      "signature": "XMTiMJNn8qhgcGpzwR3G3tgzoscgdFQFt6pnxSiacbHjf2DgRNCzVC5KDH74sCikCDa29mc42awpArpHDbbee41",
+      "index": 0,
+      "level": 20,
+      "cost": [
+        "1620000",
+        "648000",
+        "286000",
+        "810000000"
+      ],
+      "xp": "9750"
+    },
+    {
+      "label": "building-1-level-20",
+      "signature": "5hbWHaFsvKqX377JQ7NTWb48DL4EAJJ3yREC7HiRUFC88bVWaFfhPhAZmjoE2jcX5cigRyu9D7aqHeGwG5U7uHyt",
+      "index": 1,
+      "level": 20,
+      "cost": [
+        "648000",
+        "1620000",
+        "572000",
+        "1215000000"
+      ],
+      "xp": "11700"
+    },
+    {
+      "label": "building-2-level-20",
+      "signature": "YBgoKK4bf3DNPfSwQCXkb9geJcFRvtMgsHAh7pxaZrhSqTpwAzKMVKiwxWv2gNS5V5b7JLr3hssK3RWFHU7Tp1Z",
+      "index": 2,
+      "level": 20,
+      "cost": [
+        "1296000",
+        "1296000",
+        "429000",
+        "972000000"
+      ],
+      "xp": "11000"
+    },
+    {
+      "label": "building-3-level-20",
+      "signature": "4p9fJUre4vwfkeQ8R1Yzoxxnkm9hGscgFe7BMJkzrR46ZwLN2d8D1ScbSvrgyScWaPo3DqgrdUTJSJpKeibPywLA",
+      "index": 3,
+      "level": 20,
+      "cost": [
+        "972000",
+        "972000",
+        "840000",
+        "1620000000"
+      ],
+      "xp": "14000"
+    },
+    {
+      "label": "building-0-level-21",
+      "signature": "4Kw1xQcaoTc4JHbycArgMQKFuVQLZLmYKcKrPpZvYwVAd9nq2mMK5rnjzEWGjAgj3XYfWFMTxuz86nds1Qsqifhs",
+      "index": 0,
+      "level": 21,
+      "cost": [
+        "1764000",
+        "705600",
+        "308700",
+        "840000000"
+      ],
+      "xp": "10500"
+    },
+    {
+      "label": "building-1-level-21",
+      "signature": "31oywBKfoUbBE7J5XemYk8iuK9zdVBuz73vsGynkkzgM9StV177cpDJ8uCLkNieM4kgkKigZNrtYDcK6RMK6rVuU",
+      "index": 1,
+      "level": 21,
+      "cost": [
+        "705600",
+        "1764000",
+        "617400",
+        "1260000000"
+      ],
+      "xp": "12600"
+    },
+    {
+      "label": "building-2-level-21",
+      "signature": "5CBgPQoEUPgk66m6K2oZyY3NtrAnQM5cATG4TWtPBjtNwKnGWoAFVJ7jxyxap6izUTYRh5JKVRKEz2gh1aaGwhKP",
+      "index": 2,
+      "level": 21,
+      "cost": [
+        "1411200",
+        "1411200",
+        "463050",
+        "1008000000"
+      ],
+      "xp": "11838"
+    },
+    {
+      "label": "building-3-level-21",
+      "signature": "61Ukf5dT6jCdKKenzxx78gCY9LCH4cJZUKtx9wkVBqvFbGUSLhUyDcEQZRtaNB3FdufVQhEYx1XjUhzNzSyDUmva",
+      "index": 3,
+      "level": 21,
+      "cost": [
+        "1058400",
+        "1058400",
+        "906255",
+        "1680000000"
+      ],
+      "xp": "15067"
+    },
+    {
+      "label": "building-0-level-22",
+      "signature": "621JCEhVG7anjTDWzmB9fYQYeQswR1PGExZrKjxfaSdShdGacsqZgKHWdNSbNikuw7RoTGYzRhw63q6W7V2yRPgs",
+      "index": 0,
+      "level": 22,
+      "cost": [
+        "1911800",
+        "764720",
+        "331540",
+        "869000000"
+      ],
+      "xp": "11275"
+    },
+    {
+      "label": "building-1-level-22",
+      "signature": "4SXkBEcBQUvJapitd7N97jUjuQqeVvZz5k6kTB3Kt2ixuC4i4jeTKRZtvYiUACXwUozm4mt9g63gVUfdsNvryua9",
+      "index": 1,
+      "level": 22,
+      "cost": [
+        "764720",
+        "1911800",
+        "663080",
+        "1303500000"
+      ],
+      "xp": "13530"
+    },
+    {
+      "label": "building-2-level-22",
+      "signature": "5V1Sxws367snhma8e1VhaRqh2E5rQWPCATMu56aZcRVDa4KeP9dFpLT71R3NdxstferTpwxVfurf3yzNdbgYiJ2v",
+      "index": 2,
+      "level": 22,
+      "cost": [
+        "1529440",
+        "1529440",
+        "497310",
+        "1042800000"
+      ],
+      "xp": "12705"
+    },
+    {
+      "label": "building-3-level-22",
+      "signature": "2nDqCxu2TPJyWjfG642M7mq3REjLJxNB16o6puY2SfrwpGeCogCWu4oNJjjcAK3bGfwQXjHxJcRXAyfeLjzu4mst",
+      "index": 3,
+      "level": 22,
+      "cost": [
+        "1147080",
+        "1147080",
+        "972840",
+        "1738000000"
+      ],
+      "xp": "16170"
+    },
+    {
+      "label": "building-0-level-23",
+      "signature": "2U2hLFvuRqgxruJZBUfJZY8QF5h9o4a2e8LiukeLXYw2jqLarKpsxxhwzh8qgttco9WqQiAVjN3Ju4w2oGXzyjKw",
+      "index": 0,
+      "level": 23,
+      "cost": [
+        "2063100",
+        "825240",
+        "354430",
+        "897000000"
+      ],
+      "xp": "12075"
+    },
+    {
+      "label": "building-1-level-23",
+      "signature": "2Umf7jj12vzYt93VofMUWPKcs9GLHXaD5CNaihDUvh6MWoiY1bNF3ePth8BH5XNfm5Rmzrpr3KL9L1RKGPgjujY2",
+      "index": 1,
+      "level": 23,
+      "cost": [
+        "825240",
+        "2063100",
+        "708860",
+        "1345500000"
+      ],
+      "xp": "14490"
+    },
+    {
+      "label": "building-2-level-23",
+      "signature": "5ih7rvXXfkHx8D1vZ1qZ1N2XEBRTGLA548YAd9A9WLecXTwWi2un39GiUm2MFPheccQozZ97JiHjcPTJSKaP5ePv",
+      "index": 2,
+      "level": 23,
+      "cost": [
+        "1650480",
+        "1650480",
+        "531645",
+        "1076400000"
+      ],
+      "xp": "13598"
+    },
+    {
+      "label": "building-3-level-23",
+      "signature": "5hui6HvsBj9YeuVs586KAvsdfUUKZpvPsPxnmVYEzVqMKuSNE7W4MawtW5qsQxUvKL6cSJV844S9XEtuZHJRPCE1",
+      "index": 3,
+      "level": 23,
+      "cost": [
+        "1237860",
+        "1237860",
+        "1039485",
+        "1794000000"
+      ],
+      "xp": "17307"
+    },
+    {
+      "label": "building-0-level-24",
+      "signature": "5uQ4Xk4eaNyqxpq4Hmg9BaaVZMAqTdiy8LjXBkqnWVERojP4DwEQYx7aZKesVjHCSrw5Fyt5WX8UQFoZ1S4hSM3v",
+      "index": 0,
+      "level": 24,
+      "cost": [
+        "2217600",
+        "887040",
+        "377280",
+        "924000000"
+      ],
+      "xp": "12900"
+    },
+    {
+      "label": "building-1-level-24",
+      "signature": "5ZMiTaoKJe2QwvhVz5hojGCKxkTrzx2uNbKVUg6jPsasu8gxx5ini6M93D6dv7nLWV4KKBzgcBLLK5GUT5HUrwzq",
+      "index": 1,
+      "level": 24,
+      "cost": [
+        "887040",
+        "2217600",
+        "754560",
+        "1386000000"
+      ],
+      "xp": "15480"
+    },
+    {
+      "label": "building-2-level-24",
+      "signature": "3czaTTG7wJmeogDV36b7zWk4dYTAbAYH5uTGet6GnMSrVnfnfV8AH3JGKQhn31pnAkK4UptZHzpU1wbcRfkFKAfY",
+      "index": 2,
+      "level": 24,
+      "cost": [
+        "1774080",
+        "1774080",
+        "565920",
+        "1108800000"
+      ],
+      "xp": "14520"
+    },
+    {
+      "label": "building-3-level-24",
+      "signature": "2GH2knKjmERtp3hj7M21Kyj9tQWhaPuDQSifBmh6NKn1LpXnjUf5kY9jJc1yEfbSYVcSEkw5eg64ut9EMBe7Z2XK",
+      "index": 3,
+      "level": 24,
+      "cost": [
+        "1330560",
+        "1330560",
+        "1105920",
+        "1848000000"
+      ],
+      "xp": "18480"
+    },
+    {
+      "label": "building-0-level-25",
+      "signature": "4WGvp5iHCdZK3Yq8KvAmX3xp2KqhWuaLZXfuwNyPqesBbojMWHTWP6rjemQ1s7RgytCAKmd5igEFKJe2inm91a3r",
+      "index": 0,
+      "level": 25,
+      "cost": [
+        "2375000",
+        "950000",
+        "400000",
+        "950000000"
+      ],
+      "xp": "13750"
+    },
+    {
+      "label": "building-1-level-25",
+      "signature": "63rTKN9pk1rbpT17Ck5jeXt4jpUrPQqboS5XSi27dFgXZVSD3p7Ga9JKhHF1uHMHjbbJvMbNyU83osQGT5bfQKnF",
+      "index": 1,
+      "level": 25,
+      "cost": [
+        "950000",
+        "2375000",
+        "800000",
+        "1425000000"
+      ],
+      "xp": "16500"
+    },
+    {
+      "label": "building-2-level-25",
+      "signature": "38Rcc19VzjFsmuAgBh2wX2H4qWG37nibeo59Y4i4XFekPJEqe51nTHRREoGdn33m5PY34Dc9wgpucVxxoZz8LWz4",
+      "index": 2,
+      "level": 25,
+      "cost": [
+        "1900000",
+        "1900000",
+        "600000",
+        "1140000000"
+      ],
+      "xp": "15468"
+    },
+    {
+      "label": "building-3-level-25",
+      "signature": "3da1L7tFifQtHvLMjs9oX2XGCr6PDq48g198pZ9RTFi3GVUbXKanR51xgACTkrc4eRPt8JMLXiFwTACRr4W3aC4Y",
+      "index": 3,
+      "level": 25,
+      "cost": [
+        "1425000",
+        "1425000",
+        "1171875",
+        "1900000000"
+      ],
+      "xp": "19687"
+    },
+    {
+      "label": "cap-0-rejects-level-26",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "cap-1-rejects-level-26",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "cap-2-rejects-level-26",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "cap-3-rejects-level-26",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "regular-member-cannot-upgrade",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "invalid-building-4",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "invalid-building-255",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "foreign-treasury",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "maximum-trade-defense-research-bonus-stack",
+      "signature": "2WgG6sxNmGGsDUaTgAHcRfKpjTH2BTpXVsoy4XD8z6Er4zKbPAcdDD5gfRREtDnFZKGjXJLqdfD9bqQxGGPpNhFA",
+      "index": 0,
+      "level": 25,
+      "cost": [
+        "2343750",
+        "937500",
+        "390625",
+        "937500000"
+      ],
+      "xp": "14062"
+    },
+    {
+      "label": "short-0-0-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-0-1-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-0-2-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-0-3-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-1-0-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-1-1-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-1-2-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-1-3-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-2-0-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-2-1-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-2-2-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-2-3-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-3-0-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-3-1-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-3-2-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    },
+    {
+      "label": "short-3-3-one-unit-below",
+      "rejectedBeforeSubmission": true,
+      "unchanged": true
+    }
+  ],
+  "source": "previously tested deployed SBF binary; no rebuild",
+  "startedAt": "2026-10-19T20:28:53.329Z",
+  "finishedAt": "2026-10-19T20:29:37.639Z",
+  "count": 125
+}

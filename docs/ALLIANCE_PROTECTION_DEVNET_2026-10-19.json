@@ -1,0 +1,21 @@
+{
+  "network": "devnet",
+  "program": "J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq",
+  "status": "finalized-and-binary-verified",
+  "signature": "4SpLmNqpwWQ9vuHzWL2tcKBpE6fqSpjQGgNJUDFsRmQzvKhWrdAUb2baeD5dWa9wsqKfFBwmkbJsPz5nMxg27U61",
+  "slot": 512923126,
+  "bytes": 1556848,
+  "binarySha256": "52d81fe227f133916e6c37369b6fbd5984407d1fcf139b82332793016d2006d2",
+  "authorityUnchanged": "EhT4UUmsHyd41bZSGzj1W72yu2EptHk8sEvnK7aaNuBu",
+  "payer": "HAHnFdgoASDzzma7fP9nfKo5nByU1uStYR964QhWnL2X",
+  "bufferConsumed": true,
+  "trailingPaddingZero": true,
+  "controlsUnchanged": true,
+  "sizeExtension": false,
+  "grossFundingLamports": 7926956040,
+  "capLamports": 7939626040,
+  "netDeploymentCostLamports": 17320000,
+  "usdcSpent": "0",
+  "antimatterSpent": "0",
+  "automation": "PAUSED"
+}

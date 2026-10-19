@@ -32,6 +32,7 @@ for (const [code, words] of [
   ['QuestAlreadyClaimed',/already/],['WrongQuestRewardPlanet',/planet/],['QuestRequirementsNotMet',/requirements/],
   ['StorePackAlreadyPurchased',/already/],['StoreDisabled',/unavailable/],['NoAccelerationNeeded',/acceleration/],
   ['AllianceTreasuryNotEnoughResources',/treasury/],['AllianceFull',/member slots/],['NotInAlliance',/Join/],
+  ['AllianceUpgradeLevelChanged',/changed level/],['AllianceUpgradePriceExceeded',/price you approved/],
   ['AllianceLeaderRequired',/leader/],['AllianceJoinRequestNotFound',/pending/],['PlanetHasActiveMissions',/missions/],
   ['HomeworldNotSellable',/homeworld/],['AlreadyFilled',/no longer/],['VaultAuthorizationExpired',/authorization/],
 ]) test(`${code} becomes a friendly pre-signing blocker`,()=>{

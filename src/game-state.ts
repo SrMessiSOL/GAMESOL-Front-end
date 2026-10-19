@@ -13,6 +13,7 @@ import bs58 from "bs58";
 import { Buffer } from "buffer";
 import { accountRentTotal } from './account-rent';
 import { ALLIANCE_BUILDING_MAX_LEVEL } from './alliance-contribution';
+import { allianceUpgradeQuote, type AllianceUpgradeQuote } from './alliance-upgrade';
 import { preflightCommand } from './command-preflight';
 import { assertCommandInteger, assertResourceAmount, constructionBlockReason, rewardStorageBlock, storePackBlock } from './command-validation';
 import { dailyCheckInReward } from './quest-rewards';
@@ -4735,7 +4736,7 @@ export class GameClient {
       : this.sendInstruction([...tokenSetup.setupInstructions, ix]);
   }
 
-  async upgradeAllianceBuilding(buildingId: number): Promise<string> {
+  async upgradeAllianceBuilding(buildingId: number, approvedQuote?: AllianceUpgradeQuote): Promise<string> {
     assertCommandInteger('alliance building', buildingId, 0, 3);
     const authority = this.provider.wallet.publicKey;
     const membership = await this.getAllianceMembership(authority);
@@ -4747,10 +4748,23 @@ export class GameClient {
       const level = [treasury.logisticsHub, treasury.researchGrid, treasury.defenseCoordination, treasury.tradeNetwork][buildingId];
       if (level >= ALLIANCE_BUILDING_MAX_LEVEL) throw new Error('Alliance infrastructure is already at maximum level. Nothing was submitted.');
     } else {
-      await this.initializeAllianceTreasury();
+      throw new Error('Alliance treasury is not initialized. Nothing was submitted.');
+    }
+    const currentQuote = allianceUpgradeQuote(buildingId, treasury);
+    const quote = approvedQuote ?? currentQuote;
+    if (quote.expectedLevel !== currentQuote.expectedLevel) throw new Error('Alliance building level changed. Review a fresh upgrade quote. Nothing was submitted.');
+    for (const resource of ['metal', 'crystal', 'deuterium', 'antimatter'] as const) {
+      if (typeof quote[resource] !== 'bigint' || quote[resource] < 0n || quote[resource] > 0xffffffffffffffffn) throw new Error('Invalid alliance upgrade price. Nothing was submitted.');
+      if (currentQuote[resource] > quote[resource]) throw new Error('Alliance upgrade exceeds the approved price. Nothing was submitted.');
+      if (treasury[resource] < currentQuote[resource]) throw new Error('Alliance treasury does not have enough resources. Nothing was submitted.');
     }
     const writer = new BorshWriter();
     writer.writeU8(buildingId);
+    writer.writeU8(quote.expectedLevel);
+    writer.writeU64(quote.metal);
+    writer.writeU64(quote.crystal);
+    writer.writeU64(quote.deuterium);
+    writer.writeU64(quote.antimatter);
     const ix = new TransactionInstruction({
       programId: GAME_STATE_PROGRAM_ID,
       keys: [

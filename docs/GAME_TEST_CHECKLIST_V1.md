@@ -6,11 +6,26 @@ features. This review submitted no transactions and published nothing.
 
 ## How To Read This
 
+Alliance fixed-level/price candidate (2026-10-19):
+[local protection report](ALLIANCE_UPGRADE_PROTECTION_2026-10-19.md).
+LOCAL: 125 protected SBF level/cap/rollback cases and 12 concurrent/recovery
+scenarios passed. SDK and both UI actions bind the approved level and four
+maximum prices. This adds T20/T27/T35 evidence without closing those families.
+The candidate is now deployed and byte-for-byte verified: signer, authority,
+budget and seven deployed guard simulations plus two finalized rejection
+transactions passed. See the report for the exact boundary: funded devnet
+upgrade races/replay and interactive Lazor execution remain follow-ups.
+Scheduled automation remains PAUSED.
+
 Cap-only release verification (2026-10-19): [desktop/mobile report](ALLIANCE_CAP_RELEASE_2026-10-19.md).
 The actual infrastructure controls were viewport-checked at level 24/25;
 capped commands block before signing and no level-26 quote is shown. The clean
 release passed 382 tests and production build. This adds T20/T28 evidence, not
 family completion. Scheduled automated work remains PAUSED.
+
+2026-10-19 agent execution supplement: [three concurrent agents](THREE_AGENTS_DEVNET_2026-10-19.md).
+This adds signed devnet evidence to existing families, not new frozen-scope rows
+or a blanket completion claim. Scheduled checklist automation remains PAUSED.
 
 - Completed evidence is retained; it is not a claim of a fresh rerun today.
 - LIVE = retained signed devnet execution/state evidence; LOCAL = isolated
@@ -63,15 +78,15 @@ items, including currently locked or hidden items.
 | T16 | Personal quests and daily check-in - PARTIAL | LIVE tutorial/daily/monthly rewards; SIM target, replay and storage guards; AUTO streak quote/UTC math | Every frozen tutorial/check-in definition and rotating metric: threshold below/at, correct epoch/bound planet, one claim; real UTC day/week/month transitions, consecutive/gapped/capped streak; signed stale-capacity and interruption recovery; both claim routes |
 | T17 | USDC store - PARTIAL | LIVE daily/weekly purchases; 29 SIM store/quest edges and UI guards | Each enabled indexed pack: exact debit/delivery/counters, fit/exact-cap/overflow; fitting monthly duplicate, actual UTC reset, signed stale balance/cap and interrupted authorization/payment recovery. Three shield packs currently rejected: verify all UIs keep disabled; enabling is NEW scope |
 | T18 | Alliance membership and leadership - PARTIAL | LIVE create/apply/reject/approve/leave/expel/rejoin, transfer leadership both ways | Direct join versus request policy, both request routes, full/duplicate membership, conflicting/replayed applications, stale leader actions and wrong authority; concurrent updates and exact rent refunds; no unintended fees |
-| T19 | Alliance resource/AM treasury - PARTIAL | LIVE contributions, deposit compression, exact state and treasury synchronization | Every resource combination and zero/negative/overflow input, insufficient funds, wrong treasury/owner, atomic rollback; initialize-treasury variants and concurrent deposits; exact resource/AM balances plus XP with no duplication |
-| T20 | Four alliance infrastructure upgrades - PARTIAL | LIVE all four upgrades and on-chain Logistics XP / Research / Defense / Trade bonus proofs | Full level/cap boundaries, rounding and bonus stacking, wrong role/treasury, quote changes after membership/level updates, concurrent upgrades and exact treasury burn; each affected action at nonzero baseline and zero-discount boundaries |
-| T21 | Alliance missions - OPEN | Source/UI catalog and shared quest mechanics located; not enough item-specific receipts | Each daily/weekly/monthly alliance mission metric/reward: eligibility, membership/role changes, threshold, epoch, one claim, XP/resource caps, reward target, simultaneous claims and reset; retain individual receipts |
+| T19 | Alliance resource/AM treasury - PARTIAL | LIVE contributions, deposit compression, exact state and treasury synchronization; [three-agent follow-up](ALLIANCE_AGENT_INFRASTRUCTURE_2026-10-19.md): zero treasury initialization, mixed-resource/AM funding, three simultaneous 100-AM deposits with exact protocol transfer/ledger/XP, duplicate preflight rejection; AUTO invalid amount bounds | Remaining resource combinations and routes; wrong treasury/owner and atomic rollback variants; initialize-treasury variants; broader concurrent/recovery cases and source-balance settlement boundaries |
+| T20 | Four alliance infrastructure upgrades - PARTIAL | [LIVE agents](ALLIANCE_AGENT_INFRASTRUCTURE_2026-10-19.md): four upgrades and bonuses; [higher-level/cap follow-up](ALLIANCE_HIGHER_LEVELS_CAPS_2026-10-19.md): LIVE levels 2/2/2/1, Research 10% XP; LOCAL 125 SBF cases cover all four levels 1-25, rejected 26, max Trade/Defense/Research stacking, shortage/role/treasury guards; AUTO fixes UI/SDK cap 255 -> 25 | Remaining bonus/contribution combinations (including Logistics 25 deposits), direct/vault parity, stale role/quote changes after membership/level updates, concurrent upgrades and interrupted recovery; release-candidate UI checks. Local cap proof does not mean devnet reached cap |
+| T21 | Alliance missions - OPEN | Source/UI catalog and shared quest mechanics located; [agent receipts](ALLIANCE_AGENT_INFRASTRUCTURE_2026-10-19.md) for nine mixed weekly, daily metal/deuterium/AM contribution completions and simultaneous AM XP; not enough receipts for the full mission catalog | Each remaining daily/weekly/monthly alliance mission metric/reward: eligibility, membership/role changes, threshold, epoch, one claim, XP/resource caps, reward target, simultaneous claims and reset; retain individual receipts |
 | T22 | Commander identity and linked UFO wallet - PARTIAL | LIVE #513 saved/restored, silent ownership checks and real artwork fixes; LOCAL select/clear/reselect and invalid proof tests | Refresh/new browser restoration, clear/reselect and unlink end to end; ownership loss/reacquisition and changed linked wallet; portrait remains independent of utility-proof expiry; no unsolicited repeat signatures. Real mainnet NFT transfer needs separate permission; fixture proof is labeled separately |
 | T23 | UFO expeditions, boosters and loot - PARTIAL | LIVE expedition/booster/loot/equipment; LOCAL timing/replay/domain/ownership guards | Every implemented real-trait effect, route/encounter/booster/equipment branch and loot outcome; abort, cooldown, inventory/duplicate limits, stale/lost ownership revocation and reacquisition; interrupted claims and concurrent attempts; no fabricated traits or unverified eligibility |
 | T24 | Resource market - PARTIAL | LOCAL all three resources and rollback; LIVE listing/cancel/purchase/fees; SIM replay/storage guards | Live stale quote and buy/cancel/two-buyer races, full-process interruption at payment boundaries, exact-one settlement/rent/refund/counters; all three resource client routes and malformed binding; auth-expiry and storage checks before approval |
 | T25 | Planet market - PARTIAL | LOCAL settlement/rollback; LIVE roundtrip ownership/index/fees and tab recovery/expiry reclaim | Live concurrent buy/cancel/two-buyer races, process crash at each payment boundary, stale price/owner/mission/obligation state, signed rejection recovery; seller receives exact net and buyer cannot pay twice; direct/vault CPI authorization distinct |
 | T26 | Direct planet transfer - OPEN | Market-mediated transfer proven, which does not prove direct transfer | Authorized direct transfer and prohibited homeworld/mission/obligation cases; recipient eligibility, all owner/profile/index changes, wrong authority/replay and rollback; if not launch-supported, explicitly disable and approve exclusion |
-| T27 | Cross-account alliance synchronization - PARTIAL | LIVE treasury observer refresh | Leadership, expulsion, leave/rejoin, approval/rejection and infrastructure update visible in both open accounts without manual reload; stale buttons lose permission; background/resume and RPC-failure recovery |
+| T27 | Cross-account alliance synchronization - PARTIAL | LIVE treasury observer refresh; three native API accounts read identical treasury/levels/XP after simultaneous deposits in [agent follow-up](ALLIANCE_AGENT_INFRASTRUCTURE_2026-10-19.md), not browser UI proof | Leadership, expulsion, leave/rejoin, approval/rejection and infrastructure update visible in both open accounts without manual reload; stale buttons lose permission; background/resume and RPC-failure recovery |
 | T28 | All command screens and modals - PARTIAL | UI repeated desktop/mobile viewport releases, wallet/store/market review and system layout fixes | Final candidate: populated/empty/loading/error/disabled/pending/success states for construction/research/ships/defense/fleet/reports/store/quests/alliance/UFO/market; modal focus/Escape/scroll/backdrop and stacked dialogs, no raw backend copy/overflow/unstyled controls |
 | T29 | Universe/system/planet navigation - PARTIAL | UI compact system slots, loading/scene transitions and mobile navigation fixes | Final candidate all routes, system positions, occupied/empty/own/foreign planets, camera/input cancel, repeated enter/exit, resize/orientation, reduced motion, network/asset failures, canvas nonblank and controls accessible |
 | T30 | Real mobile devices - OPEN | Desktop mobile-size viewports only are not device proof | iOS and Android supported wallet/passkey connect, cancellation/retry, popup/deep link return, background/foreground, tab/browser restart, scrolling/touch/orientation and transaction reconciliation; any unsupported platform explicitly declared |
@@ -82,6 +97,17 @@ items, including currently locked or hidden items.
 | T35 | Global transaction and state recovery - PARTIAL | AUTO preflight/recovery; LIVE selected cancellation, expiry and tab-close cases | For every command family above: stale snapshot, approval cancel/timeout, RPC/submission/confirmation interruption, account/network switch during await, duplicate click and resume; no false success/failure, double spend or lost durable state; verify actual wrapper simulation, not raw unsigned auth assumptions |
 
 ## Item-Level Evidence Rules
+
+2026-10-19 alliance edge follow-up: [same three agents, concurrency and recovery](ALLIANCE_EDGE_RECOVERY_2026-10-19.md).
+LIVE: 12 finalized transactions / 25 checkpoints, restored membership/leadership,
+stale-command rejection, rent refund, claim preservation, actual API-process
+restart after lost approval/deposit responses and exact-signed replay. LOCAL:
+eight funded SBF upgrade races. Found/fixed local agent submit preflight and
+confirmation-race handling plus SDK duplicate-application guards. Distinct signed
+upgrades in the deployed program still lack atomic expected-level/max-price
+binding; the protected local candidate now passes the report linked above;
+live funded upgrade races remain resource-gated. This extends T18/T19/T20/T27/T35
+without adding checklist rows or marking them complete. Automation stays PAUSED.
 
 The generated [instruction and catalog inventory](GAME_TEST_INVENTORY_V1.md)
 is the complete fixed item list, not a claim that all items passed. Every
@@ -110,6 +136,12 @@ not 35 individual test actions. Completed subcases remain in column three.
 | R09 | OPEN | Separately approved token issuance, fundraising and mainnet deployment plan; no approval implied by this checklist |
 
 ## Scope Control And Completion
+
+Explicit NEW scope authorized after V1: the separate devnet agent API/mine-loop
+and x402 slice is tracked as A01-A08 in
+[Agent API Devnet Results](AGENT_API_DEVNET_2026-10-19.md). It does not alter
+T01-T35, their completion counts, or the frozen original instruction inventory.
+Scheduled automation remains PAUSED.
 
 1. Run `node server/testing-scope.cjs`. It checks every current instruction,
    catalog definition and API endpoint against the frozen JSON baseline and

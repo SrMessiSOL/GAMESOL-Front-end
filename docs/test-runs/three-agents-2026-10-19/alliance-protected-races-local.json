@@ -1,0 +1,849 @@
+{
+  "network": "isolated-local-validator",
+  "genesis": "Cb2Jmto2QSZP2WeZa6tcFyB6wXqvRxPDENGhfbsRR3qn",
+  "startedAt": "2026-10-19T20:30:52.676Z",
+  "checks": [
+    {
+      "name": "different-buildings-serialize-with-order-correct-XP",
+      "passed": true,
+      "before": {
+        "xp": "0",
+        "balances": [
+          "1000000000000",
+          "1000000000000",
+          "1000000000000",
+          "1000000000000"
+        ],
+        "levels": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "after": {
+        "xp": "562",
+        "balances": [
+          "999999993000",
+          "999999993000",
+          "999999997000",
+          "999875000000"
+        ],
+        "levels": [
+          1,
+          1,
+          0,
+          0
+        ]
+      },
+      "signatures": [
+        "4LnWPf4SMegqpqvnGQHogNnpjuQRVon17LWPvtxrc1s2iVqb69JLtBQpGnm8vQZQsuLWPiDZN3HnGCqNNqU5MtYG",
+        "3BScDjRpY6V6hMaUYspCZFbsQ9BGAmqJ7fhr91k4usE3BL2KZHaGsWKwKVwkQmWR3Rhjc5K1dFmoCSYmVuCrT1Xy"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 36,
+          "status": {
+            "Ok": null
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 36,
+          "status": {
+            "Ok": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "identical-signed-request-only-upgrades-once",
+      "passed": true,
+      "before": {
+        "xp": "0",
+        "balances": [
+          "1000000000000",
+          "1000000000000",
+          "1000000000000",
+          "1000000000000"
+        ],
+        "levels": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "after": {
+        "xp": "250",
+        "balances": [
+          "999999995000",
+          "999999998000",
+          "999999999000",
+          "999950000000"
+        ],
+        "levels": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "signatures": [
+        "3Y2qgz9yJvAh8FN34H7DnQXnZp5RT6ZBuFq5Lg1MHayHbSDrQGU5gvqwmMd9GyLNAe15AkSSAqKqHLyW1NzLEHWc",
+        "3Y2qgz9yJvAh8FN34H7DnQXnZp5RT6ZBuFq5Lg1MHayHbSDrQGU5gvqwmMd9GyLNAe15AkSSAqKqHLyW1NzLEHWc"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 37,
+          "status": {
+            "Ok": null
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 37,
+          "status": {
+            "Ok": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "two-distinct-same-level-intents-only-one-charges",
+      "passed": true,
+      "before": {
+        "xp": "0",
+        "balances": [
+          "1000000000000",
+          "1000000000000",
+          "1000000000000",
+          "1000000000000"
+        ],
+        "levels": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "after": {
+        "xp": "250",
+        "balances": [
+          "999999995000",
+          "999999998000",
+          "999999999000",
+          "999950000000"
+        ],
+        "levels": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "signatures": [
+        "229HZ3rqVh9bkEKRTkHSwcbrW18pN6Aj9fAExsQ7FVUE4juU2qCW3bbVxmdkkz9azpLbYsxAgjsw4hR3YghgetBY",
+        "2p53Z5cksDRHoqh4hwuvipqUh3XShEb8qMbY1Rfyt7WaDFxdj8oav7xvwg7kpZWQnKZa8GNaLe398DbeXCyjcWKF"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": {
+            "InstructionError": [
+              1,
+              {
+                "Custom": 6101
+              }
+            ]
+          },
+          "slot": 38,
+          "status": {
+            "Err": {
+              "InstructionError": [
+                1,
+                {
+                  "Custom": 6101
+                }
+              ]
+            }
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 38,
+          "status": {
+            "Ok": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "cap-race-one-success-one-onchain-rejection",
+      "passed": true,
+      "before": {
+        "xp": "0",
+        "balances": [
+          "1000000000000",
+          "1000000000000",
+          "1000000000000",
+          "1000000000000"
+        ],
+        "levels": [
+          24,
+          25,
+          25,
+          25
+        ]
+      },
+      "after": {
+        "xp": "14062",
+        "balances": [
+          "999997656250",
+          "999999062500",
+          "999999609375",
+          "999062500000"
+        ],
+        "levels": [
+          25,
+          25,
+          25,
+          25
+        ]
+      },
+      "signatures": [
+        "4yJdA9zW4pLTn36w3SbkuajfST8V4cJpXkFhd6tRTyadLaJSqj4NVMSrfNSeoxSvTfT3nd7QVVnKtz6J5G7gBKs",
+        "5wNftuAi4t6ssSXNmyPD4DGy1a74PqjA1oNgz39quc5MFgyBiApyU3r7CCtossnYCAH2h88uyQpF3wAHWyDiy8pR"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 39,
+          "status": {
+            "Ok": null
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": {
+            "InstructionError": [
+              1,
+              {
+                "Custom": 6101
+              }
+            ]
+          },
+          "slot": 39,
+          "status": {
+            "Err": {
+              "InstructionError": [
+                1,
+                {
+                  "Custom": 6101
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "treasury-one-upgrade-budget-is-not-overspent",
+      "passed": true,
+      "before": {
+        "xp": "0",
+        "balances": [
+          "5000",
+          "2000",
+          "1000",
+          "50000000"
+        ],
+        "levels": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "after": {
+        "xp": "250",
+        "balances": [
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "levels": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "signatures": [
+        "526kSLLTZQXKFwA21MaTDmp2TrHbthQ3Vtnn8cqe621de9jstUe2HDLL5U9hzMZa13UNpH3MXwTt6dLZjvWaP3Db",
+        "3299ZJHfMFTGWvSFs13j9ukFge4uKvnfPQFM4jXbmYp7msYncTQyA77Rjx1qJwGae3ZqD4Ed6UWViCwqfdnurKeJ"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 40,
+          "status": {
+            "Ok": null
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": {
+            "InstructionError": [
+              1,
+              {
+                "Custom": 6101
+              }
+            ]
+          },
+          "slot": 40,
+          "status": {
+            "Err": {
+              "InstructionError": [
+                1,
+                {
+                  "Custom": 6101
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "prepared-former-leader-upgrade-is-rejected",
+      "passed": true,
+      "transfer": {
+        "signatures": [
+          "53Bv3vCBjthxjbtVvUKGkHNKHpF4eWhMddYzcza1WobjkSE4iyWWhWX3TKfoBVBeG6BWHRfSqsu67DRMtJKu9QQ"
+        ],
+        "statuses": [
+          {
+            "confirmationStatus": "confirmed",
+            "confirmations": 1,
+            "err": null,
+            "slot": 41,
+            "status": {
+              "Ok": null
+            }
+          }
+        ]
+      },
+      "rejected": {
+        "signatures": [
+          "2YEJEirbSVR3kz1W5DA6n12kf1PuudK3XeLDVWvaSyB524BvmG44tosKT9FDstFEGyKf2CwpaWBLLSRfy2iHX92T"
+        ],
+        "statuses": [
+          {
+            "confirmationStatus": "confirmed",
+            "confirmations": 1,
+            "err": {
+              "InstructionError": [
+                1,
+                {
+                  "Custom": 6076
+                }
+              ]
+            },
+            "slot": 42,
+            "status": {
+              "Err": {
+                "InstructionError": [
+                  1,
+                  {
+                    "Custom": 6076
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "restore": {
+        "signatures": [
+          "5FnmtSUhS2rw9uFf1LCAyK4tqkRvKDYL3XZHMvRT89bXP8ejdgsQdAGDS1EiYfitWuLHsFh64vFwhjYLb98jG9Vz"
+        ],
+        "statuses": [
+          {
+            "confirmationStatus": "confirmed",
+            "confirmations": 1,
+            "err": null,
+            "slot": 43,
+            "status": {
+              "Ok": null
+            }
+          }
+        ]
+      },
+      "treasuryUnchanged": true
+    },
+    {
+      "name": "four-concurrent-bonus-upgrades-match-a-valid-serialized-order",
+      "passed": true,
+      "before": {
+        "xp": "0",
+        "balances": [
+          "1000000000000",
+          "1000000000000",
+          "1000000000000",
+          "1000000000000"
+        ],
+        "levels": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "after": {
+        "xp": "1188",
+        "balances": [
+          "999999986060",
+          "999999986090",
+          "999999992500",
+          "999716350000"
+        ],
+        "levels": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "signatures": [
+        "U4YFvwL5o2VDFKRijVRqYCnp5u3d6dsLZemrnPwQHQ4vpP44aCsqL92gWME7LGRVoc5jWJRY8dwmwKunASG5aRC",
+        "wXVLgpwv8QXG25SHCGBz4ppJBJDKD8Cbzi3pegi3R4eCmyosX5VTsqPaxbYsVXisPj3QM9HjG9akqk6x9SNhZkW",
+        "5UnRmUPZrA1cawCBCiXNu2JE6DRyHpRvFieCG4rqLxaJwYXhUWH55uE8VVDixLH5RDBt6UhMwp6ZFcMvTfzs5WJw",
+        "CPkGdBBz9qTGfi9zMHDC58hzXN3ZWW8x5gR5gJeYKg9TX39uyYeCzAEmMFKtaFo82hMkqvu4LXunzQd52b9Rs6U"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 44,
+          "status": {
+            "Ok": null
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 44,
+          "status": {
+            "Ok": null
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 44,
+          "status": {
+            "Ok": null
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 44,
+          "status": {
+            "Ok": null
+          }
+        }
+      ],
+      "matchingSerializedOrders": [
+        [
+          0,
+          3,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "name": "three-actor-race-only-current-leader-can-upgrade",
+      "passed": true,
+      "before": {
+        "xp": "0",
+        "balances": [
+          "1000000000000",
+          "1000000000000",
+          "1000000000000",
+          "1000000000000"
+        ],
+        "levels": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "after": {
+        "xp": "250",
+        "balances": [
+          "999999995000",
+          "999999998000",
+          "999999999000",
+          "999950000000"
+        ],
+        "levels": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "signatures": [
+        "2GG9WcDUStSZCr3rYrBTfx9xtKiCdRAikfHTBkmC9Kiz9Vqnh7BZ3fo6fK7GUY2TAUMiuNc7QyDPExJ51t2ATooi",
+        "4rzVP8n1YCYAbwbycTXQ9ULi6QYxzfPa41XkangYF85sHiD2kTBSvZ6ijNk4yuxkYS2g78onbsGfWkSxUgynpjfT",
+        "5DW9DtndbxGrgrS8pq69hn72jfQCXc6VAR5y3jpo544iVmUcJxKyyfhWww5RaqJHG2EZqVyz4biGHTBJz8dZNEF4"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 45,
+          "status": {
+            "Ok": null
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": {
+            "InstructionError": [
+              1,
+              {
+                "Custom": 6076
+              }
+            ]
+          },
+          "slot": 45,
+          "status": {
+            "Err": {
+              "InstructionError": [
+                1,
+                {
+                  "Custom": 6076
+                }
+              ]
+            }
+          }
+        },
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": {
+            "InstructionError": [
+              1,
+              {
+                "Custom": 6076
+              }
+            ]
+          },
+          "slot": 45,
+          "status": {
+            "Err": {
+              "InstructionError": [
+                1,
+                {
+                  "Custom": 6076
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "four-price-ceilings-reject-without-mutation",
+      "passed": true,
+      "results": [
+        {
+          "signatures": [
+            "2Sk4oXkMxJi9X7cGug2e75WWPDuXjZbsfgMr9Rj6bDmARao1vY2T2ZZK3qRRT9tfFMfrd4LTdLdRWf7bhJjxWKv5"
+          ],
+          "statuses": [
+            {
+              "confirmationStatus": "confirmed",
+              "confirmations": 1,
+              "err": {
+                "InstructionError": [
+                  1,
+                  {
+                    "Custom": 6102
+                  }
+                ]
+              },
+              "slot": 46,
+              "status": {
+                "Err": {
+                  "InstructionError": [
+                    1,
+                    {
+                      "Custom": 6102
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "signatures": [
+            "shUcdNxBghsrpLo3441ctZm8Mc63SB7ceAYtdxh452up524wy6QMTEfwVaUpdcibD3FW8fgytqmBV6x5y33KcT7"
+          ],
+          "statuses": [
+            {
+              "confirmationStatus": "confirmed",
+              "confirmations": 1,
+              "err": {
+                "InstructionError": [
+                  1,
+                  {
+                    "Custom": 6102
+                  }
+                ]
+              },
+              "slot": 47,
+              "status": {
+                "Err": {
+                  "InstructionError": [
+                    1,
+                    {
+                      "Custom": 6102
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "signatures": [
+            "347ionQCpmSk751Y4d77xsA5mNz58TJjfy6htUwC55QwBvzzAgVMTKqS577GundV4zMjP2WyiNTzrquSpMzLsbYW"
+          ],
+          "statuses": [
+            {
+              "confirmationStatus": "confirmed",
+              "confirmations": 1,
+              "err": {
+                "InstructionError": [
+                  1,
+                  {
+                    "Custom": 6102
+                  }
+                ]
+              },
+              "slot": 48,
+              "status": {
+                "Err": {
+                  "InstructionError": [
+                    1,
+                    {
+                      "Custom": 6102
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "signatures": [
+            "3FdDA2UJ7NxPMs5DHLUsMBj6u5CAMBy3VEkY1hcdM1Th3wrvRYFXtCDVid1KAxb1jeV1Lsu1ebiJ5EgffDMeC1sf"
+          ],
+          "statuses": [
+            {
+              "confirmationStatus": "confirmed",
+              "confirmations": 1,
+              "err": {
+                "InstructionError": [
+                  1,
+                  {
+                    "Custom": 6102
+                  }
+                ]
+              },
+              "slot": 49,
+              "status": {
+                "Err": {
+                  "InstructionError": [
+                    1,
+                    {
+                      "Custom": 6102
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "treasuryAndXpUnchanged": true
+    },
+    {
+      "name": "legacy-unquoted-upgrade-fails-closed",
+      "passed": true,
+      "signatures": [
+        "66hifibbd2fRkvYXTc6SJ7jKUU6nHrncHNY4UbArw15AWgbWRCrqXAWedLXtxUNXtmsxL6Gj9ymVcJu2My7mJgVK"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": {
+            "InstructionError": [
+              1,
+              {
+                "Custom": 102
+              }
+            ]
+          },
+          "slot": 50,
+          "status": {
+            "Err": {
+              "InstructionError": [
+                1,
+                {
+                  "Custom": 102
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "interrupted-response-recovery-replays-exact-signature-only-once",
+      "passed": true,
+      "first": {
+        "signatures": [
+          "5zSpNNzLfUqhAwFqGiUQgqSFDvNcxPzaeJMPuAMVhAQD9YGHgU5kHeKjokKiEq8cT8NWhAhtHmgQsvv4ekJ9Bmud"
+        ],
+        "statuses": [
+          {
+            "confirmationStatus": "confirmed",
+            "confirmations": 1,
+            "err": null,
+            "slot": 51,
+            "status": {
+              "Ok": null
+            }
+          }
+        ]
+      },
+      "recovered": {
+        "signatures": [
+          "5zSpNNzLfUqhAwFqGiUQgqSFDvNcxPzaeJMPuAMVhAQD9YGHgU5kHeKjokKiEq8cT8NWhAhtHmgQsvv4ekJ9Bmud"
+        ],
+        "statuses": [
+          {
+            "confirmationStatus": "confirmed",
+            "confirmations": 1,
+            "err": null,
+            "slot": 51,
+            "status": {
+              "Ok": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "held-quote-allows-improved-discount-and-charges-the-lower-price",
+      "passed": true,
+      "before": {
+        "xp": "1087",
+        "balances": [
+          "999999973000",
+          "999999985000",
+          "999999993000",
+          "999775000000"
+        ],
+        "levels": [
+          2,
+          1,
+          0,
+          0
+        ]
+      },
+      "after": {
+        "xp": "2241",
+        "balances": [
+          "999999925450",
+          "999999964180",
+          "999999981000",
+          "999526500000"
+        ],
+        "levels": [
+          3,
+          1,
+          0,
+          1
+        ]
+      },
+      "discount": {
+        "signatures": [
+          "3PSPmqEbbKL3HUVwDCpcej9ESAx1WYnNfPNei3Qbo2oLNFQe3Rdge67qByGB37s3Tjbi2Hoo4Vie1ojABQhb1EL4"
+        ],
+        "statuses": [
+          {
+            "confirmationStatus": "confirmed",
+            "confirmations": 1,
+            "err": null,
+            "slot": 52,
+            "status": {
+              "Ok": null
+            }
+          }
+        ]
+      },
+      "signatures": [
+        "4qdA7eSp9TnCgSUw4C6HgsymAzx7KE9UZzS6sPWoxe6rEMzotbjT3xWhn2BuSpq4ubKAPn5WtN7za8rfHVrA3Wwt"
+      ],
+      "statuses": [
+        {
+          "confirmationStatus": "confirmed",
+          "confirmations": 1,
+          "err": null,
+          "slot": 53,
+          "status": {
+            "Ok": null
+          }
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-10-19T20:31:00.788Z",
+  "count": 12
+}

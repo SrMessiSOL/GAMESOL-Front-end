@@ -1,0 +1,162 @@
+{
+  "network": "devnet",
+  "method": "signed simulations and two deliberately rejected finalized transactions",
+  "checks": [
+    {
+      "name": "stale-approved-level",
+      "passed": true,
+      "slot": 512923207,
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6101
+          }
+        ]
+      },
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: UpgradeAllianceBuilding",
+        "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3540. Error Code: AllianceUpgradeLevelChanged. Error Number: 6101. Error Message: Alliance building level changed. Review a fresh upgrade quote..",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 13668 of 200000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x17d5"
+      ],
+      "signature": "57KN9EUtnVbtjL6yUzPv6WqMwn1bGSJHpVYyBHyLixYhuh455xfC3giBxNQmhC8GfJvd7P5AcBh32YvenTbxgD3U",
+      "finalized": true,
+      "finalizedSlot": 512923211,
+      "fee": 5000
+    },
+    {
+      "name": "metal-ceiling",
+      "passed": true,
+      "slot": 512923216,
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6102
+          }
+        ]
+      },
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: UpgradeAllianceBuilding",
+        "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3559. Error Code: AllianceUpgradePriceExceeded. Error Number: 6102. Error Message: Alliance upgrade exceeds the approved price..",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 13995 of 200000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x17d6"
+      ],
+      "signature": "4JjVDFvrJZ2TWejmaK3cjwPDLpmMSMrdV8DywSe4jfmF3Cvg7SRcd4Zn4aE2kTvryCGTxfK8mY6CYFj1Diwh6uwn",
+      "finalized": true,
+      "finalizedSlot": 512923221,
+      "fee": 5000
+    },
+    {
+      "name": "crystal-ceiling",
+      "passed": true,
+      "slot": 512923227,
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6102
+          }
+        ]
+      },
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: UpgradeAllianceBuilding",
+        "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3559. Error Code: AllianceUpgradePriceExceeded. Error Number: 6102. Error Message: Alliance upgrade exceeds the approved price..",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 13997 of 200000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x17d6"
+      ]
+    },
+    {
+      "name": "deuterium-ceiling",
+      "passed": true,
+      "slot": 512923229,
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6102
+          }
+        ]
+      },
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: UpgradeAllianceBuilding",
+        "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3559. Error Code: AllianceUpgradePriceExceeded. Error Number: 6102. Error Message: Alliance upgrade exceeds the approved price..",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 13999 of 200000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x17d6"
+      ]
+    },
+    {
+      "name": "antimatter-ceiling",
+      "passed": true,
+      "slot": 512923231,
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6102
+          }
+        ]
+      },
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: UpgradeAllianceBuilding",
+        "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3559. Error Code: AllianceUpgradePriceExceeded. Error Number: 6102. Error Message: Alliance upgrade exceeds the approved price..",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 14001 of 200000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x17d6"
+      ]
+    },
+    {
+      "name": "legacy-payload-fails-closed",
+      "passed": true,
+      "slot": 512923233,
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 102
+          }
+        ]
+      },
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: UpgradeAllianceBuilding",
+        "Program log: AnchorError occurred. Error Code: InstructionDidNotDeserialize. Error Number: 102. Error Message: The program could not deserialize the given instruction.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 5973 of 200000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x66"
+      ]
+    },
+    {
+      "name": "valid-quote-reaches-affordability-guard",
+      "passed": true,
+      "slot": 512923235,
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6081
+          }
+        ]
+      },
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: UpgradeAllianceBuilding",
+        "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3564. Error Code: AllianceTreasuryNotEnoughResources. Error Number: 6081. Error Message: AllianceTreasuryNotEnoughResources.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 13934 of 200000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x17c1"
+      ]
+    }
+  ],
+  "transactionsSent": 2,
+  "feesSpent": 10000,
+  "startedAt": "2026-10-19T20:45:47.192Z",
+  "binarySha256": "52d81fe227f133916e6c37369b6fbd5984407d1fcf139b82332793016d2006d2",
+  "upgradeSlot": "512923126",
+  "stateUnchanged": true,
+  "finishedAt": "2026-10-19T20:45:56.888Z",
+  "remaining": "Funded same-level race and wallet UI execution remain devnet follow-ups; funded races passed on local validator."
+}

@@ -13,6 +13,8 @@ const RULES: Array<[RegExp, string]> = [
   [/InsufficientAntimatter/, 'There is not enough ANTIMATTER for this action.'],
   [/InsufficientUsdc/, 'There is not enough USDC for this action.'],
   [/AllianceTreasuryNotEnoughResources/, 'The alliance treasury needs more resources for this upgrade.'],
+  [/AllianceUpgradeLevelChanged/, 'This alliance building has changed level. Refresh and review its next upgrade.'],
+  [/AllianceUpgradePriceExceeded/, 'This alliance upgrade exceeds the price you approved. Refresh and review its cost.'],
   [/InsufficientResources/, 'There are not enough resources for this action.'],
   [/insufficient lamports|insufficient funds/i, 'There are not enough funds for this action or its account rent.'],
   [/ResearchQueueBusy/, 'Finish the current research before starting another project.'],
