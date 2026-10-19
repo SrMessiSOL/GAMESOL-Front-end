@@ -36,3 +36,13 @@ No purchases, additional claims, USDC/AM spending, program upgrade, economy or
 authority changes. Storage edge cases are automated fixtures using the real
 client and helper, not manipulated live planets. Today's account was already
 claimed; no second claim or midnight transition was attempted.
+
+## Published
+
+- Source commit 3113b97 pushed to feat/crypto-ufos-wallet-link.
+- Final build: https://frontend-5hqrebgmt-srmessisols-projects.vercel.app
+- QA and chained-universe.vercel.app point to this build. Final QA restored
+  Default/#513 and confirmed the 550/325/110 claimed card and UTC wording.
+- Public index-BgkYmNVA.js and devnet genesis verified after alias publication.
+- Final build includes the older view's storage-aware ready styling as well.
+- No runtime source edits after the final test/build candidate.
