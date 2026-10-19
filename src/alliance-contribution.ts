@@ -1,5 +1,7 @@
 import type { AllianceMembershipAccount } from './game-state';
 
+export const ALLIANCE_BUILDING_MAX_LEVEL = 25;
+
 type Contribution = { period: number; id: number; metal: bigint; crystal: bigint; deuterium: bigint; antimatter: bigint };
 type Balances = { metal: bigint; crystal: bigint; deuterium: bigint; antimatter: bigint };
 
@@ -18,7 +20,8 @@ export function allianceInfrastructureBlock(leader: boolean, level: number, trea
   cost: Balances): string | null {
   if (!leader) return 'LEADER ONLY';
   if (!treasury) return 'Checking treasury';
-  if (level >= 255) return 'Maximum level';
+  if (!Number.isInteger(level) || level < 0) return 'Checking infrastructure';
+  if (level >= ALLIANCE_BUILDING_MAX_LEVEL) return 'Maximum level';
   for (const field of ['metal', 'crystal', 'deuterium', 'antimatter'] as const) {
     if (treasury[field] < cost[field]) return `Needs ${field === 'antimatter' ? 'AM' : field}`;
   }

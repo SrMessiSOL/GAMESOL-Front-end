@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { STORE_PACKS, type StorePack, type StorePeriod } from './store-catalog';
+import { ALLIANCE_BUILDING_MAX_LEVEL } from './alliance-contribution';
 import { dailyCheckInReward } from './quest-rewards';
 import { rewardStorageBlock } from './command-validation';
 import { Capacitor } from "@capacitor/core";
@@ -4679,7 +4680,9 @@ const AllianceTab: React.FC<{
                   ? `${boostPercentLabel(boosts.defenseDeuteriumDiscountBps)} deuterium discount`
                   : `${boostPercentLabel(boosts.tradeCostDiscountBps)} metal/crystal/ANTIMATTER discount`;
             const isLeader = membership.role === 2;
+            const maxed = current >= ALLIANCE_BUILDING_MAX_LEVEL;
             const canUpgrade = isLeader
+              && !maxed
               && !!allianceTreasury
               && allianceTreasury.metal >= cost.metal
               && allianceTreasury.crystal >= cost.crystal
@@ -4694,13 +4697,13 @@ const AllianceTab: React.FC<{
                 <div className="quest-req-row met" style={{marginBottom:10}}>
                   <span>Current effect</span><strong>{effect}</strong>
                 </div>
-                <div className="quest-req-list">
+                {!maxed && <div className="quest-req-list">
                   <div className={`quest-req-row ${(allianceTreasury?.metal ?? 0n) >= cost.metal ? "met" : "missing"}`}><ResourceLabel kind="metal" /><strong>{fmt(allianceTreasury?.metal ?? 0n)}/{fmt(cost.metal)}</strong></div>
                   <div className={`quest-req-row ${(allianceTreasury?.crystal ?? 0n) >= cost.crystal ? "met" : "missing"}`}><ResourceLabel kind="crystal" /><strong>{fmt(allianceTreasury?.crystal ?? 0n)}/{fmt(cost.crystal)}</strong></div>
                   <div className={`quest-req-row ${(allianceTreasury?.deuterium ?? 0n) >= cost.deuterium ? "met" : "missing"}`}><ResourceLabel kind="deuterium" /><strong>{fmt(allianceTreasury?.deuterium ?? 0n)}/{fmt(cost.deuterium)}</strong></div>
                   <div className={`quest-req-row ${(allianceTreasury?.antimatter ?? 0n) >= cost.antimatter ? "met" : "missing"}`}><AntimatterLabel /><strong>{formatTokenAmount(allianceTreasury?.antimatter ?? 0n, 6)}/{formatTokenAmount(cost.antimatter, 6)}</strong></div>
-                </div>
-                <button className="modal-btn primary" disabled={txBusy || !canUpgrade} onClick={() => onUpgradeBuilding(building.id)}>{isLeader ? "LEVEL UP" : "LEADER ONLY"}</button>
+                </div>}
+                <button className="modal-btn primary" disabled={txBusy || !canUpgrade} onClick={() => onUpgradeBuilding(building.id)}>{maxed ? "MAXIMUM LEVEL" : isLeader ? "LEVEL UP" : "LEADER ONLY"}</button>
               </div>
             );
           })}

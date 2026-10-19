@@ -51,10 +51,28 @@ test('infrastructure blocks the wrong role, absent treasury, maximum level and e
   assert.match(infrastructure(false,1,cost,cost),/LEADER/);
   assert.match(infrastructure(true,1,null,cost),/Checking/);
   assert.match(infrastructure(true,255,cost,cost),/Maximum/);
+  assert.equal(infrastructure(true,24,cost,cost),null);
+  for(const level of [25,26,254])assert.match(infrastructure(true,level,cost,cost),/Maximum/);
+  for(const level of [-1,NaN,1.5])assert.match(infrastructure(true,level,cost,cost),/Checking/);
   for(const field of ['metal','crystal','deuterium','antimatter']) assert.match(infrastructure(true,1,{...cost,[field]:cost[field]-1n},cost),/Needs/);
   const ui=fs.readFileSync(require.resolve('../src/PlanetWorld.tsx'),'utf8');
   assert.match(ui,/const block = allianceInfrastructureBlock\(leader, currentLevel, allianceTreasury, cost\)/);
   assert.match(ui,/disabled=\{busy \|\| Boolean\(block\)\}/);
+});
+
+test('infrastructure cap matches Rust and both UI entry points use the cap guard',()=>{
+  assert.equal(exportsObject.ALLIANCE_BUILDING_MAX_LEVEL,25);
+  const backendPath=require('node:path').resolve(__dirname,'../../../passkey-ufo-release/programs/game-state/src/constants.rs');
+  if(fs.existsSync(backendPath)){
+    const backend=fs.readFileSync(backendPath,'utf8');
+    assert.equal(exportsObject.ALLIANCE_BUILDING_MAX_LEVEL,Number(backend.match(/ALLIANCE_BUILDING_MAX_LEVEL: u8 = (\d+)/)[1]));
+  }
+  const app=fs.readFileSync(require.resolve('../src/App.tsx'),'utf8');
+  assert.match(app,/const maxed = current >= ALLIANCE_BUILDING_MAX_LEVEL/);
+  assert.match(app,/const canUpgrade = isLeader\s*&& !maxed/);
+  assert.match(app,/\{!maxed && <div className="quest-req-list">/);
+  const world=fs.readFileSync(require.resolve('../src/PlanetWorld.tsx'),'utf8');
+  assert.match(world,/currentLevel >= ALLIANCE_BUILDING_MAX_LEVEL \? "Maximum level reached"/);
 });
 
 test('live alliance confirmation is above the command panel on desktop and mobile', () => {

@@ -1,5 +1,8 @@
 .git
 .vercel
+.agent-local
+agent-api
+server/alliance-cap-visual.cjs
 node_modules
 dist
 android

@@ -12,6 +12,7 @@ import { AnchorProvider, setProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
 import { accountRentTotal } from './account-rent';
+import { ALLIANCE_BUILDING_MAX_LEVEL } from './alliance-contribution';
 import { preflightCommand } from './command-preflight';
 import { assertCommandInteger, assertResourceAmount, constructionBlockReason, rewardStorageBlock, storePackBlock } from './command-validation';
 import { dailyCheckInReward } from './quest-rewards';
@@ -4741,7 +4742,11 @@ export class GameClient {
     if (!membership) throw new Error("Join or create an alliance first.");
     if (membership.role !== 2) throw new Error('Only the current alliance leader can upgrade infrastructure. Nothing was submitted.');
     const alliancePda = new PublicKey(membership.alliance);
-    if (!(await this.getAllianceTreasury(alliancePda))) {
+    const treasury = await this.getAllianceTreasury(alliancePda);
+    if (treasury) {
+      const level = [treasury.logisticsHub, treasury.researchGrid, treasury.defenseCoordination, treasury.tradeNetwork][buildingId];
+      if (level >= ALLIANCE_BUILDING_MAX_LEVEL) throw new Error('Alliance infrastructure is already at maximum level. Nothing was submitted.');
+    } else {
       await this.initializeAllianceTreasury();
     }
     const writer = new BorshWriter();
