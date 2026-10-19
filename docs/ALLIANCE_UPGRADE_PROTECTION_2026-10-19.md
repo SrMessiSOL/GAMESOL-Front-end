@@ -1,7 +1,7 @@
 # Alliance Upgrade Level And Price Protection
 
 Status: deployed to devnet and verified byte-for-byte. Deployed protection
-checks passed; matching frontend approved for publication. Automation stays PAUSED.
+checks passed; matching frontend is published. Automation stays PAUSED.
 
 ## Contract
 
@@ -104,6 +104,19 @@ safely against the new program, but cannot upgrade until refreshed.
 Signer, authority, budget, deployment and deployed rejection checks are complete.
 Funded devnet upgrade/concurrency/replay and interactive Lazor execution are
 still follow-up evidence, not claimed here. Nothing certifies mainnet readiness.
+
+## Frontend Publication
+
+Code commit: `dcf2df3`, branch `feat/crypto-ufos-wallet-link`.
+Production deployment: `frontend-zob3fx77w-srmessisols-projects.vercel.app`.
+The existing `chained-universe.vercel.app` alias was explicitly assigned to it.
+[Public release verification](ALLIANCE_PROTECTION_RELEASE_VERIFICATION_2026-10-19.json)
+compares nine JavaScript assets between the deployment and main URL, verifies
+the new quote guards are present, and checks the devnet genesis. This is asset
+and endpoint verification, not a new signed-in Lazor or physical-device test.
+The exact isolated source release passed all 386 tests and the production build;
+unrelated working-tree edits were not included. Total deployment plus rejection
+test net spend was 0.01733 test SOL, with zero USDC/ANTIMATTER spent.
 
 The frozen 110-instruction inventory is unchanged: this strengthens the
 existing instruction in T20/T27/T35, not a new checklist family.

@@ -15,6 +15,8 @@ The candidate is now deployed and byte-for-byte verified: signer, authority,
 budget and seven deployed guard simulations plus two finalized rejection
 transactions passed. See the report for the exact boundary: funded devnet
 upgrade races/replay and interactive Lazor execution remain follow-ups.
+Matching frontend code is published as `dcf2df3`; main URL verification matches
+nine assets to its production deployment and confirms the devnet genesis.
 Scheduled automation remains PAUSED.
 
 Cap-only release verification (2026-10-19): [desktop/mobile report](ALLIANCE_CAP_RELEASE_2026-10-19.md).
@@ -104,8 +106,8 @@ stale-command rejection, rent refund, claim preservation, actual API-process
 restart after lost approval/deposit responses and exact-signed replay. LOCAL:
 eight funded SBF upgrade races. Found/fixed local agent submit preflight and
 confirmation-race handling plus SDK duplicate-application guards. Distinct signed
-upgrades in the deployed program still lack atomic expected-level/max-price
-binding; the protected local candidate now passes the report linked above;
+at that earlier run the deployed program lacked atomic expected-level/max-price
+binding; the protected candidate is now deployed and verified in the report above;
 live funded upgrade races remain resource-gated. This extends T18/T19/T20/T27/T35
 without adding checklist rows or marking them complete. Automation stays PAUSED.
 

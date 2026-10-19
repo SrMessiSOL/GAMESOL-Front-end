@@ -1,0 +1,58 @@
+{
+  "verifiedAt": "2026-10-19T20:50:51.467Z",
+  "codeCommit": "dcf2df3",
+  "url": "https://chained-universe.vercel.app/app",
+  "deployment": "https://frontend-zob3fx77w-srmessisols-projects.vercel.app",
+  "htmlStatus": 200,
+  "assets": [
+    {
+      "path": "/assets/index-CGQ8lgAd.js",
+      "sha256": "b6c1d8eb5e55b0bb7e5518ee162102a800ece3c7542efc53d0a2ffff9f915056",
+      "bytes": 319256
+    },
+    {
+      "path": "/assets/UniverseGame-Cz1B4HI6.js",
+      "sha256": "6606e2c5c85245af462e8d270b7c4ea1f385d330b699fe212f5595a782062d96",
+      "bytes": 93727
+    },
+    {
+      "path": "/assets/logobg-BMwZTyoV.js",
+      "sha256": "a3e8b684e2b5fd9f0b72880526fe9347417ce9429a44e720e21e3d80ef25cb80",
+      "bytes": 611083
+    },
+    {
+      "path": "/assets/UniverseLab-D2M48VMl.js",
+      "sha256": "746801ba8381f903fd0d76e7bc74d38ac92b722b583753317d8d2c8d6be32f00",
+      "bytes": 1396795
+    },
+    {
+      "path": "/assets/usdc-DdsJ84Jb.js",
+      "sha256": "e874ee3c4669930dd518671699ee2bb8278946a9b5c78855e795a548990e0265",
+      "bytes": 2204
+    },
+    {
+      "path": "/assets/users-DAnq7LMy.js",
+      "sha256": "b463b68df7c262cd45a9976df0582b02968a89c17124b37da4856472165c8251",
+      "bytes": 2958
+    },
+    {
+      "path": "/assets/ui-art-Bo-urJ04.js",
+      "sha256": "0b67db466dbda7042e777146b435210f00048fd96bf9461077e7b807c686bed8",
+      "bytes": 27474
+    },
+    {
+      "path": "/assets/App-DiMWNQKA.js",
+      "sha256": "9c191e7069e4e53bb583a330fe9397c9b3bb020b37dbe61da9e0ac2528d3f308",
+      "bytes": 401710
+    },
+    {
+      "path": "/assets/PlanetWorld-CLCShUz-.js",
+      "sha256": "e1267284ec6a2c381698a27b745d4dd6616f96d915675aa497b26910ac1e1194",
+      "bytes": 483880
+    }
+  ],
+  "quoteGuardsPresent": true,
+  "devnetGenesisVerified": true,
+  "automation": "PAUSED",
+  "boundary": "Asset/endpoint verification, not a new signed-in wallet or physical-device test."
+}
