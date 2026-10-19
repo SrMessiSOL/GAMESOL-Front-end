@@ -10,6 +10,22 @@ fees and no USDC/ANTIMATTER spending. No mainnet or authority change occurred.
 
 ## Fresh devnet results
 
+Daily check-in quote correction now passes 380 tests and desktop/mobile QA.
+Shared reward math, storage guards and UTC reset copy are verified; see
+CHECKIN_REWARD_FIX_2026-10-19.md. This supersedes the open quote issue below.
+
+### Additional quest pass
+
+Two earned rewards claimed live: Colony Ship tutorial reward (5,000 metal,
+5,000 crystal, 2,000 deuterium) and daily check-in (550/325/110 including bonus).
+Both finalized and claim flags verified. Seven unsigned quest rejection checks
+and six completed-action replays passed. No USDC or ANTIMATTER spent.
+New open UI issue: check-in quotes base reward without its streak bonus and
+describes a rolling 24-hour interval instead of the implemented UTC day reset.
+See DEVNET_QUEST_PASS_2026-10-19.md for receipts and evidence boundaries.
+Fresh full audit: 15 moderate, zero high/critical advisories. NewAccount shield
+deadline was re-read as October 21, 2026 at 19:28:55 UTC.
+
 ### Latest completed follow-up
 
 Quick Play stale-status fix passed 373 tests and desktop/mobile account-modal
@@ -97,7 +113,7 @@ Retained from the October 18 checklist and linked receipts, not rerun today:
 | Payment recovery | Full Chrome-process interruption and remaining payment-boundary interruptions | Tab close/reopen is already covered; not equivalent to process crash |
 | Wallet funds | Each supported withdrawal asset, cancellation and reconciliation | Bound amounts and destinations before transfer |
 | Store | Full daily/weekly/monthly cap/reset matrix; balance/storage changes between review and approval | Overflow guards passed today; shield packs remain disabled because deployed program rejects them |
-| Quests | Full duplicate, wrong-world, storage and completion matrix | Some guards covered; not every live reward scenario |
+| Quests | Finish same-owner target, live storage and recurring/reset matrix | Check-in quote/storage/UTC fix tested; tutorial/check-in claimed live; seven rejection checks passed; full matrix still open |
 | UFO utility | Ownership loss/reacquisition, unlink, stale proofs and utility revocation | Use fixtures first; no real mainnet NFT transfer without separate approval |
 | Alliance sync | Open-tab leadership/membership changes and permission refresh across accounts | Treasury sync alone does not prove all role-change cases |
 | Mobile | Real device wallets/passkeys: cancel, resume, reconnect, background and restart | Responsive desktop viewports are not physical-device proof |
@@ -122,5 +138,5 @@ Retained from the October 18 checklist and linked receipts, not rerun today:
 ## Next Order
 
 Quick Play UI fix and existing ship collection are complete. Next run the
-remaining recovery/store/role-sync cases with bounded test actions. Controlled
+remaining quest edge cases, then recovery/store/role-sync cases with bounded test actions. Controlled
 combat must wait for legitimate target eligibility. Mainnet is not approved.

@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { STORE_PACKS, type StorePack, type StorePeriod } from './store-catalog';
+import { dailyCheckInReward } from './quest-rewards';
+import { rewardStorageBlock } from './command-validation';
 import { Capacitor } from "@capacitor/core";
 import { useConnection, useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider } from "@coral-xyz/anchor";
@@ -623,7 +625,7 @@ const QUEST_DEFINITIONS: QuestDefinition[] = [
   { period: 0, id: 18, group: "Tutorial", title: "Research Astrophysics", hint: "Astrophysics is the road to expansion.", reward: { metal: 1500, crystal: 1800, deuterium: 700 }, requirements: [questReq("Astrophysics", 1, s => s.research.astrophysics)] },
   { period: 0, id: 19, group: "Tutorial", title: "Hold five defenses", hint: "A small defense grid is better than an empty planet.", reward: { metal: 1200, crystal: 900, deuterium: 200 }, requirements: [questReq("Defense units", 5, totalQuestDefenses)] },
   { period: 0, id: 20, group: "Tutorial", title: "Build a Colony Ship", hint: "Complete command training and claim the final tutorial reward.", reward: { metal: 5000, crystal: 5000, deuterium: 2000 }, requirements: [questReq("Colony Ship", 1, s => s.fleet.colonyShip)] },
-  { period: 1, id: 0, group: "Daily", title: "Daily check-in", hint: "Claim once every 24 hours. Streak bonus is small and capped.", reward: { metal: 500, crystal: 300, deuterium: 100 }, requirements: [], checkIn: true },
+  { period: 1, id: 0, group: "Daily", title: "Daily check-in", hint: "Resets daily at 00:00 UTC. Consecutive UTC days increase the bonus, capped at 30 days.", reward: { metal: 500, crystal: 300, deuterium: 100 }, requirements: [], checkIn: true },
   { period: 1, id: 1, group: "Daily", title: "Metal Mine Lv 3", hint: "Keep basic metal production moving.", reward: { metal: 1000, crystal: 500, deuterium: 100 }, requirements: [questReq("Metal Mine", 3, s => s.planet.metalMine)] },
   { period: 1, id: 2, group: "Daily", title: "Crystal Mine Lv 3", hint: "Keep crystal production balanced.", reward: { metal: 500, crystal: 1000, deuterium: 100 }, requirements: [questReq("Crystal Mine", 3, s => s.planet.crystalMine)] },
   { period: 1, id: 3, group: "Daily", title: "Solar Plant Lv 4", hint: "A powered colony is a productive colony.", reward: { metal: 700, crystal: 700, deuterium: 150 }, requirements: [questReq("Solar Plant", 4, s => s.planet.solarPlant)] },
@@ -1076,8 +1078,9 @@ function allianceThreshold(level: number): bigint {
   const prev = BigInt(Math.max(0, level - 1));
   return (prev * BigInt(level) * 1000n) / 2n;
 }
-export function activeQuestDefinitions(nowTs: number, questProgress: QuestProgressStateAccount | null | undefined): QuestDefinition[] {
-  const tutorialAndCheckIn = QUEST_DEFINITIONS.filter(q => q.period === 0 || (q.period === 1 && q.id === 0));
+export function activeQuestDefinitions(nowTs: number, questProgress: QuestProgressStateAccount | null | undefined, questState?: QuestStateAccount | null): QuestDefinition[] {
+  const tutorialAndCheckIn = QUEST_DEFINITIONS.filter(q => q.period === 0 || (q.period === 1 && q.id === 0))
+    .map(q => q.checkIn ? {...q, reward: dailyCheckInReward(questState, nowTs)} : q);
   const dailyQuestEpoch = dailyEpoch(nowTs);
   const weeklyQuestEpoch = weeklyEpoch(nowTs);
   const monthlyQuestEpoch = monthlyEpoch(nowTs);
@@ -4333,10 +4336,9 @@ const QuestsTab: React.FC<{
   });
   const hideTutorial = tutorialQuestsComplete(questState);
   const groups: Array<QuestDefinition["group"]> = hideTutorial ? ["Daily", "Weekly", "Monthly"] : ["Tutorial", "Daily", "Weekly", "Monthly"];
-  const visibleQuests = activeQuestDefinitions(nowTs, questProgress).filter(quest => !hideTutorial || quest.group !== "Tutorial");
+  const visibleQuests = activeQuestDefinitions(nowTs, questProgress, questState).filter(quest => !hideTutorial || quest.group !== "Tutorial");
   const currentDay = dailyEpoch(nowTs);
   const checkInClaimed = questState?.dailyCheckinDay === currentDay || hasQuestBit(questClaimedMask(1, questState, nowTs), 0);
-  const nextStreak = Math.min((questState?.dailyCheckinStreak ?? 0) + 1, 30);
   const planetNameByPda = useMemo(() => {
     const map = new Map<string, string>();
     for (const planet of planets) {
@@ -4398,20 +4400,15 @@ const QuestsTab: React.FC<{
                 const missing = statuses.filter(req => !req.met);
                 const metCount = statuses.length - missing.length;
                 const progress = statuses.length === 0 ? 100 : Math.round((metCount / statuses.length) * 100);
-                const canClaim = missing.length === 0 && !claimed;
                 const targetPlanet = quest.period === 0 || quest.checkIn
                   ? null
                   : questRewardTargetForRequirement(quest.period as 1 | 2 | 3, quest.requirements[0]?.label ?? "", questRewardTargets);
                 const targetPlanetKey = targetPlanet?.toBase58() ?? null;
                 const targetPlanetName = targetPlanetKey ? (planetNameByPda.get(targetPlanetKey) ?? "another planet") : null;
                 const claimOnWrongPlanet = !!targetPlanetKey && targetPlanetKey !== state.entityPda && targetPlanetKey !== state.planetPda;
-                const reward = quest.checkIn
-                  ? {
-                      metal: quest.reward.metal + nextStreak * 50,
-                      crystal: quest.reward.crystal + Math.floor(nextStreak * 25),
-                      deuterium: quest.reward.deuterium + Math.floor(nextStreak * 10),
-                    }
-                  : quest.reward;
+                const reward = quest.reward;
+                const storageBlock = quest.checkIn && !questState ? 'Checking check-in' : rewardStorageBlock(reward, state.resources);
+                const canClaim = missing.length === 0 && !claimed && !claimOnWrongPlanet && !storageBlock;
 
                 return (
                   <div key={`${quest.period}:${quest.id}`} className={`quest-card ${claimed ? "claimed" : canClaim ? "ready" : "locked"}`}>
@@ -4453,14 +4450,14 @@ const QuestsTab: React.FC<{
                     <div className="quest-actions">
                       <button
                         className={`quest-btn${claimed ? " claimed" : missing.length ? " locked" : ""}`}
-                        disabled={txBusy || claimed || claimOnWrongPlanet}
+                        disabled={txBusy || claimed || claimOnWrongPlanet || Boolean(storageBlock)}
                         onClick={() => {
-                          if (claimOnWrongPlanet) return;
+                          if (claimOnWrongPlanet || storageBlock) return;
                           if (missing.length) { setLockedQuest(quest); return; }
                           quest.checkIn ? onDailyCheckIn() : onClaimQuest(quest.period, quest.id);
                         }}
                       >
-                        {claimed ? "CLAIMED" : claimOnWrongPlanet ? `CLAIM FROM ${targetPlanetName}` : missing.length ? `REQUIREMENTS (${missing.length})` : "CLAIM"}
+                        {claimed ? "CLAIMED" : claimOnWrongPlanet ? `CLAIM FROM ${targetPlanetName}` : missing.length ? `REQUIREMENTS (${missing.length})` : storageBlock ?? "CLAIM"}
                       </button>
                     </div>
                   </div>
@@ -5887,28 +5884,20 @@ const App: React.FC = () => {
     );
   };
 
-  const getDailyCheckInRewardDelta = (): ResourceDelta => {
-    const currentDay = Math.floor(nowTs / 86_400);
-    const previousDay = questState?.dailyCheckinDay ?? -1;
-    const nextStreak = previousDay === currentDay - 1
-      ? Math.min((questState?.dailyCheckinStreak ?? 0) + 1, 30)
-      : 1;
-    return {
-      metal: 500 + nextStreak * 50,
-      crystal: 300 + Math.floor((nextStreak * 50) / 2),
-      deuterium: 100 + Math.floor((nextStreak * 50) / 5),
-    };
+  const getDailyCheckInRewardDelta = () => {
+    return dailyCheckInReward(questState, nowTs);
   };
 
   const handleDailyCheckIn = async () => {
     if (!clientRef.current || !state) return;
-    if (!confirmResourceCapWarning("Daily check-in", getDailyCheckInRewardDelta())) return;
+    if (!questState || rewardStorageBlock(getDailyCheckInRewardDelta(), liveRes ?? state.resources)) return;
     await withTx("Daily check-in", () => clientRef.current!.dailyCheckIn(new PublicKey(state.entityPda)), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); });
   };
 
   const handleClaimQuest = async (period: QuestPeriod, questId: number) => {
     if (!clientRef.current || !state) return;
-    const quest = activeQuestDefinitions(nowTs, questProgress).find(entry => entry.period === period && entry.id === questId);
+    if (period === 1 && questId === 0) return handleDailyCheckIn();
+    const quest = activeQuestDefinitions(nowTs, questProgress, questState).find(entry => entry.period === period && entry.id === questId);
     if (quest && !confirmResourceCapWarning(`Claim ${quest.title}`, quest.reward)) return;
     await withTx("Claim quest", () => clientRef.current!.claimQuest(new PublicKey(state.entityPda), period, questId), async () => { await refreshSelectedPlanetState(); await refreshQuestState(); });
   };

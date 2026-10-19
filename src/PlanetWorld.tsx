@@ -2455,7 +2455,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
       </section>;
     })}</>;
   };
-  const questDefinitions = activeQuestDefinitions(nowTs, questProgress);
+  const questDefinitions = activeQuestDefinitions(nowTs, questProgress, questState);
   const questsHideTutorial = tutorialQuestsComplete(questState);
   const questGroups: QuestDefinition["group"][] = questsHideTutorial ? ["Daily", "Weekly", "Monthly"] : ["Tutorial", "Daily", "Weekly", "Monthly"];
   const questWorldNames = new Map(worlds.map((world) => [world.entity, world.name]));
@@ -2469,7 +2469,7 @@ export default function PlanetWorld({ state, busy, run, onExit, onOpenWallet, wa
     const wrongPlanet = !!targetKey && targetKey !== state.entityPda && targetKey !== state.planetPda;
     const targetName = targetKey ? (questWorldNames.get(targetKey) ?? "recorded world") : null;
     const progress = claimed || complete ? 100 : statuses.length === 0 ? 0 : Math.round(statuses.reduce((sum, requirement) => sum + Math.min(1, requirement.current / Math.max(1, requirement.required)), 0) / statuses.length * 100);
-    const storageBlock = rewardStorageBlock(quest.reward, resource);
+    const storageBlock = quest.checkIn && !questState ? 'Checking check-in' : rewardStorageBlock(quest.reward, resource);
     return { quest, statuses, complete, claimed, wrongPlanet, targetName, progress, storageBlock };
   });
   const questReadyCount = questCards.filter((card) => card.complete && !card.claimed && !card.wrongPlanet && !card.storageBlock).length;

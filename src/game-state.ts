@@ -13,7 +13,8 @@ import bs58 from "bs58";
 import { Buffer } from "buffer";
 import { accountRentTotal } from './account-rent';
 import { preflightCommand } from './command-preflight';
-import { assertCommandInteger, assertResourceAmount, constructionBlockReason, storePackBlock } from './command-validation';
+import { assertCommandInteger, assertResourceAmount, constructionBlockReason, rewardStorageBlock, storePackBlock } from './command-validation';
+import { dailyCheckInReward } from './quest-rewards';
 import { STORE_PACKS } from './store-catalog';
 import { projectResources } from './resource-projection';
 
@@ -5745,10 +5746,15 @@ export class GameClient {
   }
 
   async dailyCheckIn(entityPda: PublicKey): Promise<string> {
-    await this.ensureQuestState();
-    await this.ensureQuestProgress();
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    const quest = await this.getQuestState(authority);
+    if (!state || !quest) throw new Error('Check-in data could not be loaded. Nothing was submitted.');
+    const now = Math.floor(Date.now() / 1000);
+    if (quest.dailyCheckinDay === Math.floor(now / 86_400)) throw new Error('Today\'s UTC check-in is already claimed. Nothing was submitted.');
+    const block = rewardStorageBlock(dailyCheckInReward(quest, now), projectResources(state.resources, now));
+    if (block) throw new Error(`${block}. Nothing was submitted.`);
+    await this.ensureQuestProgress();
     await this.prepareVaultSigningForAuthority(authority);
     return this.sendVaultInstruction(
       [this.buildQuestInstruction(IX.dailyCheckInVault, IX.dailyCheckIn, entityPda, authority)],
