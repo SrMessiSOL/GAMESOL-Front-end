@@ -18,7 +18,7 @@ test('client selects buyer table only for resource purchases and bounded setup',
 });
 test('passkey submission refreshes its blockhash after finalizing the owner signature',()=>{
   assert.match(source,/finalizeExecute\(prepared, response\);\s*\/\/[^\n]+\n\s*const submissionBlockhash = await withRateLimitBackoff\(\(\) => rpc.getLatestBlockhash\('confirmed'\)\)/);
-  assert.match(source,/sendSponsored\(rpc, \[\.\.\.precompiles, \.\.\.wrapped\], \[\], submissionBlockhash/);
+  assert.match(source,/sendSponsored\(rpc, colonyComputeBudget\(instructions, \[\.\.\.precompiles, \.\.\.wrapped\]\), \[\], submissionBlockhash/);
 });
 
 test('client selects buyer compression for planet purchases, never repeated or altered commands',async()=>{

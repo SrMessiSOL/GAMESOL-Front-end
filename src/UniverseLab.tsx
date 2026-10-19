@@ -7,6 +7,7 @@ import { PublicKey } from "@solana/web3.js";
 import * as THREE from "three";
 import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, MapPin, Navigation2, TrendingUp, X, Zap, ZoomIn, ZoomOut } from "lucide-react";
 import { createUniverseSnapshotFromChainData, orbitForSystemPosition, pointOnUniverseOrbit, snapshotFromPublicPlanets, type UniverseMission, type UniverseOrbit, type UniversePlanet, type UniverseSnapshot } from "./universe-data";
+import { emptySystemDisplayOrbit, missionDestinationIsLocal, missionJourneyProgress } from './mission-scene';
 import { fetchAllianceDirectory, fetchAllianceGovernance, fetchAllPublicPlanets, fetchSystemSovereignties, fetchUniverseMapData, SOVEREIGNTY_WRITES_ENABLED, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceStateAccount, type SystemSovereigntyAccount } from "./game-state";
 import { planetSurfaceStyleForSystem, type PlanetSurfaceStyle } from "./planet-style";
 import { planetBiomeIndex, planetBiomeTexture } from "./planet-biome-assets";
@@ -1985,6 +1986,12 @@ function PlanetNode({ planet, displayOrbit, active, onSelect }: { planet: Univer
   </group>;
 }
 
+function emptySystemPlanetRadius(position: number, galaxy: number, system: number, orbit: UniverseOrbit): number {
+  const style = planetSurfaceStyleForSystem(position, galaxy, system);
+  const baseRadius = style.className === "gas" ? .62 : .49;
+  return baseRadius * THREE.MathUtils.clamp(1.02 - orbit.radius / 300, .84, 1) * systemPlanetLinearMagnification(position);
+}
+
 function EmptyPlanetSlot({ position, galaxy, system, orbit, onSelect }: { position: number; galaxy: number; system: number; orbit: UniverseOrbit; onSelect: () => void }) {
   const orbiter = React.useRef<THREE.Group>(null!);
   const planet = React.useRef<THREE.Group>(null!);
@@ -1994,9 +2001,7 @@ function EmptyPlanetSlot({ position, galaxy, system, orbit, onSelect }: { positi
   const surfaceTexture = useProceduralPlanetTexture(style, 6, 192);
   // Empty worlds remain smaller than inhabited worlds, but share the same
   // cinematic 20x-50x footprint progression across the system.
-  const baseRadius = style.className === "gas" ? .62 : .49;
-  const distanceScale = THREE.MathUtils.clamp(1.02 - orbit.radius / 300, .84, 1);
-  const radius = baseRadius * distanceScale * systemPlanetLinearMagnification(position);
+  const radius = emptySystemPlanetRadius(position, galaxy, system, orbit);
   const surfaceTint = useMemo(() => new THREE.Color("#ffffff").lerp(new THREE.Color(style.previewColor), .025), [style.previewColor]);
   const clouded = style.className === "ocean" || style.className === "terran" || style.className === "ice";
   useFrame(({ camera, clock }) => {
@@ -2339,8 +2344,9 @@ function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMiss
   const vessel = React.useRef<THREE.Group>(null!);
   const [routePoints, setRoutePoints] = useState<Array<[number, number, number]>>([]);
   const lastRouteLineUpdate = useRef(-1);
+  const progressEpoch = useRef(Date.now() / 1000);
   useFrame(({ clock }) => {
-    if ((!source && !mission.sourceCoordinates) || (!target && !mission.destinationCoordinates) || !vessel.current) return;
+    if ((!source && !mission.sourceCoordinates) || (!target && !mission.destinationCoordinates && !mission.destinationOrbit) || !vessel.current) return;
     const elapsed = clock.getElapsedTime();
     const bodies = planets.map((planet) => ({
       id: planet.id,
@@ -2348,28 +2354,27 @@ function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMiss
       clearance: occupiedSystemPlanetRadius(planet) * 1.16,
     }));
     const sourceCenter = source ? livePlanetPosition(source, elapsed) : new THREE.Vector3(...mission.sourceCoordinates!);
-    const targetCenter = target ? livePlanetPosition(target, elapsed) : new THREE.Vector3(...mission.destinationCoordinates!);
+    const targetCenter = target ? livePlanetPosition(target, elapsed) : mission.destinationOrbit
+      ? new THREE.Vector3(...pointOnUniverseOrbit(mission.destinationOrbit, mission.destinationOrbit.phase + elapsed * mission.destinationOrbit.angularVelocity))
+      : new THREE.Vector3(...mission.destinationCoordinates!);
     const route = collisionSafeFleetCurve({
       missionId: mission.id,
       sourceCenter,
       targetCenter,
       sourceIsPlanet: !!source,
-      targetIsPlanet: !!target,
+      targetIsPlanet: !!target || !!mission.destinationOrbit,
       bodies,
       sourceId: mission.sourceId,
       targetId: mission.destinationId,
       sourceClearance: source ? occupiedSystemPlanetRadius(source) * 1.08 : 0,
-      targetClearance: target ? occupiedSystemPlanetRadius(target) * 1.08 : 0,
+      targetClearance: target ? occupiedSystemPlanetRadius(target) * 1.08 : mission.destinationClearance ?? 0,
       starClearance,
     });
     if (lastRouteLineUpdate.current < 0 || elapsed - lastRouteLineUpdate.current >= .2) {
       lastRouteLineUpdate.current = elapsed;
       setRoutePoints(route.getPoints(48).map((point) => point.toArray() as [number, number, number]));
     }
-    const elapsedProgress = elapsed / Math.max(1, mission.durationSeconds);
-    const journeyProgress = mission.phase === "arrived" || mission.phase === "returned"
-      ? 1
-      : Math.min(1, mission.progress + elapsedProgress);
+    const journeyProgress = missionJourneyProgress(mission, Date.now() / 1000, progressEpoch.current);
     // Once a leg finishes, the fleet is no longer physically travelling. Hide
     // both the ship and its route while it waits for resolution at the planet.
     routeGroup.current.visible = (mission.phase === "outbound" || mission.phase === "returning") && journeyProgress < 1;
@@ -2381,7 +2386,7 @@ function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMiss
     if (mission.phase === "returning") direction.multiplyScalar(-1);
     vessel.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
   });
-  if ((!source && !mission.sourceCoordinates) || (!target && !mission.destinationCoordinates)) return null;
+  if ((!source && !mission.sourceCoordinates) || (!target && !mission.destinationCoordinates && !mission.destinationOrbit)) return null;
   const color = mission.kind === "attack" ? "#ff586d" : mission.kind === "espionage" ? "#d998ff" : mission.kind === "colonize" ? "#ffc866" : "#45f4c1";
   return <group ref={routeGroup} visible={mission.phase === "outbound" || mission.phase === "returning"}>{routePoints.length > 1 && <><Line points={routePoints} color={color} transparent opacity={.12} lineWidth={1.5} /><Line points={routePoints} color={color} transparent opacity={.42} lineWidth={.72} dashed dashScale={3.2} dashSize={.24} gapSize={.34} /></>}
     <group ref={vessel}>
@@ -2445,9 +2450,13 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
       // likewise no longer an active flight.
       if (mission.phase === "arrived" || mission.phase === "returned") return [];
       const sourceHere = planetIds.has(mission.sourceId);
-      const destinationHere = planetIds.has(mission.destinationId);
+      const destinationHere = planetIds.has(mission.destinationId) || missionDestinationIsLocal(mission, selectedGalaxy, selectedSystem);
       if (!sourceHere && !destinationHere) return [];
-      if (sourceHere && destinationHere) return [mission];
+      const emptyTarget = destinationHere && !planetIds.has(mission.destinationId) && mission.destinationPosition;
+      const destinationOrbit = emptyTarget ? emptySystemDisplayOrbit(emptyTarget.position, selectedGalaxy, selectedSystem, SYSTEM_ORBIT_PRESENTATION_SCALE, systemStarOrbitOffset(currentStar)) : undefined;
+      const localMission = { ...mission, destinationOrbit,
+        destinationClearance: destinationOrbit && emptyTarget ? emptySystemPlanetRadius(emptyTarget.position, selectedGalaxy, selectedSystem, destinationOrbit) * 1.08 : undefined };
+      if (sourceHere && destinationHere) return [localMission];
 
       // Cross-system missions are real on-chain routes, but their remote planet
       // is outside this system scene. Project that endpoint beyond the last
@@ -2465,12 +2474,12 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
         Math.sin(angle) * 330,
       ];
       return [{
-        ...mission,
+        ...localMission,
         sourceCoordinates: sourceHere ? mission.sourceCoordinates : externalPoint,
         destinationCoordinates: destinationHere ? mission.destinationCoordinates : externalPoint,
       }];
     });
-  }, [currentSystemDisplayPlanets, snapshot.missions]);
+  }, [currentSystemDisplayPlanets, snapshot.missions, selectedGalaxy, selectedSystem, currentStar]);
   const currentGalaxyKind = galaxyKindForId(selectedGalaxy);
   const starLabelOffset = -(systemStarClearanceRadius(currentStar) * 1.34);
   return <Canvas dpr={[1, 1.5]} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.setClearColor("#01030a"); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.08; }}>
@@ -2504,17 +2513,7 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
       </Html>
       {Array.from({ length: PLANETS_PER_SYSTEM }, (_, index) => index + 1).map((position) => {
         const planet = currentSystemDisplayPlanets.find((candidate) => Number(candidate.system.split(":")[2]) === position);
-        const baseOrbit = planet?.orbit ?? orbitForSystemPosition(position, selectedGalaxy * 1000 + selectedSystem);
-        const orbit = planet ? baseOrbit : { ...baseOrbit, radius: baseOrbit.radius * 1.3 * SYSTEM_ORBIT_PRESENTATION_SCALE + systemStarOrbitOffset(currentStar) };
-        const displayOrbit = planet
-          ? orbit
-          : {
-              ...orbit,
-              // Preserve the orbital tilt while compensating for its rotated
-              // plane, so neighboring empty slots cannot visually bunch up.
-              phase: orbit.phase - (orbit.ascendingNode ?? 0),
-              angularVelocity: orbit.angularVelocity * .12,
-            };
+        const displayOrbit = planet?.orbit ?? emptySystemDisplayOrbit(position, selectedGalaxy, selectedSystem, SYSTEM_ORBIT_PRESENTATION_SCALE, systemStarOrbitOffset(currentStar));
         return <React.Fragment key={planet?.id ?? `empty-${position}`}><OrbitPath orbit={displayOrbit} faction={planet?.faction} active={planet?.id === selected?.id} />{planet ? <PlanetNode planet={planet} displayOrbit={displayOrbit} active={selected?.id === planet.id} onSelect={() => onSelect(planet)} /> : <EmptyPlanetSlot position={position} galaxy={selectedGalaxy} system={selectedSystem} orbit={displayOrbit} onSelect={() => onEmptySlotSelect({ galaxy: selectedGalaxy, system: selectedSystem, position })} />}</React.Fragment>;
       })}
       {currentSystemMissions.map((mission) => <FleetRoute key={mission.id} mission={mission} planets={currentSystemDisplayPlanets} starClearance={systemStarClearanceRadius(currentStar) + 1.8} />)}
@@ -2570,7 +2569,8 @@ function CompatibilityUniverseScene({ snapshot, level, selectedGalaxy, selectedS
 
 export default function UniverseLab({ embedded = false, productionUi = false, initialEmpireOpen, onOpenCommand, onOpenEmptyTarget, onNavigationLevelChange, ownedPlanets = [], activeOwnedPlanet, onOperatePlanet, initialGalaxy, initialSystem, sponsorTokenAccounts, onSceneReady }: { embedded?: boolean; productionUi?: boolean; initialEmpireOpen?: boolean; onOpenCommand?: (planet: UniversePlanet) => void; onOpenEmptyTarget?: (target: { galaxy: number; system: number; position: number }) => void; onNavigationLevelChange?: (level: ZoomLevel) => void; ownedPlanets?: UniverseOwnedPlanet[]; activeOwnedPlanet?: string; onOperatePlanet?: (planet: UniverseOwnedPlanet) => void; initialGalaxy?: number; initialSystem?: number; sponsorTokenAccounts?: SponsoredTokenAccountBuilder; onSceneReady?: () => void }) {
   const demoParams = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
-  const localSystemDemo = import.meta.env.DEV && demoParams?.get("system-demo") === "full";
+  const localSystemDemo = import.meta.env.DEV && ["full", "colony"].includes(demoParams?.get("system-demo") ?? "");
+  const localColonyDemo = import.meta.env.DEV && demoParams?.get("system-demo") === "colony";
   const demoGalaxy = Math.max(1, Math.min(MAX_GALAXY, Number(demoParams?.get("galaxy")) || 3));
   const demoSystem = Math.max(1, Math.min(SYSTEMS_PER_GALAXY, Number(demoParams?.get("system")) || 293));
   const { connection } = useConnection();
@@ -2584,7 +2584,6 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
   const empireOpenedByControlRef = useRef(false);
   const empireRestoreFocusRef = useRef(false);
   const [viewContextOpen, setViewContextOpen] = useState(() => typeof window === "undefined" || !window.matchMedia("(max-width: 700px)").matches);
-  const [navigationRailOpen, setNavigationRailOpen] = useState(true);
   const [zoomLevel, commitZoomLevel] = useState<ZoomLevel>(initialGalaxy && initialSystem || localSystemDemo ? "system" : "universe");
   const mapTransit = useSceneTransit();
   const setZoomLevel = (level: ZoomLevel) => {
@@ -2744,7 +2743,14 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
     let cancelled = false;
     const load = async () => {
       if (localSystemDemo) {
-        applySnapshot(createFullSystemVisualDemo(demoGalaxy, demoSystem));
+        const fixture = createFullSystemVisualDemo(demoGalaxy, demoSystem);
+        if (localColonyDemo) {
+          fixture.planets = fixture.planets.slice(0, 1);
+          fixture.missions = [{ id: 'local-colony-to-empty-slot', sourceId: fixture.planets[0].id,
+            destinationId: `G${demoGalaxy}S${demoSystem}P2`, destinationPosition: { galaxy: demoGalaxy, system: demoSystem, position: 2 },
+            kind: 'colonize', phase: 'outbound', progress: .82, etaSeconds: 648, durationSeconds: 3600 }];
+        }
+        applySnapshot(fixture);
         return;
       }
       try {
@@ -2771,7 +2777,7 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
       cancelled = true;
       clearInterval(timer);
     };
-  }, [connection, publicKey?.toBase58(), localSystemDemo, demoGalaxy, demoSystem]);
+  }, [connection, publicKey?.toBase58(), localSystemDemo, localColonyDemo, demoGalaxy, demoSystem]);
   useEffect(() => {
     let cancelled = false;
     const loadSovereignty = async () => {
@@ -3240,13 +3246,10 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
       />}
     </div>
     <div className={`scene-optics is-${zoomLevel}`} aria-hidden="true" />
-    {localSystemDemo && <aside className="system-demo-banner" role="status"><div><b>LOCAL FULL-SYSTEM SIMULATION</b><span>15 TEST WORLDS · 4 ALLIANCES · 24 ACTIVE FLEETS · COLLISION-SAFE ORBITS · NO ON-CHAIN DATA</span><nav className="system-demo-alliance-legend" aria-label="Simulated alliances">{SYSTEM_DEMO_ALLIANCES.map((alliance) => <i key={alliance.tag}><em style={{ background: FACTION_COLORS[alliance.faction] }} />{alliance.tag}</i>)}</nav></div><a href={window.location.pathname}>EXIT DEMO</a></aside>}
+    {localSystemDemo && <aside className="system-demo-banner" role="status"><div><b>{localColonyDemo ? "LOCAL COLONY ROUTE CHECK" : "LOCAL FULL-SYSTEM SIMULATION"}</b><span>{localColonyDemo ? "1 COLONY SHIP · EMPTY SLOT 2 · NO ON-CHAIN DATA" : "15 TEST WORLDS · 4 ALLIANCES · 24 ACTIVE FLEETS · COLLISION-SAFE ORBITS · NO ON-CHAIN DATA"}</span><nav className="system-demo-alliance-legend" aria-label="Simulated alliances">{SYSTEM_DEMO_ALLIANCES.map((alliance) => <i key={alliance.tag}><em style={{ background: FACTION_COLORS[alliance.faction] }} />{alliance.tag}</i>)}</nav></div><a href={window.location.pathname}>EXIT DEMO</a></aside>}
     <header className="universe-topbar">
       <a href="/" className="universe-brand" aria-label="GAMESOL home"><img src={gamesolMark} alt="GAMESOL" /></a>
-      <div className={`navigation-console${navigationRailOpen ? "" : " is-collapsed"}`}>
-        <button className="navigation-rail-toggle" type="button" aria-label={navigationRailOpen ? "Collapse navigation controls" : "Expand navigation controls"} title={navigationRailOpen ? "Collapse navigation controls" : "Expand navigation controls"} aria-expanded={navigationRailOpen} onClick={() => setNavigationRailOpen((open) => !open)}>
-          {navigationRailOpen ? <X aria-hidden="true" /> : <Navigation2 aria-hidden="true" />}
-        </button>
+      <div className="navigation-console">
         <div className="camera-controls" aria-label="Camera zoom">
           {zoomLevel === "system" && <GameIconButton className="camera-survey polished-control" label="Survey system" onClick={() => setSelected(null)}><Navigation2 aria-hidden="true" /></GameIconButton>}
           <GameIconButton className="camera-zoom polished-control" label="Zoom camera out" disabled={graphicsMode === "compat"} onClick={() => setCameraZoom(({ id }) => ({ id: id + 1, direction: "out" }))}><ZoomOut aria-hidden="true" /></GameIconButton>

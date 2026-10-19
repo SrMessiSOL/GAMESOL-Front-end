@@ -160,6 +160,7 @@ const code=ts.transpileModule(fn.getText(ast),{compilerOptions:{module:ts.Module
 function executor(extra={}) {
   const exports={}; const trace=[];
   const mock={exports,Buffer,Error,PublicKey:web3.PublicKey,Ed25519Program:web3.Ed25519Program,
+    colonyComputeBudget:(_commands, wrapped)=>wrapped,
     IS_DEVNET:true,env:{},refreshPlayerFundedSession:async()=>({active:true}),
     readStoredSession:()=>({walletPda:payer.toBase58(),sessionPda:payer.toBase58(),active:true}),
     keypairFromStored:()=>({publicKey:payer}),connection:()=>rpc(),

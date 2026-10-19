@@ -31,7 +31,7 @@ test('ownership refresh does not revoke a still-connected wallet utility message
 test('Lazor session forwarding executes ownership precompiles outside the CPI wrapper',()=>{
   const source=read('player-funded-session.ts');
   assert.match(source,/instructions = instructions\.filter\(instruction => !instruction\.programId\.equals\(Ed25519Program\.programId\)\)/);
-  assert.match(source,/sendSponsored\(rpc, \[\.\.\.precompiles, \.\.\.wrapped\], \[sessionKeypair\]/);
+  assert.match(source,/sendSponsored\(rpc, submission, \[sessionKeypair\]/);
   assert.match(read('game-state.ts'),/sendUfoInstructions[\s\S]*?commander\.equals\(this\.provider\.wallet\.publicKey\)[\s\S]*?execute\(instructions, 'session'\)/);
 });
 test('UFO issuer targets the existing LazorKit game instead of the legacy public program', () => {

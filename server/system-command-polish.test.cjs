@@ -16,7 +16,8 @@ test('system survey clears only camera selection and keeps renderer fallback int
   assert.match(map, /onContextLost=\{\(\) => setGraphicsMode\("compat"\)\}/);
   assert.match(map, /<CompatibilityUniverseScene/);
   assert.match(map, /import "\.\/system-command-polish.css"/);
-  assert.match(map, /\[navigationRailOpen, setNavigationRailOpen\] = useState\(true\)/);
+  assert.doesNotMatch(map, /navigationRailOpen|navigation-rail-toggle/);
+  assert.match(map, /<div className="navigation-console">/);
 });
 
 test('orbital positions reuse a compact desktop strip and two mobile rows with visible keyboard focus', () => {

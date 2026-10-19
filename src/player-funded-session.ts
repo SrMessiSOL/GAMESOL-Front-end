@@ -18,6 +18,7 @@ import { serializeDeferredPayload, deserializeDeferredPayload } from './lazor-de
 import { paymentTestPhase } from './payment-recovery-qa';
 import { assertFreshPasskeyApproval } from './passkey-approval-age';
 import { preflightCommand } from './command-preflight';
+import { colonyComputeBudget } from './colony-compute-budget';
 import { signWithPopupRecovery, withPreparationTimeout } from './passkey-connect-recovery';
 import {
   createAssociatedTokenAccountInstruction,
@@ -741,10 +742,11 @@ export async function executeWithPlayerSession(
       }),
       takeLatestBlockhash(rpc),
     ]);
-    if (IS_DEVNET) await withPreparationTimeout(preflightCommand(rpc, sponsorPayer, [...precompiles, ...wrapped], async () => [
+    const submission = colonyComputeBudget(instructions, [...precompiles, ...wrapped]);
+    if (IS_DEVNET) await withPreparationTimeout(preflightCommand(rpc, sponsorPayer, submission, async () => [
       await fetchUfoLookupTable(rpc, sponsorPayer), await fetchAllianceLookupTable(rpc, sponsorPayer), await fetchMarketLookupTable(rpc, sponsorPayer),
     ]));
-    return sendSponsored(rpc, [...precompiles, ...wrapped], [sessionKeypair], latest);
+    return sendSponsored(rpc, submission, [sessionKeypair], latest);
   }
 
   const [resolved, displayBlockhash] = await Promise.all([
@@ -833,7 +835,7 @@ export async function executeWithPlayerSession(
   const { instructions: wrapped } = resolved.client.finalizeExecute(prepared, response);
   // Passkey approval can outlive the display transaction's blockhash.
   const submissionBlockhash = await withRateLimitBackoff(() => rpc.getLatestBlockhash('confirmed'));
-  return sendSponsored(rpc, [...precompiles, ...wrapped], [], submissionBlockhash,
+  return sendSponsored(rpc, colonyComputeBudget(instructions, [...precompiles, ...wrapped]), [], submissionBlockhash,
     isMarketPurchaseBundle(instructions) ? 'market' : isAllianceCreationBundle(instructions) || isAllianceDepositBundle(instructions) ? 'alliance' : isStorePurchaseBundle(instructions) || isMarketListingBundle(instructions));
 }
 

@@ -62,6 +62,10 @@ export type UniverseMission = {
   destinationId: string;
   sourceCoordinates?: [number, number, number];
   destinationCoordinates?: [number, number, number];
+  destinationPosition?: { galaxy: number; system: number; position: number };
+  destinationOrbit?: UniverseOrbit;
+  destinationClearance?: number;
+  sampledAt?: number;
   kind: "transport" | "attack" | "espionage" | "colonize";
   phase: "outbound" | "arrived" | "returning" | "returned";
   progress: number;
@@ -215,7 +219,7 @@ export function createUniverseSnapshotFromChainData(
   const missions: UniverseMission[] = [];
   const missionIndexByDestination = new Map<string, number>();
   for (const source of planets) {
-    for (const mission of source.missions ?? []) {
+    for (const [slot, mission] of (source.missions ?? []).entries()) {
       // A populated mission slot remains authoritative until the player
       // resolves it on-chain, including while it waits at either endpoint.
       const active = mission.missionType > 0 && mission.departTs > 0;
@@ -226,9 +230,11 @@ export function createUniverseSnapshotFromChainData(
       if (current > 4) continue;
       const destinationId = coordinateMap.get(key) ?? `G${mission.targetGalaxy}S${mission.targetSystem}P${mission.targetPosition}`;
       missions.push({
-        id: `${source.entity}-${current + 1}`,
+        id: `${source.entity}-${slot}`,
         sourceId: source.entity,
         destinationId,
+        destinationPosition: { galaxy: mission.targetGalaxy, system: mission.targetSystem, position: mission.targetPosition },
+        sampledAt: now,
         kind: missionKindFromCode(mission.missionType),
         phase: mission.applied
           ? now >= mission.returnTs ? "returned" : "returning"
