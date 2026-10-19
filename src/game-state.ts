@@ -12,6 +12,10 @@ import { AnchorProvider, setProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
 import { accountRentTotal } from './account-rent';
+import { preflightCommand } from './command-preflight';
+import { assertCommandInteger, assertResourceAmount, constructionBlockReason, storePackBlock } from './command-validation';
+import { STORE_PACKS } from './store-catalog';
+import { projectResources } from './resource-projection';
 
 type PrivateSnapshot = {
   resources: unknown;
@@ -3549,7 +3553,7 @@ export class GameClient {
   }
 
 
-  private async findUserTokenAccountForMint(owner: PublicKey, mint: PublicKey, minAmount: bigint = 1n): Promise<PublicKey> {
+  private async findUserTokenAccountForMint(owner: PublicKey, mint: PublicKey, minAmount: bigint = 1n, label = 'the selected token'): Promise<PublicKey> {
     const response = await this.connection.getParsedTokenAccountsByOwner(
       owner,
       { mint, programId: TOKEN_PROGRAM_ID },
@@ -3563,11 +3567,10 @@ export class GameClient {
       if (amount >= minAmount) return account.pubkey;
     }
     if (!best) {
-      throw new Error(`No token account found for mint ${mint.toBase58()}.`);
+      throw new Error(`Your game account does not hold ${label} yet. Fund it before continuing. Nothing was submitted.`);
     }
     throw new Error(
-      `No single token account for mint ${mint.toBase58()} has enough balance. ` +
-      `Required ${minAmount.toString()}, best account has ${best.amount.toString()}.`,
+      `Your game account does not have enough ${label} in one token account for this action. Nothing was submitted.`,
     );
   }
 
@@ -3657,6 +3660,9 @@ export class GameClient {
       }
 
       const tx = new Transaction().add(...fullInstructions);
+
+      if (IS_DEVNET) await preflightCommand(this.connection,
+        extraSigners[0]?.publicKey ?? this.provider.wallet.publicKey, fullInstructions);
 
       const { blockhash, lastValidBlockHeight } =
         await this.connection.getLatestBlockhash("confirmed");
@@ -4090,9 +4096,13 @@ export class GameClient {
   }
 
   async purchaseStorePack(entityPda: PublicKey, period: number, packId: number): Promise<string> {
+    storePackPriceUsdc(period, packId);
+    const pack = STORE_PACKS.find(pack => pack.period === period && pack.id === packId);
+    if (!pack) throw new Error('This pack is unavailable. Nothing was submitted.');
+    const destination = await this.loadPlanetStateByPda(entityPda);
+    const storageBlock = storePackBlock(pack, destination ? projectResources(destination.resources, Math.floor(Date.now() / 1000)) : undefined);
+    if (storageBlock) throw new Error(`${storageBlock}. Nothing was submitted.`);
     const authority = this.provider.wallet.publicKey;
-    await this.ensureQuestProgress();
-    await this.ensureQuestRewardTargets(authority);
     const config = await this.getStoreConfig();
     if (!config) throw new Error("Store is not initialized yet.");
     if (!config.enabled) throw new Error("Store is currently disabled.");
@@ -4101,7 +4111,10 @@ export class GameClient {
       authority,
       usdcMint,
       storePackPriceUsdc(period, packId),
+      'USDC',
     );
+    await this.ensureQuestProgress();
+    await this.ensureQuestRewardTargets(authority);
     const writer = new BorshWriter();
     writer.writeU8(period);
     writer.writeU8(packId);
@@ -4645,6 +4658,11 @@ export class GameClient {
     missionId: number,
     amounts: { metal?: bigint | number; crystal?: bigint | number; deuterium?: bigint | number; antimatter?: bigint | number },
   ): Promise<string> {
+    assertCommandInteger('contribution period', period, 1, 3);
+    assertCommandInteger('contribution type', missionId, 0, 255);
+    for (const field of ['metal', 'crystal', 'deuterium', 'antimatter'] as const) {
+      assertResourceAmount(field, amounts[field] ?? 0n);
+    }
     const authority = this.provider.wallet.publicKey;
     const membership = await this.getAllianceMembership(authority);
     if (!membership) throw new Error("Join or create an alliance first.");
@@ -4716,9 +4734,11 @@ export class GameClient {
   }
 
   async upgradeAllianceBuilding(buildingId: number): Promise<string> {
+    assertCommandInteger('alliance building', buildingId, 0, 3);
     const authority = this.provider.wallet.publicKey;
     const membership = await this.getAllianceMembership(authority);
     if (!membership) throw new Error("Join or create an alliance first.");
+    if (membership.role !== 2) throw new Error('Only the current alliance leader can upgrade infrastructure. Nothing was submitted.');
     const alliancePda = new PublicKey(membership.alliance);
     if (!(await this.getAllianceTreasury(alliancePda))) {
       await this.initializeAllianceTreasury();
@@ -5736,6 +5756,8 @@ export class GameClient {
   }
 
   async claimQuest(entityPda: PublicKey, period: number, questId: number): Promise<string> {
+    assertCommandInteger('quest period', period, 0, 3);
+    assertCommandInteger('quest', questId, 0, 255);
     await this.ensureQuestState();
     await this.ensureQuestProgress();
     const state = await this.loadPlanetStateByPda(entityPda);
@@ -5751,10 +5773,18 @@ export class GameClient {
   }
 
   async startBuild(entityPda: PublicKey, buildingIdx: number): Promise<string> {
+    assertCommandInteger('building', buildingIdx, 0, 12);
     const writer = new BorshWriter();
     writer.writeU8(buildingIdx);
     writer.writeI64(Math.floor(Date.now() / 1000));
     const state = await this.loadPlanetStateByPda(entityPda);
+    if (!state) throw new Error('This planet could not be loaded. Nothing was submitted.');
+    const block = constructionBlockReason({buildingIdx, level: Number((state.planet as any)[BUILDINGS[buildingIdx].key]),
+      freeFields: state.planet.maxFields - state.planet.usedFields,
+      constructionBusy: state.planet.buildFinishTs > Math.floor(Date.now() / 1000),
+      productionBusy: state.planet.shipBuildItem !== 255 || state.planet.defenseBuildItem !== 255,
+      researchBusy: state.research.queueItem !== 255});
+    if (block) throw new Error(`${block}. Nothing was submitted.`);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
     await this.prepareVaultSigningForAuthority(authority);
     const sovereigntyKeys = await this.activeSovereigntyBonusKeys(state, authority);
@@ -5778,6 +5808,7 @@ export class GameClient {
   }
 
   async startResearch(entityPda: PublicKey, techIdx: number): Promise<string> {
+    assertCommandInteger('research', techIdx, 0, 9);
     const writer = new BorshWriter();
     writer.writeU8(techIdx);
     writer.writeI64(Math.floor(Date.now() / 1000));
@@ -5802,6 +5833,8 @@ export class GameClient {
   }
 
   async buildShip(entityPda: PublicKey, shipType: number, quantity: number): Promise<string> {
+    assertCommandInteger('ship type', shipType, 0, 13);
+    assertCommandInteger('ship quantity', quantity, 1, 0xffffffff);
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
     await this.prepareVaultSigningForAuthority(authority);
@@ -5836,6 +5869,8 @@ export class GameClient {
   }
 
   async buildDefense(entityPda: PublicKey, defenseType: number, quantity: number): Promise<string> {
+    assertCommandInteger('defense type', defenseType, 0, 9);
+    assertCommandInteger('defense quantity', quantity, 1, 0xffffffff);
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
     await this.prepareVaultSigningForAuthority(authority);
@@ -5878,6 +5913,13 @@ export class GameClient {
     target?: LaunchFleetTarget,
   ): Promise<string> {
     if (!target) throw new Error("Launch target is required.");
+    if (![1, 2, 5, 6].includes(missionType)) throw new Error('Choose a supported fleet mission. Nothing was submitted.');
+    assertCommandInteger('galaxy', target.galaxy, 1, 999);
+    assertCommandInteger('system', target.system, 1, 999);
+    assertCommandInteger('position', target.position, 1, 15);
+    assertCommandInteger('fleet speed', speedFactor, 10, 100);
+    for (const count of Object.values(ships)) assertCommandInteger('ship quantity', count ?? 0, 0, 0xffffffff);
+    for (const field of ['metal', 'crystal', 'deuterium'] as const) assertResourceAmount(field, cargo[field] ?? 0n);
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
     await this.prepareVaultSigningForAuthority(authority);

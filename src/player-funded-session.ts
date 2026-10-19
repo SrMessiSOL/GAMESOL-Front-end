@@ -17,12 +17,14 @@ import { runPlanetPurchase, type PendingPlanetPurchase } from './planet-purchase
 import { serializeDeferredPayload, deserializeDeferredPayload } from './lazor-deferred-payload';
 import { paymentTestPhase } from './payment-recovery-qa';
 import { assertFreshPasskeyApproval } from './passkey-approval-age';
+import { preflightCommand } from './command-preflight';
 import { signWithPopupRecovery, withPreparationTimeout } from './passkey-connect-recovery';
 import {
   createAssociatedTokenAccountInstruction,
   createTransferCheckedTokenInstruction,
   deriveAssociatedTokenAccount,
   GAME_STATE_PROGRAM_ID,
+  IS_DEVNET,
   IS_SHARED_PUBLIC_RPC,
   MARKET_PROGRAM_ID,
   RPC_ENDPOINT,
@@ -739,6 +741,9 @@ export async function executeWithPlayerSession(
       }),
       takeLatestBlockhash(rpc),
     ]);
+    if (IS_DEVNET) await withPreparationTimeout(preflightCommand(rpc, sponsorPayer, [...precompiles, ...wrapped], async () => [
+      await fetchUfoLookupTable(rpc, sponsorPayer), await fetchAllianceLookupTable(rpc, sponsorPayer), await fetchMarketLookupTable(rpc, sponsorPayer),
+    ]));
     return sendSponsored(rpc, [...precompiles, ...wrapped], [sessionKeypair], latest);
   }
 
@@ -746,7 +751,6 @@ export async function executeWithPlayerSession(
     resolvePasskeyWallet(rpc, wallet),
     takeLatestBlockhash(rpc),
   ]);
-  const signatureSlot = await freshPasskeySlot(rpc);
   if (isPlanetPurchaseBundle(instructions)) {
     const testPause = env.VITE_DEVNET_PAYMENT_QA === '1' && typeof window !== 'undefined'
       ? paymentTestPhase(env.VITE_DEVNET_PAYMENT_QA, window.location.hostname, window.location.search, await rpc.getGenesisHash()) : null;
@@ -763,6 +767,7 @@ export async function executeWithPlayerSession(
       load: () => { const raw = localStorage.getItem(storageKey); return raw ? JSON.parse(raw) as PendingPlanetPurchase : null; },
       save: record => { if (record) localStorage.setItem(storageKey, JSON.stringify(record)); else localStorage.removeItem(storageKey); },
       prepare: async () => {
+        if (IS_DEVNET) await withPreparationTimeout(preflightCommand(rpc, sponsorPayer, instructions, async () => [table]));
         const display = await buildDisplayTransaction(rpc, sponsorPayer, instructions, displayBlockhash.blockhash);
         approvalSlot = await freshPasskeySlot(rpc);
         const prepared = await resolved.client.authorizePrepare({payer: sponsorPayer, walletPda,
@@ -808,6 +813,10 @@ export async function executeWithPlayerSession(
       },
     });
   }
+  if (IS_DEVNET) await withPreparationTimeout(preflightCommand(rpc, sponsorPayer, [...precompiles, ...instructions], async () => [
+    await fetchUfoLookupTable(rpc, sponsorPayer), await fetchAllianceLookupTable(rpc, sponsorPayer), await fetchMarketLookupTable(rpc, sponsorPayer),
+  ]));
+  const signatureSlot = await freshPasskeySlot(rpc);
   const prepared = await resolved.client.prepareExecute({
     payer: sponsorPayer,
     walletPda,

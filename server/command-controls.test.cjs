@@ -89,19 +89,28 @@ test('quantity controls have labelled icon buttons, presets, and input bounds', 
 });
 
 test('store cards use original USDC artwork, do not show zero rewards, and never buy on the first click', () => {
-  const pack = STORE_PACKS.find((pack) => pack.group === 'Daily' && pack.id === 16);
+  const pack = STORE_PACKS.find((pack) => pack.group === 'Daily' && pack.id === 0);
+  const resources = {metal:0n,crystal:0n,deuterium:0n,metalCap:10000n,crystalCap:10000n,deuteriumCap:10000n};
   const html = renderToStaticMarkup(React.createElement(StorePackCard, {
-    pack, balance: 3_000_000n, worldName: 'Test-only destination', purchased: false, resetLabel: 'in 1h', onReview() {},
+    pack, resources, balance: 3_000_000n, worldName: 'Test-only destination', purchased: false, resetLabel: 'in 1h', onReview() {},
   }));
   assert.match(html, /usdc\.svg/);
   assert.match(html, /Review purchase/);
   assert.doesNotMatch(html, />0<|>Buy now</);
-  assert.match(html, /6h/);
+  assert(html.includes((3000).toLocaleString()));
   const blocked = renderToStaticMarkup(React.createElement(StorePackCard, {
-    pack, balance: 0n, worldName: 'Test-only destination', purchased: false, resetLabel: 'in 1h', onReview() {},
+    pack, resources, balance: 0n, worldName: 'Test-only destination', purchased: false, resetLabel: 'in 1h', onReview() {},
   }));
   assert.match(blocked, /Insufficient USDC/);
   assert.match(blocked, /disabled=""/);
+  const noRoom = renderToStaticMarkup(React.createElement(StorePackCard, {
+    pack, resources:{...resources,metal:9500n}, balance:3_000_000n, worldName:'Test-only destination', purchased:false, resetLabel:'in 1h', onReview() {},
+  }));
+  assert.match(noRoom,/Needs metal storage/); assert.match(noRoom,/disabled=""/);
+  const shield = renderToStaticMarkup(React.createElement(StorePackCard, {
+    pack:STORE_PACKS.find(pack=>pack.period===1&&pack.id===16), resources, balance:3_000_000n, worldName:'Test-only destination', purchased:false, resetLabel:'in 1h', onReview() {},
+  }));
+  assert.match(shield,/6h/); assert.match(shield,/Shield packs unavailable/); assert.match(shield,/disabled=""/);
 });
 
 test('every catalog pack retains the transaction client price after catalog extraction', () => {
@@ -129,7 +138,9 @@ test('construction, research and queues retain readiness gates and share the com
   const world = fs.readFileSync(path.join(__dirname, '../src/PlanetWorld.tsx'), 'utf8');
   assert.match(world, /trackCommand\(`building:\$\{building.key\}`/);
   assert.match(world, /trackCommand\('building:shipyard'/);
-  assert.match(world, /pendingCommand !== null \|\| queueBusy \|\| shipyardUpgradeBlocked \|\| !shipyardAffordable \|\| !shipyardRequirementsMet/);
+  assert.match(world, /pendingCommand !== null \|\| shipyardUpgradeBlocked \|\| !shipyardAffordable \|\| !shipyardRequirementsMet/);
+  assert.match(world, /constructionBusy: queueBusy, productionBusy: shipyardBusy, researchBusy/);
+  assert.match(world, /const shipyardBlock = constructionBlockFor\(7, state.planet.shipyard\)/);
   assert.match(world, /trackCommand\(`research:\$\{tech.key\}`/);
   assert.match(world, /pendingCommand !== null \|\| !buildingCommandReady/);
   assert.match(world, /pendingCommand !== null \|\| researchBusy \|\| researchLabUpgrading \|\| !ready/);

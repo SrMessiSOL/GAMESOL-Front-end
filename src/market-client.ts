@@ -19,6 +19,7 @@ import { AnchorProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
 import { marketStorageError } from './market-storage';
+import { assertCommandInteger, assertResourceAmount } from './command-validation';
 import { projectResources } from './resource-projection';
 import {
   createAssociatedTokenAccountInstruction,
@@ -556,6 +557,9 @@ export class MarketClient {
 
   async createOffer(params: CreateOfferParams, sellerPlanet?: PublicKey): Promise<string> {
     const { resourceType, resourceAmount, priceAntimatter } = params;
+    assertCommandInteger('resource type', resourceType, 0, 2);
+    assertResourceAmount('resource quantity', resourceAmount, 1n);
+    assertResourceAmount('ANTIMATTER price', priceAntimatter, 1n);
     const seller = this.provider.wallet.publicKey;
     const sellerPlanetPda = sellerPlanet ?? this.requireActivePlanet();
     const marketConfigPda = deriveMarketConfigPda();

@@ -1,0 +1,666 @@
+[
+  {
+    "slug": "building",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "Requirements not met"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "building",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "Requirements not met"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "research",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "research",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "shipyard",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "Shipyard locked",
+      "",
+      "",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "shipyard",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "Shipyard locked",
+      "",
+      "",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity",
+      "Invalid quantity"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "defenses",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "defenses",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked",
+      "Locked"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "ufo",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 715.3542175292969,
+      "left": 120,
+      "right": 1160,
+      "top": 184.64584350585935
+    },
+    "disabledButtons": [
+      "Check ownership",
+      "Launch UFO expedition"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "ufo",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 734.5000228881836,
+      "left": 8,
+      "right": 382,
+      "top": 109.48958587646484
+    },
+    "disabledButtons": [
+      "Check ownership",
+      "Launch UFO expedition"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "fleet",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 711.9062805175781,
+      "left": 120,
+      "right": 1160,
+      "top": 188.08334350585935
+    },
+    "disabledButtons": [
+      "Check ownership",
+      "Launch UFO expedition"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "fleet",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 741.2292098999023,
+      "left": 8,
+      "right": 382,
+      "top": 102.77083587646484
+    },
+    "disabledButtons": [
+      "Check ownership",
+      "Launch UFO expedition"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "quests",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "REWARD CLAIMED",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "quests",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "REWARD CLAIMED",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "store",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "store",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "alliance",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 782.3021240234375,
+      "left": 120,
+      "right": 1160,
+      "top": 117.6875
+    },
+    "disabledButtons": [
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "alliance",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "alliance",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 782.3021240234375,
+      "left": 120,
+      "right": 1160,
+      "top": 117.6875
+    },
+    "disabledButtons": [
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "Needs metal",
+      "Needs deuterium",
+      "Needs AM",
+      "Needs metal",
+      "Needs crystal",
+      "Needs metal",
+      "Needs AM",
+      "Needs metal",
+      "Needs metal",
+      "Needs crystal",
+      "Needs AM"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "alliance",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "Needs metal",
+      "Needs deuterium",
+      "Needs AM",
+      "Needs metal",
+      "Needs crystal",
+      "Needs metal",
+      "Needs AM",
+      "Needs metal",
+      "Needs metal",
+      "Needs crystal",
+      "Needs AM"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "contributions",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "Needs metal",
+      "Needs deuterium",
+      "Needs AM",
+      "Needs metal",
+      "Needs crystal",
+      "Needs metal",
+      "Needs AM",
+      "Needs metal",
+      "Needs metal",
+      "Needs crystal",
+      "Needs AM"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "contributions",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "LEADER ONLY",
+      "Needs metal",
+      "Needs deuterium",
+      "Needs AM",
+      "Needs metal",
+      "Needs crystal",
+      "Needs metal",
+      "Needs AM",
+      "Needs metal",
+      "Needs metal",
+      "Needs crystal",
+      "Needs AM"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "store",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "store",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC",
+      "Insufficient USDC"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "quests",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 884,
+      "left": 120,
+      "right": 1160,
+      "top": 16
+    },
+    "disabledButtons": [
+      "REWARD CLAIMED",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "quests",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "REWARD CLAIMED",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS",
+      "IN PROGRESS"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  },
+  {
+    "slug": "market",
+    "mode": "desktop",
+    "dialog": {
+      "bottom": 832.6250228881836,
+      "left": 120,
+      "right": 1160,
+      "top": 67.36458587646484
+    },
+    "disabledButtons": [
+      "+ CONFIRM BUY"
+    ],
+    "pageOverflow": false,
+    "width": 1280
+  },
+  {
+    "slug": "market",
+    "mode": "mobile",
+    "dialog": {
+      "bottom": 836,
+      "left": 8,
+      "right": 382,
+      "top": 8
+    },
+    "disabledButtons": [
+      "+ CONFIRM BUY"
+    ],
+    "pageOverflow": false,
+    "width": 390
+  }
+]

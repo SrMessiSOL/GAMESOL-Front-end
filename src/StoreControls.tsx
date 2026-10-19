@@ -2,7 +2,8 @@ import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, FlaskConical, Gem, Pickaxe, Shield, ShoppingCart, X } from 'lucide-react';
 import type { StorePack } from './store-catalog';
-import { formatUsdc, storePurchaseEligibility } from './command-validation';
+import { formatUsdc, storePackBlock, storePurchaseEligibility } from './command-validation';
+import type { Resources } from './game-state';
 import { CommandActionButton } from './design-system/command-controls';
 import { GameButton, GameIconButton } from './design-system/game-ui';
 import usdcCoin from './assets/ui/usdc.svg';
@@ -17,10 +18,12 @@ function PackContents({ pack }: { pack: StorePack }) {
   </div>;
 }
 
-export function StorePackCard({ pack, purchased, balance, worldName, pending = false, disabled = false, resetLabel, onReview }: {
-  pack: StorePack; purchased: boolean; balance: bigint; worldName: string; pending?: boolean; disabled?: boolean; resetLabel: string; onReview: (pack: StorePack) => void;
+export function StorePackCard({ pack, purchased, balance, resources, worldName, pending = false, disabled = false, resetLabel, onReview }: {
+  pack: StorePack; purchased: boolean; balance: bigint; resources: Resources; worldName: string; pending?: boolean; disabled?: boolean; resetLabel: string; onReview: (pack: StorePack) => void;
 }) {
   const eligibility = storePurchaseEligibility({ enabled: true, purchased, balance, price: pack.priceUsdc, pending });
+  const block = storePackBlock(pack, resources);
+  if (eligibility.allowed && block) { eligibility.allowed = false; eligibility.label = block; }
   const price = formatUsdc(pack.priceUsdc);
   return <article className={`command-store-pack${purchased ? ' is-purchased' : ''}`}>
     <div className="command-pack-copy"><h3>{pack.title}</h3><p>{pack.hint}</p><span className="command-pack-price"><img src={usdcCoin} alt="USDC" /><strong>{price}</strong></span></div>
@@ -28,13 +31,14 @@ export function StorePackCard({ pack, purchased, balance, worldName, pending = f
     <footer>
       <CommandActionButton icon={purchased ? <Check /> : <ShoppingCart />} pending={pending} pendingLabel="Purchasing..." disabled={disabled || !eligibility.allowed} title={purchased ? `Available again ${resetLabel}` : undefined} aria-label={eligibility.allowed ? `Review ${pack.title}, ${price} USDC` : `${pack.title}: ${eligibility.label}`} onClick={() => onReview(pack)}>{eligibility.label}</CommandActionButton>
       {!purchased && balance < pack.priceUsdc && !pending && <small className="command-pack-shortfall">Needs {formatUsdc(pack.priceUsdc - balance)} more USDC</small>}
+      {!purchased && block && <small className="command-pack-shortfall">{block}</small>}
       {purchased && <small>Resets {resetLabel}</small>}
     </footer>
   </article>;
 }
 
-export function StorePurchaseReview({ pack, worldName, balance, disabled = false, onClose, onConfirm }: {
-  pack: StorePack; worldName: string; balance: bigint; disabled?: boolean; onClose: () => void; onConfirm: () => void;
+export function StorePurchaseReview({ pack, worldName, balance, resources, disabled = false, onClose, onConfirm }: {
+  pack: StorePack; worldName: string; balance: bigint; resources: Resources; disabled?: boolean; onClose: () => void; onConfirm: () => void;
 }) {
   const ref = useRef<HTMLElement>(null);
   const titleId = useId();
@@ -57,7 +61,8 @@ export function StorePurchaseReview({ pack, worldName, balance, disabled = false
     document.addEventListener('keydown', key, true);
     return () => { document.removeEventListener('keydown', key, true); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
   }, []);
-  const allowed = !disabled && balance >= pack.priceUsdc;
+  const block = storePackBlock(pack, resources);
+  const allowed = !disabled && !block && balance >= pack.priceUsdc;
   return createPortal(<div className="command-purchase-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section ref={ref} className="command-purchase-review" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <header><h2 id={titleId}>Review purchase</h2><GameIconButton label="Close purchase review" onClick={onClose}><X aria-hidden="true" /></GameIconButton></header>
@@ -66,6 +71,7 @@ export function StorePurchaseReview({ pack, worldName, balance, disabled = false
       <PackContents pack={pack} />
       <small className="command-purchase-limit">One per {pack.group.toLowerCase()} reset. Resource storage and protection limits apply.</small>
       {balance < pack.priceUsdc && <p className="command-purchase-error" role="alert">Insufficient USDC.</p>}
+      {block && <p className="command-purchase-error" role="alert">{block}. No payment was sent.</p>}
       <footer><GameButton onClick={onClose}>Cancel</GameButton><CommandActionButton tone="primary" icon={<ShoppingCart />} disabled={!allowed} onClick={onConfirm}>Buy for {formatUsdc(pack.priceUsdc)} USDC</CommandActionButton></footer>
     </section>
   </div>, document.body);

@@ -5,6 +5,7 @@ const ts = require('typescript');
 const vm = require('node:vm');
 const { PublicKey, Keypair, TransactionInstruction } = require('@solana/web3.js');
 const { TOKEN_PROGRAM_ID } = require('@solana/spl-token');
+const { assertCommandInteger, assertResourceAmount } = require('./frontend-ts-loader.cjs').frontendLoader()('command-validation.ts');
 
 const source = ts.createSourceFile('game-state.ts', fs.readFileSync(require.resolve('../src/game-state.ts'), 'utf8'), ts.ScriptTarget.Latest, true);
 const cls = source.statements.find(n => ts.isClassDeclaration(n) && n.name?.text === 'GameClient');
@@ -15,6 +16,7 @@ class Writer { writeU8() {} writeU64() {} toBuffer() { return Buffer.alloc(34); 
 vm.runInNewContext(ts.transpileModule('class Subject {' + method.getText(source) + '}\nmodule.exports=Subject;', {
   compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS },
 }).outputText, { module: moduleTarget, PublicKey, TransactionInstruction, BorshWriter: Writer,
+  assertCommandInteger, assertResourceAmount,
   VAULT_MIN_BALANCE_LAMPORTS: 50000000, GAME_STATE_PROGRAM_ID: key(), TOKEN_PROGRAM_ID,
   deriveAssociatedTokenAccount: key, deriveAuthorizedVaultPda: key,
   deriveAllianceMembershipPda: key, deriveAllianceTreasuryPda: key,

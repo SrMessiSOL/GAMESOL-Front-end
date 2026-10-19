@@ -1,0 +1,169 @@
+{
+  "network": "devnet",
+  "slot": 512673221,
+  "signatureVerification": false,
+  "submitted": false,
+  "watchedAccountsUnchanged": true,
+  "boundary": "Real client preparation and current program-rule simulations only; no wallet authentication, execution or token spending.",
+  "results": [
+    {
+      "name": "affordable metal mine construction",
+      "allowed": true,
+      "submitted": false
+    },
+    {
+      "name": "affordable research command",
+      "allowed": true,
+      "submitted": false
+    },
+    {
+      "name": "eligible quest reward with sufficient storage",
+      "allowed": true,
+      "submitted": false
+    },
+    {
+      "name": "available cargo fleet launch",
+      "allowed": true,
+      "submitted": false
+    },
+    {
+      "name": "affordable resource sell order",
+      "allowed": true,
+      "submitted": false
+    },
+    {
+      "name": "affordable alliance crystal contribution",
+      "allowed": true,
+      "submitted": false
+    },
+    {
+      "name": "leader with funded alliance treasury",
+      "allowed": true,
+      "submitted": false
+    },
+    {
+      "name": "funded daily store pack eligibility without payment",
+      "allowed": true,
+      "submitted": false
+    },
+    {
+      "name": "oversized monthly store pack",
+      "allowed": false,
+      "message": "Needs deuterium storage. Nothing was submitted.",
+      "submitted": false
+    },
+    {
+      "name": "unsupported shield store pack",
+      "allowed": false,
+      "message": "Shield packs unavailable. Nothing was submitted.",
+      "submitted": false
+    },
+    {
+      "name": "deployed program rejects overflowing store delivery",
+      "allowed": false,
+      "message": "The delivery exceeds this planet's storage. Upgrade storage or choose a smaller delivery. Nothing was submitted.",
+      "guard": "Program log: AnchorError occurred. Error Code: ResourceCapExceeded. Error Number: 6066. Error Message: ResourceCapExceeded.",
+      "submitted": false
+    },
+    {
+      "name": "deployed program rejects unsupported shield pack",
+      "allowed": false,
+      "message": "The selected action is invalid. Refresh and check its requirements. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5293. Error Code: InvalidStorePack. Error Number: 6061. Error Message: InvalidStorePack.",
+      "submitted": false
+    },
+    {
+      "name": "locked nanite construction",
+      "allowed": false,
+      "message": "Complete the listed building and research requirements first. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:2843. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+      "submitted": false
+    },
+    {
+      "name": "missing impulse research prerequisites",
+      "allowed": false,
+      "message": "Complete the listed building and research requirements first. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3035. Error Code: LabTooLow. Error Number: 6011. Error Message: LabTooLow.",
+      "submitted": false
+    },
+    {
+      "name": "locked colony ship",
+      "allowed": false,
+      "message": "Complete the listed building and research requirements first. Nothing was submitted.",
+      "guard": "Program log: ProgramError occurred. Error Code: Custom(6020). Error Number: 6020. Error Message: Custom program error: 0x1784.",
+      "submitted": false
+    },
+    {
+      "name": "locked plasma defense",
+      "allowed": false,
+      "message": "Complete the listed building and research requirements first. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3400. Error Code: ShipyardTooLow. Error Number: 6020. Error Message: ShipyardTooLow.",
+      "submitted": false
+    },
+    {
+      "name": "empty research queue completion",
+      "allowed": false,
+      "message": "There is no queued work to finish. Refresh the planet. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3081. Error Code: NoResearch. Error Number: 6013. Error Message: NoResearch.",
+      "submitted": false
+    },
+    {
+      "name": "empty fleet launch",
+      "allowed": false,
+      "message": "Select at least one ship before launching. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1792. Error Code: EmptyFleet. Error Number: 6026. Error Message: EmptyFleet.",
+      "submitted": false
+    },
+    {
+      "name": "invalid quest",
+      "allowed": false,
+      "message": "The selected action is invalid. Refresh and check its requirements. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:4858. Error Code: InvalidQuest. Error Number: 6056. Error Message: InvalidQuest.",
+      "submitted": false
+    },
+    {
+      "name": "unaffordable store pack",
+      "allowed": false,
+      "message": "Your game account does not hold USDC yet. Fund it before continuing. Nothing was submitted.",
+      "submitted": false
+    },
+    {
+      "name": "excess resource sell order",
+      "allowed": false,
+      "message": "There are not enough resources for this action. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:7034. Error Code: InsufficientResources. Error Number: 6030. Error Message: InsufficientResources.",
+      "submitted": false
+    },
+    {
+      "name": "fractional ship quantity",
+      "allowed": false,
+      "message": "Check ship quantity: enter a whole number from 1 to 4.294.967.295. Nothing was submitted.",
+      "submitted": false
+    },
+    {
+      "name": "negative alliance contribution",
+      "allowed": false,
+      "message": "Check metal: the amount is outside the supported range. Nothing was submitted.",
+      "submitted": false
+    },
+    {
+      "name": "unavailable alliance deuterium contribution",
+      "allowed": false,
+      "message": "There is not enough deuterium for this action. Nothing was submitted.",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:1818. Error Code: InsufficientDeuterium. Error Number: 6007. Error Message: InsufficientDeuterium.",
+      "submitted": false
+    },
+    {
+      "name": "member cannot upgrade alliance infrastructure",
+      "allowed": false,
+      "message": "Only the current alliance leader can upgrade infrastructure. Nothing was submitted.",
+      "submitted": false
+    },
+    {
+      "name": "invalid alliance infrastructure",
+      "allowed": false,
+      "message": "Check alliance building: enter a whole number from 0 to 3. Nothing was submitted.",
+      "submitted": false
+    }
+  ]
+}

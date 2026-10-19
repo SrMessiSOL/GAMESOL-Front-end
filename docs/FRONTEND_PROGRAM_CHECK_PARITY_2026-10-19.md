@@ -1,6 +1,6 @@
 # Frontend / program check parity
 
-## Release boundary
+## Initial Storage Release Boundary
 
 Storage purchase protection is released and tested. Whole-game pre-signing
 parity is NOT yet certified. No generic simulation gate was included in this
@@ -8,6 +8,24 @@ release: simulating a raw instruction outside Lazor's actual wrapped execution
 can misrepresent authorization, precompile indices, rent and CPI context.
 Existing submitted-payment recovery must never be blocked by replaying a fresh
 purchase check against an already-filled listing.
+
+## Follow-Up: Shared Devnet Pre-Signing Checks
+
+The follow-up implementation adds a strictly devnet-genesis-checked, read-only
+program-rule simulation before new Lazor approvals. Session commands simulate
+their actual wrapped instructions; passkey commands simulate the prepared game
+instructions without claiming wallet authentication. Planet purchase checks run
+inside new-intent preparation, never ahead of pending-payment recovery.
+
+Explicit UI/client checks also cover numeric encoding bounds, building fields,
+maximum levels, cross-queue building restrictions, store/quest reward capacity,
+alliance contribution affordability, infrastructure treasury affordability and
+leader eligibility. The deployed store rejects shield packs and oversized
+deliveries; neither is offered as a valid purchase in the follow-up UI.
+
+See `DEVNET_FRONTEND_GUARDS_2026-10-19.md` and the read-only rehearsal JSON for
+evidence. This improves normal-command coverage; it does not certify every
+security constraint, legacy setup/withdrawal path, race or mainnet workflow.
 
 ## Reviewed surfaces and remaining verification
 

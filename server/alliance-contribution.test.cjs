@@ -6,7 +6,7 @@ const ts = require('typescript');
 const source = fs.readFileSync(require.resolve('../src/alliance-contribution.ts'), 'utf8');
 const exportsObject = {};
 vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, { exports: exportsObject });
-const { allianceContributionCompleted: completed } = exportsObject;
+const { allianceContributionCompleted: completed, allianceContributionBlock: block, allianceInfrastructureBlock: infrastructure } = exportsObject;
 const now = Date.parse('2026-10-15T12:00:00Z') / 1000;
 const day = Math.floor(now / 86400);
 const member = { dailyEpoch: day, weeklyEpoch: Math.floor((day + 3) / 7), monthlyEpoch: 2026 * 12 + 9,
@@ -30,9 +30,31 @@ test('missing membership, invalid missions and periods cannot appear completed',
 });
 test('render and click handler both guard completed contributions', () => {
   const ui = fs.readFileSync(require.resolve('../src/PlanetWorld.tsx'), 'utf8');
-  assert.match(ui, /if \(allianceContributionCompleted\(allianceMembership, mission.period, mission.id, nowTs\)\) return/);
-  assert.match(ui, /disabled=\{busy \|\| allianceContributionCompleted\(allianceMembership, mission.period, mission.id, nowTs\)\}/);
-  assert.match(ui, /\? "COMPLETED" : "DEPOSIT"/);
+  assert.match(ui, /if \(contributionBlock\(mission\)\) return/);
+  assert.match(ui, /disabled=\{busy \|\| Boolean\(contributionBlock\(mission\)\)\}/);
+  assert.match(ui, /contributionBlock\(mission\) \?\? "DEPOSIT"/);
+});
+
+test('contributions reject missing membership and balances and accept exact affordability',()=>{
+  const mission={period:1,id:1,metal:1000n,crystal:500n,deuterium:250n,antimatter:1000000n};
+  const balances={metal:1000n,crystal:500n,deuterium:250n,antimatter:1000000n};
+  assert.equal(block(member,mission,balances,now),null);
+  assert.match(block(null,mission,balances,now),/Join/);
+  assert.match(block({...member,role:0},mission,balances,now),/Join/);
+  assert.match(block(member,mission,undefined,now),/Checking/);
+  for(const field of ['metal','crystal','deuterium','antimatter']) assert.match(block(member,mission,{...balances,[field]:balances[field]-1n},now),/Needs/);
+  assert.equal(block(member,{...mission,id:0},balances,now),'COMPLETED');
+});
+test('infrastructure blocks the wrong role, absent treasury, maximum level and every resource shortage',()=>{
+  const cost={metal:1000n,crystal:500n,deuterium:250n,antimatter:1000000n};
+  assert.equal(infrastructure(true,1,cost,cost),null);
+  assert.match(infrastructure(false,1,cost,cost),/LEADER/);
+  assert.match(infrastructure(true,1,null,cost),/Checking/);
+  assert.match(infrastructure(true,255,cost,cost),/Maximum/);
+  for(const field of ['metal','crystal','deuterium','antimatter']) assert.match(infrastructure(true,1,{...cost,[field]:cost[field]-1n},cost),/Needs/);
+  const ui=fs.readFileSync(require.resolve('../src/PlanetWorld.tsx'),'utf8');
+  assert.match(ui,/const block = allianceInfrastructureBlock\(leader, currentLevel, allianceTreasury, cost\)/);
+  assert.match(ui,/disabled=\{busy \|\| Boolean\(block\)\}/);
 });
 
 test('live alliance confirmation is above the command panel on desktop and mobile', () => {

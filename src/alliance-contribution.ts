@@ -1,5 +1,30 @@
 import type { AllianceMembershipAccount } from './game-state';
 
+type Contribution = { period: number; id: number; metal: bigint; crystal: bigint; deuterium: bigint; antimatter: bigint };
+type Balances = { metal: bigint; crystal: bigint; deuterium: bigint; antimatter: bigint };
+
+export function allianceContributionBlock(membership: AllianceMembershipAccount | null, mission: Contribution,
+  balances: Balances | undefined, nowTs: number): string | null {
+  if (!membership || membership.role === 0) return 'Join an alliance';
+  if (allianceContributionCompleted(membership, mission.period, mission.id, nowTs)) return 'COMPLETED';
+  if (!balances) return 'Checking resources';
+  for (const field of ['metal', 'crystal', 'deuterium', 'antimatter'] as const) {
+    if (balances[field] < mission[field]) return `Needs ${field === 'antimatter' ? 'AM' : field}`;
+  }
+  return null;
+}
+
+export function allianceInfrastructureBlock(leader: boolean, level: number, treasury: Balances | null,
+  cost: Balances): string | null {
+  if (!leader) return 'LEADER ONLY';
+  if (!treasury) return 'Checking treasury';
+  if (level >= 255) return 'Maximum level';
+  for (const field of ['metal', 'crystal', 'deuterium', 'antimatter'] as const) {
+    if (treasury[field] < cost[field]) return `Needs ${field === 'antimatter' ? 'AM' : field}`;
+  }
+  return null;
+}
+
 export function allianceContributionCompleted(
   membership: AllianceMembershipAccount | null,
   period: number,
