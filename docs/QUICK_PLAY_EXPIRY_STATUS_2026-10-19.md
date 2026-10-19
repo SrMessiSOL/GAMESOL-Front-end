@@ -46,3 +46,16 @@ duplicate rejection is unsigned program-rule evidence, not authentication proof.
 
 Automated expiry tests are not a live eight-hour elapsed-time test. Public
 publication details are recorded separately after the release smoke check.
+
+## Published
+
+- GitHub source commit: `9a39a83`, branch `feat/crypto-ufos-wallet-link`.
+- Final Production build: https://frontend-5q3kb02xs-srmessisols-projects.vercel.app
+- Both public and stable QA aliases point to this build. Asset index-bknaIRKr.js
+  and devnet genesis were verified through the public alias after publication.
+- QA restored Quick Play ON across both the post-collection reload and the
+  Preview-to-final-build update, without renewal. Public game restored Default
+  and #513. QA authorization is origin-bound; it is not copied to the public
+  origin, whose previously expired permission must not be silently renewed.
+- Finalized receipt confirms FinishShipBuildVault, fee 10,000 lamports paid by
+  sponsor F8HniT2KZspe6AGDQKvVrmkFt9LwZkctPVVQF8XZz6ub.
