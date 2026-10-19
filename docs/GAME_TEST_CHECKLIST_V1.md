@@ -6,6 +6,12 @@ features. This review submitted no transactions and published nothing.
 
 ## How To Read This
 
+Cap-only release verification (2026-10-19): [desktop/mobile report](ALLIANCE_CAP_RELEASE_2026-10-19.md).
+The actual infrastructure controls were viewport-checked at level 24/25;
+capped commands block before signing and no level-26 quote is shown. The clean
+release passed 382 tests and production build. This adds T20/T28 evidence, not
+family completion. Scheduled automated work remains PAUSED.
+
 - Completed evidence is retained; it is not a claim of a fresh rerun today.
 - LIVE = retained signed devnet execution/state evidence; LOCAL = isolated
   validator; SIM = unsigned deployed-program simulation; AUTO = automated test;

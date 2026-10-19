@@ -30,3 +30,14 @@ Regression/build/deployment outcomes are recorded with the published commit and
 Vercel release receipt. Higher-level devnet and isolated-validator results remain
 in their existing checklist entries; this release does not mark the whole game
 fully tested or mainnet ready.
+
+## Release Result
+
+Code commit: `1084834` on `feat/crypto-ufos-wallet-link`. The clean exported commit
+passed all 382 frontend/server/API tests and the TypeScript/Vite production
+build. Only cap changes, tests and this evidence were published; agent helpers
+and uncommitted working files were not included. The read-only visual fixture
+and local agent files are excluded from Vercel uploads.
+
+Production verification:
+[main URL asset checks](ALLIANCE_CAP_RELEASE_VERIFICATION_2026-10-19.json).

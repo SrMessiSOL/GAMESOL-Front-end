@@ -1,0 +1,55 @@
+{
+  "verifiedAt": "2026-10-19T20:03:13.421Z",
+  "codeCommit": "1084834",
+  "url": "https://chained-universe.vercel.app/app",
+  "htmlStatus": 200,
+  "assets": [
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/index-vplxY5We.js",
+      "sha256": "c0437367b0abd6ed594dd3d1e5ed58cf6aabbc27cc5e2d5e6e2de8e56a99cf1b"
+    },
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/logobg-DTYKaa-i.js",
+      "sha256": "8cfb330862aed05fb7df06f03f93712b4450a6e5c05dc2e772d5c54752070bf8"
+    },
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/UniverseGame-BW3tlyZn.js",
+      "sha256": "a45ff4150e19bdb5933a7a28547266ab04a5f8d1370c5ae2882db813f7a8da1e"
+    },
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/UniverseLab-BLotobLl.js",
+      "sha256": "86542d2c2f0f0c58c7184c1aa3b99f544c7d777426ea15e40e0660305aacc930"
+    },
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/usdc-CFyETsq3.js",
+      "sha256": "dfdba18d5556dc8de56a23d115e5ad6d507ec13a8d00406e7515fcb1d37a2392"
+    },
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/users-2-IhoeWx.js",
+      "sha256": "d106ef179875055233a580d4251f94a54e4dc420e3d4d3c555b6d383d34c1fbe"
+    },
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/ui-art-BsAPG5YR.js",
+      "sha256": "4ff89685dba467c1068229690d45ddf8ba25fb2ec3f97576c0d0780ad13e8415"
+    },
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/App-DP6RffCi.js",
+      "sha256": "e87fc9f24ed788407e7f0305cd9af1211f6bb4c09182ade68fc28884bafe48b1"
+    },
+    {
+      "url": "https://frontend-8w7h5rpcb-srmessisols-projects.vercel.app/assets/PlanetWorld-BbHZv1i0.js",
+      "sha256": "84ad5ee8415fe08ade03de4c970c7cf79c98b70126bb5746d6d56108bb2845a4"
+    }
+  ],
+  "checks": {
+    "sdkCapGuard": true,
+    "noLevel26Quote": true,
+    "alternateMaxLabel": true,
+    "agentHelpersExcluded": true,
+    "desktop": "1440x1000",
+    "mobile": "390x844 and 320x740",
+    "releaseTests": 382,
+    "cleanBuild": "passed",
+    "automation": "PAUSED"
+  }
+}
