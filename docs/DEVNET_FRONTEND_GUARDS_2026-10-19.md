@@ -66,3 +66,21 @@ No program upgrade, economy change, grant, authority change, token spending or
 mainnet write is included. Legacy vault setup, withdrawals, governance activation,
 physical-device wallets and the remaining mainnet release matrix are not certified
 by this frontend pass. Responsive checks are browser emulation, not physical phones.
+
+## Published And Smoke Checked
+
+- Source commits: `053ffd6` and final disabled-state polish `617da93`, pushed to
+  `feat/crypto-ufos-wallet-link` on `SrMessiSOL/GAMESOL-Front-end`.
+- Final immutable Production build:
+  `https://frontend-sh8jtofl9-srmessisols-projects.vercel.app`.
+- Both `chained-universe.vercel.app` and `gamesol-devnet-qa.vercel.app` point to
+  that exact build. The final blocked-button appearance was checked at desktop
+  and mobile widths before switching the main game alias.
+- Public RPC genesis rechecked as devnet. Public browser loaded the final
+  immutable asset host and restored Default / Homeworld 9:427:13 and UFO #513.
+- Post-publication read-only smoke check: Default's 100.5 test-USDC balance is
+  sufficient for a 20-USDC pack, but oversized Metal/Deuterium reserves are
+  correctly disabled for storage, not funds. A fitting Crystal reserve remains
+  reviewable. The daily pack review opened and was cancelled without Lazor.
+- No game transaction, passkey approval, token payment, reward claim, mission
+  launch or upgrade was submitted during these checks. Browser sizing restored.
