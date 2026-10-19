@@ -28,7 +28,23 @@ delivery; the UI incorrectly invited an impossible wallet approval.
   warning shows room for 8,579, confirmation disabled. No wallet prompt opened.
 - Screenshots `market-storage-fixed-desktop.jpg`, `market-storage-fixed-mobile.jpg`.
 
-No storage/economy/program/authority changes or USDC/AM spending. Browser viewport
-reset. The public game and GitHub have NOT been updated with this new fix;
-publication approval was requested separately. This does not make the oversized
-order fit: the player must expand storage normally or choose a smaller offer.
+## Publication verified October 19
+
+- GitHub commit `469f2e2`, branch `feat/crypto-ufos-wallet-link`, pushed.
+- Production build `frontend-qbmpgsota-srmessisols-projects.vercel.app` completed.
+- Both `chained-universe.vercel.app` and `gamesol-devnet-qa.vercel.app` explicitly
+  assigned to that exact production deployment.
+- Public address loaded successfully as Default; QA retained NewAccount's
+  separate login. The buyer interaction was tested on QA against the identical
+  production deployment, not by switching the public address's signed-in account.
+- Opening the 28,000-crystal order displays room for 8,579 and disables CONFIRM
+  BUY before any Lazor prompt. Desktop and 390x844 responsive checks passed.
+- Re-ran all six storage regressions successfully after publication, including
+  the actual client overflow rejection before payment construction/submission.
+- Evidence: `market-storage-published-desktop.jpg` and
+  `market-storage-published-mobile.jpg`. Browser viewport reset afterward.
+
+No storage/economy/program/authority changes or USDC/AM spending. This does not
+make the oversized order fit: expand storage normally or choose a smaller offer.
+This release does not certify every game-program constraint has an equivalent
+fresh frontend guard; see `FRONTEND_PROGRAM_CHECK_PARITY_2026-10-19.md`.
