@@ -24,6 +24,16 @@ after updating three source-layout assertions. Type checking and the production
 build also passed (existing chunk-size/dynamic-import warnings remain).
 The budget fixture serializes below the packet limit, but is
 not the actual player's signed packet. This is not proof of a resolved colony.
-No colony retry, relaunch, purchase, program upgrade or publication was performed.
+No colony retry, relaunch, purchase or program upgrade was performed.
 Live validation must resolve the existing mission once, then verify the colony,
 source mission slot and receipt. Automated work remains paused.
+
+## Publication
+
+Code commit `990be28` is pushed to `feat/crypto-ufos-wallet-link` and deployed at
+https://frontend-robhlvgpu-srmessisols-projects.vercel.app. The existing
+https://chained-universe.vercel.app alias explicitly points to this release.
+All nine JavaScript assets match between deployment and public alias; the live
+bundle includes the 400,000-unit budget and the colony instruction discriminator.
+The public RPC still reports the Solana devnet genesis. This verifies delivery of
+the correction, not a successful signed colony resolution.

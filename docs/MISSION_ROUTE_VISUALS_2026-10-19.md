@@ -1,6 +1,6 @@
 # Mission Route Visual Fix
 
-Status: local only, not pushed or deployed. Automation remains PAUSED.
+Status: published in code commit `990be28`. Automation remains PAUSED.
 No wallet approval, resource spending, mission launch or chain mutation.
 
 ## Changes
@@ -41,4 +41,17 @@ No wallet approval, resource spending, mission launch or chain mutation.
 Local game: http://127.0.0.1:4187/app
 Read-only visual fixture: http://127.0.0.1:4187/app?system-demo=colony
 The fixture is guarded by `import.meta.env.DEV` and does not enable simulated
-missions on the published game. The public Vercel deployment is unchanged.
+missions on the published game.
+
+## Publication
+
+- Clean release copy: all 394 regression tests and production build passed.
+- GitHub branch: `feat/crypto-ufos-wallet-link`, code commit `990be28`.
+- Deployment: https://frontend-robhlvgpu-srmessisols-projects.vercel.app
+- Main URL: https://chained-universe.vercel.app/app
+- Explicit alias assignment succeeded. Read-only verification matched all nine
+  JavaScript assets between the deployment and main URL, confirmed structured
+  destinations/snapshot timing and absence of the navigation collapse control.
+- Devnet genesis was verified. No live mission was launched or resolved during
+  publication. Unrelated local agent and SDK changes were excluded.
+- Repeat verification: `node server/verify-colony-release.cjs`.
