@@ -34,6 +34,7 @@ import {
 } from "./market-client";
 import { fmtCountdown, type PlayerState, type Resources } from "./game-state";
 import { OrbitingPlanetVisual } from "./PlanetVisual";
+import { marketStorageError } from './market-storage';
 
 const PROTOCOL_AUTHORITY = "EhT4UUmsHyd41bZSGzj1W72yu2EptHk8sEvnK7aaNuBu";
 
@@ -751,18 +752,21 @@ const CreateOfferModal: React.FC<{
 
 const BuyConfirmModal: React.FC<{
   offer: MarketOffer;
+  resources: Resources | undefined;
   antimatterBalance: bigint;
   txBusy: boolean;
   marketUnlocked: boolean;
   marketUnlockLeft: number;
   onClose: () => void;
   onConfirm: () => Promise<void>;
-}> = ({ offer, antimatterBalance, txBusy, marketUnlocked, marketUnlockLeft, onClose, onConfirm }) => {
+}> = ({ offer, resources, antimatterBalance, txBusy, marketUnlocked, marketUnlockLeft, onClose, onConfirm }) => {
   const [submitting, setSubmitting] = useState(false);
   const [localErr, setLocalErr] = useState<string | null>(null);
   const canAfford = antimatterBalance >= offer.priceAntimatter;
+  const storageError = marketStorageError(offer.resourceType, offer.resourceAmount, resources);
 
   const handleConfirm = async () => {
+    if (storageError || !canAfford || !marketUnlocked || submitting || txBusy) return;
     setLocalErr(null);
     setSubmitting(true);
     try {
@@ -833,7 +837,8 @@ const BuyConfirmModal: React.FC<{
           </div>
         )}
 
-        {localErr && <div style={{ color: "var(--danger)", fontSize: 12, marginBottom: 10 }}>{localErr}</div>}
+        {storageError && <p role="status" style={{ color: "var(--warn)", fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>{storageError}</p>}
+        {localErr && <div role="alert" style={{ color: "var(--danger)", fontSize: 12, marginBottom: 10 }}>{localErr}</div>}
 
         <div style={{ display: "flex", gap: 10 }}>
           <button
@@ -847,7 +852,7 @@ const BuyConfirmModal: React.FC<{
           >CANCEL</button>
           <button
             onClick={() => void handleConfirm()}
-            disabled={!canAfford || !marketUnlocked || submitting || txBusy}
+            disabled={Boolean(storageError) || !canAfford || !marketUnlocked || submitting || txBusy}
             style={{
               flex: 2, padding: "12px 16px", borderRadius: 2,
               border: `1px solid ${canAfford ? "var(--cyan)" : "var(--border)"}`,
@@ -1201,6 +1206,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
   const handleAcceptOffer = async (offer: MarketOffer) => {
     if (!client) return;
+    const storageError = marketStorageError(offer.resourceType, offer.resourceAmount, liveRes);
+    if (storageError) throw new Error(storageError);
     if (!marketUnlocked) {
       onTxEnd(`Market unlocks in ${fmtCountdown(marketUnlockLeft)}.`);
       return;
@@ -1838,6 +1845,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
       {buyTarget && (
         <BuyConfirmModal
           offer={buyTarget}
+          resources={liveRes}
           antimatterBalance={antimatterBalance}
           txBusy={txBusy}
           marketUnlocked={marketUnlocked}

@@ -18,6 +18,8 @@ import {
 import { AnchorProvider } from "@coral-xyz/anchor";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
+import { marketStorageError } from './market-storage';
+import { projectResources } from './resource-projection';
 import {
   createAssociatedTokenAccountInstruction,
   derivePlanetCoordsPda,
@@ -618,6 +620,11 @@ export class MarketClient {
    async acceptOffer(offer: MarketOffer, buyerPlanet?: PublicKey): Promise<string> {
     const buyer = this.provider.wallet.publicKey;
     const buyerPlanetPda = buyerPlanet ?? this.requireActivePlanet();
+
+    const destination = await this.gameClient.getPlanetStateByPda(buyerPlanetPda);
+    const storageError = marketStorageError(offer.resourceType, offer.resourceAmount,
+      destination ? projectResources(destination.resources, Math.floor(Date.now() / 1000)) : undefined);
+    if (storageError) throw new Error(storageError);
 
     const config = await this.getMarketConfig();
     if (!config) throw new Error("Market config not initialized.");
