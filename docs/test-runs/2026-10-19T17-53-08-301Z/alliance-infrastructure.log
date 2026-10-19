@@ -1,0 +1,5 @@
+{"test":"duplicate monthly Sector Reserve","guard":"Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:1804. Error Code: AllianceMissionAlreadyClaimed. Error Number: 6072. Error Message: AllianceMissionAlreadyClaimed.","error":{"InstructionError":[0,{"Custom":6072}]},"recordsUnchanged":true}
+{"test":"regular member cannot upgrade infrastructure","guard":"Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3530. Error Code: AllianceLeaderRequired. Error Number: 6076. Error Message: AllianceLeaderRequired.","error":{"InstructionError":[0,{"Custom":6076}]},"recordsUnchanged":true}
+{"test":"leader cannot buy an unfunded Research Grid level 3","guard":"Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:3553. Error Code: AllianceTreasuryNotEnoughResources. Error Number: 6081. Error Message: AllianceTreasuryNotEnoughResources.","error":{"InstructionError":[0,{"Custom":6081}]},"recordsUnchanged":true}
+{"network":"devnet","submitted":false,"signatureVerification":false,"boundary":"Program business-rule rejection, not wallet authentication"}
+

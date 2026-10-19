@@ -1,5 +1,9 @@
 # GAMESOL readiness - October 19, 2026
 
+Canonical fixed acceptance scope: [GAME_TEST_CHECKLIST_V1.md](GAME_TEST_CHECKLIST_V1.md).
+Its stable T01-T35 and R01-R09 IDs supersede the remaining-work tables below.
+This file remains the dated evidence/history record, not a second evolving scope.
+
 ## Decision
 
 NOT CLEARED FOR MAINNET. This is the latest checklist, supplementing the
@@ -9,6 +13,21 @@ below collected the ship and published a frontend fix, with sponsored devnet
 fees and no USDC/ANTIMATTER spending. No mainnet or authority change occurred.
 
 ## Fresh devnet results
+
+### Latest store and quest edge pass
+
+29 deployed-program simulations passed (eight allowed, 21 rejected), with
+unchanged referenced accounts. Covers commander-wide daily/weekly pack limits,
+cross-planet duplication, independent periods, wrong USDC mint/source/treasury,
+all three resource overflows, same-owner quest target binding and quest overflow
+after virtual deliveries. No simulated payment was submitted.
+
+One earned monthly reward was then claimed live: finalized slot 512875199,
+monthly mask 260 -> 262; reward 45,000 metal / 35,000 crystal / 10,000 deuterium
+arrived only at Homeworld. Eight replay/quest guards passed afterward, including
+this claim's replay rejection. No USDC or ANTIMATTER spent. Store desktop/mobile
+disabled-state checks passed. See STORE_QUEST_EDGES_2026-10-19.md and its raw
+report for receipts, fixture timing and unsigned/signed evidence boundaries.
 
 Daily check-in quote correction now passes 380 tests and desktop/mobile QA.
 Shared reward math, storage guards and UTC reset copy are verified; see
@@ -112,8 +131,8 @@ Retained from the October 18 checklist and linked receipts, not rerun today:
 | Market races | Live purchase/cancel and stale-price races with exact-one settlement | Local-validator races already passed, not live Lazor proof |
 | Payment recovery | Full Chrome-process interruption and remaining payment-boundary interruptions | Tab close/reopen is already covered; not equivalent to process crash |
 | Wallet funds | Each supported withdrawal asset, cancellation and reconciliation | Bound amounts and destinations before transfer |
-| Store | Full daily/weekly/monthly cap/reset matrix; balance/storage changes between review and approval | Overflow guards passed today; shield packs remain disabled because deployed program rejects them |
-| Quests | Finish same-owner target, live storage and recurring/reset matrix | Check-in quote/storage/UTC fix tested; tutorial/check-in claimed live; seven rejection checks passed; full matrix still open |
+| Store | Fitting monthly-pack duplicate case; actual UTC transitions; signed stale balance/storage and interrupted-payment cases | Daily/weekly global limits, independent periods, catch-up weekly reset, all-resource overflow and account-binding checks passed unsigned; shields stay disabled |
+| Quests | Remaining metric/target variations, real UTC transitions, consecutive/capped streak and signed boundary recovery | Same-owner target and capacity rejection passed unsigned; monthly reward claimed live on bound Homeworld; duplicate rejected and UI storage refreshed |
 | UFO utility | Ownership loss/reacquisition, unlink, stale proofs and utility revocation | Use fixtures first; no real mainnet NFT transfer without separate approval |
 | Alliance sync | Open-tab leadership/membership changes and permission refresh across accounts | Treasury sync alone does not prove all role-change cases |
 | Mobile | Real device wallets/passkeys: cancel, resume, reconnect, background and restart | Responsive desktop viewports are not physical-device proof |
@@ -138,5 +157,5 @@ Retained from the October 18 checklist and linked receipts, not rerun today:
 ## Next Order
 
 Quick Play UI fix and existing ship collection are complete. Next run the
-remaining quest edge cases, then recovery/store/role-sync cases with bounded test actions. Controlled
+remaining reset/payment-boundary cases and role synchronization with bounded test actions. Controlled
 combat must wait for legitimate target eligibility. Mainnet is not approved.

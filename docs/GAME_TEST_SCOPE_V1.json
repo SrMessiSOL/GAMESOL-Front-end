@@ -1,0 +1,1500 @@
+{
+  "version": 1,
+  "date": "2026-10-19",
+  "instructions": [
+    {
+      "program": "game-state",
+      "instruction": "set_commander_identity",
+      "line": 21,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "clear_commander_identity",
+      "line": 25,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "configure_ufo",
+      "line": 30,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "start_ufo_expedition",
+      "line": 33,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "advance_ufo_expedition",
+      "line": 36,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "claim_ufo_loot",
+      "line": 39,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "equip_ufo_loot",
+      "line": 42,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "abort_ufo_expedition",
+      "line": 45,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_lazor_player",
+      "line": 51,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "sponsor_account_rent",
+      "line": 57,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_player",
+      "line": 64,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "rotate_vault",
+      "line": 86,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_vault_for_existing_player",
+      "line": 108,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "revoke_vault",
+      "line": 130,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "extend_vault",
+      "line": 134,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_homeworld",
+      "line": 138,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_colony",
+      "line": 145,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "sync_planet_owner_index_vault",
+      "line": 153,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_public_homeworld",
+      "line": 160,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_public_colony",
+      "line": 167,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "sync_public_planet_view",
+      "line": 174,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_quest_state",
+      "line": 178,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_quest_progress",
+      "line": 182,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_quest_reward_targets",
+      "line": 186,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_store_config",
+      "line": 192,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "update_store_config",
+      "line": 199,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "rotate_store_config_admin",
+      "line": 203,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "purchase_store_pack",
+      "line": 210,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "daily_check_in",
+      "line": 218,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "daily_check_in_vault",
+      "line": 222,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "claim_quest",
+      "line": 226,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "claim_quest_vault",
+      "line": 230,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "create_alliance",
+      "line": 238,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "join_alliance",
+      "line": 247,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "request_join_alliance",
+      "line": 251,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "request_join_alliance_vault",
+      "line": 255,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "approve_join_request",
+      "line": 259,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "reject_join_request",
+      "line": 263,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "expel_alliance_member",
+      "line": 267,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "transfer_alliance_leadership",
+      "line": 271,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "leave_alliance",
+      "line": 275,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "claim_alliance_mission",
+      "line": 279,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_alliance_treasury",
+      "line": 287,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_alliance_treasury_vault",
+      "line": 291,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "deposit_alliance_resources",
+      "line": 297,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "deposit_alliance_resources_vault",
+      "line": 311,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "upgrade_alliance_building",
+      "line": 325,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "claim_system_sovereignty",
+      "line": 332,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "fund_system_sovereignty",
+      "line": 348,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "set_system_sovereignty_specialization",
+      "line": 356,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_alliance_governance",
+      "line": 370,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_gamesol_governance",
+      "line": 378,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "enroll_alliance_in_gamesol_governance",
+      "line": 386,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "sync_alliance_gamesol_governance",
+      "line": 392,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "create_alliance_decision",
+      "line": 399,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "execute_alliance_decision",
+      "line": 425,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "produce",
+      "line": 434,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "produce_vault",
+      "line": 438,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "start_build",
+      "line": 442,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "start_build_vault",
+      "line": 446,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "finish_build",
+      "line": 454,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "finish_build_vault",
+      "line": 458,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "start_research",
+      "line": 462,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "start_research_vault",
+      "line": 466,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "finish_research",
+      "line": 474,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "finish_research_vault",
+      "line": 478,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "build_ship",
+      "line": 482,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "build_ship_vault",
+      "line": 491,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "finish_ship_build",
+      "line": 500,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "finish_ship_build_vault",
+      "line": 504,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "build_defense",
+      "line": 508,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "build_defense_vault",
+      "line": 517,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "finish_defense_build",
+      "line": 526,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "finish_defense_build_vault",
+      "line": 530,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "launch_fleet",
+      "line": 537,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "launch_fleet_vault",
+      "line": 541,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "lock_resources_for_market",
+      "line": 548,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "release_resources_from_market",
+      "line": 556,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "transfer_resources_from_market",
+      "line": 564,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_transport",
+      "line": 572,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_transport_vault",
+      "line": 576,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_transport_empty",
+      "line": 584,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_transport_empty_vault",
+      "line": 592,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_attack",
+      "line": 600,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_attack_vault",
+      "line": 604,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_espionage",
+      "line": 612,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_espionage_vault",
+      "line": 616,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_colonize",
+      "line": 624,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "resolve_colonize_vault",
+      "line": 628,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "transfer_planet",
+      "line": 636,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "transfer_planet_from_market",
+      "line": 642,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "initialize_game_config",
+      "line": 648,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "update_antimatter_mint",
+      "line": 655,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "rotate_game_config_admin",
+      "line": 662,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "claim_antimatter_faucet",
+      "line": 669,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "accelerate_build_with_antimatter",
+      "line": 673,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "accelerate_research_with_antimatter",
+      "line": 677,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "accelerate_ship_build_with_antimatter",
+      "line": 681,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "accelerate_defense_build_with_antimatter",
+      "line": 685,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "game-state",
+      "instruction": "accelerate_mission_with_antimatter",
+      "line": 689,
+      "source": "programs/game-state/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "initialize_market",
+      "line": 22,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "initialize_escrow",
+      "line": 26,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "update_market_config",
+      "line": 30,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "rotate_market_config_admin",
+      "line": 37,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "create_offer",
+      "line": 44,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "cancel_offer",
+      "line": 53,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "accept_offer",
+      "line": 57,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "create_planet_listing",
+      "line": 61,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "cancel_planet_listing",
+      "line": 68,
+      "source": "programs/market/src/lib.rs"
+    },
+    {
+      "program": "market",
+      "instruction": "buy_planet_listing",
+      "line": 72,
+      "source": "programs/market/src/lib.rs"
+    }
+  ],
+  "catalogs": {
+    "BUILDINGS": [
+      {
+        "index": 0,
+        "definition": "{ idx: 0, key: \"metalMine\", name: \"Metal Mine\", icon: \"⬡\", desc: \"Extracts metal from the planet crust.\" }"
+      },
+      {
+        "index": 1,
+        "definition": "{ idx: 1, key: \"crystalMine\", name: \"Crystal Mine\", icon: \"◈\", desc: \"Processes surface crystal formations.\" }"
+      },
+      {
+        "index": 2,
+        "definition": "{ idx: 2, key: \"deuteriumSynthesizer\", name: \"Deuterium Synthesizer\", icon: \"◉\", desc: \"Extracts deuterium from the atmosphere.\" }"
+      },
+      {
+        "index": 3,
+        "definition": "{ idx: 3, key: \"solarPlant\", name: \"Solar Plant\", icon: \"☀\", desc: \"Converts sunlight to energy.\" }"
+      },
+      {
+        "index": 4,
+        "definition": "{ idx: 4, key: \"fusionReactor\", name: \"Fusion Reactor\", icon: \"⚛\", desc: \"Burns deuterium for high-yield energy.\" }"
+      },
+      {
+        "index": 5,
+        "definition": "{ idx: 5, key: \"roboticsFactory\", name: \"Robotics Factory\", icon: \"🤖\", desc: \"Automated workers — halves build time.\" }"
+      },
+      {
+        "index": 6,
+        "definition": "{ idx: 6, key: \"naniteFactory\", name: \"Nanite Factory\", icon: \"🔬\", desc: \"Nano assemblers — massive build speed.\" }"
+      },
+      {
+        "index": 7,
+        "definition": "{ idx: 7, key: \"shipyard\", name: \"Shipyard\", icon: \"🚀\", desc: \"Constructs ships and defense units.\" }"
+      },
+      {
+        "index": 8,
+        "definition": "{ idx: 8, key: \"metalStorage\", name: \"Metal Storage\", icon: \"🏗\", desc: \"Increases metal cap.\" }"
+      },
+      {
+        "index": 9,
+        "definition": "{ idx: 9, key: \"crystalStorage\", name: \"Crystal Storage\", icon: \"🏗\", desc: \"Increases crystal cap.\" }"
+      },
+      {
+        "index": 10,
+        "definition": "{ idx: 10, key: \"deuteriumTank\", name: \"Deuterium Tank\", icon: \"🏗\", desc: \"Increases deuterium cap.\" }"
+      },
+      {
+        "index": 11,
+        "definition": "{ idx: 11, key: \"researchLab\", name: \"Research Lab\", icon: \"🔭\", desc: \"Required for all technology research.\" }"
+      },
+      {
+        "index": 12,
+        "definition": "{ idx: 12, key: \"missileSilo\", name: \"Missile Silo\", icon: \"🎯\", desc: \"Legacy missile infrastructure.\" }"
+      }
+    ],
+    "SHIPS": [
+      {
+        "index": 0,
+        "definition": "{ key: \"smallCargo\", name: \"Small Cargo\", icon: \"📦\", atk: 5, cargo: 5_000, cost: { m: 2000, c: 2000, d: 0 } }"
+      },
+      {
+        "index": 1,
+        "definition": "{ key: \"largeCargo\", name: \"Large Cargo\", icon: \"🚛\", atk: 5, cargo: 25_000, cost: { m: 6000, c: 6000, d: 0 } }"
+      },
+      {
+        "index": 2,
+        "definition": "{ key: \"lightFighter\", name: \"Light Fighter\", icon: \"✈\", atk: 50, cargo: 50, cost: { m: 3000, c: 1000, d: 0 } }"
+      },
+      {
+        "index": 3,
+        "definition": "{ key: \"heavyFighter\", name: \"Heavy Fighter\", icon: \"⚡\", atk: 150, cargo: 100, cost: { m: 6000, c: 4000, d: 0 } }"
+      },
+      {
+        "index": 4,
+        "definition": "{ key: \"cruiser\", name: \"Cruiser\", icon: \"🛸\", atk: 400, cargo: 800, cost: { m: 20000, c: 7000, d: 2000 } }"
+      },
+      {
+        "index": 5,
+        "definition": "{ key: \"battleship\", name: \"Battleship\", icon: \"⚔\", atk: 1000, cargo: 1500, cost: { m: 45000, c: 15000, d: 0 } }"
+      },
+      {
+        "index": 6,
+        "definition": "{ key: \"battlecruiser\", name: \"Battlecruiser\", icon: \"🔱\", atk: 700, cargo: 750, cost: { m: 30000, c: 40000, d: 15000 } }"
+      },
+      {
+        "index": 7,
+        "definition": "{ key: \"bomber\", name: \"Bomber\", icon: \"💣\", atk: 1000, cargo: 500, cost: { m: 50000, c: 25000, d: 15000 } }"
+      },
+      {
+        "index": 8,
+        "definition": "{ key: \"destroyer\", name: \"Destroyer\", icon: \"💥\", atk: 2000, cargo: 2000, cost: { m: 60000, c: 50000, d: 15000 } }"
+      },
+      {
+        "index": 9,
+        "definition": "{ key: \"deathstar\", name: \"Deathstar\", icon: \"🌑\", atk: 200000, cargo: 1000000, cost: { m: 5000000, c: 4000000, d: 1000000 } }"
+      },
+      {
+        "index": 10,
+        "definition": "{ key: \"recycler\", name: \"Recycler\", icon: \"♻\", atk: 1, cargo: 20_000, cost: { m: 10000, c: 6000, d: 2000 } }"
+      },
+      {
+        "index": 11,
+        "definition": "{ key: \"espionageProbe\",name: \"Espionage Probe\",icon: \"👁\", atk: 0, cargo: 0, cost: { m: 0, c: 1000, d: 0 } }"
+      },
+      {
+        "index": 12,
+        "definition": "{ key: \"colonyShip\", name: \"Colony Ship\", icon: \"🌍\", atk: 50, cargo: 7500, cost: { m: 10000, c: 20000, d: 10000 } }"
+      },
+      {
+        "index": 13,
+        "definition": "{ key: \"solarSatellite\",name: \"Solar Satellite\",icon: \"🛰\", atk: 1, cargo: 0, cost: { m: 0, c: 2000, d: 500 } }"
+      }
+    ],
+    "RESEARCH": [
+      {
+        "index": 0,
+        "definition": "{ name: \"Energy Technology\", key: \"energyTech\", desc: \"Raises Fusion Reactor energy output by 10%.\", cost: [0, 800, 400] }"
+      },
+      {
+        "index": 1,
+        "definition": "{ name: \"Combustion Drive\", key: \"combustionDrive\", desc: \"Improves travel speed for combustion-drive ships.\", cost: [400, 0, 600] }"
+      },
+      {
+        "index": 2,
+        "definition": "{ name: \"Impulse Drive\", key: \"impulseDrive\", desc: \"Improves travel speed for impulse-drive ships.\", cost: [2000, 4000, 600] }"
+      },
+      {
+        "index": 3,
+        "definition": "{ name: \"Hyperspace Drive\", key: \"hyperspaceDrive\", desc: \"Improves travel speed for hyperspace-drive ships.\", cost: [10000, 20000, 6000] }"
+      },
+      {
+        "index": 4,
+        "definition": "{ name: \"Computer Technology\", key: \"computerTech\", desc: \"Advances toward additional usable mission slots.\", cost: [0, 400, 600] }"
+      },
+      {
+        "index": 5,
+        "definition": "{ name: \"Astrophysics\", key: \"astrophysics\", desc: \"Advances colonization capacity and colony requirements.\", cost: [4000, 2000, 1000] }"
+      },
+      {
+        "index": 6,
+        "definition": "{ name: \"Intergalactic Research Network\", key: \"igrNetwork\", desc: \"Increases the research-network level and laboratory requirements.\", cost: [240000, 400000, 160000] }"
+      },
+      {
+        "index": 7,
+        "definition": "{ name: \"Weapons Technology\", key: \"weaponsTechnology\", desc: \"Increases weapons effectiveness for ships and defenses.\", cost: [800, 200, 0] }"
+      },
+      {
+        "index": 8,
+        "definition": "{ name: \"Shielding Technology\", key: \"shieldingTechnology\", desc: \"Increases shielding effectiveness for ships and defenses.\", cost: [200, 600, 0] }"
+      },
+      {
+        "index": 9,
+        "definition": "{ name: \"Armor Technology\", key: \"armorTechnology\", desc: \"Increases armor effectiveness for ships and defenses.\", cost: [1000, 0, 0] }"
+      }
+    ],
+    "DEFENSE": [
+      {
+        "index": 0,
+        "definition": "{ name: \"Rocket Launcher\", key: \"rocketLauncher\", role: \"KINETIC BATTERY\", desc: \"Reliable surface defense for the first layer of a planetary grid.\", cost: [2000, 0, 0] }"
+      },
+      {
+        "index": 1,
+        "definition": "{ name: \"Light Laser\", key: \"lightLaser\", role: \"LASER BATTERY\", desc: \"Low-cost directed-energy coverage for sustained perimeter defense.\", cost: [1500, 500, 0] }"
+      },
+      {
+        "index": 2,
+        "definition": "{ name: \"Heavy Laser\", key: \"heavyLaser\", role: \"HEAVY BATTERY\", desc: \"Reinforced laser emplacement for stronger orbital resistance.\", cost: [6000, 2000, 0] }"
+      },
+      {
+        "index": 3,
+        "definition": "{ name: \"Gauss Cannon\", key: \"gaussCannon\", role: \"MASS DRIVER\", desc: \"High-impact electromagnetic artillery for hardened targets.\", cost: [20000, 15000, 2000] }"
+      },
+      {
+        "index": 4,
+        "definition": "{ name: \"Ion Cannon\", key: \"ionCannon\", role: \"ION BATTERY\", desc: \"Shield-focused energy defense supported by advanced technology.\", cost: [2000, 6000, 0] }"
+      },
+      {
+        "index": 5,
+        "definition": "{ name: \"Plasma Turret\", key: \"plasmaTurret\", role: \"PLASMA BATTERY\", desc: \"Endgame surface weapon requiring a mature technology stack.\", cost: [50000, 50000, 30000] }"
+      },
+      {
+        "index": 6,
+        "definition": "{ name: \"Small Shield Dome\", key: \"smallShieldDome\", role: \"PLANETARY SHIELD\", desc: \"A unique defensive field protecting the planetary command zone.\", cost: [10000, 10000, 0] }"
+      },
+      {
+        "index": 7,
+        "definition": "{ name: \"Large Shield Dome\", key: \"largeShieldDome\", role: \"PLANETARY SHIELD\", desc: \"A unique large-scale field for advanced planetary protection.\", cost: [50000, 50000, 0] }"
+      },
+      {
+        "index": 8,
+        "definition": "{ name: \"Anti-Ballistic Missile\", key: \"antiBallisticMissile\", role: \"MISSILE DEFENSE\", desc: \"Interceptor stockpile produced through the planetary missile silo.\", cost: [8000, 0, 2000] }"
+      },
+      {
+        "index": 9,
+        "definition": "{ name: \"Interplanetary Missile\", key: \"interplanetaryMissile\", role: \"STRATEGIC MISSILE\", desc: \"Long-range missile inventory enabled by silo infrastructure.\", cost: [12500, 2500, 5000] }"
+      }
+    ],
+    "STORE_PACKS": [
+      {
+        "index": 0,
+        "definition": "{ period: 1, id: 0, group: \"Daily\", title: \"Daily Metal Cache\", hint: \"Focused metal refill for one active session.\", priceUsdc: 1_000_000n, reward: { metal: 3000, crystal: 0, deuterium: 0 } }"
+      },
+      {
+        "index": 1,
+        "definition": "{ period: 1, id: 1, group: \"Daily\", title: \"Daily Crystal Cache\", hint: \"Focused crystal refill for one active session.\", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 2000, deuterium: 0 } }"
+      },
+      {
+        "index": 2,
+        "definition": "{ period: 1, id: 2, group: \"Daily\", title: \"Daily Deuterium Cache\", hint: \"Focused fuel refill for one active session.\", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 0, deuterium: 750 } }"
+      },
+      {
+        "index": 3,
+        "definition": "{ period: 1, id: 3, group: \"Daily\", title: \"Daily Supply Drop\", hint: \"Metal, crystal, and deuterium together.\", priceUsdc: 3_000_000n, reward: { metal: 3000, crystal: 2000, deuterium: 750 } }"
+      },
+      {
+        "index": 4,
+        "definition": "{ period: 1, id: 4, group: \"Daily\", title: \"Daily Logistics Crate\", hint: \"A modest boost without skipping progression.\", priceUsdc: 5_000_000n, reward: { metal: 8000, crystal: 5000, deuterium: 2000 } }"
+      },
+      {
+        "index": 5,
+        "definition": "{ period: 1, id: 5, group: \"Daily\", title: \"Daily Builder Cache\", hint: \"Extra daily materials for active builders.\", priceUsdc: 7_500_000n, reward: { metal: 14000, crystal: 9000, deuterium: 3500 } }"
+      },
+      {
+        "index": 6,
+        "definition": "{ period: 1, id: 16, group: \"Daily\", title: \"Daily Defense Shield\", hint: \"Adds 6 hours of attack protection, capped on-chain.\", priceUsdc: 1_000_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 6 * 60 * 60 }"
+      },
+      {
+        "index": 7,
+        "definition": "{ period: 2, id: 0, group: \"Weekly\", title: \"Weekly Metal Reserve\", hint: \"Focused weekly metal for construction queues.\", priceUsdc: 5_000_000n, reward: { metal: 35000, crystal: 0, deuterium: 0 } }"
+      },
+      {
+        "index": 8,
+        "definition": "{ period: 2, id: 1, group: \"Weekly\", title: \"Weekly Crystal Reserve\", hint: \"Focused weekly crystal for research and ships.\", priceUsdc: 5_000_000n, reward: { metal: 0, crystal: 24000, deuterium: 0 } }"
+      },
+      {
+        "index": 9,
+        "definition": "{ period: 2, id: 2, group: \"Weekly\", title: \"Weekly Deuterium Reserve\", hint: \"Focused weekly fuel for fleet activity.\", priceUsdc: 5_000_000n, reward: { metal: 0, crystal: 0, deuterium: 10000 } }"
+      },
+      {
+        "index": 10,
+        "definition": "{ period: 2, id: 3, group: \"Weekly\", title: \"Weekly Foundry Pack\", hint: \"Balanced material to keep queues moving.\", priceUsdc: 15_000_000n, reward: { metal: 35000, crystal: 24000, deuterium: 10000 } }"
+      },
+      {
+        "index": 11,
+        "definition": "{ period: 2, id: 4, group: \"Weekly\", title: \"Weekly Expansion Pack\", hint: \"Supports fleet and building momentum.\", priceUsdc: 30_000_000n, reward: { metal: 80000, crystal: 55000, deuterium: 25000 } }"
+      },
+      {
+        "index": 12,
+        "definition": "{ period: 2, id: 5, group: \"Weekly\", title: \"Weekly War Chest\", hint: \"Heavier weekly support for active commanders.\", priceUsdc: 45_000_000n, reward: { metal: 140000, crystal: 90000, deuterium: 40000 } }"
+      },
+      {
+        "index": 13,
+        "definition": "{ period: 2, id: 16, group: \"Weekly\", title: \"Weekly Defense Shield\", hint: \"Adds 24 hours of attack protection, capped on-chain.\", priceUsdc: 5_000_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 24 * 60 * 60 }"
+      },
+      {
+        "index": 14,
+        "definition": "{ period: 3, id: 0, group: \"Monthly\", title: \"Monthly Metal Reserve\", hint: \"Focused monthly metal for large construction.\", priceUsdc: 20_000_000n, reward: { metal: 180000, crystal: 0, deuterium: 0 } }"
+      },
+      {
+        "index": 15,
+        "definition": "{ period: 3, id: 1, group: \"Monthly\", title: \"Monthly Crystal Reserve\", hint: \"Focused monthly crystal for research growth.\", priceUsdc: 20_000_000n, reward: { metal: 0, crystal: 125000, deuterium: 0 } }"
+      },
+      {
+        "index": 16,
+        "definition": "{ period: 3, id: 2, group: \"Monthly\", title: \"Monthly Deuterium Reserve\", hint: \"Focused monthly fuel for fleet operations.\", priceUsdc: 20_000_000n, reward: { metal: 0, crystal: 0, deuterium: 60000 } }"
+      },
+      {
+        "index": 17,
+        "definition": "{ period: 3, id: 3, group: \"Monthly\", title: \"Monthly Sector Pack\", hint: \"A larger but capped monthly resource bundle.\", priceUsdc: 60_000_000n, reward: { metal: 180000, crystal: 125000, deuterium: 60000 } }"
+      },
+      {
+        "index": 18,
+        "definition": "{ period: 3, id: 4, group: \"Monthly\", title: \"Monthly Command Pack\", hint: \"Strong monthly support for established planets.\", priceUsdc: 100_000_000n, reward: { metal: 400000, crystal: 275000, deuterium: 140000 } }"
+      },
+      {
+        "index": 19,
+        "definition": "{ period: 3, id: 5, group: \"Monthly\", title: \"Monthly Builder Pack\", hint: \"Deep resource support for long build plans.\", priceUsdc: 150_000_000n, reward: { metal: 700000, crystal: 450000, deuterium: 220000 } }"
+      },
+      {
+        "index": 20,
+        "definition": "{ period: 3, id: 6, group: \"Monthly\", title: \"Monthly Fleet Pack\", hint: \"Large support for active shipyard cycles.\", priceUsdc: 200_000_000n, reward: { metal: 1000000, crystal: 650000, deuterium: 320000 } }"
+      },
+      {
+        "index": 21,
+        "definition": "{ period: 3, id: 7, group: \"Monthly\", title: \"Monthly Research Pack\", hint: \"Premium monthly support for research-heavy players.\", priceUsdc: 250_000_000n, reward: { metal: 1350000, crystal: 900000, deuterium: 450000 } }"
+      },
+      {
+        "index": 22,
+        "definition": "{ period: 3, id: 8, group: \"Monthly\", title: \"Monthly Empire Pack\", hint: \"A high-cap monthly bundle for mature accounts.\", priceUsdc: 300_000_000n, reward: { metal: 1750000, crystal: 1150000, deuterium: 600000 } }"
+      },
+      {
+        "index": 23,
+        "definition": "{ period: 3, id: 9, group: \"Monthly\", title: \"Monthly Deep Space Pack\", hint: \"Largest monthly resource support before caps.\", priceUsdc: 400_000_000n, reward: { metal: 2500000, crystal: 1700000, deuterium: 850000 } }"
+      },
+      {
+        "index": 24,
+        "definition": "{ period: 3, id: 16, group: \"Monthly\", title: \"Monthly Defense Shield\", hint: \"Adds 3 days of attack protection, capped on-chain.\", priceUsdc: 12_500_000n, reward: { metal: 0, crystal: 0, deuterium: 0 }, shieldSeconds: 3 * 24 * 60 * 60 }"
+      }
+    ],
+    "QUEST_DEFINITIONS": [
+      {
+        "index": 0,
+        "definition": "{ period: 0, id: 0, group: \"Tutorial\", title: \"Establish command\", hint: \"Create your first planet and open the command surface.\", reward: { metal: 500, crystal: 300, deuterium: 0 }, requirements: [] }"
+      },
+      {
+        "index": 1,
+        "definition": "{ period: 0, id: 1, group: \"Tutorial\", title: \"Upgrade Metal Mine Lv 2\", hint: \"Metal is the backbone of early construction.\", reward: { metal: 700, crystal: 200, deuterium: 0 }, requirements: [questReq(\"Metal Mine\", 2, s => s.planet.metalMine)] }"
+      },
+      {
+        "index": 2,
+        "definition": "{ period: 0, id: 2, group: \"Tutorial\", title: \"Upgrade Crystal Mine Lv 2\", hint: \"Crystal unlocks research and higher infrastructure.\", reward: { metal: 400, crystal: 600, deuterium: 0 }, requirements: [questReq(\"Crystal Mine\", 2, s => s.planet.crystalMine)] }"
+      },
+      {
+        "index": 3,
+        "definition": "{ period: 0, id: 3, group: \"Tutorial\", title: \"Upgrade Solar Plant Lv 2\", hint: \"Power shortages slow the whole colony.\", reward: { metal: 350, crystal: 300, deuterium: 0 }, requirements: [questReq(\"Solar Plant\", 2, s => s.planet.solarPlant)] }"
+      },
+      {
+        "index": 4,
+        "definition": "{ period: 0, id: 4, group: \"Tutorial\", title: \"Start deuterium production\", hint: \"Deuterium fuels fleets and advanced tech.\", reward: { metal: 400, crystal: 250, deuterium: 150 }, requirements: [questReq(\"Deuterium Synthesizer\", 1, s => s.planet.deuteriumSynthesizer)] }"
+      },
+      {
+        "index": 5,
+        "definition": "{ period: 0, id: 5, group: \"Tutorial\", title: \"Increase metal capacity\", hint: \"Storage protects production from hitting the cap.\", reward: { metal: 300, crystal: 300, deuterium: 0 }, requirements: [questReq(\"Metal Storage\", 1, s => s.planet.metalStorage)] }"
+      },
+      {
+        "index": 6,
+        "definition": "{ period: 0, id: 6, group: \"Tutorial\", title: \"Build Robotics Factory Lv 1\", hint: \"Robotics shortens build times.\", reward: { metal: 800, crystal: 400, deuterium: 0 }, requirements: [questReq(\"Robotics Factory\", 1, s => s.planet.roboticsFactory)] }"
+      },
+      {
+        "index": 7,
+        "definition": "{ period: 0, id: 7, group: \"Tutorial\", title: \"Build Shipyard Lv 1\", hint: \"The shipyard opens fleet and defense construction.\", reward: { metal: 1000, crystal: 700, deuterium: 100 }, requirements: [questReq(\"Shipyard\", 1, s => s.planet.shipyard)] }"
+      },
+      {
+        "index": 8,
+        "definition": "{ period: 0, id: 8, group: \"Tutorial\", title: \"Build Research Lab Lv 1\", hint: \"Research unlocks engines, colonies, and combat tech.\", reward: { metal: 800, crystal: 900, deuterium: 200 }, requirements: [questReq(\"Research Lab\", 1, s => s.planet.researchLab)] }"
+      },
+      {
+        "index": 9,
+        "definition": "{ period: 0, id: 9, group: \"Tutorial\", title: \"Research Energy Technology\", hint: \"Energy tech supports deeper industry and shields.\", reward: { metal: 600, crystal: 600, deuterium: 200 }, requirements: [questReq(\"Energy Technology\", 1, s => s.research.energyTech)] }"
+      },
+      {
+        "index": 10,
+        "definition": "{ period: 0, id: 10, group: \"Tutorial\", title: \"Research Combustion Drive\", hint: \"Combustion drive prepares early cargo movement.\", reward: { metal: 600, crystal: 300, deuterium: 300 }, requirements: [questReq(\"Combustion Drive\", 1, s => s.research.combustionDrive)] }"
+      },
+      {
+        "index": 11,
+        "definition": "{ period: 0, id: 11, group: \"Tutorial\", title: \"Build your first ship\", hint: \"Ships turn resources into movement and reach.\", reward: { metal: 900, crystal: 600, deuterium: 150 }, requirements: [questReq(\"Fleet ships\", 1, totalQuestShips)] }"
+      },
+      {
+        "index": 12,
+        "definition": "{ period: 0, id: 12, group: \"Tutorial\", title: \"Build a Small Cargo\", hint: \"Cargo ships let you move resources between planets.\", reward: { metal: 1000, crystal: 700, deuterium: 150 }, requirements: [questReq(\"Small Cargo\", 1, s => s.fleet.smallCargo)] }"
+      },
+      {
+        "index": 13,
+        "definition": "{ period: 0, id: 13, group: \"Tutorial\", title: \"Build a Rocket Launcher\", hint: \"Basic defenses make planets harder to raid.\", reward: { metal: 800, crystal: 200, deuterium: 0 }, requirements: [questReq(\"Rocket Launcher\", 1, s => s.planet.rocketLauncher)] }"
+      },
+      {
+        "index": 14,
+        "definition": "{ period: 0, id: 14, group: \"Tutorial\", title: \"Research Computer Technology\", hint: \"Computer tech expands usable mission slots over time.\", reward: { metal: 700, crystal: 700, deuterium: 250 }, requirements: [questReq(\"Computer Technology\", 1, s => s.research.computerTech)] }"
+      },
+      {
+        "index": 15,
+        "definition": "{ period: 0, id: 15, group: \"Tutorial\", title: \"Build an Espionage Probe\", hint: \"Probes prepare scouting and information play.\", reward: { metal: 600, crystal: 500, deuterium: 250 }, requirements: [questReq(\"Espionage Probe\", 1, s => s.fleet.espionageProbe)] }"
+      },
+      {
+        "index": 16,
+        "definition": "{ period: 0, id: 16, group: \"Tutorial\", title: \"Build a Light Laser\", hint: \"Layer defenses instead of relying on one unit.\", reward: { metal: 800, crystal: 500, deuterium: 0 }, requirements: [questReq(\"Light Laser\", 1, s => s.planet.lightLaser)] }"
+      },
+      {
+        "index": 17,
+        "definition": "{ period: 0, id: 17, group: \"Tutorial\", title: \"Research Impulse Drive\", hint: \"Impulse drive unlocks stronger movement options.\", reward: { metal: 1500, crystal: 1500, deuterium: 600 }, requirements: [questReq(\"Impulse Drive\", 1, s => s.research.impulseDrive)] }"
+      },
+      {
+        "index": 18,
+        "definition": "{ period: 0, id: 18, group: \"Tutorial\", title: \"Research Astrophysics\", hint: \"Astrophysics is the road to expansion.\", reward: { metal: 1500, crystal: 1800, deuterium: 700 }, requirements: [questReq(\"Astrophysics\", 1, s => s.research.astrophysics)] }"
+      },
+      {
+        "index": 19,
+        "definition": "{ period: 0, id: 19, group: \"Tutorial\", title: \"Hold five defenses\", hint: \"A small defense grid is better than an empty planet.\", reward: { metal: 1200, crystal: 900, deuterium: 200 }, requirements: [questReq(\"Defense units\", 5, totalQuestDefenses)] }"
+      },
+      {
+        "index": 20,
+        "definition": "{ period: 0, id: 20, group: \"Tutorial\", title: \"Build a Colony Ship\", hint: \"Complete command training and claim the final tutorial reward.\", reward: { metal: 5000, crystal: 5000, deuterium: 2000 }, requirements: [questReq(\"Colony Ship\", 1, s => s.fleet.colonyShip)] }"
+      },
+      {
+        "index": 21,
+        "definition": "{ period: 1, id: 0, group: \"Daily\", title: \"Daily check-in\", hint: \"Resets daily at 00:00 UTC. Consecutive UTC days increase the bonus, capped at 30 days.\", reward: { metal: 500, crystal: 300, deuterium: 100 }, requirements: [], checkIn: true }"
+      },
+      {
+        "index": 22,
+        "definition": "{ period: 1, id: 1, group: \"Daily\", title: \"Metal Mine Lv 3\", hint: \"Keep basic metal production moving.\", reward: { metal: 1000, crystal: 500, deuterium: 100 }, requirements: [questReq(\"Metal Mine\", 3, s => s.planet.metalMine)] }"
+      },
+      {
+        "index": 23,
+        "definition": "{ period: 1, id: 2, group: \"Daily\", title: \"Crystal Mine Lv 3\", hint: \"Keep crystal production balanced.\", reward: { metal: 500, crystal: 1000, deuterium: 100 }, requirements: [questReq(\"Crystal Mine\", 3, s => s.planet.crystalMine)] }"
+      },
+      {
+        "index": 24,
+        "definition": "{ period: 1, id: 3, group: \"Daily\", title: \"Solar Plant Lv 4\", hint: \"A powered colony is a productive colony.\", reward: { metal: 700, crystal: 700, deuterium: 150 }, requirements: [questReq(\"Solar Plant\", 4, s => s.planet.solarPlant)] }"
+      },
+      {
+        "index": 25,
+        "definition": "{ period: 1, id: 4, group: \"Daily\", title: \"Deuterium Synthesizer Lv 2\", hint: \"Fuel growth without overpaying the player.\", reward: { metal: 600, crystal: 500, deuterium: 300 }, requirements: [questReq(\"Deuterium Synthesizer\", 2, s => s.planet.deuteriumSynthesizer)] }"
+      },
+      {
+        "index": 26,
+        "definition": "{ period: 1, id: 5, group: \"Daily\", title: \"Shipyard Lv 2\", hint: \"Keep fleet construction options open.\", reward: { metal: 1200, crystal: 900, deuterium: 250 }, requirements: [questReq(\"Shipyard\", 2, s => s.planet.shipyard)] }"
+      },
+      {
+        "index": 27,
+        "definition": "{ period: 1, id: 6, group: \"Daily\", title: \"Own 3 ships\", hint: \"Maintain a small operational fleet.\", reward: { metal: 1500, crystal: 1000, deuterium: 250 }, requirements: [questReq(\"Fleet ships\", 3, totalQuestShips)] }"
+      },
+      {
+        "index": 28,
+        "definition": "{ period: 1, id: 7, group: \"Daily\", title: \"Own 3 defenses\", hint: \"Do not leave the planet naked.\", reward: { metal: 1200, crystal: 800, deuterium: 150 }, requirements: [questReq(\"Defense units\", 3, totalQuestDefenses)] }"
+      },
+      {
+        "index": 29,
+        "definition": "{ period: 1, id: 8, group: \"Daily\", title: \"Energy Technology Lv 1\", hint: \"Review your research base each day.\", reward: { metal: 800, crystal: 800, deuterium: 250 }, requirements: [questReq(\"Energy Technology\", 1, s => s.research.energyTech)] }"
+      },
+      {
+        "index": 30,
+        "definition": "{ period: 1, id: 9, group: \"Daily\", title: \"Computer Technology Lv 1\", hint: \"Mission control starts with computer tech.\", reward: { metal: 800, crystal: 1000, deuterium: 300 }, requirements: [questReq(\"Computer Technology\", 1, s => s.research.computerTech)] }"
+      },
+      {
+        "index": 31,
+        "definition": "{ period: 2, id: 0, group: \"Weekly\", title: \"Research Lab Lv 2\", hint: \"Build toward a stronger tech floor.\", reward: { metal: 6000, crystal: 7000, deuterium: 2000 }, requirements: [questReq(\"Research Lab\", 2, s => s.planet.researchLab)] }"
+      },
+      {
+        "index": 32,
+        "definition": "{ period: 2, id: 1, group: \"Weekly\", title: \"Shipyard Lv 2\", hint: \"Keep construction capacity ready.\", reward: { metal: 8000, crystal: 5000, deuterium: 1500 }, requirements: [questReq(\"Shipyard\", 2, s => s.planet.shipyard)] }"
+      },
+      {
+        "index": 33,
+        "definition": "{ period: 2, id: 2, group: \"Weekly\", title: \"Own 5 ships\", hint: \"A small fleet enables transport and response.\", reward: { metal: 9000, crystal: 6000, deuterium: 2500 }, requirements: [questReq(\"Fleet ships\", 5, totalQuestShips)] }"
+      },
+      {
+        "index": 34,
+        "definition": "{ period: 2, id: 3, group: \"Weekly\", title: \"Own 5 defenses\", hint: \"Build a basic defensive shell.\", reward: { metal: 8000, crystal: 7000, deuterium: 1500 }, requirements: [questReq(\"Defense units\", 5, totalQuestDefenses)] }"
+      },
+      {
+        "index": 35,
+        "definition": "{ period: 2, id: 4, group: \"Weekly\", title: \"Metal Mine Lv 5\", hint: \"Upgrade core production over time.\", reward: { metal: 10000, crystal: 3000, deuterium: 500 }, requirements: [questReq(\"Metal Mine\", 5, s => s.planet.metalMine)] }"
+      },
+      {
+        "index": 36,
+        "definition": "{ period: 2, id: 5, group: \"Weekly\", title: \"Crystal Mine Lv 5\", hint: \"Balance metal with crystal growth.\", reward: { metal: 4000, crystal: 10000, deuterium: 500 }, requirements: [questReq(\"Crystal Mine\", 5, s => s.planet.crystalMine)] }"
+      },
+      {
+        "index": 37,
+        "definition": "{ period: 2, id: 6, group: \"Weekly\", title: \"Deuterium Synthesizer Lv 4\", hint: \"Prepare fuel for higher activity.\", reward: { metal: 5000, crystal: 4000, deuterium: 3000 }, requirements: [questReq(\"Deuterium Synthesizer\", 4, s => s.planet.deuteriumSynthesizer)] }"
+      },
+      {
+        "index": 38,
+        "definition": "{ period: 2, id: 7, group: \"Weekly\", title: \"Combustion Drive Lv 2\", hint: \"Improve early fleet movement.\", reward: { metal: 5000, crystal: 3000, deuterium: 3000 }, requirements: [questReq(\"Combustion Drive\", 2, s => s.research.combustionDrive)] }"
+      },
+      {
+        "index": 39,
+        "definition": "{ period: 2, id: 8, group: \"Weekly\", title: \"Computer Technology Lv 2\", hint: \"Make mission management part of progress.\", reward: { metal: 4000, crystal: 5000, deuterium: 3000 }, requirements: [questReq(\"Computer Technology\", 2, s => s.research.computerTech)] }"
+      },
+      {
+        "index": 40,
+        "definition": "{ period: 2, id: 9, group: \"Weekly\", title: \"Own 5 Small Cargo\", hint: \"Cargo capacity supports trading and relocation.\", reward: { metal: 9000, crystal: 7000, deuterium: 1500 }, requirements: [questReq(\"Small Cargo\", 5, s => s.fleet.smallCargo)] }"
+      },
+      {
+        "index": 41,
+        "definition": "{ period: 2, id: 10, group: \"Weekly\", title: \"Own 10 Rocket Launchers\", hint: \"A starter defense wall discourages easy raids.\", reward: { metal: 12000, crystal: 3000, deuterium: 500 }, requirements: [questReq(\"Rocket Launcher\", 10, s => s.planet.rocketLauncher)] }"
+      },
+      {
+        "index": 42,
+        "definition": "{ period: 3, id: 0, group: \"Monthly\", title: \"Impulse Drive Lv 1\", hint: \"Start the midgame engine path.\", reward: { metal: 30000, crystal: 25000, deuterium: 12000 }, requirements: [questReq(\"Impulse Drive\", 1, s => s.research.impulseDrive)] }"
+      },
+      {
+        "index": 43,
+        "definition": "{ period: 3, id: 1, group: \"Monthly\", title: \"Astrophysics Lv 1\", hint: \"Prepare for expansion and colony strategy.\", reward: { metal: 25000, crystal: 35000, deuterium: 15000 }, requirements: [questReq(\"Astrophysics\", 1, s => s.research.astrophysics)] }"
+      },
+      {
+        "index": 44,
+        "definition": "{ period: 3, id: 2, group: \"Monthly\", title: \"Own 25 ships\", hint: \"Hold a meaningful active fleet.\", reward: { metal: 45000, crystal: 30000, deuterium: 15000 }, requirements: [questReq(\"Fleet ships\", 25, totalQuestShips)] }"
+      },
+      {
+        "index": 45,
+        "definition": "{ period: 3, id: 3, group: \"Monthly\", title: \"Own 25 defenses\", hint: \"Build lasting planetary protection.\", reward: { metal: 40000, crystal: 35000, deuterium: 12000 }, requirements: [questReq(\"Defense units\", 25, totalQuestDefenses)] }"
+      },
+      {
+        "index": 46,
+        "definition": "{ period: 3, id: 4, group: \"Monthly\", title: \"Metal Mine Lv 10\", hint: \"Reach a real production milestone.\", reward: { metal: 50000, crystal: 15000, deuterium: 3000 }, requirements: [questReq(\"Metal Mine\", 10, s => s.planet.metalMine)] }"
+      },
+      {
+        "index": 47,
+        "definition": "{ period: 3, id: 5, group: \"Monthly\", title: \"Crystal Mine Lv 10\", hint: \"Sustain research and higher construction.\", reward: { metal: 20000, crystal: 50000, deuterium: 3000 }, requirements: [questReq(\"Crystal Mine\", 10, s => s.planet.crystalMine)] }"
+      },
+      {
+        "index": 48,
+        "definition": "{ period: 3, id: 6, group: \"Monthly\", title: \"Solar Plant Lv 12\", hint: \"Power the late early-game economy.\", reward: { metal: 25000, crystal: 25000, deuterium: 5000 }, requirements: [questReq(\"Solar Plant\", 12, s => s.planet.solarPlant)] }"
+      },
+      {
+        "index": 49,
+        "definition": "{ period: 3, id: 7, group: \"Monthly\", title: \"Research Lab Lv 5\", hint: \"Unlock deeper research trees.\", reward: { metal: 30000, crystal: 40000, deuterium: 15000 }, requirements: [questReq(\"Research Lab\", 5, s => s.planet.researchLab)] }"
+      },
+      {
+        "index": 50,
+        "definition": "{ period: 3, id: 8, group: \"Monthly\", title: \"Shipyard Lv 5\", hint: \"Prepare heavier fleet production.\", reward: { metal: 45000, crystal: 35000, deuterium: 10000 }, requirements: [questReq(\"Shipyard\", 5, s => s.planet.shipyard)] }"
+      },
+      {
+        "index": 51,
+        "definition": "{ period: 3, id: 9, group: \"Monthly\", title: \"Computer Technology Lv 5\", hint: \"Improve command capacity.\", reward: { metal: 30000, crystal: 35000, deuterium: 20000 }, requirements: [questReq(\"Computer Technology\", 5, s => s.research.computerTech)] }"
+      },
+      {
+        "index": 52,
+        "definition": "{ period: 3, id: 10, group: \"Monthly\", title: \"Own a Colony Ship\", hint: \"Expansion should come from real preparation.\", reward: { metal: 60000, crystal: 50000, deuterium: 20000 }, requirements: [questReq(\"Colony Ship\", 1, s => s.fleet.colonyShip)] }"
+      },
+      {
+        "index": 53,
+        "definition": "{ period: 3, id: 11, group: \"Monthly\", title: \"Own a Battleship\", hint: \"A heavy fleet milestone for committed players.\", reward: { metal: 70000, crystal: 50000, deuterium: 25000 }, requirements: [questReq(\"Battleship\", 1, s => s.fleet.battleship)] }"
+      }
+    ],
+    "DAILY_ROTATING_QUESTS_UI": [
+      {
+        "index": 0,
+        "definition": "qCatalog(\"Metal Mine Lv 3\", \"Keep basic metal production moving.\", \"Metal Mine\", 3, s => s.planet.metalMine, { metal: 1000, crystal: 500, deuterium: 100 })"
+      },
+      {
+        "index": 1,
+        "definition": "qCatalog(\"Crystal Mine Lv 3\", \"Keep crystal production balanced.\", \"Crystal Mine\", 3, s => s.planet.crystalMine, { metal: 500, crystal: 1000, deuterium: 100 })"
+      },
+      {
+        "index": 2,
+        "definition": "qCatalog(\"Solar Plant Lv 4\", \"A powered colony is a productive colony.\", \"Solar Plant\", 4, s => s.planet.solarPlant, { metal: 700, crystal: 700, deuterium: 150 })"
+      },
+      {
+        "index": 3,
+        "definition": "qCatalog(\"Deuterium Synthesizer Lv 2\", \"Fuel growth without overpaying the player.\", \"Deuterium Synthesizer\", 2, s => s.planet.deuteriumSynthesizer, { metal: 600, crystal: 500, deuterium: 300 })"
+      },
+      {
+        "index": 4,
+        "definition": "qCatalog(\"Robotics Factory Lv 1\", \"Keep construction efficiency online.\", \"Robotics Factory\", 1, s => s.planet.roboticsFactory, { metal: 800, crystal: 650, deuterium: 150 })"
+      },
+      {
+        "index": 5,
+        "definition": "qCatalog(\"Shipyard Lv 2\", \"Keep fleet construction options open.\", \"Shipyard\", 2, s => s.planet.shipyard, { metal: 1200, crystal: 900, deuterium: 250 })"
+      },
+      {
+        "index": 6,
+        "definition": "qCatalog(\"Research Lab Lv 1\", \"Keep the lab ready for unlocks.\", \"Research Lab\", 1, s => s.planet.researchLab, { metal: 900, crystal: 900, deuterium: 250 })"
+      },
+      {
+        "index": 7,
+        "definition": "qCatalog(\"Energy Technology Lv 1\", \"Review your research base each day.\", \"Energy Technology\", 1, s => s.research.energyTech, { metal: 800, crystal: 800, deuterium: 250 })"
+      },
+      {
+        "index": 8,
+        "definition": "qCatalog(\"Computer Technology Lv 1\", \"Mission control starts with computer tech.\", \"Computer Technology\", 1, s => s.research.computerTech, { metal: 800, crystal: 1000, deuterium: 300 })"
+      },
+      {
+        "index": 9,
+        "definition": "qCatalog(\"Own 3 Ships\", \"Maintain a small operational fleet.\", \"Fleet ships\", 3, totalQuestShips, { metal: 1500, crystal: 1000, deuterium: 250 })"
+      },
+      {
+        "index": 10,
+        "definition": "qCatalog(\"Own 3 Defenses\", \"Do not leave the planet naked.\", \"Defense units\", 3, totalQuestDefenses, { metal: 1200, crystal: 800, deuterium: 150 })"
+      },
+      {
+        "index": 11,
+        "definition": "qCatalog(\"Own 2 Small Cargo\", \"Cargo capacity keeps logistics flexible.\", \"Small Cargo\", 2, s => s.fleet.smallCargo, { metal: 1000, crystal: 700, deuterium: 200 })"
+      },
+      {
+        "index": 12,
+        "definition": "qCatalog(\"Own a Large Cargo\", \"Move a heavier payload when the route needs it.\", \"Large Cargo\", 1, s => s.fleet.largeCargo, { metal: 1200, crystal: 900, deuterium: 250 })"
+      },
+      {
+        "index": 13,
+        "definition": "qCatalog(\"Own 2 Light Fighters\", \"Keep a starter combat screen.\", \"Light Fighter\", 2, s => s.fleet.lightFighter, { metal: 1100, crystal: 700, deuterium: 200 })"
+      },
+      {
+        "index": 14,
+        "definition": "qCatalog(\"Own 3 Rocket Launchers\", \"Maintain a basic defense line.\", \"Rocket Launcher\", 3, s => s.planet.rocketLauncher, { metal: 900, crystal: 500, deuterium: 100 })"
+      },
+      {
+        "index": 15,
+        "definition": "qCatalog(\"Own a Light Laser\", \"Layer defenses instead of relying on one unit.\", \"Light Laser\", 1, s => s.planet.lightLaser, { metal: 1000, crystal: 700, deuterium: 100 })"
+      },
+      {
+        "index": 16,
+        "definition": "qCatalog(\"Own an Espionage Probe\", \"Information starts with probes.\", \"Espionage Probe\", 1, s => s.fleet.espionageProbe, { metal: 700, crystal: 700, deuterium: 250 })"
+      },
+      {
+        "index": 17,
+        "definition": "qCatalog(\"Combustion Drive Lv 1\", \"Prepare early fleet movement.\", \"Combustion Drive\", 1, s => s.research.combustionDrive, { metal: 900, crystal: 600, deuterium: 300 })"
+      },
+      {
+        "index": 18,
+        "definition": "qCatalog(\"Metal Storage Lv 1\", \"Protect production from caps.\", \"Metal Storage\", 1, s => s.planet.metalStorage, { metal: 700, crystal: 500, deuterium: 100 })"
+      },
+      {
+        "index": 19,
+        "definition": "qCatalog(\"Crystal Storage Lv 1\", \"Protect crystal from caps.\", \"Crystal Storage\", 1, s => s.planet.crystalStorage, { metal: 500, crystal: 700, deuterium: 100 })"
+      },
+      {
+        "index": 20,
+        "definition": "qCatalog(\"Deuterium Tank Lv 1\", \"Protect fuel from caps.\", \"Deuterium Tank\", 1, s => s.planet.deuteriumTank, { metal: 600, crystal: 500, deuterium: 250 })"
+      },
+      {
+        "index": 21,
+        "definition": "qCatalog(\"Own a Colony Ship\", \"Keep expansion capacity ready.\", \"Colony Ship\", 1, s => s.fleet.colonyShip, { metal: 1400, crystal: 1200, deuterium: 400 })"
+      },
+      {
+        "index": 22,
+        "definition": "qCatalog(\"Own a Heavy Fighter\", \"Begin heavier combat production.\", \"Heavy Fighter\", 1, s => s.fleet.heavyFighter, { metal: 1400, crystal: 1000, deuterium: 350 })"
+      },
+      {
+        "index": 23,
+        "definition": "qCatalog(\"Shielding Technology Lv 1\", \"Start defensive research.\", \"Shielding Technology\", 1, s => s.research.shieldingTechnology, { metal: 900, crystal: 1100, deuterium: 250 })"
+      },
+      {
+        "index": 24,
+        "definition": "qCatalog(\"Armor Technology Lv 1\", \"Improve fleet durability.\", \"Armor Technology\", 1, s => s.research.armorTechnology, { metal: 1100, crystal: 800, deuterium: 250 })"
+      }
+    ],
+    "WEEKLY_ROTATING_QUESTS_UI": [
+      {
+        "index": 0,
+        "definition": "qCatalog(\"Research Lab Lv 2\", \"Build toward a stronger tech floor.\", \"Research Lab\", 2, s => s.planet.researchLab, { metal: 6000, crystal: 7000, deuterium: 2000 })"
+      },
+      {
+        "index": 1,
+        "definition": "qCatalog(\"Shipyard Lv 2\", \"Keep construction capacity ready.\", \"Shipyard\", 2, s => s.planet.shipyard, { metal: 8000, crystal: 5000, deuterium: 1500 })"
+      },
+      {
+        "index": 2,
+        "definition": "qCatalog(\"Own 5 Ships\", \"A small fleet enables transport and response.\", \"Fleet ships\", 5, totalQuestShips, { metal: 9000, crystal: 6000, deuterium: 2500 })"
+      },
+      {
+        "index": 3,
+        "definition": "qCatalog(\"Own 5 Defenses\", \"Build a basic defensive shell.\", \"Defense units\", 5, totalQuestDefenses, { metal: 8000, crystal: 7000, deuterium: 1500 })"
+      },
+      {
+        "index": 4,
+        "definition": "qCatalog(\"Metal Mine Lv 5\", \"Upgrade core production over time.\", \"Metal Mine\", 5, s => s.planet.metalMine, { metal: 10000, crystal: 3000, deuterium: 500 })"
+      },
+      {
+        "index": 5,
+        "definition": "qCatalog(\"Crystal Mine Lv 5\", \"Balance metal with crystal growth.\", \"Crystal Mine\", 5, s => s.planet.crystalMine, { metal: 4000, crystal: 10000, deuterium: 500 })"
+      },
+      {
+        "index": 6,
+        "definition": "qCatalog(\"Deuterium Synthesizer Lv 4\", \"Prepare fuel for higher activity.\", \"Deuterium Synthesizer\", 4, s => s.planet.deuteriumSynthesizer, { metal: 5000, crystal: 4000, deuterium: 3000 })"
+      },
+      {
+        "index": 7,
+        "definition": "qCatalog(\"Combustion Drive Lv 2\", \"Improve early fleet movement.\", \"Combustion Drive\", 2, s => s.research.combustionDrive, { metal: 5000, crystal: 3000, deuterium: 3000 })"
+      },
+      {
+        "index": 8,
+        "definition": "qCatalog(\"Computer Technology Lv 2\", \"Make mission management part of progress.\", \"Computer Technology\", 2, s => s.research.computerTech, { metal: 4000, crystal: 5000, deuterium: 3000 })"
+      },
+      {
+        "index": 9,
+        "definition": "qCatalog(\"Own 5 Small Cargo\", \"Cargo capacity supports trading and relocation.\", \"Small Cargo\", 5, s => s.fleet.smallCargo, { metal: 9000, crystal: 7000, deuterium: 1500 })"
+      },
+      {
+        "index": 10,
+        "definition": "qCatalog(\"Own 10 Rocket Launchers\", \"A starter defense wall discourages easy raids.\", \"Rocket Launcher\", 10, s => s.planet.rocketLauncher, { metal: 12000, crystal: 3000, deuterium: 500 })"
+      },
+      {
+        "index": 11,
+        "definition": "qCatalog(\"Own a Large Cargo\", \"Move larger payloads between planets.\", \"Large Cargo\", 1, s => s.fleet.largeCargo, { metal: 8000, crystal: 8000, deuterium: 2000 })"
+      },
+      {
+        "index": 12,
+        "definition": "qCatalog(\"Own 5 Light Fighters\", \"Maintain a basic response wing.\", \"Light Fighter\", 5, s => s.fleet.lightFighter, { metal: 8000, crystal: 5000, deuterium: 1500 })"
+      },
+      {
+        "index": 13,
+        "definition": "qCatalog(\"Own 2 Heavy Fighters\", \"Add stronger ships to the roster.\", \"Heavy Fighter\", 2, s => s.fleet.heavyFighter, { metal: 9000, crystal: 8000, deuterium: 3000 })"
+      },
+      {
+        "index": 14,
+        "definition": "qCatalog(\"Own a Recycler\", \"Prepare debris recovery.\", \"Recycler\", 1, s => s.fleet.recycler, { metal: 8000, crystal: 7000, deuterium: 2500 })"
+      },
+      {
+        "index": 15,
+        "definition": "qCatalog(\"Own 5 Probes\", \"Keep scouting capacity available.\", \"Espionage Probe\", 5, s => s.fleet.espionageProbe, { metal: 5000, crystal: 6000, deuterium: 2000 })"
+      },
+      {
+        "index": 16,
+        "definition": "qCatalog(\"Solar Plant Lv 8\", \"Support higher production.\", \"Solar Plant\", 8, s => s.planet.solarPlant, { metal: 8000, crystal: 5000, deuterium: 1000 })"
+      },
+      {
+        "index": 17,
+        "definition": "qCatalog(\"Robotics Factory Lv 3\", \"Improve build cadence.\", \"Robotics Factory\", 3, s => s.planet.roboticsFactory, { metal: 8000, crystal: 6000, deuterium: 1500 })"
+      },
+      {
+        "index": 18,
+        "definition": "qCatalog(\"Energy Technology Lv 2\", \"Push energy science forward.\", \"Energy Technology\", 2, s => s.research.energyTech, { metal: 6000, crystal: 7000, deuterium: 2500 })"
+      },
+      {
+        "index": 19,
+        "definition": "qCatalog(\"Weapons Technology Lv 1\", \"Start combat research.\", \"Weapons Technology\", 1, s => s.research.weaponsTechnology, { metal: 8000, crystal: 5000, deuterium: 2000 })"
+      },
+      {
+        "index": 20,
+        "definition": "qCatalog(\"Shielding Technology Lv 1\", \"Improve defensive strength.\", \"Shielding Technology\", 1, s => s.research.shieldingTechnology, { metal: 7000, crystal: 8000, deuterium: 2000 })"
+      },
+      {
+        "index": 21,
+        "definition": "qCatalog(\"Armor Technology Lv 1\", \"Improve ship durability.\", \"Armor Technology\", 1, s => s.research.armorTechnology, { metal: 8000, crystal: 7000, deuterium: 2000 })"
+      },
+      {
+        "index": 22,
+        "definition": "qCatalog(\"Own 5 Light Lasers\", \"Layer early defenses.\", \"Light Laser\", 5, s => s.planet.lightLaser, { metal: 7000, crystal: 5000, deuterium: 1000 })"
+      }
+    ],
+    "MONTHLY_ROTATING_QUESTS_UI": [
+      {
+        "index": 0,
+        "definition": "qCatalog(\"Impulse Drive Lv 1\", \"Start the midgame engine path.\", \"Impulse Drive\", 1, s => s.research.impulseDrive, { metal: 30000, crystal: 25000, deuterium: 12000 })"
+      },
+      {
+        "index": 1,
+        "definition": "qCatalog(\"Astrophysics Lv 1\", \"Prepare for expansion and colony strategy.\", \"Astrophysics\", 1, s => s.research.astrophysics, { metal: 25000, crystal: 35000, deuterium: 15000 })"
+      },
+      {
+        "index": 2,
+        "definition": "qCatalog(\"Own 25 Ships\", \"Hold a meaningful active fleet.\", \"Fleet ships\", 25, totalQuestShips, { metal: 45000, crystal: 30000, deuterium: 15000 })"
+      },
+      {
+        "index": 3,
+        "definition": "qCatalog(\"Own 25 Defenses\", \"Build lasting planetary protection.\", \"Defense units\", 25, totalQuestDefenses, { metal: 40000, crystal: 35000, deuterium: 12000 })"
+      },
+      {
+        "index": 4,
+        "definition": "qCatalog(\"Metal Mine Lv 10\", \"Reach a real production milestone.\", \"Metal Mine\", 10, s => s.planet.metalMine, { metal: 50000, crystal: 15000, deuterium: 3000 })"
+      },
+      {
+        "index": 5,
+        "definition": "qCatalog(\"Crystal Mine Lv 10\", \"Sustain research and higher construction.\", \"Crystal Mine\", 10, s => s.planet.crystalMine, { metal: 20000, crystal: 50000, deuterium: 3000 })"
+      },
+      {
+        "index": 6,
+        "definition": "qCatalog(\"Solar Plant Lv 12\", \"Power the late early-game economy.\", \"Solar Plant\", 12, s => s.planet.solarPlant, { metal: 25000, crystal: 25000, deuterium: 5000 })"
+      },
+      {
+        "index": 7,
+        "definition": "qCatalog(\"Research Lab Lv 5\", \"Unlock deeper research trees.\", \"Research Lab\", 5, s => s.planet.researchLab, { metal: 30000, crystal: 40000, deuterium: 15000 })"
+      },
+      {
+        "index": 8,
+        "definition": "qCatalog(\"Shipyard Lv 5\", \"Prepare heavier fleet production.\", \"Shipyard\", 5, s => s.planet.shipyard, { metal: 45000, crystal: 35000, deuterium: 10000 })"
+      },
+      {
+        "index": 9,
+        "definition": "qCatalog(\"Computer Technology Lv 5\", \"Improve command capacity.\", \"Computer Technology\", 5, s => s.research.computerTech, { metal: 30000, crystal: 35000, deuterium: 20000 })"
+      },
+      {
+        "index": 10,
+        "definition": "qCatalog(\"Own a Colony Ship\", \"Expansion should come from real preparation.\", \"Colony Ship\", 1, s => s.fleet.colonyShip, { metal: 60000, crystal: 50000, deuterium: 20000 })"
+      },
+      {
+        "index": 11,
+        "definition": "qCatalog(\"Own a Battleship\", \"A heavy fleet milestone for committed players.\", \"Battleship\", 1, s => s.fleet.battleship, { metal: 70000, crystal: 50000, deuterium: 25000 })"
+      },
+      {
+        "index": 12,
+        "definition": "qCatalog(\"Own 3 Cruisers\", \"Build a mid-tier strike group.\", \"Cruiser\", 3, s => s.fleet.cruiser, { metal: 55000, crystal: 45000, deuterium: 18000 })"
+      },
+      {
+        "index": 13,
+        "definition": "qCatalog(\"Own 5 Recyclers\", \"Prepare serious debris recovery.\", \"Recycler\", 5, s => s.fleet.recycler, { metal: 45000, crystal: 35000, deuterium: 18000 })"
+      },
+      {
+        "index": 14,
+        "definition": "qCatalog(\"Own 10 Heavy Lasers\", \"Strengthen defensive depth.\", \"Heavy Laser\", 10, s => s.planet.heavyLaser, { metal: 35000, crystal: 30000, deuterium: 8000 })"
+      },
+      {
+        "index": 15,
+        "definition": "qCatalog(\"Own 3 Gauss Cannons\", \"Add armor-piercing defense.\", \"Gauss Cannon\", 3, s => s.planet.gaussCannon, { metal: 45000, crystal: 35000, deuterium: 10000 })"
+      },
+      {
+        "index": 16,
+        "definition": "qCatalog(\"Own 3 Ion Cannons\", \"Add shield-focused defense.\", \"Ion Cannon\", 3, s => s.planet.ionCannon, { metal: 35000, crystal: 45000, deuterium: 12000 })"
+      },
+      {
+        "index": 17,
+        "definition": "qCatalog(\"Own a Plasma Turret\", \"Reach a high-end defense milestone.\", \"Plasma Turret\", 1, s => s.planet.plasmaTurret, { metal: 60000, crystal: 45000, deuterium: 18000 })"
+      },
+      {
+        "index": 18,
+        "definition": "qCatalog(\"Fusion Reactor Lv 3\", \"Stabilize deeper energy needs.\", \"Fusion Reactor\", 3, s => s.planet.fusionReactor, { metal: 35000, crystal: 35000, deuterium: 16000 })"
+      },
+      {
+        "index": 19,
+        "definition": "qCatalog(\"Nanite Factory Lv 1\", \"Unlock serious industrial acceleration.\", \"Nanite Factory\", 1, s => s.planet.naniteFactory, { metal: 80000, crystal: 60000, deuterium: 20000 })"
+      },
+      {
+        "index": 20,
+        "definition": "qCatalog(\"Hyperspace Drive Lv 1\", \"Start the advanced engine path.\", \"Hyperspace Drive\", 1, s => s.research.hyperspaceDrive, { metal: 50000, crystal: 55000, deuterium: 25000 })"
+      },
+      {
+        "index": 21,
+        "definition": "qCatalog(\"IGR Network Lv 1\", \"Connect research capacity.\", \"Intergalactic Research Network\", 1, s => s.research.igrNetwork, { metal: 45000, crystal: 60000, deuterium: 20000 })"
+      },
+      {
+        "index": 22,
+        "definition": "qCatalog(\"Weapons Technology Lv 3\", \"Build a stronger combat foundation.\", \"Weapons Technology\", 3, s => s.research.weaponsTechnology, { metal: 55000, crystal: 45000, deuterium: 20000 })"
+      }
+    ],
+    "ALLIANCE_BUILDINGS": [
+      {
+        "index": 0,
+        "definition": "{ id: 0, key: \"logisticsHub\", title: \"Logistics Hub\", hint: \"Shared shipping and contribution capacity.\" }"
+      },
+      {
+        "index": 1,
+        "definition": "{ id: 1, key: \"researchGrid\", title: \"Research Grid\", hint: \"Shared scientific coordination.\" }"
+      },
+      {
+        "index": 2,
+        "definition": "{ id: 2, key: \"defenseCoordination\", title: \"Defense Coordination\", hint: \"Alliance-wide defensive organization.\" }"
+      },
+      {
+        "index": 3,
+        "definition": "{ id: 3, key: \"tradeNetwork\", title: \"Trade Network\", hint: \"Shared market and treasury infrastructure.\" }"
+      }
+    ]
+  },
+  "api": [
+    "antimatter-faucet.js",
+    "crypto-ufos-image.js",
+    "crypto-ufos.js",
+    "futarchy-finalizer.js",
+    "lazor-paymaster.js",
+    "solana-rpc.js"
+  ]
+}

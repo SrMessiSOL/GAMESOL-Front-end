@@ -1,0 +1,236 @@
+{
+  "network": "devnet",
+  "slot": 512874831,
+  "submitted": false,
+  "signatureVerification": false,
+  "initialStoreState": {
+    "authority": "G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r",
+    "dailyEpoch": 20743,
+    "weeklyEpoch": 2963,
+    "monthlyEpoch": 24321,
+    "dailyPurchasedMask": "0",
+    "weeklyPurchasedMask": "31",
+    "monthlyPurchasedMask": "0",
+    "lastUpdatedTs": 1792268992,
+    "bump": 255
+  },
+  "boundary": "Unsigned simulations only, including virtual token transfers and atomic rollback; not signed settlement, live races or observed reset boundaries",
+  "results": [
+    {
+      "name": "period 1 pack fits and can transfer test USDC in simulation",
+      "allowed": true,
+      "code": null,
+      "recordsUnchanged": true
+    },
+    {
+      "name": "period 1 same pack twice in one atomic bundle",
+      "allowed": false,
+      "code": "StorePackAlreadyPurchased",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5287. Error Code: StorePackAlreadyPurchased. Error Number: 6062. Error Message: StorePackAlreadyPurchased.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "period 2 pack fits and can transfer test USDC in simulation",
+      "allowed": true,
+      "code": null,
+      "recordsUnchanged": true
+    },
+    {
+      "name": "period 2 same pack twice in one atomic bundle",
+      "allowed": false,
+      "code": "StorePackAlreadyPurchased",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5287. Error Code: StorePackAlreadyPurchased. Error Number: 6062. Error Message: StorePackAlreadyPurchased.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "daily and weekly same pack ID have independent limits",
+      "allowed": true,
+      "code": null,
+      "recordsUnchanged": true
+    },
+    {
+      "name": "same-owner colony can receive an otherwise eligible pack",
+      "allowed": true,
+      "code": null,
+      "recordsUnchanged": true
+    },
+    {
+      "name": "pack limit follows commander across planets",
+      "allowed": false,
+      "code": "StorePackAlreadyPurchased",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5287. Error Code: StorePackAlreadyPurchased. Error Number: 6062. Error Message: StorePackAlreadyPurchased.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "monthly metal delivery exceeds current capacity",
+      "allowed": false,
+      "code": "ResourceCapExceeded",
+      "guard": "Program log: AnchorError occurred. Error Code: ResourceCapExceeded. Error Number: 6066. Error Message: ResourceCapExceeded.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "monthly crystal delivery exceeds current capacity",
+      "allowed": false,
+      "code": "ResourceCapExceeded",
+      "guard": "Program log: AnchorError occurred. Error Code: ResourceCapExceeded. Error Number: 6066. Error Message: ResourceCapExceeded.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "monthly deuterium delivery exceeds current capacity",
+      "allowed": false,
+      "code": "ResourceCapExceeded",
+      "guard": "Program log: AnchorError occurred. Error Code: ResourceCapExceeded. Error Number: 6066. Error Message: ResourceCapExceeded.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "invalid raw store period",
+      "allowed": false,
+      "code": "InvalidStorePack",
+      "guard": "Program log: AnchorError occurred. Error Code: InvalidStorePack. Error Number: 6061. Error Message: InvalidStorePack.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "invalid raw store ID",
+      "allowed": false,
+      "code": "InvalidStorePack",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5249. Error Code: InvalidStorePack. Error Number: 6061. Error Message: InvalidStorePack.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "period 1 unsupported shield",
+      "allowed": false,
+      "code": "InvalidStorePack",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5293. Error Code: InvalidStorePack. Error Number: 6061. Error Message: InvalidStorePack.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "period 2 unsupported shield",
+      "allowed": false,
+      "code": "InvalidStorePack",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5293. Error Code: InvalidStorePack. Error Number: 6061. Error Message: InvalidStorePack.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "period 3 unsupported shield",
+      "allowed": false,
+      "code": "InvalidStorePack",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5293. Error Code: InvalidStorePack. Error Number: 6061. Error Message: InvalidStorePack.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "store delivery cannot target another commander",
+      "allowed": false,
+      "code": "Unauthorized",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5296. Error Code: Unauthorized. Error Number: 6000. Error Message: Unauthorized.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "store payment cannot redirect treasury to buyer",
+      "allowed": false,
+      "code": "InvalidUsdcAccount",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:5255. Error Code: InvalidUsdcAccount. Error Number: 6064. Error Message: InvalidUsdcAccount.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "AM mint cannot substitute configured USDC mint",
+      "allowed": false,
+      "code": "InvalidUsdcMint",
+      "guard": "Program log: AnchorError caused by account: usdc_mint. Error Code: InvalidUsdcMint. Error Number: 6063. Error Message: InvalidUsdcMint.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "buyer cannot pay with treasury token account",
+      "allowed": false,
+      "code": "ConstraintTokenOwner",
+      "guard": "Program log: AnchorError occurred. Error Code: ConstraintTokenOwner. Error Number: 2015. Error Message: A token owner constraint was violated.",
+      "lastInstruction": "Program log: Instruction: PurchaseStorePack",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "unclaimed tutorial objective is eligible",
+      "allowed": true,
+      "code": null,
+      "recordsUnchanged": true
+    },
+    {
+      "name": "unclaimed tutorial twice in atomic bundle rolls back",
+      "allowed": false,
+      "code": "QuestAlreadyClaimed",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:4869. Error Code: QuestAlreadyClaimed. Error Number: 6057. Error Message: QuestAlreadyClaimed.",
+      "lastInstruction": "Program log: Instruction: ClaimQuestVault",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "tutorial replay cannot switch to another owned planet",
+      "allowed": false,
+      "code": "QuestAlreadyClaimed",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:4869. Error Code: QuestAlreadyClaimed. Error Number: 6057. Error Message: QuestAlreadyClaimed.",
+      "lastInstruction": "Program log: Instruction: ClaimQuestVault",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "monthly quest 0 on same-owner colony",
+      "allowed": false,
+      "code": "QuestRequirementsNotMet",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:4892. Error Code: QuestRequirementsNotMet. Error Number: 6058. Error Message: QuestRequirementsNotMet.",
+      "lastInstruction": "Program log: Instruction: ClaimQuestVault",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "monthly quest 1 on same-owner colony",
+      "allowed": false,
+      "code": "WrongQuestRewardPlanet",
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:6524. Error Code: WrongQuestRewardPlanet. Error Number: 6096. Error Message: WrongQuestRewardPlanet.",
+      "lastInstruction": "Program log: Instruction: ClaimQuestVault",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "monthly quest 1 on bound homeworld",
+      "allowed": true,
+      "code": null,
+      "recordsUnchanged": true
+    },
+    {
+      "name": "virtual deliveries fit before quest-capacity test",
+      "allowed": true,
+      "code": null,
+      "recordsUnchanged": true
+    },
+    {
+      "name": "monthly reward rejects after virtual storage fill",
+      "allowed": false,
+      "code": "ResourceCapExceeded",
+      "guard": "Program log: AnchorError occurred. Error Code: ResourceCapExceeded. Error Number: 6066. Error Message: ResourceCapExceeded.",
+      "lastInstruction": "Program log: Instruction: ClaimQuestVault",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "tutorial reward still fits near capacity",
+      "allowed": true,
+      "code": null,
+      "recordsUnchanged": true
+    },
+    {
+      "name": "second distinct tutorial reward exceeds remaining storage",
+      "allowed": false,
+      "code": "ResourceCapExceeded",
+      "guard": "Program log: AnchorError occurred. Error Code: ResourceCapExceeded. Error Number: 6066. Error Message: ResourceCapExceeded.",
+      "lastInstruction": "Program log: Instruction: ClaimQuestVault",
+      "recordsUnchanged": true
+    }
+  ]
+}

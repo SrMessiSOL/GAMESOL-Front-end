@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-10-19T18:10:20.911Z",
+  "live": "https://chained-universe.vercel.app",
+  "pinned": "https://frontend-5hqrebgmt-srmessisols-projects.vercel.app",
+  "sourceCommit": "3113b97",
+  "evidenceCommit": "3bd1df2",
+  "network": "devnet",
+  "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "results": [
+    {
+      "asset": "/assets/index-BgkYmNVA.js",
+      "bytes": 319860,
+      "sha256": "777c4bcf048bddcb7a0346992c9cd289776b1589af8d135c02e34e1c68343955",
+      "matchesPublishedRelease": true
+    },
+    {
+      "asset": "/assets/index-RWKvG8gF.css",
+      "bytes": 15464,
+      "sha256": "a1eec290b853e60e403d20ef89917fee2ef2e0423bcb9a5f1c6bb67c7d5d2a33",
+      "matchesPublishedRelease": true
+    },
+    {
+      "asset": "/assets/UniverseGame-yI2uUWoz.js",
+      "bytes": 93738,
+      "sha256": "1c6f4a7a2826f7557054d166c7807cc0cd93749735bf4f8a9c036498c6ee082c",
+      "matchesPublishedRelease": true
+    },
+    {
+      "asset": "/assets/logobg-FrempVgw.js",
+      "bytes": 608674,
+      "sha256": "8fe2f02d69edf856662d3548d36c4d04e9fc0bde36743eb9857964d2156250f4",
+      "matchesPublishedRelease": true
+    },
+    {
+      "asset": "/assets/UniverseLab-BS4HlW4M.js",
+      "bytes": 1396794,
+      "sha256": "714d4582e6dfe9348abf6e94680bc0d819871cae2c8fe9b4cf8da11f381f721a",
+      "matchesPublishedRelease": true
+    },
+    {
+      "asset": "/assets/usdc-Bm0nc6D-.js",
+      "bytes": 2204,
+      "sha256": "ed7652f5b7a0abd267a758a0744c16a4a44f0ecfbb3bf0baea7b100d99685d98",
+      "matchesPublishedRelease": true
+    },
+    {
+      "asset": "/assets/users-CbYK9CZo.js",
+      "bytes": 2958,
+      "sha256": "3836516dfe8d8893683f90951be0e26582d36338d230710c05713ad8cc97e3ce",
+      "matchesPublishedRelease": true
+    },
+    {
+      "asset": "/assets/ui-art-C5RJeBpY.js",
+      "bytes": 27774,
+      "sha256": "40d9887247f7815004683fd491d5f3805e30202b6c5972eb40c5ec85903e9106",
+      "matchesPublishedRelease": true
+    },
+    {
+      "asset": "/assets/App-cUAQtWA1.js",
+      "bytes": 401537,
+      "sha256": "879efcccfe5fc27164ea1fc11db5c6e0a8b2e50cac09edd104fe337c220f180f",
+      "matchesPublishedRelease": true
+    }
+  ],
+  "boundary": "Public assets match the retained tested release byte-for-byte. No new signed-in visual, passkey or gameplay transaction test was performed. No deployment or chain write."
+}

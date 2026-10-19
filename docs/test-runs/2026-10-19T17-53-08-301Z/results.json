@@ -1,0 +1,45 @@
+{
+  "startedAt": "2026-10-19T17:53:08.303Z",
+  "mode": "unsigned-devnet-simulations",
+  "submitted": false,
+  "signed": false,
+  "results": [
+    {
+      "name": "planet-market-replay",
+      "checklist": [
+        "T25",
+        "T35"
+      ],
+      "exitCode": 0,
+      "passed": true,
+      "tests": null,
+      "error": null,
+      "log": "planet-market-replay.log"
+    },
+    {
+      "name": "alliance-permissions",
+      "checklist": [
+        "T18"
+      ],
+      "exitCode": 0,
+      "passed": true,
+      "tests": null,
+      "error": null,
+      "log": "alliance-permissions.log"
+    },
+    {
+      "name": "alliance-infrastructure",
+      "checklist": [
+        "T20",
+        "T21"
+      ],
+      "exitCode": 0,
+      "passed": true,
+      "tests": null,
+      "error": null,
+      "log": "alliance-infrastructure.log"
+    }
+  ],
+  "finishedAt": "2026-10-19T17:53:20.921Z",
+  "boundary": "These results do not close a checklist family, prove wallet authentication, or certify signed settlement/UI/device coverage. Failures require diagnosis; historical state fixtures can become stale."
+}

@@ -1,0 +1,49 @@
+{
+  "network": "devnet",
+  "submitted": false,
+  "signatureVerification": false,
+  "boundary": "Program permission rejection only; not wallet authentication or successful action execution",
+  "recordsUnchanged": true,
+  "results": [
+    {
+      "action": "expel_alliance_member",
+      "expected": "AllianceLeaderRequired",
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6076
+          }
+        ]
+      },
+      "guard": "Program log: AnchorError caused by account: leader_membership. Error Code: AllianceLeaderRequired. Error Number: 6076. Error Message: AllianceLeaderRequired."
+    },
+    {
+      "action": "transfer_alliance_leadership",
+      "expected": "AllianceLeaderRequired",
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6076
+          }
+        ]
+      },
+      "guard": "Program log: AnchorError caused by account: leader_membership. Error Code: AllianceLeaderRequired. Error Number: 6076. Error Message: AllianceLeaderRequired."
+    },
+    {
+      "action": "leave_alliance",
+      "expected": "AllianceFounderCannotLeave",
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6070
+          }
+        ]
+      },
+      "guard": "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:1289. Error Code: AllianceFounderCannotLeave. Error Number: 6070. Error Message: AllianceFounderCannotLeave."
+    }
+  ]
+}
+

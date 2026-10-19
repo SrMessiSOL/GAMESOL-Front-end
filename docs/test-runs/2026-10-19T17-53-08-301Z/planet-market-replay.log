@@ -1,0 +1,70 @@
+{
+  "network": "devnet",
+  "submitted": false,
+  "signatureVerification": false,
+  "boundary": "Program replay and current-ownership rejection only, not wallet authentication or new settlement",
+  "results": [
+    {
+      "name": "filled planet purchase 1",
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 3012
+          }
+        ]
+      },
+      "guard": "Program log: AnchorError caused by account: listing. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "consumed Lazor purchase approval 1",
+      "error": {
+        "InstructionError": [
+          0,
+          "IllegalOwner"
+        ]
+      },
+      "guard": "Program 4h3XoNReAgEcHVxcZ8sw2aufi9MTr7BbvYYjzjWDyDxS failed: Provided owner is not allowed",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "filled planet purchase 2",
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 3012
+          }
+        ]
+      },
+      "guard": "Program log: AnchorError caused by account: listing. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "consumed Lazor purchase approval 2",
+      "error": {
+        "InstructionError": [
+          0,
+          "IllegalOwner"
+        ]
+      },
+      "guard": "Program 4h3XoNReAgEcHVxcZ8sw2aufi9MTr7BbvYYjzjWDyDxS failed: Provided owner is not allowed",
+      "recordsUnchanged": true
+    },
+    {
+      "name": "previous seller cannot reuse transferred ownership",
+      "error": {
+        "InstructionError": [
+          0,
+          {
+            "Custom": 6000
+          }
+        ]
+      },
+      "guard": "Program log: AnchorError caused by account: ownership_registry. Error Code: Unauthorized. Error Number: 6000. Error Message: Unauthorized.",
+      "recordsUnchanged": true
+    }
+  ]
+}
+
