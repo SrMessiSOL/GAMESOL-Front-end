@@ -48,3 +48,5 @@ Only the owner/traffic UI, shared snapshot helper and focused regression tests b
 - Browser inspection: 1440x1000 desktop and 390x844 mobile, both departure and destination galaxies; no console errors observed. Mobile document width equals viewport width and entry/exit labels fit.
 - Local screenshots: `.validation/galaxy-traffic-desktop.jpg`, `galaxy-traffic-mobile.jpg`, `galaxy-arrival-desktop.jpg`, `galaxy-arrival-mobile.jpg` beneath the workspace root.
 - Rendering fixtures only; no new flights or spending. Automation stays paused.
+- Final build passed. Canvas sampling found 5,660 distinct colors and 495 changed samples between settled arrival frames in the ship region.
+- Runtime commit `f5fa5b3` deployed to https://frontend-qnyowiwu1-srmessisols-projects.vercel.app and assigned to the main game URL. The expanded verifier matched all nine JavaScript assets and confirmed galaxy travel markers, preserved owner/system fixes, no DEV fixture and devnet genesis.
