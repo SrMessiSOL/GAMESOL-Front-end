@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const deployment = 'https://frontend-lsqkx82rr-srmessisols-projects.vercel.app';
+const deployment = 'https://frontend-mvsmy9h0e-srmessisols-projects.vercel.app';
 const publicOrigin = 'https://chained-universe.vercel.app';
 async function get(url) {
   const response = await fetch(url);
@@ -33,11 +33,11 @@ async function main() {
     assert.ok(visited.size <= 100);
   }
   const code = bodies.join('\n');
-  for (const marker of ['orbit-owner', 'ownerAddress', 'sourcePosition', 'destinationPosition', 'mission-traffic-list', 'Fleet departure and arrival points', 'awaiting resolution']) assert.ok(code.includes(marker), marker);
+  for (const marker of ['orbit-owner', 'ownerAddress', 'sourcePosition', 'destinationPosition', 'mission-traffic-list', 'Fleet departure and arrival points', 'awaiting resolution', 'mission-vessel-label', 'INBOUND', 'OUTBOUND', 'Colony ship']) assert.ok(code.includes(marker), marker);
   assert.ok(!code.includes('LOCAL TRAFFIC CHECK'), 'DEV-only fixture must not ship');
   assert.match(code, /units:(?:4e5|400000)/);
   const rpc = await fetch(`${publicOrigin}/api/solana-rpc`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getGenesisHash' }) });
   assert.equal((await rpc.json()).result, 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG');
-  console.log(JSON.stringify({ commit: '23ce706', deployment, publicOrigin, matchedJavascriptAssets: visited.size, currentOwnerLabels: true, twoEndedMissionVisibility: true, devnet: true, noTransactionsSubmitted: true }, null, 2));
+  console.log(JSON.stringify({ commit: '9cb8ce8', deployment, publicOrigin, matchedJavascriptAssets: visited.size, currentOwnerLabels: true, twoEndedMissionVisibility: true, readableSystemShips: true, devnet: true, noTransactionsSubmitted: true }, null, 2));
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

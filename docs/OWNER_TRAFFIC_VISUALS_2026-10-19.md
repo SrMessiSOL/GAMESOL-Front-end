@@ -37,3 +37,4 @@ Only the owner/traffic UI, shared snapshot helper and focused regression tests b
 - Desktop 1440x1000 and mobile 390x844 checks inspected an incoming colony ship at 35% progress and on final approach. The early incoming mobile label was inside the viewport, with the ship clear of the bottom panel; no console errors observed.
 - 404 regression tests passed, followed by 10 focused mission tests after the final viewport projection adjustment.
 - This remains DEV-only rendering-fixture evidence, not a newly signed flight. No funds spent; automation stays paused.
+- Production build passed. Follow-up runtime commit `9cb8ce8` deployed to https://frontend-mvsmy9h0e-srmessisols-projects.vercel.app and assigned to the main URL. Vercel reported Ready; all nine JavaScript assets matched the main alias and the expanded verifier confirmed real-ship labels and devnet.
