@@ -20,3 +20,11 @@
 
 ## Release Boundary
 Only the owner/traffic UI, shared snapshot helper and focused regression tests belong to this release. Unrelated local agent API, SDK and checklist work is excluded.
+
+## Published Result
+- Runtime commit: `23ce706` on `feat/crypto-ufos-wallet-link`; clean release production build passed.
+- Deployment: https://frontend-lsqkx82rr-srmessisols-projects.vercel.app
+- Main URL: https://chained-universe.vercel.app/app
+- `server/verify-owner-traffic-release.cjs` matched all nine JavaScript assets between deployment and main alias; confirmed owner/traffic code, no DEV fixture, preserved colony compute limit and devnet genesis.
+- Live desktop/mobile recheck at 9:427 confirmed Devnet Colony belongs to Fv9x...Rvdd, with the owner row and inspect button fitting correctly. Live departure count is rendered from public chain data.
+- No game transaction submitted. Automation remains paused.
