@@ -1,9 +1,11 @@
 import { planetClassForPosition, type PlanetClass } from "./planet-style";
+import { shortPlanetOwner } from './planet-owner';
 
 export type UniversePlanet = {
   id: string;
   name: string;
   ownerLabel: string;
+  ownerAddress?: string;
   coordinates: [number, number, number];
   seedLabel: string;
   orbit?: UniverseOrbit;
@@ -63,6 +65,7 @@ export type UniverseMission = {
   sourceCoordinates?: [number, number, number];
   destinationCoordinates?: [number, number, number];
   destinationPosition?: { galaxy: number; system: number; position: number };
+  sourcePosition?: { galaxy: number; system: number; position: number };
   destinationOrbit?: UniverseOrbit;
   destinationClearance?: number;
   sampledAt?: number;
@@ -201,7 +204,8 @@ export function createUniverseSnapshotFromChainData(
     return {
       id: planet.entity,
       name: planet.name || `Planet ${planet.galaxy}:${planet.system}:${planet.position}`,
-      ownerLabel: planet.owner.slice(0, 4).toUpperCase(),
+      ownerLabel: shortPlanetOwner(planet.owner),
+      ownerAddress: planet.owner,
       seedLabel: `#${planet.planetIndex}`,
       coordinates: pointOnUniverseOrbit(orbit),
       orbit,
@@ -217,7 +221,6 @@ export function createUniverseSnapshotFromChainData(
   });
 
   const missions: UniverseMission[] = [];
-  const missionIndexByDestination = new Map<string, number>();
   for (const source of planets) {
     for (const [slot, mission] of (source.missions ?? []).entries()) {
       // A populated mission slot remains authoritative until the player
@@ -225,15 +228,13 @@ export function createUniverseSnapshotFromChainData(
       const active = mission.missionType > 0 && mission.departTs > 0;
       if (!active) continue;
       const key = `${mission.targetGalaxy}:${mission.targetSystem}:${mission.targetPosition}`;
-      const current = missionIndexByDestination.get(key) ?? 0;
-      missionIndexByDestination.set(key, current + 1);
-      if (current > 4) continue;
       const destinationId = coordinateMap.get(key) ?? `G${mission.targetGalaxy}S${mission.targetSystem}P${mission.targetPosition}`;
       missions.push({
         id: `${source.entity}-${slot}`,
         sourceId: source.entity,
         destinationId,
         destinationPosition: { galaxy: mission.targetGalaxy, system: mission.targetSystem, position: mission.targetPosition },
+        sourcePosition: { galaxy: source.galaxy, system: source.system, position: source.position },
         sampledAt: now,
         kind: missionKindFromCode(mission.missionType),
         phase: mission.applied

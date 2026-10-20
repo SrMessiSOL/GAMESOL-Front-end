@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 const root=path.join(__dirname,'../src');
 function load(name,imports={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root,name+'.ts'),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports,require:id=>{assert(id in imports,id);return imports[id];},Date,Math,Map,Set,BigInt});return exports;}
-const data=load('universe-data',{'./planet-style':{planetClassForPosition:()=> 'terran'}});
+const data=load('universe-data',{'./planet-style':{planetClassForPosition:()=> 'terran'},'./planet-owner':load('planet-owner')});
 const scene=load('mission-scene',{'./universe-data':data});
 test('empty colony destinations retain authoritative galaxy/system/position and distinct slot IDs',()=>{
   const now=Math.floor(Date.now()/1000),mission=position=>({missionType:5,departTs:now-10,arriveTs:now+90,returnTs:now+190,targetGalaxy:9,targetSystem:427,targetPosition:position,applied:false});

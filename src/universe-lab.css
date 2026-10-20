@@ -809,7 +809,14 @@
 @media(max-width:700px){.universe-lab.production-ui .empire-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.universe-lab.production-ui .owned-planet-roster.empire-world-list .empire-world-visit{grid-template-columns:38px minmax(0,1fr)!important}.universe-lab.production-ui .empire-world-state{grid-column:2;justify-items:start}.universe-lab.production-ui .empire-world-state em{grid-column:auto!important}.universe-lab.production-ui .empire-world-state b,.universe-lab.production-ui .empire-world-state em{padding:3px 5px;font-size:5.5px}}
 
 /* Match the Empire panel close control to every production workspace. */
+.orbit-selection .orbit-owner{display:flex;align-items:baseline;gap:6px;min-width:0;color:#9bb9c4;font:12px Outfit,system-ui,sans-serif;letter-spacing:0;text-transform:none}
+.orbit-selection .orbit-owner strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e3f2f7;font:500 12px 'DM Mono',monospace;letter-spacing:0;text-transform:none}
 .universe-lab.production-ui .empire-heading>button{width:42px;height:42px;min-width:42px;border-radius:9px}
 .universe-lab.production-ui .empire-heading>button svg{width:18px;height:18px;stroke-width:1.8}
 .universe-lab.production-ui .empire-heading>button:focus-visible{outline:2px solid var(--gds-focus);outline-offset:3px}
 @media(max-width:700px){.universe-lab.production-ui .empire-heading>button{width:46px;height:46px;min-width:46px}}
+.mission-traffic-list{display:grid;gap:4px;max-height:112px;overflow:auto;margin:8px 0;min-width:0}
+.mission-traffic-list button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:36px;padding:6px 8px;border:1px solid #31505c;border-radius:4px;background:#10222b;color:#dcecf0;text-align:left;font:12px Outfit,system-ui,sans-serif;letter-spacing:0}
+.mission-traffic-list button:hover,.mission-traffic-list button:focus-visible{border-color:#78d9b1;background:#18343d}
+.mission-traffic-list button span{min-width:0;overflow-wrap:anywhere;color:#a8c7ce}
+.traffic-beacon-label{white-space:nowrap;padding:6px 8px;border:1px solid #416270;border-radius:4px;background:#10222b;color:#e0f3f4;font:12px Outfit,system-ui,sans-serif;pointer-events:none;letter-spacing:0}
