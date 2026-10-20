@@ -3,6 +3,21 @@ import type { UniverseMission, UniverseSnapshot } from './universe-data';
 export type MissionLocation = { galaxy: number; system: number; position: number };
 export type TrafficScope = { level: 'system' | 'galaxy' | 'universe'; galaxy: number; system: number };
 export type TrafficPoint = { key: string; location: MissionLocation; departures: number; arrivals: number; waiting: number };
+type MapPoint = [number, number, number];
+
+export function galaxyTravelEndpoints(source: MissionLocation, target: MissionLocation, galaxy: number,
+  systemPosition: (location: MissionLocation) => MapPoint, galaxyPosition: (galaxy: number) => MapPoint): { start: MapPoint; end: MapPoint; remoteAt: 'start' | 'end' | null } | null {
+  const sourceHere = source.galaxy === galaxy, targetHere = target.galaxy === galaxy;
+  if ((!sourceHere && !targetHere) || !missionVisibleAtScale(source, target, 'galaxy')) return null;
+  const boundary = (remote: number): MapPoint => {
+    const local = galaxyPosition(galaxy), other = galaxyPosition(remote);
+    const direction = other.map((value, index) => value - local[index]);
+    const length = Math.hypot(...direction) || 1;
+    return direction.map(value => value / length * 100) as MapPoint;
+  };
+  return { start: sourceHere ? systemPosition(source) : boundary(source.galaxy),
+    end: targetHere ? systemPosition(target) : boundary(target.galaxy), remoteAt: !sourceHere ? 'start' : !targetHere ? 'end' : null };
+}
 
 function valid(location: MissionLocation | undefined): location is MissionLocation {
   return !!location && Number.isInteger(location.galaxy) && location.galaxy >= 1 && location.galaxy <= 999

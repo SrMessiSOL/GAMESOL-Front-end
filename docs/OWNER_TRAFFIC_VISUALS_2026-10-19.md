@@ -38,3 +38,13 @@ Only the owner/traffic UI, shared snapshot helper and focused regression tests b
 - 404 regression tests passed, followed by 10 focused mission tests after the final viewport projection adjustment.
 - This remains DEV-only rendering-fixture evidence, not a newly signed flight. No funds spent; automation stays paused.
 - Production build passed. Follow-up runtime commit `9cb8ce8` deployed to https://frontend-mvsmy9h0e-srmessisols-projects.vercel.app and assigned to the main URL. Vercel reported Ready; all nine JavaScript assets matched the main alias and the expanded verifier confirmed real-ship labels and devnet.
+
+## Follow-up: Galaxy Travel
+- Galaxy view now renders ships and paths between systems, including endpoints in empty systems.
+- Intergalactic missions are no longer filtered out. The departure galaxy shows a route to a labelled exit; the destination galaxy shows a matching entry and incoming ship. Return legs reverse travel direction and entry/exit labels.
+- Off-screen remote endpoints project to the map edge while the local endpoint remains at its actual star position. In-view system-to-system endpoints remain at their actual positions.
+- Labels are bounded to the viewport; the mobile check caught and corrected a clipped exit label. Galaxy endpoint rings are compact. Universe rendering remains unchanged.
+- 405 regression tests passed. Focused endpoint tests cover same-galaxy travel, departure/arrival galaxies, irrelevant galaxies, and suppression of within-system travel at galaxy scale.
+- Browser inspection: 1440x1000 desktop and 390x844 mobile, both departure and destination galaxies; no console errors observed. Mobile document width equals viewport width and entry/exit labels fit.
+- Local screenshots: `.validation/galaxy-traffic-desktop.jpg`, `galaxy-traffic-mobile.jpg`, `galaxy-arrival-desktop.jpg`, `galaxy-arrival-mobile.jpg` beneath the workspace root.
+- Rendering fixtures only; no new flights or spending. Automation stays paused.

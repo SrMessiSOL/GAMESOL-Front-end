@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const load = require('./frontend-ts-loader.cjs').frontendLoader();
-const { missionTrafficPoints, missionEndpoints } = load('mission-visibility.ts');
+const { missionTrafficPoints, missionEndpoints, galaxyTravelEndpoints } = load('mission-visibility.ts');
 const source = { galaxy: 3, system: 293, position: 1 };
 const target = { galaxy: 4, system: 12, position: 2 };
 const mission = { id: 'flight', sourceId: 'a', destinationId: 'empty', sourcePosition: source, destinationPosition: target, phase: 'outbound' };
@@ -32,4 +32,19 @@ test('return legs reverse departure and arrival; resolved legs wait at the corre
 test('all missions are counted and malformed coordinates fail closed', () => {
   assert.equal(missionTrafficPoints(snapshot(Array.from({ length: 9 }, (_, i) => ({ ...mission, id: String(i) }))), scope('system', 4, 12))[0].arrivals, 9);
   assert.equal(missionEndpoints({ ...mission, destinationPosition: { ...target, position: 16 } }, []), null);
+});
+
+test('galaxy legs connect real systems and project intergalactic entry and exit at both ends', () => {
+  const systemPosition = location => [location.system, 0, location.position];
+  const galaxyPosition = galaxy => [galaxy * 500, 0, 0];
+  const outbound = galaxyTravelEndpoints(source, target, 3, systemPosition, galaxyPosition);
+  assert.equal(outbound.remoteAt, 'end'); assert.equal(outbound.start.join(','), '293,0,1');
+  assert.equal(outbound.end.join(','), '100,0,0');
+  const inbound = galaxyTravelEndpoints(source, target, 4, systemPosition, galaxyPosition);
+  assert.equal(inbound.remoteAt, 'start'); assert.equal(inbound.start.join(','), '-100,0,0');
+  assert.equal(inbound.end.join(','), '12,0,2');
+  assert.equal(galaxyTravelEndpoints(source, target, 5, systemPosition, galaxyPosition), null);
+  const local = galaxyTravelEndpoints(source, { ...source, system: 294 }, 3, systemPosition, galaxyPosition);
+  assert.equal(local.remoteAt, null); assert.equal(local.start[0], 293); assert.equal(local.end[0], 294);
+  assert.equal(galaxyTravelEndpoints(source, { ...source, position: 2 }, 3, systemPosition, galaxyPosition), null);
 });
