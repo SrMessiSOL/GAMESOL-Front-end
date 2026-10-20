@@ -34,3 +34,22 @@ test('actual route and slot renderer share the orbit helper and allow destinatio
   assert.match(source,/missionJourneyProgress\(mission, Date\.now\(\) \/ 1000/);
   assert.doesNotMatch(source,/mission\.progress \+ elapsedProgress|navigationRailOpen|navigation-rail-toggle/);
 });
+
+test('cross-system entry stays just outside the orbital boundary instead of hundreds of units away',()=>{
+  for(const radius of [40,90,160]) {
+    const point=scene.systemEntryPoint('incoming-colony',radius);
+    assert(Math.abs(Math.hypot(point[0],point[2])-(radius+12))<1e-8);
+    assert.equal(point.join(','),scene.systemEntryPoint('incoming-colony',radius).join(','));
+  }
+});
+
+test('real fleet stays readable at desktop and mobile zoom without unbounded scaling',()=>{
+  assert.equal(scene.readableFleetScale(2,50,1000),1);
+  assert(scene.readableFleetScale(150,50,844)>1);
+  assert.equal(scene.readableFleetScale(10000,50,320),16);
+  const source=fs.readFileSync(path.join(root,'UniverseLab.tsx'),'utf8');
+  assert.match(source,/vessel\.current\.scale\.setScalar\(readableFleetScale/);
+  assert.match(source,/if \(!point\.waiting\) return null/);
+  assert.match(source,/remote\.set\(direction\.x \/ extent \* \.88/);
+  assert.match(source,/Colony ship/);
+});

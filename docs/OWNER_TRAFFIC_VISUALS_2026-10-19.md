@@ -28,3 +28,12 @@ Only the owner/traffic UI, shared snapshot helper and focused regression tests b
 - `server/verify-owner-traffic-release.cjs` matched all nine JavaScript assets between deployment and main alias; confirmed owner/traffic code, no DEV fixture, preserved colony compute limit and devnet genesis.
 - Live desktop/mobile recheck at 9:427 confirmed Devnet Colony belongs to Fv9x...Rvdd, with the owner row and inspect button fitting correctly. Live departure count is rendered from public chain data.
 - No game transaction submitted. Automation remains paused.
+
+## Follow-up: Visible Incoming Ships
+- Active system traffic uses the actual fleet model rather than an arrival beacon. Waiting-for-resolution markers remain; galaxy/universe rendering is unchanged.
+- Remote endpoints project to the edge of the current view when their physical map position is off-screen and the local endpoint is visible. Vertical inset leaves room for mobile navigation and system intel.
+- Fleet hull illumination and bounded screen-space scaling keep ships readable; small INBOUND/OUTBOUND labels distinguish cross-system travel.
+- Real mission progress, return direction and arrival visibility gates remain authoritative; no looping or early arrival is introduced.
+- Desktop 1440x1000 and mobile 390x844 checks inspected an incoming colony ship at 35% progress and on final approach. The early incoming mobile label was inside the viewport, with the ship clear of the bottom panel; no console errors observed.
+- 404 regression tests passed, followed by 10 focused mission tests after the final viewport projection adjustment.
+- This remains DEV-only rendering-fixture evidence, not a newly signed flight. No funds spent; automation stays paused.

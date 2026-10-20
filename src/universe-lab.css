@@ -820,3 +820,5 @@
 .mission-traffic-list button:hover,.mission-traffic-list button:focus-visible{border-color:#78d9b1;background:#18343d}
 .mission-traffic-list button span{min-width:0;overflow-wrap:anywhere;color:#a8c7ce}
 .traffic-beacon-label{white-space:nowrap;padding:6px 8px;border:1px solid #416270;border-radius:4px;background:#10222b;color:#e0f3f4;font:12px Outfit,system-ui,sans-serif;pointer-events:none;letter-spacing:0}
+.mission-vessel-label{display:flex;align-items:center;gap:6px;white-space:nowrap;padding:3px 6px;background:#06141ee6;color:#e4f2f8;font:12px Outfit,system-ui,sans-serif;letter-spacing:0;pointer-events:none}
+.mission-vessel-label small{color:#8fdcc8;font:9px 'DM Mono',monospace;letter-spacing:0}

@@ -7,7 +7,7 @@ import { PublicKey } from "@solana/web3.js";
 import * as THREE from "three";
 import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, MapPin, Navigation2, TrendingUp, X, Zap, ZoomIn, ZoomOut } from "lucide-react";
 import { createUniverseSnapshotFromChainData, orbitForSystemPosition, pointOnUniverseOrbit, snapshotFromPublicPlanets, type UniverseMission, type UniverseOrbit, type UniversePlanet, type UniverseSnapshot } from "./universe-data";
-import { emptySystemDisplayOrbit, missionDestinationIsLocal, missionJourneyProgress } from './mission-scene';
+import { emptySystemDisplayOrbit, missionDestinationIsLocal, missionJourneyProgress, systemEntryPoint, readableFleetScale } from './mission-scene';
 import { missionEndpoints, missionTrafficPoints, missionVisibleAtScale, trafficPointLabel, type MissionLocation, type TrafficPoint } from './mission-visibility';
 import { fetchAllianceDirectory, fetchAllianceGovernance, fetchAllPublicPlanets, fetchSystemSovereignties, fetchUniverseMapData, SOVEREIGNTY_WRITES_ENABLED, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceStateAccount, type SystemSovereigntyAccount } from "./game-state";
 import { planetSurfaceStyleForSystem, type PlanetSurfaceStyle } from "./planet-style";
@@ -2315,9 +2315,9 @@ function MissionFleetVessel({ kind, color }: { kind: UniverseMission["kind"]; co
     if (escortWing.current) escortWing.current.rotation.y += delta * .18;
   });
   return <group scale={capitalScale}>
-    <mesh castShadow><cylinderGeometry args={[.13, .27, 1.28, 7]} /><meshStandardMaterial color="#667e8d" metalness={.93} roughness={.18} /></mesh>
+    <mesh castShadow><cylinderGeometry args={[.13, .27, 1.28, 7]} /><meshStandardMaterial color="#a1bccb" emissive="#66899d" emissiveIntensity={.65} metalness={.55} roughness={.3} /></mesh>
     <mesh position={[0, .18, 0]} castShadow><octahedronGeometry args={[.3, 0]} /><meshPhysicalMaterial color="#243f50" metalness={.86} roughness={.17} clearcoat={.4} /></mesh>
-    <mesh position={[0, -.08, 0]} rotation={[0, 0, Math.PI / 2]} castShadow><boxGeometry args={[.09, 1.16, .36]} /><meshStandardMaterial color="#344f60" metalness={.9} roughness={.2} /></mesh>
+    <mesh position={[0, -.08, 0]} rotation={[0, 0, Math.PI / 2]} castShadow><boxGeometry args={[.09, 1.16, .36]} /><meshStandardMaterial color="#7898a9" emissive="#486c82" emissiveIntensity={.55} metalness={.6} roughness={.3} /></mesh>
     <mesh position={[0, .34, .25]}><boxGeometry args={[.22, .56, .035]} /><meshBasicMaterial color={color} transparent opacity={.8} toneMapped={false} /></mesh>
     {kind !== "espionage" && <>
       <mesh position={[-.48, -.08, 0]} castShadow><boxGeometry args={[.16, .72, .24]} /><meshStandardMaterial color="#415c6d" metalness={.88} roughness={.22} /></mesh>
@@ -2341,12 +2341,16 @@ function MissionFleetVessel({ kind, color }: { kind: UniverseMission["kind"]; co
 function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMission; planets: UniversePlanet[]; starClearance: number }) {
   const source = planets.find((planet) => planet.id === mission.sourceId);
   const target = planets.find((planet) => planet.id === mission.destinationId);
+  const externalSource = !source && !!mission.sourceCoordinates;
+  const externalTarget = !target && !mission.destinationOrbit && !!mission.destinationCoordinates;
+  const inbound = mission.phase === 'returning' ? externalTarget : externalSource;
+  const vesselLabel = mission.kind === 'colonize' ? 'Colony ship' : mission.kind === 'transport' ? 'Cargo fleet' : mission.kind === 'espionage' ? 'Probe' : 'Attack fleet';
   const routeGroup = React.useRef<THREE.Group>(null!);
   const vessel = React.useRef<THREE.Group>(null!);
   const [routePoints, setRoutePoints] = useState<Array<[number, number, number]>>([]);
   const lastRouteLineUpdate = useRef(-1);
   const progressEpoch = useRef(Date.now() / 1000);
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera, size }) => {
     if ((!source && !mission.sourceCoordinates) || (!target && !mission.destinationCoordinates && !mission.destinationOrbit) || !vessel.current) return;
     const elapsed = clock.getElapsedTime();
     const bodies = planets.map((planet) => ({
@@ -2358,6 +2362,20 @@ function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMiss
     const targetCenter = target ? livePlanetPosition(target, elapsed) : mission.destinationOrbit
       ? new THREE.Vector3(...pointOnUniverseOrbit(mission.destinationOrbit, mission.destinationOrbit.phase + elapsed * mission.destinationOrbit.angularVelocity))
       : new THREE.Vector3(...mission.destinationCoordinates!);
+    // A remote system is a map-edge entry, not a distant invisible planet.
+    // Keep its approach in the viewport when the local endpoint is visible.
+    if (externalSource || externalTarget) {
+      const local = externalSource ? targetCenter : sourceCenter;
+      const remote = externalSource ? sourceCenter : targetCenter;
+      const localScreen = local.clone().project(camera);
+      const remoteScreen = remote.clone().project(camera);
+      if (Math.abs(localScreen.x) < 1 && Math.abs(localScreen.y) < 1 && localScreen.z < 1
+        && (Math.abs(remoteScreen.x) > .9 || Math.abs(remoteScreen.y) > .9 || remoteScreen.z > 1)) {
+        const direction = remote.clone().sub(local).applyQuaternion(camera.quaternion.clone().invert());
+        const extent = Math.max(Math.abs(direction.x), Math.abs(direction.y), .001);
+        remote.set(direction.x / extent * .88, direction.y / extent * .55, localScreen.z).unproject(camera);
+      }
+    }
     const route = collisionSafeFleetCurve({
       missionId: mission.id,
       sourceCenter,
@@ -2383,6 +2401,7 @@ function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMiss
       ? 0
       : mission.phase === "returning" ? 1 - journeyProgress : journeyProgress;
     vessel.current.position.copy(route.getPointAt(routeProgress));
+    vessel.current.scale.setScalar(readableFleetScale(camera.position.distanceTo(vessel.current.position), (camera as THREE.PerspectiveCamera).fov || 50, size.height));
     const direction = route.getTangentAt(Math.max(0, Math.min(.9999, routeProgress))).normalize();
     if (mission.phase === "returning") direction.multiplyScalar(-1);
     vessel.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
@@ -2392,6 +2411,7 @@ function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMiss
   return <group ref={routeGroup} visible={mission.phase === "outbound" || mission.phase === "returning"}>{routePoints.length > 1 && <><Line points={routePoints} color={color} transparent opacity={.12} lineWidth={1.5} /><Line points={routePoints} color={color} transparent opacity={.42} lineWidth={.72} dashed dashScale={3.2} dashSize={.24} gapSize={.34} /></>}
     <group ref={vessel}>
       <MissionFleetVessel kind={mission.kind} color={color} />
+      {(externalSource || externalTarget) && <Html center position={[0, 2.6, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{vesselLabel}<small>{inbound ? 'INBOUND' : 'OUTBOUND'}</small></span></Html>}
     </group>
   </group>;
 }
@@ -2444,6 +2464,7 @@ function MissionTrafficLayer({ snapshot, level, galaxy, system, planets, star }:
   return <group>
     {points.map(point => {
       if (level !== 'system') return <TrafficBeacon key={point.key} point={point} position={strategicPosition(point.location)} size={level === 'universe' ? 16 : .8} height={level === 'universe' ? 18 : 1} />;
+      if (!point.waiting) return null;
       const planet = planets.find(planet => Number(planet.system.split(':')[2]) === point.location.position);
       const orbit = planet?.orbit ?? emptySystemDisplayOrbit(point.location.position, galaxy, system, SYSTEM_ORBIT_PRESENTATION_SCALE, systemStarOrbitOffset(star));
       const height = planet ? occupiedSystemPlanetRadius(planet) * 1.7 : emptySystemPlanetRadius(point.location.position, galaxy, system, orbit) * 1.7;
@@ -2526,17 +2547,8 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
       // is outside this system scene. Project that endpoint beyond the last
       // orbit so inbound fleets arrive from deep space and outbound fleets leave
       // toward it instead of appearing from the origin or being filtered out.
-      let hash = 2166136261;
-      for (let index = 0; index < mission.id.length; index += 1) {
-        hash ^= mission.id.charCodeAt(index);
-        hash = Math.imul(hash, 16777619);
-      }
-      const angle = ((hash >>> 0) % 360) * (Math.PI / 180);
-      const externalPoint: [number, number, number] = [
-        Math.cos(angle) * 360,
-        (((hash >>> 9) % 7) - 3) * 1.35,
-        Math.sin(angle) * 330,
-      ];
+      const outerOrbit = emptySystemDisplayOrbit(15, selectedGalaxy, selectedSystem, SYSTEM_ORBIT_PRESENTATION_SCALE, systemStarOrbitOffset(currentStar)).radius;
+      const externalPoint = systemEntryPoint(mission.id, outerOrbit);
       return [{
         ...localMission,
         sourceCoordinates: sourceHere ? mission.sourceCoordinates : externalPoint,
@@ -2821,6 +2833,10 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
           ].map((destinationPosition, index) => ({ id: `local-traffic-${index}`, sourceId: fixture.planets[0].id,
             sourcePosition: source, destinationId: `traffic-target-${index}`, destinationPosition,
             kind: 'transport', phase: 'outbound', progress: .35, etaSeconds: 2340, durationSeconds: 3600, sampledAt: Date.now() / 1000 }));
+          fixture.missions.push({ id: 'local-incoming-ship', sourceId: 'remote-system', destinationId: fixture.planets[1].id,
+            sourcePosition: { galaxy: demoGalaxy, system: demoSystem === 999 ? 998 : demoSystem + 1, position: 1 },
+            destinationPosition: { galaxy: demoGalaxy, system: demoSystem, position: 2 },
+            kind: 'colonize', phase: 'outbound', progress: .35, etaSeconds: 23400, durationSeconds: 36000, sampledAt: Date.now() / 1000 });
         }
         if (localColonyDemo) {
           fixture.planets = fixture.planets.slice(0, 1);

@@ -15,3 +15,16 @@ export function missionJourneyProgress(mission: UniverseMission, now: number, fa
   if (mission.phase === 'arrived' || mission.phase === 'returned') return 1;
   return Math.max(0, Math.min(1, mission.progress + Math.max(0, now - (mission.sampledAt ?? fallbackSampledAt)) / Math.max(1, mission.durationSeconds)));
 }
+
+export function systemEntryPoint(id: string, outerOrbit: number): [number, number, number] {
+  let hash = 2166136261;
+  for (const char of id) { hash ^= char.charCodeAt(0); hash = Math.imul(hash, 16777619); }
+  const angle = ((hash >>> 0) % 360) * Math.PI / 180;
+  const radius = Math.max(24, outerOrbit + 12);
+  return [Math.cos(angle) * radius, (((hash >>> 9) % 7) - 3) * 1.35, Math.sin(angle) * radius];
+}
+
+export function readableFleetScale(distance: number, verticalFov: number, viewportHeight: number): number {
+  const unitsPerPixel = 2 * Math.tan(verticalFov * Math.PI / 360) * distance / Math.max(1, viewportHeight);
+  return Math.max(1, Math.min(16, unitsPerPixel * 14));
+}
