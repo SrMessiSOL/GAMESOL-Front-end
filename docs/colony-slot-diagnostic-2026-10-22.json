@@ -1,0 +1,67 @@
+{
+  "at": "2026-10-22T03:15:41.278Z",
+  "network": "devnet",
+  "readOnly": true,
+  "source": "GmuTW6QrgNgbYUnu19j19prg2GQXc1Li7VhvynHx1bk4",
+  "slot": 1,
+  "destination": [
+    9,
+    583,
+    3
+  ],
+  "legacy": {
+    "error": {
+      "InstructionError": [
+        2,
+        {
+          "Custom": 6033
+        }
+      ]
+    },
+    "logs": [
+      "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+      "Program ComputeBudget111111111111111111111111111111 success",
+      "Program 11111111111111111111111111111111 invoke [1]",
+      "Program 11111111111111111111111111111111 success",
+      "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+      "Program log: Instruction: InitializeColony",
+      "Program 11111111111111111111111111111111 invoke [2]",
+      "Program 11111111111111111111111111111111 success",
+      "Program log: AnchorError thrown in programs/game-state/src/instructions/handlers.rs:464. Error Code: MissionInFlight. Error Number: 6033. Error Message: MissionInFlight.",
+      "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 52526 of 1399700 compute units",
+      "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1791"
+    ],
+    "units": 52826
+  },
+  "corrected": {
+    "error": null,
+    "logs": [
+      "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+      "Program ComputeBudget111111111111111111111111111111 success",
+      "Program 11111111111111111111111111111111 invoke [1]",
+      "Program 11111111111111111111111111111111 success",
+      "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+      "Program log: Instruction: InitializeColony",
+      "Program 11111111111111111111111111111111 invoke [2]",
+      "Program 11111111111111111111111111111111 success",
+      "Program log: create_planet_state: validated coords",
+      "Program log: create_planet_state: derived coords PDA",
+      "Program log: create_planet_state: incremented planet_count",
+      "Program 11111111111111111111111111111111 invoke [2]",
+      "Program 11111111111111111111111111111111 success",
+      "Program log: create_planet_state: created coords account",
+      "Program log: create_planet_state: wrote coords data",
+      "Program log: create_planet_state: about to write planet_state fields",
+      "Program log: create_planet_state: finished writing planet_state fields",
+      "Program 11111111111111111111111111111111 invoke [2]",
+      "Program 11111111111111111111111111111111 success",
+      "Program 11111111111111111111111111111111 invoke [2]",
+      "Program 11111111111111111111111111111111 success",
+      "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 178460 of 1399700 compute units",
+      "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq success"
+    ],
+    "units": 178760
+  },
+  "submittedTransactions": 0,
+  "spent": 0
+}

@@ -1252,7 +1252,7 @@ function encodeColonyArgs(now: number, mission: Mission, slot: number): Buffer {
   writer.writeU32(mission.sDeathstar);
   writer.writeU32(mission.sRecycler);
   writer.writeU32(mission.sEspionageProbe);
-  writer.writeU32(0); // colony_ship consumed
+  // InitializeColonyParams has no colony_ship field; the mission consumes it.
   writer.writeU32(0); // solar_satellite not transferable
   writer.writeU8(slot);
   return writer.toBuffer();
