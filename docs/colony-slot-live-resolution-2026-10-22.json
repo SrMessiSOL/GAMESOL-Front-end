@@ -1,0 +1,25 @@
+{
+  "at": "2026-10-22T03:28:41.780Z",
+  "network": "devnet",
+  "signature": "49E3ZXUC3v8j9ayo4Adppm1Z7CsSaNxsvX967unMtz9dPSdxeFWcLmXqRstBC9HY3PeS7KrVf7bGQkRpw995B8rg",
+  "slot": 513748629,
+  "finalized": true,
+  "error": null,
+  "colony": "5sPw5GQ523UrHrQVQrSvFg8pUSisMQwD5Jpp7SjhTLGC",
+  "coordinates": [
+    9,
+    583,
+    3
+  ],
+  "owner": "G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r",
+  "source": "GmuTW6QrgNgbYUnu19j19prg2GQXc1Li7VhvynHx1bk4",
+  "resolvedMissionSlot": 1,
+  "activeMissions": 1,
+  "uiFreeSlots": "1 / 2",
+  "otherMissionUntouched": true,
+  "additionalAntimatterSpent": 0,
+  "relaunches": 0,
+  "automation": "paused",
+  "releaseCommit": "e75d535",
+  "deployment": "https://frontend-c3nauhy85-srmessisols-projects.vercel.app"
+}

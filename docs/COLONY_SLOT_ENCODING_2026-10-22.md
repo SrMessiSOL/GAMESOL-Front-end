@@ -30,6 +30,17 @@ No program, account layout, timing rule, authority or AM price changes.
 - [Simulation evidence](colony-slot-diagnostic-2026-10-22.json).
 - All 71 agent/API tests pass; TypeScript and the production frontend build pass.
 
-Not yet published. Actual Lazor wrapper, sponsor and signed arrival resolution
-remain a release verification step. User missions were left unchanged.
+Published fix e75d535 to GitHub and Vercel production release
+https://frontend-c3nauhy85-srmessisols-projects.vercel.app. The public
+https://chained-universe.vercel.app alias was explicitly updated; public/release
+HTML match verified. Before the alias update, the main URL still served old code.
+
+Clicked Resolve arrival once after refreshing the public game. The original
+account's Quick Play/Lazor transaction finalized successfully at slot 513748629:
+49E3ZXUC3v8j9ayo4Adppm1Z7CsSaNxsvX967unMtz9dPSdxeFWcLmXqRstBC9HY3PeS7KrVf7bGQkRpw995B8rg.
+Colony 9:583:3 exists at 5sPw5GQ523UrHrQVQrSvFg8pUSisMQwD5Jpp7SjhTLGC,
+owned by G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r. Source slot 2 is
+empty, UI shows 1 / 2 free slots, and slot 1 to 6:35:3 is unchanged. Receipt
+confirms no extra AM burn or relaunch. No USDC purchase or program upgrade.
+[Live chain evidence](colony-slot-live-resolution-2026-10-22.json).
 Automation remains paused.
