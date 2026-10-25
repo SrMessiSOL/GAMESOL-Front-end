@@ -5,6 +5,7 @@ import {
   PublicKey,
   SendTransactionError,
   SystemProgram,
+  SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
@@ -5947,6 +5948,18 @@ export class GameClient {
     for (const field of ['metal', 'crystal', 'deuterium'] as const) assertResourceAmount(field, cargo[field] ?? 0n);
     const state = await this.loadPlanetStateByPda(entityPda);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
+    if (missionType === 1) {
+      const destination = await this.getPlanetStateByCoordinates(target.galaxy, target.system, target.position);
+      if (!destination) throw new Error('The attack destination is not an occupied planet. Nothing was submitted.');
+      if (destination.planet.owner === authority.toBase58()) throw new Error('Choose a planet owned by another commander. Nothing was submitted.');
+      const clock = await this.connection.getAccountInfo(SYSVAR_CLOCK_PUBKEY, 'confirmed');
+      if (!clock || clock.data.length < 40) throw new Error('Could not verify the chain clock. Try again. Nothing was submitted.');
+      const now = Number(clock.data.readBigInt64LE(32));
+      const protectionUntil = Math.max(destination.planet.protectionUntilTs,
+        destination.planet.createdAt > 0 ? destination.planet.createdAt + 7 * 24 * 60 * 60 : 0);
+      // The program enforces protection at arrival; reject doomed launches before signing too.
+      if (now < protectionUntil) throw new Error('The target planet is protected. Wait until its shield expires. Nothing was submitted.');
+    }
     await this.prepareVaultSigningForAuthority(authority);
 
     return this.sendVaultInstruction(

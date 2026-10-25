@@ -6,6 +6,18 @@ features. This review submitted no transactions and published nothing.
 
 ## How To Read This
 
+2026-10-24 advanced-ship and controlled-combat readiness:
+[three-agent unsigned gates and protected-launch fix](AGENT_ADVANCED_COMBAT_GATES_2026-10-24.md).
+All 14 hulls across all three agents were checked against the deployed program:
+23 prerequisite rejections, 14 crystal shortages and five metal shortages.
+Four protected-target attacks incorrectly returned unsigned transactions before
+the shared SDK fix; all six directions now reject before signing. State and
+SOL/AM/USDC balances stayed unchanged; zero submissions. Agent API tests: 92/92.
+Positive combat remains blocked until shields expire (earliest paired homeworld
+window October 26, 15:52:58 Argentina time). Hyperspace Drive remains 2 / 2 / 1.
+Existing T08/T10/T14/T35 evidence only; completion statuses unchanged.
+Automation PAUSED. No program upgrade, authority change or mainnet action.
+
 Alliance fixed-level/price candidate (2026-10-19):
 [local protection report](ALLIANCE_UPGRADE_PROTECTION_2026-10-19.md).
 LOCAL: 125 protected SBF level/cap/rollback cases and 12 concurrent/recovery
