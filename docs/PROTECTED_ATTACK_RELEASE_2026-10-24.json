@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-10-25T01:12:24.625Z",
+  "network": "devnet",
+  "candidate": {
+    "origin": "https://frontend-5m1apvt7p-srmessisols-projects.vercel.app",
+    "guard": "/assets/logobg-CFtgzRae.js",
+    "assets": [
+      {
+        "asset": "/assets/index-DpDVXTS3.js",
+        "sha256": "453e126409d27341e9ace4ce2e812db1d0f80a9a64a173c841077b9483f1495a",
+        "bytes": 319917
+      },
+      {
+        "asset": "/assets/logobg-CFtgzRae.js",
+        "sha256": "b0717e2144220a79738e3d1626b6a6afea185d01e4c42d6e03b94f637198062f",
+        "bytes": 611919
+      }
+    ],
+    "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+  },
+  "noTransactions": true,
+  "automation": "paused",
+  "live": {
+    "origin": "https://chained-universe.vercel.app",
+    "guard": "/assets/logobg-CFtgzRae.js",
+    "assets": [
+      {
+        "asset": "/assets/index-DpDVXTS3.js",
+        "sha256": "453e126409d27341e9ace4ce2e812db1d0f80a9a64a173c841077b9483f1495a",
+        "bytes": 319917
+      },
+      {
+        "asset": "/assets/logobg-CFtgzRae.js",
+        "sha256": "b0717e2144220a79738e3d1626b6a6afea185d01e4c42d6e03b94f637198062f",
+        "bytes": 611919
+      }
+    ],
+    "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+  },
+  "identicalPublicAssets": true
+}

@@ -53,3 +53,15 @@ Positive defended combat, casualties, loot credit, fleet return and free-slot
 proof remain open. Advanced hull queue-to-inventory coverage also remains open.
 This adds evidence only to existing T08/T10/T14/T35, not new checklist families.
 Nothing published; browser/Lazor and signed-transaction parity are not claimed.
+
+## Approved Publication Follow-Up
+
+The protected-launch guard was published separately as GitHub commit `624f851`
+on the existing `feat/crypto-ufos-wallet-link` release branch. Both local and
+Vercel TypeScript/Vite builds passed, along with 77 release command/preflight
+tests. The public alias needed explicit assignment after project promotion.
+[Public verification](PROTECTED_ATTACK_RELEASE_2026-10-24.json) confirms the
+public entry and guard assets match deployment `frontend-5m1apvt7p` byte-for-byte
+and its RPC returns the expected devnet genesis. No other pending runtime
+changes were included. This is asset/network proof, not a new signed-in browser
+or Lazor interaction test. No program or authority was changed.

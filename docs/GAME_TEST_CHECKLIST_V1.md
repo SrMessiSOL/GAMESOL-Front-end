@@ -6,6 +6,20 @@ features. This review submitted no transactions and published nothing.
 
 ## How To Read This
 
+2026-10-24 published guard and advanced cargo unlock:
+[three-agent research, colony supply and Large Cargo collection](AGENT_CARGO_UNLOCK_2026-10-24.md).
+Protected attack fix `624f851` is on GitHub and the public Vercel game; public
+guard/entry hashes and devnet genesis verified. Combustion Drive reaches
+6 / 4 / 4. One builds and collects one Large Cargo using 6,000 existing colony
+crystal through normal inter-agent market trades. All queues empty, no active
+missions, four listings settled/rents recovered. 26 finalized commands and
+16 checks; every confirmed retry unchanged, independent verification zero new
+signatures. Cost: 8,649 test AM burned + 0.010 AM fees + 130,000 lamports;
+zero USDC or new funding. 94 agent tests and 77 release tests pass; local/cloud
+builds pass. Existing T07/T08/T24/T35 evidence only, broad rows still PARTIAL.
+Hyperspace remains 2 / 2 / 1. Agent combat waits for real shields; automation
+confirmed PAUSED. No program upgrade, authority change or mainnet action.
+
 2026-10-24 advanced-ship and controlled-combat readiness:
 [three-agent unsigned gates and protected-launch fix](AGENT_ADVANCED_COMBAT_GATES_2026-10-24.md).
 All 14 hulls across all three agents were checked against the deployed program:
@@ -81,7 +95,7 @@ items, including currently locked or hidden items.
 | T05 | Production, energy and storage - PARTIAL | LIVE production/upgrades; AUTO projected accrual; SIM capacity guards | Compare each mine, temperature, energy shortage, fusion fuel consumption and caps to chain over elapsed time; full storage/offline periods, backward/future time abuse, direct/vault parity and rounding/overflow |
 | T06 | Buildings - PARTIAL | LIVE mines, power/storage/lab/robotics/shipyard progression; AUTO prerequisites | Every BUILDINGS item: eligible start/finish, exact cost/time/effect, prerequisite boundary, fields/max level, mutual queue locks, early/duplicate finish, malformed index and stale affordability; settle hidden missile-silo availability explicitly |
 | T07 | Research - PARTIAL | LIVE energy/drives/computer/astrophysics progression; LOCAL prerequisite checks | Every RESEARCH item: exact start/finish/cost/time and actual resulting effect; network/lab interaction, max/invalid level, queue and prerequisite boundaries, early/duplicate finish, direct/vault parity |
-| T08 | Ship construction - PARTIAL | LOCAL all 14 hull threshold successes and failures across typed/vault; LIVE fighters, cargo, probes and Colony Ship collection | Every SHIPS item: full queue-to-inventory cycle, quantity limits/overflow, exact costs/time, shared defense queue lock, early/duplicate finish; confirm special hulls' supported uses rather than assume OGame mechanics |
+| T08 | Ship construction - PARTIAL | LOCAL all 14 hull threshold successes and failures across typed/vault; LIVE fighters, cargo, probes and Colony Ship collection; [Large Cargo unlock, collection and unchanged retry](AGENT_CARGO_UNLOCK_2026-10-24.md) | Every SHIPS item: full queue-to-inventory cycle, quantity limits/overflow, exact costs/time, shared defense queue lock, early/duplicate finish; confirm special hulls' supported uses rather than assume OGame mechanics |
 | T09 | Defense construction - PARTIAL | LIVE Rocket Launcher; AUTO disclosure/prerequisite coverage | Every DEFENSE item: eligible queue/finish and quantities; unique dome limits, missile/silo capacity, invalid/overflow inputs, shared queue and duplicate finishes; document whether missile firing exists before claiming it tested |
 | T10 | Fleet launch and slots - PARTIAL | LIVE all four exposed mission types except completed attack; AUTO/SIM ownership, fuel, cargo and slot guards | Exact per-hull mixed-fleet travel/fuel/cargo, speed/slot/coordinate boundaries; wrong source/target/type, same-planet, concurrent launches, all ships debited once; direct/vault route parity |
 | T11 | Transport and return - PARTIAL | LIVE delivery, accelerated trip, cargo return and slot release | Zero/empty-return instruction variants, recipient caps and ownership changes in transit, exact cargo/fuel accounting, early/replayed/concurrent arrival and return; refresh/recovery on each leg |
