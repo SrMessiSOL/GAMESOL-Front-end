@@ -1,0 +1,64 @@
+{
+  "url": "https://chained-universe.vercel.app/app",
+  "noTransactions": true,
+  "checks": [
+    {
+      "guards": [
+        {
+          "disabled": true,
+          "label": "One dome only",
+          "name": "Small Shield Dome"
+        },
+        {
+          "disabled": true,
+          "label": "One dome only",
+          "name": "Large Shield Dome"
+        },
+        {
+          "disabled": true,
+          "label": "Unavailable",
+          "name": "Anti-Ballistic Missile"
+        },
+        {
+          "disabled": true,
+          "label": "Unavailable",
+          "name": "Interplanetary Missile"
+        }
+      ],
+      "overflow": false,
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "guards": [
+        {
+          "disabled": true,
+          "label": "One dome only",
+          "name": "Small Shield Dome"
+        },
+        {
+          "disabled": true,
+          "label": "One dome only",
+          "name": "Large Shield Dome"
+        },
+        {
+          "disabled": true,
+          "label": "Unavailable",
+          "name": "Anti-Ballistic Missile"
+        },
+        {
+          "disabled": true,
+          "label": "Unavailable",
+          "name": "Interplanetary Missile"
+        }
+      ],
+      "overflow": false,
+      "viewport": {
+        "height": 845,
+        "width": 390
+      }
+    }
+  ]
+}

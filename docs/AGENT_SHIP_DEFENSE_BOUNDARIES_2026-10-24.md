@@ -44,3 +44,8 @@ game and candidate serve identical hashed JS/CSS and the Solana devnet genesis.
 [release notes](DEFENSE_UI_GUARDS_2026-10-24.md) describe the isolated read-only
 React fixture checks. Guards were checked before publication; screenshots are
 saved alongside this report. No live wallet action was used for UI testing.
+After publication, the actual signed-in public game defense modal was checked
+at 1440x900 and 390x845 CSS pixels: quantity-two domes and both missiles remain
+disabled with the correct labels, without horizontal overflow. No command was
+submitted; quantity was restored to one and the modal closed afterward.
+[Live DOM records](DEFENSE_LIVE_UI_2026-10-24.json).
