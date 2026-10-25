@@ -1,0 +1,557 @@
+{
+  "fixture": "Actual extracted defense JSX, option expressions, controls, styles; read-only mocked eligibility states",
+  "results": [
+    {
+      "scenario": "online",
+      "cards": [
+        {
+          "disabled": false,
+          "name": "Rocket Launcher",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Light Laser",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Heavy Laser",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Gauss Cannon",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Ion Cannon",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Plasma Turret",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": true,
+          "name": "Small Shield Dome",
+          "status": "FIELD ONLINE"
+        },
+        {
+          "disabled": false,
+          "name": "Large Shield Dome",
+          "status": "READY · BUILD 1"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 390
+    },
+    {
+      "scenario": "legacy",
+      "cards": [
+        {
+          "disabled": false,
+          "name": "Rocket Launcher",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Light Laser",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Heavy Laser",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Gauss Cannon",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Ion Cannon",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Plasma Turret",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Small Shield Dome",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Large Shield Dome",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": true,
+          "name": "Anti-Ballistic Missile",
+          "status": "UNAVAILABLE"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 390
+    },
+    {
+      "scenario": "busy",
+      "cards": [
+        {
+          "disabled": true,
+          "name": "Rocket Launcher",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Light Laser",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Heavy Laser",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Gauss Cannon",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Ion Cannon",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Plasma Turret",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Small Shield Dome",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Large Shield Dome",
+          "status": "QUEUE OCCUPIED"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 390
+    },
+    {
+      "scenario": "upgrading",
+      "cards": [
+        {
+          "disabled": true,
+          "name": "Rocket Launcher",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Light Laser",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Heavy Laser",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Gauss Cannon",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Ion Cannon",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Plasma Turret",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Small Shield Dome",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Large Shield Dome",
+          "status": "SHIPYARD UPGRADING"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 390
+    },
+    {
+      "scenario": "poor",
+      "cards": [
+        {
+          "disabled": true,
+          "name": "Rocket Launcher",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Light Laser",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Heavy Laser",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Gauss Cannon",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Ion Cannon",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Plasma Turret",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Small Shield Dome",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Large Shield Dome",
+          "status": "NEEDS RESOURCES"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 390
+    },
+    {
+      "scenario": "locked",
+      "cards": [
+        {
+          "disabled": true,
+          "name": "Rocket Launcher",
+          "status": "BLUEPRINT LOCKED"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 390
+    },
+    {
+      "viewport": "mobile",
+      "quantity": "0",
+      "enabled": 0,
+      "total": 10
+    },
+    {
+      "viewport": "mobile",
+      "quantity": "-1",
+      "enabled": 0,
+      "total": 10
+    },
+    {
+      "viewport": "mobile",
+      "quantity": "1.5",
+      "enabled": 0,
+      "total": 10
+    },
+    {
+      "viewport": "mobile",
+      "quantity": "4294967296",
+      "enabled": 0,
+      "total": 10
+    },
+    {
+      "viewport": "mobile",
+      "quantity": "2",
+      "enabled": 6,
+      "total": 10
+    },
+    {
+      "viewport": "desktop",
+      "scenario": "online",
+      "cards": [
+        {
+          "disabled": false,
+          "name": "Rocket Launcher",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Light Laser",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Heavy Laser",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Gauss Cannon",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Ion Cannon",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Plasma Turret",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": true,
+          "name": "Small Shield Dome",
+          "status": "FIELD ONLINE"
+        },
+        {
+          "disabled": false,
+          "name": "Large Shield Dome",
+          "status": "READY · BUILD 1"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 1440
+    },
+    {
+      "viewport": "desktop",
+      "scenario": "legacy",
+      "cards": [
+        {
+          "disabled": false,
+          "name": "Rocket Launcher",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Light Laser",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Heavy Laser",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Gauss Cannon",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Ion Cannon",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Plasma Turret",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Small Shield Dome",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": false,
+          "name": "Large Shield Dome",
+          "status": "READY · BUILD 1"
+        },
+        {
+          "disabled": true,
+          "name": "Anti-Ballistic Missile",
+          "status": "UNAVAILABLE"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 1440
+    },
+    {
+      "viewport": "desktop",
+      "scenario": "busy",
+      "cards": [
+        {
+          "disabled": true,
+          "name": "Rocket Launcher",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Light Laser",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Heavy Laser",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Gauss Cannon",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Ion Cannon",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Plasma Turret",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Small Shield Dome",
+          "status": "QUEUE OCCUPIED"
+        },
+        {
+          "disabled": true,
+          "name": "Large Shield Dome",
+          "status": "QUEUE OCCUPIED"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 1440
+    },
+    {
+      "viewport": "desktop",
+      "scenario": "upgrading",
+      "cards": [
+        {
+          "disabled": true,
+          "name": "Rocket Launcher",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Light Laser",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Heavy Laser",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Gauss Cannon",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Ion Cannon",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Plasma Turret",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Small Shield Dome",
+          "status": "SHIPYARD UPGRADING"
+        },
+        {
+          "disabled": true,
+          "name": "Large Shield Dome",
+          "status": "SHIPYARD UPGRADING"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 1440
+    },
+    {
+      "viewport": "desktop",
+      "scenario": "poor",
+      "cards": [
+        {
+          "disabled": true,
+          "name": "Rocket Launcher",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Light Laser",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Heavy Laser",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Gauss Cannon",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Ion Cannon",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Plasma Turret",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Small Shield Dome",
+          "status": "NEEDS RESOURCES"
+        },
+        {
+          "disabled": true,
+          "name": "Large Shield Dome",
+          "status": "NEEDS RESOURCES"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 1440
+    },
+    {
+      "viewport": "desktop",
+      "scenario": "locked",
+      "cards": [
+        {
+          "disabled": true,
+          "name": "Rocket Launcher",
+          "status": "BLUEPRINT LOCKED"
+        }
+      ],
+      "overflow": false,
+      "prepared": "0",
+      "width": 1440
+    }
+  ]
+}

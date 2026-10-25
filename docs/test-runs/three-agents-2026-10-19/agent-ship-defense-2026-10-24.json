@@ -1,0 +1,3743 @@
+{
+  "network": "devnet",
+  "automation": "paused",
+  "actions": [
+    {
+      "tag": "agent-one-agent-one-earned-scout-claim-quest",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "claim-quest",
+      "args": {
+        "period": 1,
+        "index": 5
+      },
+      "signature": "3PpvdvhNCYY7GNqhqEwu25bpaMEyn4o8kBUjYq9XKx4RsNoHZJWCUfqaGvvqLvdcmR9tNqg4trspviJJtzqxV9L8",
+      "lastValidBlockHeight": 502011989,
+      "receipt": {
+        "slot": 514810364,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-agent-two-earned-scout-claim-quest",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "claim-quest",
+      "args": {
+        "period": 1,
+        "index": 5
+      },
+      "signature": "3sE1drf3EieJ8e8oWrrZREA8Rg9JzVcawzqSqezNf9gtGv9BFHnEehEhtS7Q7juXXBDDMHk9xriqj7LGC8sd19mt",
+      "lastValidBlockHeight": 502012025,
+      "receipt": {
+        "slot": 514810401,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-agent-three-earned-scout-claim-quest",
+      "actor": "agent-three",
+      "planet": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+      "action": "claim-quest",
+      "args": {
+        "period": 1,
+        "index": 5
+      },
+      "signature": "wwXMCH1T37icGtzQ5DeFK4K1CQsVotNCWA524MefVXtF8DLdxUiLb9mr7nHySxnr8obAyn4oW6vYmGK958naQVP",
+      "lastValidBlockHeight": 502012057,
+      "receipt": {
+        "slot": 514810433,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-one-fuel-market-create",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "market-create",
+      "args": {
+        "resourceType": 2,
+        "amount": "5000",
+        "price": "1000000"
+      },
+      "signature": "4ZsTasPwj5wZMMTASzSGMSEisaeJGLUJN9JLAcLwhcnrsu719xP4K8Dd1wfeR6xoPPHKQoDVahzMiiD37Jd4nTsE",
+      "lastValidBlockHeight": 502012085,
+      "receipt": {
+        "slot": 514810466,
+        "fee": 5000,
+        "error": null
+      },
+      "listing": "8Ee1CRpntVpYSZG7TMo5QqNkZeZQ8QnrpxXWyB2y2H2X",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-one-fuel-market-buy",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "market-buy",
+      "args": {
+        "offer": "8Ee1CRpntVpYSZG7TMo5QqNkZeZQ8QnrpxXWyB2y2H2X"
+      },
+      "signature": "43SVzsL2JDmdi1986dJM9oqHGgr8qexYeR8pd1Hj1RwQSwVEZHd141xZFQsKrBxH6bdUkVFM2XAbuNbKUjUyK9pG",
+      "lastValidBlockHeight": 502012121,
+      "receipt": {
+        "slot": 514810497,
+        "fee": 5000,
+        "error": null
+      },
+      "listing": "8Ee1CRpntVpYSZG7TMo5QqNkZeZQ8QnrpxXWyB2y2H2X",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-one-crystal-two-market-create",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "market-create",
+      "args": {
+        "resourceType": 1,
+        "amount": "6000",
+        "price": "1000000"
+      },
+      "signature": "3PEsb8U6YuEzDVbDQY3K5HMCUm36p1CyyJQuvXe7cm9o4ZGwMCa4CqKDmXX9wfN4VC9P4qp8NJ9mWnSJXQs4YEUN",
+      "lastValidBlockHeight": 502012149,
+      "receipt": {
+        "slot": 514810525,
+        "fee": 5000,
+        "error": null
+      },
+      "listing": "8J1yNRskbHP2BiJWofhtLBAwWfeFEmxEX48FLBxHwVn3",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-one-crystal-two-market-buy",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "market-buy",
+      "args": {
+        "offer": "8J1yNRskbHP2BiJWofhtLBAwWfeFEmxEX48FLBxHwVn3"
+      },
+      "signature": "64KkZzk6oEGFNf3cngbxeD63dXimEKQPebyTBsKGGtbZL6BTWWsdimxxdmhsgNKdEJfTMZjFYZAve4ujDXDbv7SW",
+      "lastValidBlockHeight": 502012179,
+      "receipt": {
+        "slot": 514810556,
+        "fee": 5000,
+        "error": null
+      },
+      "listing": "8J1yNRskbHP2BiJWofhtLBAwWfeFEmxEX48FLBxHwVn3",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-one-crystal-three-market-create",
+      "actor": "agent-three",
+      "planet": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+      "action": "market-create",
+      "args": {
+        "resourceType": 1,
+        "amount": "12000",
+        "price": "1000000"
+      },
+      "signature": "2bgsaFP1rnq4Ry4showMt5xMDCa3dtHVCmrWM1JZ5U3szQbfDCEcW9ZE6FMyK6Amcya7v5fL3rMUuKJD5MxGfJLS",
+      "lastValidBlockHeight": 502012210,
+      "receipt": {
+        "slot": 514810587,
+        "fee": 5000,
+        "error": null
+      },
+      "listing": "FcT4eqSWbGbAnFn1wsbHSWaruUN3TEn1HLqLNFYMHCb2",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-one-crystal-three-market-buy",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "market-buy",
+      "args": {
+        "offer": "FcT4eqSWbGbAnFn1wsbHSWaruUN3TEn1HLqLNFYMHCb2"
+      },
+      "signature": "ApdmyjEVWEWP5fsvzY28gkRBhto95wU2wjR7emcUC5bWnSjNARTP31naardRcdYNSwRbtNQsy4TnpM5JJLRU3o4",
+      "lastValidBlockHeight": 502012241,
+      "receipt": {
+        "slot": 514810618,
+        "fee": 5000,
+        "error": null
+      },
+      "listing": "FcT4eqSWbGbAnFn1wsbHSWaruUN3TEn1HLqLNFYMHCb2",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-agent-one-energyTech-3-start-research",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "start-research",
+      "args": {
+        "index": 0
+      },
+      "signature": "3SyZ6rZNVSKjraoMUdqPr4vTKNv2MQwycjRrq8r3rK4UGJTTjKipqMt9gNotgQ5oZAvUbC6MuTiVemjte68WdhbZ",
+      "lastValidBlockHeight": 502012287,
+      "receipt": {
+        "slot": 514810664,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-agent-one-energyTech-3-accelerate-research",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "accelerate-research",
+      "args": {},
+      "signature": "2WD6jAfmQVtGQwf3qqBbFpnJwZYmZhinZi8RUbPNdG82NTTUgwxJMNia7bzPPSbKrdfkXFrH8r3AkhksP98fs6kE",
+      "lastValidBlockHeight": 502012331,
+      "receipt": {
+        "slot": 514810707,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "761000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-agent-one-shieldingTechnology-1-start-research",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "start-research",
+      "args": {
+        "index": 8
+      },
+      "signature": "3cvStTEaj64ZZqg6uryZ8fYk935wZPZfYMNnVHSmc6UwqERaR6qREH2yiCF2hXvwSCwCFtsTEDVRsAWjxHDUCw5d",
+      "lastValidBlockHeight": 502012361,
+      "receipt": {
+        "slot": 514810738,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-agent-one-shieldingTechnology-1-accelerate-research",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "accelerate-research",
+      "args": {},
+      "signature": "3XnmS6auNjBs52PTBRRoQ5yJZRN37VzWWPjhDexfVLP5mJVBu9tRUFL9ou65pL2aoeWpNBxGFvYP5JwFWcw8GW1k",
+      "lastValidBlockHeight": 502012405,
+      "receipt": {
+        "slot": 514810781,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "247000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-agent-one-shieldingTechnology-2-start-research",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "start-research",
+      "args": {
+        "index": 8
+      },
+      "signature": "NXWd9iYxh1KNmAv57vK2jrU26KmQ2Ycocgfm83C9gsfaS7fEiuu4QYJNJZQRpRX8HNtuE9cbTB8SDn1QZvxueWF",
+      "lastValidBlockHeight": 502012438,
+      "receipt": {
+        "slot": 514810813,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-agent-one-shieldingTechnology-2-accelerate-research",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "accelerate-research",
+      "args": {},
+      "signature": "5gk3uAgftgou5fPyif7EYnNb9h1WLqMrRVPbJYdmVHP6VCJT7FWedFgrTgPZ2KX8d5pUwZZYnUB6neCrPUU5AruH",
+      "lastValidBlockHeight": 502012481,
+      "receipt": {
+        "slot": 514810856,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "504000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-agent-two-weaponsTechnology-3-start-research",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "start-research",
+      "args": {
+        "index": 7
+      },
+      "signature": "5MPCyA88ui1ZPVzfrpX3SLoWLV226s7qLsZo3YtP2wC5pV5tdNkRp8iVCsfqCQYYaGfkoCc3LtD5LowhMFA7WJCZ",
+      "lastValidBlockHeight": 502012511,
+      "receipt": {
+        "slot": 514810888,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-agent-two-weaponsTechnology-3-accelerate-research",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "accelerate-research",
+      "args": {},
+      "signature": "5LN8CsksrkzX5SWgCK3FnhpV1f1tK6yZkcoVD8swFuoBuaQSpak6x8Q6qhAhq7RN4bo9aMs4C7QNJyKpoGkw5kV8",
+      "lastValidBlockHeight": 502012554,
+      "receipt": {
+        "slot": 514810933,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "760000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-ship-solarSatellite-build-ship",
+      "actor": "agent-three",
+      "planet": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+      "action": "build-ship",
+      "args": {
+        "index": 13,
+        "quantity": 1
+      },
+      "signature": "4CMuyUUWzo5FxcbynNvffSm547jvRcD4wbM2eZ2wyosxKNfkbKC2LX2qdtr2bK7eHtWJui6whTPHBc9EkJFyAn2D",
+      "lastValidBlockHeight": 502012780,
+      "receipt": {
+        "slot": 514811160,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-defense-lightLaser-build-defense",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "build-defense",
+      "args": {
+        "index": 1,
+        "quantity": 1
+      },
+      "signature": "3amcu2nAdx2cC93iAN9j8UHsEpYe18aKm1gg6RtmjRUFit56b7w7kpfXvAMr25LD2fdCqLgioMApnstxiQA7B7Qc",
+      "lastValidBlockHeight": 502012814,
+      "receipt": {
+        "slot": 514811192,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-ship-recycler-build-ship",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "build-ship",
+      "args": {
+        "index": 10,
+        "quantity": 1
+      },
+      "signature": "4GyK1755935czvNcsVuY3TNLuKdX998rgRu9sj1G5Su13wN8qhj2Dvu1h4QYu8cGV2DRPWnvZAyCZYgcwEzvsHpa",
+      "lastValidBlockHeight": 502012883,
+      "receipt": {
+        "slot": 514811263,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-ship-recycler-accelerate-ship",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "accelerate-ship",
+      "args": {},
+      "signature": "3SJTi3rDrk8jdXMsk1KzRtKH3fCg6JrErWsVk1PJKiJRtWoDPo8hQHNa4SifvVVPqeBoCw8bVyH5hydzD6Gdi3sZ",
+      "lastValidBlockHeight": 502012926,
+      "receipt": {
+        "slot": 514811304,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "761000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-defense-ionCannon-build-defense",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "build-defense",
+      "args": {
+        "index": 4,
+        "quantity": 1
+      },
+      "signature": "3LwvHit6eG8EWmV6ZgsDETG5cqQUTPGQ8CZsxw3jBxBm5QmWKPdmAx3ZQnvRun1gsCy4CzEk2Jf5EZcviRcbYwch",
+      "lastValidBlockHeight": 502012962,
+      "receipt": {
+        "slot": 514811341,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-defense-ionCannon-accelerate-defense",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "accelerate-defense",
+      "args": {},
+      "signature": "4iQ9twstKTQMZs65UJ3LCDicKfK5bJ7U4K6fa5YcXZz53n8Kc2ocX5D8wgBoS9Q4S5DyJojVMCwgHGmsU9QnGtHu",
+      "lastValidBlockHeight": 502013004,
+      "receipt": {
+        "slot": 514811384,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "290000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-defense-smallShieldDome-build-defense",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "build-defense",
+      "args": {
+        "index": 6,
+        "quantity": 1
+      },
+      "signature": "2MSmBWS6xYHbLCcfrH1AikkQHw2WjGPnZWtFWpvbPrg9wMhspSkRSBPCesLTzymbbKuREs8bqivhnkrCyVW14ozH",
+      "lastValidBlockHeight": 502013042,
+      "receipt": {
+        "slot": 514811420,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-defense-smallShieldDome-accelerate-defense",
+      "actor": "agent-one",
+      "planet": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+      "action": "accelerate-defense",
+      "args": {},
+      "signature": "3fUbjCbE9q3PL6a1rJRyovrsYFEF8NHHpkzTjPcJefrFX25G1Yc8j7L5Py1hpGN9iqchqtJPjzkA6yBkf1tCDwJX",
+      "lastValidBlockHeight": 502013082,
+      "receipt": {
+        "slot": 514811462,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "418000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-ship-solarSatellite-finish-ship",
+      "actor": "agent-three",
+      "planet": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+      "action": "finish-ship",
+      "args": {},
+      "signature": "zf13BcdtBA7BZupwR988ULUVYuPSu8iLQq1vEtaT2ccWxWRoZ8Dci1Ap1hQH7zjR4vD84D2FKdfwzxXNiVTy7t6",
+      "lastValidBlockHeight": 502014052,
+      "receipt": {
+        "slot": 514812436,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-defense-lightLaser-finish-defense",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "finish-defense",
+      "args": {},
+      "signature": "5zKMXNMw4XTBdivwNQ7ZU72nZhcTKdixjzXtaGWa6oKQ5pQkkZaT1bm5AqMq7ZRPNJvmsMibmEgFYHyptP4q2vt2",
+      "lastValidBlockHeight": 502014088,
+      "receipt": {
+        "slot": 514812471,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-defense-heavyLaser-build-defense",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "build-defense",
+      "args": {
+        "index": 2,
+        "quantity": 1
+      },
+      "signature": "2SJjkvL1ji1oMXmCxJLYgMcyS6HAJSPmerwBhbKj6iEQidiWnBMHjJpawQQ3Gqukpn4yCxxeev7bFkB9NqdRfwzP",
+      "lastValidBlockHeight": 502014123,
+      "receipt": {
+        "slot": 514812506,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-defense-heavyLaser-accelerate-defense",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "accelerate-defense",
+      "args": {},
+      "signature": "3Y2UDw228gszRiEg9LxykrgTHVLFuwtQ8UngabdxCFjhHX3uUZQ8z6EdxuSqD3aGkroWioM7VUrhHG3QcUUGAZJq",
+      "lastValidBlockHeight": 502014166,
+      "receipt": {
+        "slot": 514812548,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "290000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-defense-gaussCannon-build-defense",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "build-defense",
+      "args": {
+        "index": 3,
+        "quantity": 1
+      },
+      "signature": "7q6EEZVC18YKdH9r5gQ51cnKnJoyUQc67wWN4MX8aodozmHASp5X2ojjG6UUFbhX6oSPbwp7Qh4haZ3gWyoffPd",
+      "lastValidBlockHeight": 502014202,
+      "receipt": {
+        "slot": 514812585,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-defense-gaussCannon-accelerate-defense",
+      "actor": "agent-two",
+      "planet": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+      "action": "accelerate-defense",
+      "args": {},
+      "signature": "2B63Bf56KZvGjUq8EJoiD8FUn27W5HhQ1EYAf6ttgvD883bBfdTYMvy52ETDGXiB27FALbnhyXqVKNnUspXoEwY8",
+      "lastValidBlockHeight": 502014244,
+      "receipt": {
+        "slot": 514812628,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "782000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-defense-rocketLauncher-build-defense",
+      "actor": "agent-three",
+      "planet": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 2
+      },
+      "signature": "qdogpVfzqQ4CR6KC6eQ3oQYnEeU5CVR2KmJYZ4Pxqy8LXV2UXqR17Xq175mwbgaXoAd69AdBdzzz4nfc95DLrQz",
+      "lastValidBlockHeight": 502014280,
+      "receipt": {
+        "slot": 514812664,
+        "fee": 5000,
+        "error": null
+      },
+      "noDuplicateDebit": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-defense-rocketLauncher-accelerate-defense",
+      "actor": "agent-three",
+      "planet": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+      "action": "accelerate-defense",
+      "args": {},
+      "signature": "5vcpfLPyEZUGc4qe1iixXiu9T6vT9qZTq6NcDYtD7TZdLvDoxhT5oXFJcRP392mp8zeMr7PnvEiu8zqgDG2sGm9w",
+      "lastValidBlockHeight": 502014324,
+      "receipt": {
+        "slot": 514812707,
+        "fee": 5000,
+        "error": null
+      },
+      "amBurn": "290000000",
+      "noDuplicateDebit": true,
+      "passed": true
+    }
+  ],
+  "checks": [
+    {
+      "tag": "agent-one-earned-scout",
+      "actor": "agent-one",
+      "received": {
+        "metal": "800",
+        "crystal": "1000",
+        "deuterium": "300"
+      },
+      "passed": true
+    },
+    {
+      "tag": "agent-one-build-ship-invalid-0",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 0
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-build-ship-invalid--1",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": -1
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-build-ship-invalid-1.5",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 1.5
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-build-ship-invalid-4294967296",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 4294967296
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-build-defense-invalid-0",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 0
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-build-defense-invalid--1",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": -1
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-build-defense-invalid-1.5",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 1.5
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-build-defense-invalid-4294967296",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 4294967296
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-earned-scout",
+      "actor": "agent-two",
+      "received": {
+        "metal": "800",
+        "crystal": "1000",
+        "deuterium": "300"
+      },
+      "passed": true
+    },
+    {
+      "tag": "agent-two-build-ship-invalid-0",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 0
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-build-ship-invalid--1",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": -1
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-build-ship-invalid-1.5",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 1.5
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-build-ship-invalid-4294967296",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 4294967296
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-build-defense-invalid-0",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 0
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-build-defense-invalid--1",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": -1
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-build-defense-invalid-1.5",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 1.5
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-build-defense-invalid-4294967296",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 4294967296
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-earned-scout",
+      "actor": "agent-three",
+      "received": {
+        "metal": "800",
+        "crystal": "1000",
+        "deuterium": "300"
+      },
+      "passed": true
+    },
+    {
+      "tag": "agent-three-build-ship-invalid-0",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 0
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-build-ship-invalid--1",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": -1
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-build-ship-invalid-1.5",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 1.5
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-build-ship-invalid-4294967296",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 0,
+        "quantity": 4294967296
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-build-defense-invalid-0",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 0
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-build-defense-invalid--1",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": -1
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-build-defense-invalid-1.5",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 1.5
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-build-defense-invalid-4294967296",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 4294967296
+      },
+      "code": "INVALID_ARGUMENT",
+      "unsigned": true,
+      "passed": true
+    },
+    {
+      "tag": "one-fuel",
+      "seller": "agent-two",
+      "buyer": "agent-one",
+      "resourceType": 2,
+      "amount": "5000",
+      "passed": true
+    },
+    {
+      "tag": "one-crystal-two",
+      "seller": "agent-two",
+      "buyer": "agent-one",
+      "resourceType": 1,
+      "amount": "6000",
+      "passed": true
+    },
+    {
+      "tag": "one-crystal-three",
+      "seller": "agent-three",
+      "buyer": "agent-one",
+      "resourceType": 1,
+      "amount": "12000",
+      "passed": true
+    },
+    {
+      "tag": "recycler-locked-before-shields",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 10,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20766 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "gauss-locked-before-weapons",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 3,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:295. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20903 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-energyTech-3",
+      "actor": "agent-one",
+      "key": "energyTech",
+      "target": 3,
+      "exactCost": [
+        0,
+        3200,
+        1600
+      ],
+      "passed": true
+    },
+    {
+      "tag": "agent-one-shieldingTechnology-1",
+      "actor": "agent-one",
+      "key": "shieldingTechnology",
+      "target": 1,
+      "exactCost": [
+        200,
+        600,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "tag": "agent-one-shieldingTechnology-2",
+      "actor": "agent-one",
+      "key": "shieldingTechnology",
+      "target": 2,
+      "exactCost": [
+        400,
+        1200,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "tag": "agent-two-weaponsTechnology-3",
+      "actor": "agent-two",
+      "key": "weaponsTechnology",
+      "target": 3,
+      "exactCost": [
+        3200,
+        800,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "tag": "small-dome-quantity-two",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 6,
+        "quantity": 2
+      },
+      "expectedError": 6018,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1133. Error Code: InvalidDefenseType. Error Number: 6018. Error Message: InvalidDefenseType.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20553 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1782"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-locked-ship-5",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 5,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20759 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-locked-ship-6",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 6,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20755 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-locked-ship-7",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 7,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20756 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-locked-ship-8",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 8,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20757 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-locked-ship-9",
+      "actor": "agent-one",
+      "action": "build-ship",
+      "args": {
+        "index": 9,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20758 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-locked-defense-5",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 5,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:303. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20903 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-locked-defense-7",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 7,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:315. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20908 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-unsupported-defense-8",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 8,
+        "quantity": 1
+      },
+      "expectedError": 6018,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:318. Error Code: InvalidDefenseType. Error Number: 6018. Error Message: InvalidDefenseType.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 21039 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1782"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-one-unsupported-defense-9",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 9,
+        "quantity": 1
+      },
+      "expectedError": 6018,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:318. Error Code: InvalidDefenseType. Error Number: 6018. Error Message: InvalidDefenseType.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 21039 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1782"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-locked-ship-5",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 5,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20759 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-locked-ship-6",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 6,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20755 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-locked-ship-7",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 7,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20756 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-locked-ship-8",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 8,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20757 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-locked-ship-9",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 9,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20758 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-locked-defense-5",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 5,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:303. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20903 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-locked-defense-7",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 7,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:315. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20908 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-unsupported-defense-8",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 8,
+        "quantity": 1
+      },
+      "expectedError": 6018,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:318. Error Code: InvalidDefenseType. Error Number: 6018. Error Message: InvalidDefenseType.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 21039 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1782"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-two-unsupported-defense-9",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 9,
+        "quantity": 1
+      },
+      "expectedError": 6018,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:318. Error Code: InvalidDefenseType. Error Number: 6018. Error Message: InvalidDefenseType.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 21039 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1782"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-locked-ship-5",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 5,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20759 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-locked-ship-6",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 6,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20755 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-locked-ship-7",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 7,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20756 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-locked-ship-8",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 8,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20757 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-locked-ship-9",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 9,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:235. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20758 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-locked-defense-5",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 5,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:303. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20903 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-locked-defense-7",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 7,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:315. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20908 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-unsupported-defense-8",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 8,
+        "quantity": 1
+      },
+      "expectedError": 6018,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:318. Error Code: InvalidDefenseType. Error Number: 6018. Error Message: InvalidDefenseType.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 21039 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1782"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "agent-three-unsupported-defense-9",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 9,
+        "quantity": 1
+      },
+      "expectedError": 6018,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:318. Error Code: InvalidDefenseType. Error Number: 6018. Error Message: InvalidDefenseType.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 21039 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1782"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "ship-solarSatellite-queued",
+      "actor": "agent-three",
+      "index": 13,
+      "quantity": 1,
+      "exactCost": [
+        0,
+        2000,
+        500
+      ],
+      "passed": true
+    },
+    {
+      "tag": "defense-lightLaser-queued",
+      "actor": "agent-two",
+      "index": 1,
+      "quantity": 1,
+      "exactCost": [
+        1500,
+        500,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "tag": "ship-early-finish",
+      "actor": "agent-three",
+      "action": "finish-ship",
+      "args": {},
+      "expectedError": 6024,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishShipBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1395. Error Code: ShipBuildNotFinished. Error Number: 6024. Error Message: ShipBuildNotFinished.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20309 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1788"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-early-finish",
+      "actor": "agent-two",
+      "action": "finish-defense",
+      "args": {},
+      "expectedError": 6025,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishDefenseBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1192. Error Code: DefenseBuildNotFinished. Error Number: 6025. Error Message: DefenseBuildNotFinished.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20511 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1789"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "ship-queue-blocks-defense",
+      "actor": "agent-three",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 1
+      },
+      "expectedError": 6021,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1142. Error Code: ShipyardQueueBusy. Error Number: 6021. Error Message: ShipyardQueueBusy.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 21040 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1785"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-queue-blocks-ship",
+      "actor": "agent-two",
+      "action": "build-ship",
+      "args": {
+        "index": 2,
+        "quantity": 1
+      },
+      "expectedError": 6021,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1351. Error Code: ShipyardQueueBusy. Error Number: 6021. Error Message: ShipyardQueueBusy.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20856 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1785"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "ship-queue-blocks-ship",
+      "actor": "agent-three",
+      "action": "build-ship",
+      "args": {
+        "index": 2,
+        "quantity": 1
+      },
+      "expectedError": 6021,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildShip",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1347. Error Code: ShipyardQueueBusy. Error Number: 6021. Error Message: ShipyardQueueBusy.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20855 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1785"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-queue-blocks-defense",
+      "actor": "agent-two",
+      "action": "build-defense",
+      "args": {
+        "index": 0,
+        "quantity": 1
+      },
+      "expectedError": 6021,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1146. Error Code: ShipyardQueueBusy. Error Number: 6021. Error Message: ShipyardQueueBusy.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 21041 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1785"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "ship-recycler-queued",
+      "actor": "agent-one",
+      "index": 10,
+      "quantity": 1,
+      "exactCost": [
+        10000,
+        6000,
+        2000
+      ],
+      "passed": true
+    },
+    {
+      "tag": "ship-recycler-collected",
+      "actor": "agent-one",
+      "itemId": "SHIPS-10",
+      "quantity": 1,
+      "natural": false,
+      "inventoryVerified": true,
+      "passed": true
+    },
+    {
+      "tag": "ship-recycler-duplicate-finish",
+      "actor": "agent-one",
+      "action": "finish-ship",
+      "args": {},
+      "expectedError": 6022,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishShipBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1405. Error Code: NoShipBuild. Error Number: 6022. Error Message: NoShipBuild.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20649 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1786"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-ionCannon-queued",
+      "actor": "agent-one",
+      "index": 4,
+      "quantity": 1,
+      "exactCost": [
+        2000,
+        6000,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "tag": "defense-ionCannon-collected",
+      "actor": "agent-one",
+      "itemId": "DEFENSE-04",
+      "quantity": 1,
+      "natural": false,
+      "inventoryVerified": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-ionCannon-duplicate-finish",
+      "actor": "agent-one",
+      "action": "finish-defense",
+      "args": {},
+      "expectedError": 6023,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishDefenseBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1197. Error Code: NoDefenseBuild. Error Number: 6023. Error Message: NoDefenseBuild.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20842 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1787"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-smallShieldDome-queued",
+      "actor": "agent-one",
+      "index": 6,
+      "quantity": 1,
+      "exactCost": [
+        10000,
+        10000,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "tag": "defense-smallShieldDome-collected",
+      "actor": "agent-one",
+      "itemId": "DEFENSE-06",
+      "quantity": 1,
+      "natural": false,
+      "inventoryVerified": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-smallShieldDome-duplicate-finish",
+      "actor": "agent-one",
+      "action": "finish-defense",
+      "args": {},
+      "expectedError": 6023,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishDefenseBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1197. Error Code: NoDefenseBuild. Error Number: 6023. Error Message: NoDefenseBuild.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20842 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1787"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "small-dome-already-built",
+      "actor": "agent-one",
+      "action": "build-defense",
+      "args": {
+        "index": 6,
+        "quantity": 1
+      },
+      "expectedError": 6019,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: BuildDefense",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:312. Error Code: TechLocked. Error Number: 6019. Error Message: TechLocked.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20909 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1783"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "ship-solarSatellite-collected",
+      "actor": "agent-three",
+      "itemId": "SHIPS-13",
+      "quantity": 1,
+      "natural": true,
+      "inventoryVerified": true,
+      "passed": true
+    },
+    {
+      "tag": "ship-solarSatellite-duplicate-finish",
+      "actor": "agent-three",
+      "action": "finish-ship",
+      "args": {},
+      "expectedError": 6022,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishShipBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1405. Error Code: NoShipBuild. Error Number: 6022. Error Message: NoShipBuild.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20649 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1786"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-lightLaser-collected",
+      "actor": "agent-two",
+      "itemId": "DEFENSE-01",
+      "quantity": 1,
+      "natural": true,
+      "inventoryVerified": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-lightLaser-duplicate-finish",
+      "actor": "agent-two",
+      "action": "finish-defense",
+      "args": {},
+      "expectedError": 6023,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishDefenseBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1197. Error Code: NoDefenseBuild. Error Number: 6023. Error Message: NoDefenseBuild.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20842 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1787"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-heavyLaser-queued",
+      "actor": "agent-two",
+      "index": 2,
+      "quantity": 1,
+      "exactCost": [
+        6000,
+        2000,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "tag": "defense-heavyLaser-collected",
+      "actor": "agent-two",
+      "itemId": "DEFENSE-02",
+      "quantity": 1,
+      "natural": false,
+      "inventoryVerified": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-heavyLaser-duplicate-finish",
+      "actor": "agent-two",
+      "action": "finish-defense",
+      "args": {},
+      "expectedError": 6023,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishDefenseBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1197. Error Code: NoDefenseBuild. Error Number: 6023. Error Message: NoDefenseBuild.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20842 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1787"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-gaussCannon-queued",
+      "actor": "agent-two",
+      "index": 3,
+      "quantity": 1,
+      "exactCost": [
+        20000,
+        15000,
+        2000
+      ],
+      "passed": true
+    },
+    {
+      "tag": "defense-gaussCannon-collected",
+      "actor": "agent-two",
+      "itemId": "DEFENSE-03",
+      "quantity": 1,
+      "natural": false,
+      "inventoryVerified": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-gaussCannon-duplicate-finish",
+      "actor": "agent-two",
+      "action": "finish-defense",
+      "args": {},
+      "expectedError": 6023,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishDefenseBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1197. Error Code: NoDefenseBuild. Error Number: 6023. Error Message: NoDefenseBuild.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20842 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1787"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-rocketLauncher-queued",
+      "actor": "agent-three",
+      "index": 0,
+      "quantity": 2,
+      "exactCost": [
+        4000,
+        0,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "tag": "defense-rocketLauncher-collected",
+      "actor": "agent-three",
+      "itemId": "DEFENSE-00",
+      "quantity": 2,
+      "natural": false,
+      "inventoryVerified": true,
+      "passed": true
+    },
+    {
+      "tag": "defense-rocketLauncher-duplicate-finish",
+      "actor": "agent-three",
+      "action": "finish-defense",
+      "args": {},
+      "expectedError": 6023,
+      "logs": [
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq invoke [1]",
+        "Program log: Instruction: FinishDefenseBuild",
+        "Program log: AnchorError thrown in programs/game-state/src/utils.rs:1197. Error Code: NoDefenseBuild. Error Number: 6023. Error Message: NoDefenseBuild.",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq consumed 20842 of 1400000 compute units",
+        "Program J6rNikvM7XLs6REtbbhMhe8NVd6Nfqa1C7PDfgHSDFkq failed: custom program error: 0x1787"
+      ],
+      "unsigned": true,
+      "stateUnchanged": true,
+      "passed": true
+    }
+  ],
+  "before": [
+    {
+      "name": "agent-one",
+      "state": {
+        "entityPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "planetPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "fleetPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "resourcesPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "researchPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "isDelegated": false,
+        "planet": {
+          "creator": "CC1e4pwQFrFuZRHu1Qp9478Ld2nPw8XiL4fYHt8uv6Y1",
+          "entity": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+          "owner": "CC1e4pwQFrFuZRHu1Qp9478Ld2nPw8XiL4fYHt8uv6Y1",
+          "name": "Agent Homeworld",
+          "galaxy": 5,
+          "system": 174,
+          "position": 13,
+          "planetIndex": 0,
+          "diameter": 16037,
+          "temperature": -43,
+          "maxFields": 170,
+          "usedFields": 54,
+          "createdAt": 1792434922,
+          "protectionUntilTs": 1793039722,
+          "marketUnlockedAt": 1792435222,
+          "attackUnlockedAt": 1792435222,
+          "lastAttackLaunchTs": 0,
+          "lastAttackedTs": 0,
+          "metalMine": 7,
+          "crystalMine": 8,
+          "deuteriumSynthesizer": 4,
+          "solarPlant": 9,
+          "fusionReactor": 0,
+          "roboticsFactory": 2,
+          "naniteFactory": 0,
+          "shipyard": 7,
+          "metalStorage": 3,
+          "crystalStorage": 4,
+          "deuteriumTank": 3,
+          "researchLab": 7,
+          "missileSilo": 0,
+          "weaponsTechnology": 0,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "buildQueueItem": 255,
+          "buildQueueTarget": 0,
+          "buildFinishTs": 0,
+          "shipBuildItem": 255,
+          "shipBuildQty": 0,
+          "shipBuildFinishTs": 0,
+          "defenseBuildItem": 255,
+          "defenseBuildQty": 0,
+          "defenseBuildFinishTs": 0,
+          "rocketLauncher": 0,
+          "lightLaser": 0,
+          "heavyLaser": 0,
+          "gaussCannon": 0,
+          "ionCannon": 0,
+          "plasmaTurret": 0,
+          "smallShieldDome": 0,
+          "largeShieldDome": 0,
+          "antiBallisticMissile": 0,
+          "interplanetaryMissile": 0
+        },
+        "resources": {
+          "metal": "36640",
+          "crystal": "8229",
+          "deuterium": "777",
+          "metalHour": "409",
+          "crystalHour": "342",
+          "deuteriumHour": "82",
+          "energyProduction": "424",
+          "energyConsumption": "424",
+          "metalCap": "80000",
+          "crystalCap": "160000",
+          "deuteriumCap": "80000",
+          "lastUpdateTs": 1792892404
+        },
+        "fleet": {
+          "creator": "CC1e4pwQFrFuZRHu1Qp9478Ld2nPw8XiL4fYHt8uv6Y1",
+          "smallCargo": 2,
+          "largeCargo": 1,
+          "lightFighter": 2,
+          "heavyFighter": 2,
+          "cruiser": 2,
+          "battleship": 0,
+          "battlecruiser": 0,
+          "bomber": 0,
+          "destroyer": 0,
+          "deathstar": 0,
+          "recycler": 0,
+          "espionageProbe": 1,
+          "colonyShip": 0,
+          "solarSatellite": 0,
+          "activeMissions": 0,
+          "missions": [
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            }
+          ]
+        },
+        "research": {
+          "creator": "CC1e4pwQFrFuZRHu1Qp9478Ld2nPw8XiL4fYHt8uv6Y1",
+          "energyTech": 2,
+          "combustionDrive": 6,
+          "impulseDrive": 4,
+          "hyperspaceDrive": 3,
+          "computerTech": 2,
+          "astrophysics": 3,
+          "igrNetwork": 0,
+          "weaponsTechnology": 0,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "queueItem": 255,
+          "queueTarget": 0,
+          "researchFinishTs": 0
+        }
+      },
+      "balances": {
+        "sol": 4391814080,
+        "usdc": "999000",
+        "am": "360396600833"
+      }
+    },
+    {
+      "name": "agent-two",
+      "state": {
+        "entityPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "planetPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "fleetPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "resourcesPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "researchPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "isDelegated": false,
+        "planet": {
+          "creator": "E32UinR6Gb6Vrry2qLMSMmu7brKM3NbiKJ9w1J4kKrgt",
+          "entity": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+          "owner": "E32UinR6Gb6Vrry2qLMSMmu7brKM3NbiKJ9w1J4kKrgt",
+          "name": "Agent Homeworld",
+          "galaxy": 5,
+          "system": 193,
+          "position": 9,
+          "planetIndex": 0,
+          "diameter": 11820,
+          "temperature": 30,
+          "maxFields": 179,
+          "usedFields": 49,
+          "createdAt": 1792435978,
+          "protectionUntilTs": 1793040778,
+          "marketUnlockedAt": 1792436278,
+          "attackUnlockedAt": 1792436278,
+          "lastAttackLaunchTs": 0,
+          "lastAttackedTs": 0,
+          "metalMine": 5,
+          "crystalMine": 7,
+          "deuteriumSynthesizer": 3,
+          "solarPlant": 8,
+          "fusionReactor": 0,
+          "roboticsFactory": 2,
+          "naniteFactory": 0,
+          "shipyard": 7,
+          "metalStorage": 3,
+          "crystalStorage": 4,
+          "deuteriumTank": 3,
+          "researchLab": 7,
+          "missileSilo": 0,
+          "weaponsTechnology": 2,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "buildQueueItem": 255,
+          "buildQueueTarget": 0,
+          "buildFinishTs": 0,
+          "shipBuildItem": 255,
+          "shipBuildQty": 0,
+          "shipBuildFinishTs": 0,
+          "defenseBuildItem": 255,
+          "defenseBuildQty": 0,
+          "defenseBuildFinishTs": 0,
+          "rocketLauncher": 1,
+          "lightLaser": 0,
+          "heavyLaser": 0,
+          "gaussCannon": 0,
+          "ionCannon": 0,
+          "plasmaTurret": 0,
+          "smallShieldDome": 0,
+          "largeShieldDome": 0,
+          "antiBallisticMissile": 0,
+          "interplanetaryMissile": 0
+        },
+        "resources": {
+          "metal": "43437",
+          "crystal": "23329",
+          "deuterium": "31198",
+          "metalHour": "241",
+          "crystalHour": "272",
+          "deuteriumHour": "40",
+          "energyProduction": "342",
+          "energyConsumption": "295",
+          "metalCap": "80000",
+          "crystalCap": "160000",
+          "deuteriumCap": "80000",
+          "lastUpdateTs": 1792892380
+        },
+        "fleet": {
+          "creator": "E32UinR6Gb6Vrry2qLMSMmu7brKM3NbiKJ9w1J4kKrgt",
+          "smallCargo": 1,
+          "largeCargo": 0,
+          "lightFighter": 4,
+          "heavyFighter": 2,
+          "cruiser": 2,
+          "battleship": 0,
+          "battlecruiser": 0,
+          "bomber": 0,
+          "destroyer": 0,
+          "deathstar": 0,
+          "recycler": 0,
+          "espionageProbe": 1,
+          "colonyShip": 0,
+          "solarSatellite": 0,
+          "activeMissions": 0,
+          "missions": [
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            }
+          ]
+        },
+        "research": {
+          "creator": "E32UinR6Gb6Vrry2qLMSMmu7brKM3NbiKJ9w1J4kKrgt",
+          "energyTech": 1,
+          "combustionDrive": 4,
+          "impulseDrive": 4,
+          "hyperspaceDrive": 2,
+          "computerTech": 2,
+          "astrophysics": 0,
+          "igrNetwork": 0,
+          "weaponsTechnology": 2,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "queueItem": 255,
+          "queueTarget": 0,
+          "researchFinishTs": 0
+        }
+      },
+      "balances": {
+        "sol": 202893720,
+        "usdc": "0",
+        "am": "136328929999"
+      }
+    },
+    {
+      "name": "agent-three",
+      "state": {
+        "entityPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "planetPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "fleetPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "resourcesPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "researchPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "isDelegated": false,
+        "planet": {
+          "creator": "FEaGn9WcxqtEuBhZ2WbTMFLzhMEtpYWaEFnWEe8vxRaG",
+          "entity": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+          "owner": "FEaGn9WcxqtEuBhZ2WbTMFLzhMEtpYWaEFnWEe8vxRaG",
+          "name": "Agent Homeworld",
+          "galaxy": 5,
+          "system": 185,
+          "position": 12,
+          "planetIndex": 0,
+          "diameter": 15976,
+          "temperature": -9,
+          "maxFields": 202,
+          "usedFields": 50,
+          "createdAt": 1792435978,
+          "protectionUntilTs": 1793040778,
+          "marketUnlockedAt": 1792436278,
+          "attackUnlockedAt": 1792436278,
+          "lastAttackLaunchTs": 0,
+          "lastAttackedTs": 0,
+          "metalMine": 5,
+          "crystalMine": 7,
+          "deuteriumSynthesizer": 3,
+          "solarPlant": 8,
+          "fusionReactor": 0,
+          "roboticsFactory": 2,
+          "naniteFactory": 0,
+          "shipyard": 7,
+          "metalStorage": 4,
+          "crystalStorage": 4,
+          "deuteriumTank": 3,
+          "researchLab": 7,
+          "missileSilo": 0,
+          "weaponsTechnology": 0,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "buildQueueItem": 255,
+          "buildQueueTarget": 0,
+          "buildFinishTs": 0,
+          "shipBuildItem": 255,
+          "shipBuildQty": 0,
+          "shipBuildFinishTs": 0,
+          "defenseBuildItem": 255,
+          "defenseBuildQty": 0,
+          "defenseBuildFinishTs": 0,
+          "rocketLauncher": 1,
+          "lightLaser": 0,
+          "heavyLaser": 0,
+          "gaussCannon": 0,
+          "ionCannon": 0,
+          "plasmaTurret": 0,
+          "smallShieldDome": 0,
+          "largeShieldDome": 0,
+          "antiBallisticMissile": 0,
+          "interplanetaryMissile": 0
+        },
+        "resources": {
+          "metal": "23413",
+          "crystal": "13025",
+          "deuterium": "11775",
+          "metalHour": "241",
+          "crystalHour": "272",
+          "deuteriumHour": "48",
+          "energyProduction": "342",
+          "energyConsumption": "295",
+          "metalCap": "160000",
+          "crystalCap": "160000",
+          "deuteriumCap": "80000",
+          "lastUpdateTs": 1792892425
+        },
+        "fleet": {
+          "creator": "FEaGn9WcxqtEuBhZ2WbTMFLzhMEtpYWaEFnWEe8vxRaG",
+          "smallCargo": 1,
+          "largeCargo": 0,
+          "lightFighter": 7,
+          "heavyFighter": 3,
+          "cruiser": 1,
+          "battleship": 0,
+          "battlecruiser": 0,
+          "bomber": 0,
+          "destroyer": 0,
+          "deathstar": 0,
+          "recycler": 0,
+          "espionageProbe": 1,
+          "colonyShip": 0,
+          "solarSatellite": 0,
+          "activeMissions": 0,
+          "missions": [
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            }
+          ]
+        },
+        "research": {
+          "creator": "FEaGn9WcxqtEuBhZ2WbTMFLzhMEtpYWaEFnWEe8vxRaG",
+          "energyTech": 1,
+          "combustionDrive": 4,
+          "impulseDrive": 4,
+          "hyperspaceDrive": 2,
+          "computerTech": 2,
+          "astrophysics": 0,
+          "igrNetwork": 0,
+          "weaponsTechnology": 0,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "queueItem": 255,
+          "queueTarget": 0,
+          "researchFinishTs": 0
+        }
+      },
+      "balances": {
+        "sol": 189624640,
+        "usdc": "0",
+        "am": "147241171081"
+      }
+    }
+  ],
+  "initialChecks": {
+    "idle": true
+  },
+  "rewards": {
+    "agent-one-earned-scout": {
+      "metal": "36640",
+      "crystal": "8229",
+      "deuterium": "777",
+      "metalHour": "409",
+      "crystalHour": "342",
+      "deuteriumHour": "82",
+      "energyProduction": "424",
+      "energyConsumption": "424",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792892404
+    },
+    "agent-two-earned-scout": {
+      "metal": "43437",
+      "crystal": "23329",
+      "deuterium": "31198",
+      "metalHour": "241",
+      "crystalHour": "272",
+      "deuteriumHour": "40",
+      "energyProduction": "342",
+      "energyConsumption": "295",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792892380
+    },
+    "agent-three-earned-scout": {
+      "metal": "23413",
+      "crystal": "13025",
+      "deuterium": "11775",
+      "metalHour": "241",
+      "crystalHour": "272",
+      "deuteriumHour": "48",
+      "energyProduction": "342",
+      "energyConsumption": "295",
+      "metalCap": "160000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792892425
+    }
+  },
+  "debits": {
+    "agent-one-energyTech-3": {
+      "metal": "37531",
+      "crystal": "27306",
+      "deuterium": "6094",
+      "metalHour": "409",
+      "crystalHour": "342",
+      "deuteriumHour": "82",
+      "energyProduction": "424",
+      "energyConsumption": "424",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893229
+    },
+    "agent-one-shieldingTechnology-1": {
+      "metal": "37533",
+      "crystal": "24107",
+      "deuterium": "4494",
+      "metalHour": "409",
+      "crystalHour": "342",
+      "deuteriumHour": "82",
+      "energyProduction": "424",
+      "energyConsumption": "424",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893250
+    },
+    "agent-one-shieldingTechnology-2": {
+      "metal": "37334",
+      "crystal": "23507",
+      "deuterium": "4494",
+      "metalHour": "409",
+      "crystalHour": "342",
+      "deuteriumHour": "82",
+      "energyProduction": "424",
+      "energyConsumption": "424",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893268
+    },
+    "agent-two-weaponsTechnology-3": {
+      "metal": "44291",
+      "crystal": "18391",
+      "deuterium": "26506",
+      "metalHour": "241",
+      "crystalHour": "272",
+      "deuteriumHour": "40",
+      "energyProduction": "342",
+      "energyConsumption": "295",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893207
+    },
+    "ship-solarSatellite": {
+      "metal": "24265",
+      "crystal": "2084",
+      "deuterium": "12085",
+      "metalHour": "241",
+      "crystalHour": "272",
+      "deuteriumHour": "48",
+      "energyProduction": "342",
+      "energyConsumption": "295",
+      "metalCap": "160000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893222
+    },
+    "defense-lightLaser": {
+      "metal": "41096",
+      "crystal": "17597",
+      "deuterium": "26506",
+      "metalHour": "241",
+      "crystalHour": "272",
+      "deuteriumHour": "40",
+      "energyProduction": "342",
+      "energyConsumption": "295",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893304
+    },
+    "ship-recycler": {
+      "metal": "36935",
+      "crystal": "22307",
+      "deuterium": "4494",
+      "metalHour": "409",
+      "crystalHour": "342",
+      "deuteriumHour": "82",
+      "energyProduction": "424",
+      "energyConsumption": "424",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893285
+    },
+    "defense-ionCannon": {
+      "metal": "26947",
+      "crystal": "16316",
+      "deuterium": "2496",
+      "metalHour": "409",
+      "crystalHour": "342",
+      "deuteriumHour": "82",
+      "energyProduction": "424",
+      "energyConsumption": "424",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893392
+    },
+    "defense-smallShieldDome": {
+      "metal": "24949",
+      "crystal": "10316",
+      "deuterium": "2496",
+      "metalHour": "409",
+      "crystalHour": "342",
+      "deuteriumHour": "82",
+      "energyProduction": "424",
+      "energyConsumption": "424",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893411
+    },
+    "defense-heavyLaser": {
+      "metal": "39620",
+      "crystal": "17124",
+      "deuterium": "26509",
+      "metalHour": "241",
+      "crystalHour": "272",
+      "deuteriumHour": "40",
+      "energyProduction": "342",
+      "energyConsumption": "295",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893671
+    },
+    "defense-gaussCannon": {
+      "metal": "33620",
+      "crystal": "15124",
+      "deuterium": "26509",
+      "metalHour": "241",
+      "crystalHour": "272",
+      "deuteriumHour": "40",
+      "energyProduction": "342",
+      "energyConsumption": "295",
+      "metalCap": "80000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893689
+    },
+    "defense-rocketLauncher": {
+      "metal": "24294",
+      "crystal": "116",
+      "deuterium": "11590",
+      "metalHour": "241",
+      "crystalHour": "272",
+      "deuteriumHour": "48",
+      "energyProduction": "367",
+      "energyConsumption": "295",
+      "metalCap": "160000",
+      "crystalCap": "160000",
+      "deuteriumCap": "80000",
+      "lastUpdateTs": 1792893662
+    }
+  },
+  "after": [
+    {
+      "name": "agent-one",
+      "state": {
+        "entityPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "planetPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "fleetPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "resourcesPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "researchPda": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+        "isDelegated": false,
+        "planet": {
+          "creator": "CC1e4pwQFrFuZRHu1Qp9478Ld2nPw8XiL4fYHt8uv6Y1",
+          "entity": "8uYC5pfNKnRAVzBzAtzy8kigAMA7egvyKbBhdEBZzKCw",
+          "owner": "CC1e4pwQFrFuZRHu1Qp9478Ld2nPw8XiL4fYHt8uv6Y1",
+          "name": "Agent Homeworld",
+          "galaxy": 5,
+          "system": 174,
+          "position": 13,
+          "planetIndex": 0,
+          "diameter": 16037,
+          "temperature": -43,
+          "maxFields": 170,
+          "usedFields": 54,
+          "createdAt": 1792434922,
+          "protectionUntilTs": 1793039722,
+          "marketUnlockedAt": 1792435222,
+          "attackUnlockedAt": 1792435222,
+          "lastAttackLaunchTs": 0,
+          "lastAttackedTs": 0,
+          "metalMine": 7,
+          "crystalMine": 8,
+          "deuteriumSynthesizer": 4,
+          "solarPlant": 9,
+          "fusionReactor": 0,
+          "roboticsFactory": 2,
+          "naniteFactory": 0,
+          "shipyard": 7,
+          "metalStorage": 3,
+          "crystalStorage": 4,
+          "deuteriumTank": 3,
+          "researchLab": 7,
+          "missileSilo": 0,
+          "weaponsTechnology": 0,
+          "shieldingTechnology": 2,
+          "armorTechnology": 2,
+          "buildQueueItem": 255,
+          "buildQueueTarget": 0,
+          "buildFinishTs": 0,
+          "shipBuildItem": 255,
+          "shipBuildQty": 0,
+          "shipBuildFinishTs": 0,
+          "defenseBuildItem": 255,
+          "defenseBuildQty": 0,
+          "defenseBuildFinishTs": 0,
+          "rocketLauncher": 0,
+          "lightLaser": 0,
+          "heavyLaser": 0,
+          "gaussCannon": 0,
+          "ionCannon": 1,
+          "plasmaTurret": 0,
+          "smallShieldDome": 1,
+          "largeShieldDome": 0,
+          "antiBallisticMissile": 0,
+          "interplanetaryMissile": 0
+        },
+        "resources": {
+          "metal": "14951",
+          "crystal": "316",
+          "deuterium": "2496",
+          "metalHour": "409",
+          "crystalHour": "342",
+          "deuteriumHour": "82",
+          "energyProduction": "424",
+          "energyConsumption": "424",
+          "metalCap": "80000",
+          "crystalCap": "160000",
+          "deuteriumCap": "80000",
+          "lastUpdateTs": 1792893430
+        },
+        "fleet": {
+          "creator": "CC1e4pwQFrFuZRHu1Qp9478Ld2nPw8XiL4fYHt8uv6Y1",
+          "smallCargo": 2,
+          "largeCargo": 1,
+          "lightFighter": 2,
+          "heavyFighter": 2,
+          "cruiser": 2,
+          "battleship": 0,
+          "battlecruiser": 0,
+          "bomber": 0,
+          "destroyer": 0,
+          "deathstar": 0,
+          "recycler": 1,
+          "espionageProbe": 1,
+          "colonyShip": 0,
+          "solarSatellite": 0,
+          "activeMissions": 0,
+          "missions": [
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            }
+          ]
+        },
+        "research": {
+          "creator": "CC1e4pwQFrFuZRHu1Qp9478Ld2nPw8XiL4fYHt8uv6Y1",
+          "energyTech": 3,
+          "combustionDrive": 6,
+          "impulseDrive": 4,
+          "hyperspaceDrive": 3,
+          "computerTech": 2,
+          "astrophysics": 3,
+          "igrNetwork": 0,
+          "weaponsTechnology": 0,
+          "shieldingTechnology": 2,
+          "armorTechnology": 2,
+          "queueItem": 255,
+          "queueTarget": 0,
+          "researchFinishTs": 0
+        }
+      },
+      "balances": {
+        "sol": 4391734080,
+        "usdc": "999000",
+        "am": "357412600833"
+      }
+    },
+    {
+      "name": "agent-two",
+      "state": {
+        "entityPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "planetPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "fleetPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "resourcesPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "researchPda": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+        "isDelegated": false,
+        "planet": {
+          "creator": "E32UinR6Gb6Vrry2qLMSMmu7brKM3NbiKJ9w1J4kKrgt",
+          "entity": "8gGt1X2gGwyubWjvFoanK3Nb43LjF6Rw7tQhbCQ64Vx9",
+          "owner": "E32UinR6Gb6Vrry2qLMSMmu7brKM3NbiKJ9w1J4kKrgt",
+          "name": "Agent Homeworld",
+          "galaxy": 5,
+          "system": 193,
+          "position": 9,
+          "planetIndex": 0,
+          "diameter": 11820,
+          "temperature": 30,
+          "maxFields": 179,
+          "usedFields": 49,
+          "createdAt": 1792435978,
+          "protectionUntilTs": 1793040778,
+          "marketUnlockedAt": 1792436278,
+          "attackUnlockedAt": 1792436278,
+          "lastAttackLaunchTs": 0,
+          "lastAttackedTs": 0,
+          "metalMine": 5,
+          "crystalMine": 7,
+          "deuteriumSynthesizer": 3,
+          "solarPlant": 8,
+          "fusionReactor": 0,
+          "roboticsFactory": 2,
+          "naniteFactory": 0,
+          "shipyard": 7,
+          "metalStorage": 3,
+          "crystalStorage": 4,
+          "deuteriumTank": 3,
+          "researchLab": 7,
+          "missileSilo": 0,
+          "weaponsTechnology": 3,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "buildQueueItem": 255,
+          "buildQueueTarget": 0,
+          "buildFinishTs": 0,
+          "shipBuildItem": 255,
+          "shipBuildQty": 0,
+          "shipBuildFinishTs": 0,
+          "defenseBuildItem": 255,
+          "defenseBuildQty": 0,
+          "defenseBuildFinishTs": 0,
+          "rocketLauncher": 1,
+          "lightLaser": 1,
+          "heavyLaser": 1,
+          "gaussCannon": 1,
+          "ionCannon": 0,
+          "plasmaTurret": 0,
+          "smallShieldDome": 0,
+          "largeShieldDome": 0,
+          "antiBallisticMissile": 0,
+          "interplanetaryMissile": 0
+        },
+        "resources": {
+          "metal": "13620",
+          "crystal": "124",
+          "deuterium": "24509",
+          "metalHour": "241",
+          "crystalHour": "272",
+          "deuteriumHour": "40",
+          "energyProduction": "342",
+          "energyConsumption": "295",
+          "metalCap": "80000",
+          "crystalCap": "160000",
+          "deuteriumCap": "80000",
+          "lastUpdateTs": 1792893708
+        },
+        "fleet": {
+          "creator": "E32UinR6Gb6Vrry2qLMSMmu7brKM3NbiKJ9w1J4kKrgt",
+          "smallCargo": 1,
+          "largeCargo": 0,
+          "lightFighter": 4,
+          "heavyFighter": 2,
+          "cruiser": 2,
+          "battleship": 0,
+          "battlecruiser": 0,
+          "bomber": 0,
+          "destroyer": 0,
+          "deathstar": 0,
+          "recycler": 0,
+          "espionageProbe": 1,
+          "colonyShip": 0,
+          "solarSatellite": 0,
+          "activeMissions": 0,
+          "missions": [
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            }
+          ]
+        },
+        "research": {
+          "creator": "E32UinR6Gb6Vrry2qLMSMmu7brKM3NbiKJ9w1J4kKrgt",
+          "energyTech": 1,
+          "combustionDrive": 4,
+          "impulseDrive": 4,
+          "hyperspaceDrive": 2,
+          "computerTech": 2,
+          "astrophysics": 0,
+          "igrNetwork": 0,
+          "weaponsTechnology": 3,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "queueItem": 255,
+          "queueTarget": 0,
+          "researchFinishTs": 0
+        }
+      },
+      "balances": {
+        "sol": 202838720,
+        "usdc": "0",
+        "am": "134498924999"
+      }
+    },
+    {
+      "name": "agent-three",
+      "state": {
+        "entityPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "planetPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "fleetPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "resourcesPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "researchPda": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+        "isDelegated": false,
+        "planet": {
+          "creator": "FEaGn9WcxqtEuBhZ2WbTMFLzhMEtpYWaEFnWEe8vxRaG",
+          "entity": "53EYbcaBUFGXFtopuu98eNHSZ5deZLg78nsrz3Sf9jHK",
+          "owner": "FEaGn9WcxqtEuBhZ2WbTMFLzhMEtpYWaEFnWEe8vxRaG",
+          "name": "Agent Homeworld",
+          "galaxy": 5,
+          "system": 185,
+          "position": 12,
+          "planetIndex": 0,
+          "diameter": 15976,
+          "temperature": -9,
+          "maxFields": 202,
+          "usedFields": 50,
+          "createdAt": 1792435978,
+          "protectionUntilTs": 1793040778,
+          "marketUnlockedAt": 1792436278,
+          "attackUnlockedAt": 1792436278,
+          "lastAttackLaunchTs": 0,
+          "lastAttackedTs": 0,
+          "metalMine": 5,
+          "crystalMine": 7,
+          "deuteriumSynthesizer": 3,
+          "solarPlant": 8,
+          "fusionReactor": 0,
+          "roboticsFactory": 2,
+          "naniteFactory": 0,
+          "shipyard": 7,
+          "metalStorage": 4,
+          "crystalStorage": 4,
+          "deuteriumTank": 3,
+          "researchLab": 7,
+          "missileSilo": 0,
+          "weaponsTechnology": 0,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "buildQueueItem": 255,
+          "buildQueueTarget": 0,
+          "buildFinishTs": 0,
+          "shipBuildItem": 255,
+          "shipBuildQty": 0,
+          "shipBuildFinishTs": 0,
+          "defenseBuildItem": 255,
+          "defenseBuildQty": 0,
+          "defenseBuildFinishTs": 0,
+          "rocketLauncher": 3,
+          "lightLaser": 0,
+          "heavyLaser": 0,
+          "gaussCannon": 0,
+          "ionCannon": 0,
+          "plasmaTurret": 0,
+          "smallShieldDome": 0,
+          "largeShieldDome": 0,
+          "antiBallisticMissile": 0,
+          "interplanetaryMissile": 0
+        },
+        "resources": {
+          "metal": "20297",
+          "crystal": "120",
+          "deuterium": "11590",
+          "metalHour": "241",
+          "crystalHour": "272",
+          "deuteriumHour": "48",
+          "energyProduction": "367",
+          "energyConsumption": "295",
+          "metalCap": "160000",
+          "crystalCap": "160000",
+          "deuteriumCap": "80000",
+          "lastUpdateTs": 1792893727
+        },
+        "fleet": {
+          "creator": "FEaGn9WcxqtEuBhZ2WbTMFLzhMEtpYWaEFnWEe8vxRaG",
+          "smallCargo": 1,
+          "largeCargo": 0,
+          "lightFighter": 7,
+          "heavyFighter": 3,
+          "cruiser": 1,
+          "battleship": 0,
+          "battlecruiser": 0,
+          "bomber": 0,
+          "destroyer": 0,
+          "deathstar": 0,
+          "recycler": 0,
+          "espionageProbe": 1,
+          "colonyShip": 0,
+          "solarSatellite": 1,
+          "activeMissions": 0,
+          "missions": [
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            },
+            {
+              "missionType": 0,
+              "destination": "11111111111111111111111111111111",
+              "targetGalaxy": 0,
+              "targetSystem": 0,
+              "targetPosition": 0,
+              "colonyName": "",
+              "departTs": 0,
+              "arriveTs": 0,
+              "returnTs": 0,
+              "sSmallCargo": 0,
+              "sLargeCargo": 0,
+              "sLightFighter": 0,
+              "sHeavyFighter": 0,
+              "sCruiser": 0,
+              "sBattleship": 0,
+              "sBattlecruiser": 0,
+              "sBomber": 0,
+              "sDestroyer": 0,
+              "sDeathstar": 0,
+              "sRecycler": 0,
+              "sEspionageProbe": 0,
+              "sColonyShip": 0,
+              "cargoMetal": "0",
+              "cargoCrystal": "0",
+              "cargoDeuterium": "0",
+              "applied": false,
+              "speedFactor": 0,
+              "combatRounds": 0,
+              "attackerWon": false
+            }
+          ]
+        },
+        "research": {
+          "creator": "FEaGn9WcxqtEuBhZ2WbTMFLzhMEtpYWaEFnWEe8vxRaG",
+          "energyTech": 1,
+          "combustionDrive": 4,
+          "impulseDrive": 4,
+          "hyperspaceDrive": 2,
+          "computerTech": 2,
+          "astrophysics": 0,
+          "igrNetwork": 0,
+          "weaponsTechnology": 0,
+          "shieldingTechnology": 0,
+          "armorTechnology": 2,
+          "queueItem": 255,
+          "queueTarget": 0,
+          "researchFinishTs": 0
+        }
+      },
+      "balances": {
+        "sol": 189594640,
+        "usdc": "0",
+        "am": "146952168581"
+      }
+    }
+  ],
+  "costs": {
+    "networkLamports": 165000,
+    "antimatterSpentBaseUnits": "5103000000",
+    "marketFeesBaseUnits": "7500",
+    "usdcSpent": 0
+  },
+  "passed": true,
+  "verifiedAt": "2026-10-25T02:03:21.108Z",
+  "lastRun": {
+    "readOnly": true,
+    "newSignedActions": 0,
+    "verifiedAt": "2026-10-25T02:03:21.108Z"
+  }
+}

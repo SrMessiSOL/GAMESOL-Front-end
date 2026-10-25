@@ -6,6 +6,33 @@ features. This review submitted no transactions and published nothing.
 
 ## How To Read This
 
+2026-10-24 defense UI release and remaining raw build boundaries:
+[24 three-agent deployed-program checks](AGENT_SHIP_DEFENSE_BOUNDARIES_2026-10-24.md).
+Guard commit `4162c50` is on GitHub and the public Vercel game; all hashed
+candidate/public assets match and the RPC genesis is devnet. Actual defense JSX,
+controls and styles pass read-only 390px/1440px fixture checks; missile, dome,
+quantity, queue, prerequisite and affordability blocks prepare no commands.
+Desktop label wrapping corrected. All three agents then prove raw zero/max
+quantity, invalid ship/defense index and wrong-owner rejections. Entire planet
+and token account bytes and SOL balances unchanged; zero new signatures or
+spending. Remaining advanced construction, inventory overflow, vault parity and
+combat gates stay open under T08/T09/T35; no new families. Automation PAUSED.
+
+2026-10-24 bounded ship/defense acceptance:
+[three-agent construction matrix and rejection evidence](AGENT_SHIP_DEFENSE_ACCEPTANCE_2026-10-24.md).
+33 finalized commands, 95 checks; independent read-only verification passes with
+zero new signatures. Recycler and Solar Satellite collected; five new defense
+types collected, plus quantity-two Rocket Launchers. Natural and accelerated
+completion, exact costs, shared queues, early/duplicate finish, unique dome and
+invalid quantity cases checked. Satellite adds exactly 25 power. All queues and
+missions empty. Cost: 5103 test AM burned + 0.0075 AM fees + 165000 lamports;
+zero USDC or new funding. T08/T09 remain PARTIAL: five advanced hull cycles,
+Plasma/Large Dome, inventory limits, parity and combat effects remain. Missiles
+are unsupported, not silently excluded. Local availability guards fixed;
+desktop/mobile review required before publication. Scope audit also flags two
+existing colony-conflict instructions absent from frozen inventory (T12);
+baseline unchanged. Automation PAUSED; nothing published or deployed.
+
 2026-10-24 published guard and advanced cargo unlock:
 [three-agent research, colony supply and Large Cargo collection](AGENT_CARGO_UNLOCK_2026-10-24.md).
 Protected attack fix `624f851` is on GitHub and the public Vercel game; public
@@ -95,8 +122,8 @@ items, including currently locked or hidden items.
 | T05 | Production, energy and storage - PARTIAL | LIVE production/upgrades; AUTO projected accrual; SIM capacity guards | Compare each mine, temperature, energy shortage, fusion fuel consumption and caps to chain over elapsed time; full storage/offline periods, backward/future time abuse, direct/vault parity and rounding/overflow |
 | T06 | Buildings - PARTIAL | LIVE mines, power/storage/lab/robotics/shipyard progression; AUTO prerequisites | Every BUILDINGS item: eligible start/finish, exact cost/time/effect, prerequisite boundary, fields/max level, mutual queue locks, early/duplicate finish, malformed index and stale affordability; settle hidden missile-silo availability explicitly |
 | T07 | Research - PARTIAL | LIVE energy/drives/computer/astrophysics progression; LOCAL prerequisite checks | Every RESEARCH item: exact start/finish/cost/time and actual resulting effect; network/lab interaction, max/invalid level, queue and prerequisite boundaries, early/duplicate finish, direct/vault parity |
-| T08 | Ship construction - PARTIAL | LOCAL all 14 hull threshold successes and failures across typed/vault; LIVE fighters, cargo, probes and Colony Ship collection; [Large Cargo unlock, collection and unchanged retry](AGENT_CARGO_UNLOCK_2026-10-24.md) | Every SHIPS item: full queue-to-inventory cycle, quantity limits/overflow, exact costs/time, shared defense queue lock, early/duplicate finish; confirm special hulls' supported uses rather than assume OGame mechanics |
-| T09 | Defense construction - PARTIAL | LIVE Rocket Launcher; AUTO disclosure/prerequisite coverage | Every DEFENSE item: eligible queue/finish and quantities; unique dome limits, missile/silo capacity, invalid/overflow inputs, shared queue and duplicate finishes; document whether missile firing exists before claiming it tested |
+| T08 | Ship construction - PARTIAL | LOCAL all 14 hull thresholds across typed/vault; LIVE fighters, cargo, probes and Colony Ship; [fleet progression](AGENT_RESEARCH_FLEET_2026-10-22.md), [Large Cargo](AGENT_CARGO_UNLOCK_2026-10-24.md), [Recycler and Solar Satellite, exact debits, power effect, shared queues and early/duplicate collection](AGENT_SHIP_DEFENSE_ACCEPTANCE_2026-10-24.md) | Eligible construction/collection of Battleship, Battlecruiser, Bomber, Destroyer and Deathstar; remaining quantity/overflow and vault parity; supported special-hull uses and combat effects |
+| T09 | Defense construction - PARTIAL | [LIVE six supported defense types, exact costs, quantity-two launchers, dome uniqueness, shared queues and early/duplicate finish; local UI availability guard](AGENT_SHIP_DEFENSE_ACCEPTANCE_2026-10-24.md) | Plasma and Large Dome eligible construction; remaining quantity/overflow and vault parity; combat effects; missiles are unsupported and require explicit exclusion or implementation, not a claimed pass |
 | T10 | Fleet launch and slots - PARTIAL | LIVE all four exposed mission types except completed attack; AUTO/SIM ownership, fuel, cargo and slot guards | Exact per-hull mixed-fleet travel/fuel/cargo, speed/slot/coordinate boundaries; wrong source/target/type, same-planet, concurrent launches, all ships debited once; direct/vault route parity |
 | T11 | Transport and return - PARTIAL | LIVE delivery, accelerated trip, cargo return and slot release | Zero/empty-return instruction variants, recipient caps and ownership changes in transit, exact cargo/fuel accounting, early/replayed/concurrent arrival and return; refresh/recovery on each leg |
 | T12 | Colonization - PARTIAL | LIVE colony creation, owner registry and rewards | Occupied/raced target, capacity threshold and colony limit, ship consumption, wrong slot/type, early/repeated resolution, target initialized mid-flight; exact source/colony state and slot release |
