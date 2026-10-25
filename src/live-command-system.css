@@ -1,4 +1,5 @@
 .planet-world .pw-command-modal{--command-border:#344c56;--command-muted:#adc0c9;--command-text:#edf5f6;font:14px/1.5 Outfit,system-ui,sans-serif;letter-spacing:0}
+@media(min-width:761px){.planet-world .pw-defense-list article{grid-template-columns:96px minmax(0,1fr) 160px}}
 .planet-world:has(.pw-command-modal) .pw-wallet-trigger{visibility:hidden;pointer-events:none}
 .planet-world .pw-modal-title-group,.planet-world .pw-modal-title-group>div{min-width:0}
 .planet-world .pw-modal-title-group{flex:1}.planet-world .pw-modal-toolbar-actions{flex-shrink:0}

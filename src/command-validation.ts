@@ -3,6 +3,16 @@ import type { StorePack } from './store-catalog';
 
 export const MAX_ORDER_QUANTITY = 0xffffffff;
 
+export function defenseProductionBlock(index: number, quantity: number, online = 0): string | null {
+  if (!Number.isInteger(index) || index < 0 || index >= 8) return 'Unavailable';
+  if (!isWholeQuantity(quantity)) return 'Invalid quantity';
+  if (index === 6 || index === 7) {
+    if (online > 0) return 'Field online';
+    if (quantity !== 1) return 'One shield dome only';
+  }
+  return null;
+}
+
 export function rewardStorageBlock(reward: {metal: number; crystal: number; deuterium: number}, resources: Resources | undefined): string | null {
   if (!resources) return 'Checking storage';
   for (const field of ['metal', 'crystal', 'deuterium'] as const) {

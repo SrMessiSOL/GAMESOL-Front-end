@@ -16,7 +16,7 @@ import { accountRentTotal } from './account-rent';
 import { ALLIANCE_BUILDING_MAX_LEVEL } from './alliance-contribution';
 import { allianceUpgradeQuote, type AllianceUpgradeQuote } from './alliance-upgrade';
 import { preflightCommand } from './command-preflight';
-import { assertCommandInteger, assertResourceAmount, constructionBlockReason, rewardStorageBlock, storePackBlock } from './command-validation';
+import { assertCommandInteger, assertResourceAmount, constructionBlockReason, defenseProductionBlock, rewardStorageBlock, storePackBlock } from './command-validation';
 import { dailyCheckInReward } from './quest-rewards';
 import { STORE_PACKS } from './store-catalog';
 import { projectResources } from './resource-projection';
@@ -5897,7 +5897,12 @@ export class GameClient {
   async buildDefense(entityPda: PublicKey, defenseType: number, quantity: number): Promise<string> {
     assertCommandInteger('defense type', defenseType, 0, 9);
     assertCommandInteger('defense quantity', quantity, 1, 0xffffffff);
+    const unavailable = defenseProductionBlock(defenseType, quantity);
+    if (unavailable) throw new Error(`${unavailable}. Nothing was submitted.`);
     const state = await this.loadPlanetStateByPda(entityPda);
+    const online = defenseType === 6 ? state?.planet.smallShieldDome ?? 0 : defenseType === 7 ? state?.planet.largeShieldDome ?? 0 : 0;
+    const blocked = defenseProductionBlock(defenseType, quantity, online);
+    if (blocked) throw new Error(`${blocked}. Nothing was submitted.`);
     const authority = state ? new PublicKey(state.planet.owner) : this.provider.wallet.publicKey;
     await this.prepareVaultSigningForAuthority(authority);
     const sovereigntyKeys = await this.activeSovereigntyBonusKeys(state, authority);
