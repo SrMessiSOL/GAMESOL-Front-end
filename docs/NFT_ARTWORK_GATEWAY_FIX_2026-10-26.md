@@ -42,4 +42,19 @@ Screenshots are in docs/test-runs/nft-artwork-2026-10-26.
 The Preview endpoint returned all four originals with matching hashes;
 see docs/test-runs/nft-artwork-gateway-preview-2026-10-26.json.
 No transactions, new wallet approvals, program deployments or
-scheduled-automation changes. Production verification follows publication.
+scheduled-automation changes.
+
+## Production Result
+
+Published fix commit: 41c3f4a on feat/crypto-ufos-wallet-link.
+Production: https://frontend-rfyi61f89-srmessisols-projects.vercel.app.
+Main alias: https://chained-universe.vercel.app.
+Production build passed. Main-alias endpoint checks returned HTTP 200 and
+matching original JPEG hashes for all four checked NFTs, in 252-957 ms.
+Receipt: docs/test-runs/nft-artwork-gateway-production-2026-10-26.json.
+Authenticated main-site refresh checks restored #4672 with decoded 256x256
+artwork at actual DOM viewports 1440x900 and 390x845, no unavailable message
+or horizontal overflow. Mobile height differs by one pixel from Preview due
+to existing browser zoom; recorded dimensions are actual DOM measurements.
+Production screenshots are in the same artwork evidence directory.
+Scheduled automation remains paused and unchanged; no funds were spent.
