@@ -1,0 +1,46 @@
+{
+  "at": "2026-10-26T18:26:07.661Z",
+  "origin": "https://gamesol-devnet-qa.vercel.app",
+  "stage": "preview",
+  "images": [
+    {
+      "name": "Crypto UFO #4672",
+      "id": "5Y2fnRhCy411TWwTTBJMKTWwCAVkGJSp7yphrjrpKxv5",
+      "status": 200,
+      "bytes": 3511,
+      "sha256": "003f6f2d793eddd96ebeb33f5e92dcaa40938a110251e1d0d805bf047268be03",
+      "elapsedMs": 1175,
+      "cache": "MISS"
+    },
+    {
+      "name": "Crypto UFO #513",
+      "id": "FzEWZMXsZxNzgCFtBrSJLYDCozR4n2yaHCEvTFPNGTZg",
+      "status": 200,
+      "bytes": 3873,
+      "sha256": "4c8d4375746cd3583b778c4010a343fbe7b8cc9797845e12c8996e991b762cf3",
+      "elapsedMs": 537,
+      "cache": "MISS"
+    },
+    {
+      "name": "Crypto UFO #4018",
+      "id": "HgpcjGmKWab7KBXnVfehQSoxLPdEUXPdrj6VmCe7LdkL",
+      "status": 200,
+      "bytes": 3298,
+      "sha256": "0c78a0bd8fd6af29ddd9146eeaa8b3a10f88243c97ad918470757d1c23998d6d",
+      "elapsedMs": 413,
+      "cache": "MISS"
+    },
+    {
+      "name": "Crypto UFO #4016",
+      "id": "HCfj97RrKNHsDzSDNUEYX8CyhBvr6rYNSqHFnQYvK311",
+      "status": 200,
+      "bytes": 3575,
+      "sha256": "dda74219ffcdbaf8d65be68469201995588e11eb61b8ced9143af8f0fe260ce7",
+      "elapsedMs": 449,
+      "cache": "MISS"
+    }
+  ],
+  "originalContentVerified": true,
+  "noTransactions": true,
+  "passed": true
+}

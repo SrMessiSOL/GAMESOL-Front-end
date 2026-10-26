@@ -48,7 +48,7 @@ test('official UnixFS reader reconstructs a chunked image using only hash-verifi
   const response = await fetchArtwork(data.resource);
   assert.deepEqual(Buffer.from(await response.arrayBuffer()), data.image);
   assert.equal(requests.length, data.blocks.size);
-  assert.ok(requests.every(url => new URL(url).hostname === 'gateway.pinata.cloud'));
+  assert.ok(requests.every(url => new URL(url).hostname === 'ipfs.filebase.io'));
 });
 
 for (const corrupt of ['root', 'leaf']) {
@@ -69,7 +69,7 @@ test('a corrupt or unavailable gateway falls back without trusting the replaceme
   let failures = 0;
   const fetchArtwork = createVerifiedIpfsFetch({ fetchImpl: async (url, options) => {
     if (options.headers.accept === 'application/octet-stream') return new Response('not the requested image');
-    if (new URL(url).hostname === 'gateway.pinata.cloud') {
+    if (new URL(url).hostname === 'ipfs.filebase.io') {
       failures++;
       return new Response('not the requested block');
     }
@@ -108,9 +108,11 @@ test('forged full-path response cannot bypass the resolved raw leaf hash', async
 
 test('alternate directory gateway recovers a missing original without trusting its bytes', async () => {
   const data = await fixture({ chunked: false });
+  const candidates = [];
   const fetchArtwork = createVerifiedIpfsFetch({ fetchImpl: async (url, options) => {
     if (options.headers.accept === 'application/octet-stream') {
-      return new URL(url).hostname === 'gateway.pinata.cloud'
+      candidates.push(new URL(url).hostname);
+      return new URL(url).hostname === 'ipfs.filebase.io'
         ? new Response('unavailable', { status: 503 }) : new Response(data.image);
     }
     const cid = requestedCid(url);
@@ -118,6 +120,32 @@ test('alternate directory gateway recovers a missing original without trusting i
     return new Response(data.blocks.get(cid));
   } });
   assert.deepEqual(Buffer.from(await (await fetchArtwork(data.resource)).arrayBuffer()), data.image);
+  assert.deepEqual(candidates, ['ipfs.filebase.io', 'gateway.pinata.cloud']);
+});
+
+test('legacy gateway failures do not block original artwork from the verified preferred route', async () => {
+  const data = await fixture({ chunked: false });
+  const fetchArtwork = createVerifiedIpfsFetch({ fetchImpl: async (url, options) => {
+    assert.equal(new URL(url).hostname, 'ipfs.filebase.io');
+    assert.equal(options.redirect, 'error');
+    return new Response(options.headers.accept === 'application/octet-stream'
+      ? data.image : data.blocks.get(requestedCid(url)));
+  } });
+  assert.deepEqual(Buffer.from(await (await fetchArtwork(data.resource)).arrayBuffer()), data.image);
+});
+
+test('third gateway remains available when both earlier providers fail', async () => {
+  const data = await fixture({ chunked: false });
+  const hosts = new Set();
+  const fetchArtwork = createVerifiedIpfsFetch({ fetchImpl: async (url, options) => {
+    const host = new URL(url).hostname;
+    hosts.add(host);
+    if (host !== 'trustless-gateway.link') return new Response('unavailable', {status:503});
+    return new Response(options.headers.accept === 'application/octet-stream'
+      ? data.image : data.blocks.get(requestedCid(url)));
+  } });
+  assert.deepEqual(Buffer.from(await (await fetchArtwork(data.resource)).arrayBuffer()), data.image);
+  assert.equal(hosts.size, 3);
 });
 
 test('artwork retrieval rejects invalid resources and respects cancellation', async () => {

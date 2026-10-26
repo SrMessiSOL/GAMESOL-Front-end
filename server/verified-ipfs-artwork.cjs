@@ -4,10 +4,8 @@ const MAX_BLOCK_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 12 * 1024 * 1024;
 const MAX_BLOCK_READS = 128;
-const GATEWAYS = [
-  cid => `https://gateway.pinata.cloud/ipfs/${cid}?format=raw`,
-  cid => `https://trustless-gateway.link/ipfs/${cid}?format=raw`,
-];
+const GATEWAY_HOSTS = ['ipfs.filebase.io', 'gateway.pinata.cloud', 'trustless-gateway.link'];
+const GATEWAYS = GATEWAY_HOSTS.map(host => cid => `https://${host}/ipfs/${cid}?format=raw`);
 
 async function boundedBody(response, limit) {
   if (!response.ok || !response.body) throw new Error('IPFS block is unavailable.');
@@ -63,7 +61,7 @@ function createVerifiedIpfsFetch({ fetchImpl = fetch } = {}) {
             // to this exact raw leaf reached through the verified directory.
             if (cid.code === 0x55) {
               pathCandidate ||= (async () => {
-                const response = await fetchImpl(`https://gateway.pinata.cloud/ipfs/${root.toV1()}/${url.pathname.slice(1)}`, {
+                const response = await fetchImpl(`https://${GATEWAY_HOSTS[0]}/ipfs/${root.toV1()}/${url.pathname.slice(1)}`, {
                   headers: { accept: 'application/octet-stream' }, redirect: 'error',
                   signal: AbortSignal.any([signal, AbortSignal.timeout(12000)]),
                 });
@@ -77,8 +75,8 @@ function createVerifiedIpfsFetch({ fetchImpl = fetch } = {}) {
               if (candidate?.hash.equals(Buffer.from(cid.multihash.digest))) return candidate.bytes;
               // Directory routing can work even when a gateway cannot serve a
               // leaf CID. The alternate bytes still have to match that leaf.
-              try {
-                const response = await fetchImpl(`https://trustless-gateway.link/ipfs/${root.toV1()}/${url.pathname.slice(1)}`, {
+              for (const host of GATEWAY_HOSTS.slice(1)) try {
+                const response = await fetchImpl(`https://${host}/ipfs/${root.toV1()}/${url.pathname.slice(1)}`, {
                   headers: { accept: 'application/octet-stream' }, redirect: 'error',
                   signal: AbortSignal.any([signal, AbortSignal.timeout(12000)]),
                 });
