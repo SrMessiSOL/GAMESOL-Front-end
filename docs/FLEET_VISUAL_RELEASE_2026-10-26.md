@@ -40,12 +40,32 @@
   Screenshot scene-region samples were nonblank (not direct GPU-buffer reads).
   No in-flight missions were present; class-specific moving models retain the
   previously documented local fixture/14-model evidence, not new flight receipts.
-- A separate commander NFT image fell back to Artwork unavailable in QA.
+- A separate commander NFT image fell back to Artwork unavailable in QA and
+  during the main-site smoke check. Its availability is not certified here.
   NFT service/client and all API files remain unchanged from the published
   baseline. This ship-art release does not certify NFT-service availability.
 
 ## Publication Boundary
 
-Preview checks complete; GitHub/production publication pending. No Solana
-program upgrade, authority change, token spending or scheduled-automation change.
+Published application commit: `229ed1578efd4fd9c19ed037f92c0e7a56aaa333` on the
+existing `feat/crypto-ufos-wallet-link` GitHub branch.
+
+Production: https://frontend-5zmhgpb67-srmessisols-projects.vercel.app
+Main URL: https://chained-universe.vercel.app
+
+The custom main alias required an explicit switch after the production build.
+Read-only verification compared 46 script/style/image assets and found identical
+hashes on the immutable deployment and main alias. All 14 ship images and the
+hangar matched local WebPs. Defense guards and fixed mission sizes were present.
+The RPC genesis remained Solana devnet. Receipt:
+`test-runs/fleet-production-2026-10-26.json`.
+
+Main-site public desktop/mobile and signed-in mission smoke checks passed for
+this visual scope. Main game responsive smoke reflected the browser's existing
+zoom (585 CSS pixels); exact 390x844 signed-in checks were performed on QA.
+No new flight was launched or existing arrival resolved. NFT image availability
+remains a separate observed issue; its cause was not established in this pass.
+
+No Solana program upgrade, authority change, token spending or
+scheduled-automation change.
 Existing security/mainnet release gates remain separate and are not certified.
