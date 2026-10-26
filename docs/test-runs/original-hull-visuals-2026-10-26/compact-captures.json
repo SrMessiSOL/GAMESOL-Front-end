@@ -1,0 +1,58 @@
+[
+  {
+    "ship": "smallCargo",
+    "passed": true
+  },
+  {
+    "ship": "largeCargo",
+    "passed": true
+  },
+  {
+    "ship": "lightFighter",
+    "passed": true
+  },
+  {
+    "ship": "heavyFighter",
+    "passed": true
+  },
+  {
+    "ship": "cruiser",
+    "passed": true
+  },
+  {
+    "ship": "battleship",
+    "passed": true
+  },
+  {
+    "ship": "battlecruiser",
+    "passed": true
+  },
+  {
+    "ship": "bomber",
+    "passed": true
+  },
+  {
+    "ship": "destroyer",
+    "passed": true
+  },
+  {
+    "ship": "deathstar",
+    "passed": true
+  },
+  {
+    "ship": "recycler",
+    "passed": true
+  },
+  {
+    "ship": "espionageProbe",
+    "passed": true
+  },
+  {
+    "ship": "colonyShip",
+    "passed": true
+  },
+  {
+    "ship": "solarSatellite",
+    "passed": true
+  }
+]

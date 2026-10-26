@@ -26,7 +26,8 @@ test('all four fleet roles have distinct finite lightweight +Y hull geometry', (
   for (const [role, geometry] of Object.entries(FLEET_HULLS)) {
     geometry.computeBoundingBox();
     const box = geometry.boundingBox;
-    assert.ok(box.max.y > .8 && box.min.y < -.6, role);
+    const minimumLength=role==='espionage'?.35:.8;
+    assert.ok(box.max.y > minimumLength && box.min.y < -minimumLength, role);
     assert.ok(box.max.z - box.min.z > .08, role);
     const positions = geometry.getAttribute('position');
     assert.ok(positions.count / 3 < 250, `${role} triangle budget`);
@@ -77,6 +78,28 @@ test('all fourteen catalog classes have distinct finite bounded navigation hulls
   assert.equal(signatures.size,14);
 });
 
+test('original spherical hulls, cargo stacks and colony habitat retain their volumes',()=>{
+  for(const key of ['deathstar','espionageProbe']){
+    const g=exports.FLEET_CLASS_HULLS[key];g.computeBoundingBox();const b=g.boundingBox;
+    assert.ok(Math.abs((b.max.x-b.min.x)-(b.max.z-b.min.z))<.05,key);
+  }
+  const colony=exports.FLEET_MODELS.colonyShip.glass;colony.computeBoundingBox();assert.ok(colony.boundingBox.max.z>.65);
+  const cargo=exports.FLEET_MODELS.largeCargo.plating;cargo.computeBoundingBox();assert.ok(cargo.boundingBox.max.z>.85);
+  const capital=exports.FLEET_CLASS_HULLS.battlecruiser;capital.computeBoundingBox();assert.ok(capital.boundingBox.max.z-capital.boundingBox.min.z>.6);
+  assert.equal(exports.FLEET_MODELS.deathstar.engines.getAttribute('position').count,0);
+  assert.equal(exports.FLEET_MODELS.solarSatellite.engines.getAttribute('position').count,0);
+});
+
+test('all class-specific distant silhouettes stay below 300 triangles with shared two-mesh rendering',()=>{
+  function meshes(node){if(!node||typeof node!=='object')return [];if(Array.isArray(node))return node.flatMap(meshes);return [...(node.type==='mesh'?[node]:[]),...meshes(node.props?.children)];}
+  for(const [key,model]of Object.entries(exports.FLEET_MODELS)){
+    assert.ok(model.compact.getAttribute('position').count/3<300,key);
+    assert.ok([...model.compact.getAttribute('position').array].every(Number.isFinite),key);
+    const first=meshes(exports.FleetVessel({kind:'attack',shipClass:key,compact:true})),second=meshes(exports.FleetVessel({kind:'attack',shipClass:key,compact:true}));
+    assert.equal(first.length,2,key);first.forEach((mesh,i)=>{assert.equal(mesh.props.geometry,second[i].props.geometry);assert.equal(mesh.props.material,second[i].props.material);});
+  }
+});
+
 test('catalog delivers every enabled class once using separate optimized artwork', () => {
   const catalog=fs.readFileSync(new URL('../src/ship-catalog.ts',import.meta.url),'utf8');
   const keys=[...catalog.matchAll(/\{key:'([^']+)'/g)].map(m=>m[1]);
@@ -104,7 +127,10 @@ test('catalog delivers every enabled class once using separate optimized artwork
   }
   const ui=fs.readFileSync(new URL('../src/ui-art.ts',import.meta.url),'utf8');
   assert.match(ui,/fleetArt\.get\(toLookupKey\(key\)\)/);
-  assert.match(ui,/SHIP_BACKDROPS.hangar/);
+  assert.doesNotMatch(ui,/SHIP_BACKDROPS.hangar/);
+  const shipImports=imports.filter(([,name])=>!['hangar','space'].includes(name));
+  assert.equal(shipImports.length,14);
+  for(const [,name,file]of shipImports)assert.match(file,/^\.\/assets\/ui\//,`${name} preserves original artwork`);
 });
 
 test('live mission artwork is dimension-bounded instead of using intrinsic image size', () => {

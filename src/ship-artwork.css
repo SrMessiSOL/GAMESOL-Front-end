@@ -1,14 +1,13 @@
 .ship-art-stage{position:relative;isolation:isolate;overflow:hidden;min-width:0;background-position:center;background-size:cover;background-color:#10191e;aspect-ratio:1.5}
 .ship-art-stage::before{content:'';position:absolute;inset:0;background:#03080d4d;z-index:0;pointer-events:none}
-.ship-art-stage>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:7%;z-index:1;filter:drop-shadow(0 7px 9px #0008);transition:transform .25s ease}
-.ship-art-stage:hover>img{transform:translateY(-3px)}
-.ship-card-art{background-size:88% auto,cover!important;background-repeat:no-repeat!important;background-position:center!important}
-.pw-ship-list .pw-row-art{background-size:88% auto,cover!important;background-repeat:no-repeat!important;background-position:center!important}
+.ship-art-stage>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:0;z-index:1}
+.ship-card-art{background-size:contain!important;background-repeat:no-repeat!important;background-position:center!important;background-color:#080e14}
+.pw-ship-list .pw-row-art{background-size:contain!important;background-repeat:no-repeat!important;background-position:center!important;background-color:#080e14}
 .pw-command-list.pw-ship-list article{grid-template-columns:minmax(150px,24%) minmax(0,1fr) 118px;min-height:148px}
 .pw-ship-list .pw-row-art{min-height:128px;border:1px solid #81939b35;border-radius:4px}
 .ug-unit-art.ship-card-art::after{display:none}
 .modal-ship-art,.mission-ship-card-art{background-image:url('./assets/fleet/orbital-hangar-v1.webp');background-size:cover;background-position:center}
-.modal-ship-art img,.mission-ship-card-art img{object-fit:contain!important;padding:7%}
+.modal-ship-art img,.mission-ship-card-art img{object-fit:contain!important;padding:0}
 .pw-ship-list .ship-art-stage{align-self:stretch;min-height:130px}
 .pw-ship-list .ship-art-stage::after,.ug-unit-art.ship-art-stage::after{display:none}
 .ug-unit-art.ship-art-stage{background-size:cover;aspect-ratio:auto;min-width:0}

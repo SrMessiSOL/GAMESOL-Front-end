@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { FleetVessel } from './FleetVessel';
 import type { ShipClass } from './fleet-identity';
@@ -33,10 +34,11 @@ export default function FleetAssetReview() {
     <div className="fleet-review-body">
       <div className="fleet-review-tools"><label>Environment<select disabled={mode==='shipyard'} value={mode==='shipyard'?'hangar':scene} onChange={e=>setScene(e.target.value as 'hangar'|'space')}><option value="hangar">Orbital hangar</option><option value="space">Deep space</option></select></label>{mode==='models'&&<><label>Ship class<select value={selected} onChange={e=>setSelected(e.target.value as ShipClass)}>{SHIP_CATALOG.map(ship=><option key={ship.key} value={ship.key}>{ship.name}</option>)}</select></label><label><input type="checkbox" checked={compact} onChange={e=>setCompact(e.target.checked)} /> Distant silhouette</label><label><input type="checkbox" checked={rotate} onChange={e=>setRotate(e.target.checked)} /> Rotate</label></>}</div>
       {mode==='artwork'&&<div className="fleet-review-catalog">{SHIP_CATALOG.map(ship=><article key={ship.key}><ShipArtwork shipKey={ship.key} label={ship.name} scene={scene}/><h2>{ship.name}</h2><p>{ship.role}</p></article>)}</div>}
-      {mode==='models'&&<div className="fleet-review-scene" style={{backgroundImage:`url("${SHIP_BACKDROPS[scene]}")`}}><Canvas dpr={[1,1.5]} camera={{position:[0,0,6.5],fov:48}}>
+      {mode==='models'&&<div className="fleet-review-model-layout"><div className="fleet-review-scene" style={{backgroundImage:`url("${SHIP_BACKDROPS[scene]}")`}}><Canvas dpr={[1,1.5]} camera={{position:[2.5,3,6],fov:48}}>
         <ambientLight intensity={1.2} /><directionalLight position={[-3,5,6]} intensity={3} /><directionalLight position={[5,-2,3]} intensity={1.7} color="#68b9dc" />
         <Turntable compact={compact} rotate={rotate} shipClass={selected} />
-      </Canvas></div>}
+        <OrbitControls makeDefault enablePan={false} minDistance={4} maxDistance={10}/>
+      </Canvas></div><figure className="fleet-review-reference"><ShipArtwork shipKey={selected} label={SHIP_CATALOG.find(ship=>ship.key===selected)?.name}/><figcaption>{SHIP_CATALOG.find(ship=>ship.key===selected)?.name}</figcaption></figure></div>}
       {mode==='shipyard'&&<div className="planet-world fleet-review-shipyard"><section className="pw-command-modal"><div className="pw-command-list pw-ship-list">{SHIP_CATALOG.map(ship=><article key={ship.key}><div className="pw-row-art" style={{backgroundImage:resolveGameArt(ship.key,'none')}}/><div><h3>{ship.name}</h3><p>{ship.role}</p></div><CommandActionButton icon={<Hammer/>} tone="primary" disabled>Build 1</CommandActionButton></article>)}</div></section></div>}
     </div>
     <footer>GAMESOL / 14 ship classes / local asset review</footer>

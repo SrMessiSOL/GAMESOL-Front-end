@@ -1,4 +1,4 @@
-import { SHIP_ART as fleetArt, SHIP_BACKDROPS } from './ship-catalog';
+import { SHIP_ART as fleetArt } from './ship-catalog';
 import './ship-artwork.css';
 
 const artModules = import.meta.glob("./assets/ui/*.webp", {
@@ -71,7 +71,7 @@ function toLookupKey(key: string): string {
 
 export function resolveGameArt(key: string, fallback: string): string {
   const ship = fleetArt.get(toLookupKey(key));
-  if (ship) return `url("${ship}"), url("${SHIP_BACKDROPS.hangar}")`;
+  if (ship) return `url("${ship}")`;
   const resolved = artIndex.get(toLookupKey(key));
   return resolved ? `url("${resolved}")` : fallback;
 }

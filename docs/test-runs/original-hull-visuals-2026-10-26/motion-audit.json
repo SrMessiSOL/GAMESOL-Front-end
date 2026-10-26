@@ -1,0 +1,5 @@
+{
+  "sampledChangedPixels": 1363,
+  "passed": true,
+  "scope": "Rendered mobile canvas screenshot region; not direct GPU readback"
+}

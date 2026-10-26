@@ -7,7 +7,7 @@ import galaxyArt from './assets/universe-lab/spiral-galaxy.png';
 import planetArt from './assets/universe-lab/ocean-world-albedo.png';
 import spaceArt from './assets/universe-lab/cinematic-nebula-panorama-v2.webp';
 import mineArt from './assets/ui/crystalMine.webp';
-import fleetArt from './assets/fleet/gamesol-battlecruiser-v1.webp';
+import fleetArt from './assets/ui/battlecruiser.webp';
 import { SHIP_CATALOG } from './ship-catalog';
 import ShipArtwork from './ShipArtwork';
 import { FleetVessel } from './FleetVessel';

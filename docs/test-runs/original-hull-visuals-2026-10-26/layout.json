@@ -1,0 +1,562 @@
+[
+  {
+    "ship": "smallCargo",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "largeCargo",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "lightFighter",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "heavyFighter",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "cruiser",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "battleship",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "battlecruiser",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "bomber",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "destroyer",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "deathstar",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "recycler",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "espionageProbe",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "colonyShip",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "solarSatellite",
+    "mode": "desktop",
+    "canvas": [
+      {
+        "height": 705,
+        "rect": {
+          "height": 705.3333740234375,
+          "width": 870.4166870117188,
+          "x": 0,
+          "y": 131.33334350585938
+        },
+        "width": 870
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "reference": true,
+    "width": 1280
+  },
+  {
+    "ship": "smallCargo",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "largeCargo",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "lightFighter",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "heavyFighter",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "cruiser",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "battleship",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "battlecruiser",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "bomber",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "destroyer",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "deathstar",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "recycler",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "espionageProbe",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "colonyShip",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  },
+  {
+    "ship": "solarSatellite",
+    "mode": "mobile",
+    "canvas": [
+      {
+        "height": 360,
+        "rect": {
+          "height": 360,
+          "width": 386.6666870117187,
+          "x": 0,
+          "y": 211
+        },
+        "width": 386
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "reference": true,
+    "width": 390
+  }
+]

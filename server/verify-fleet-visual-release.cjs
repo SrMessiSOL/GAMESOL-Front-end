@@ -3,7 +3,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 
-const ships = ['smallCargo-v1', 'gamesol-cargo-v1', 'lightFighter-v1',
+const restored = process.argv.includes('--restored');
+const ships = restored ? ['smallCargo','largeCargo','lightFighter','heavyFighter',
+  'cruiser','battleship','battlecruiser','bomber','destroyer','deathStar',
+  'recycler','espionageProbe','colonyShip','solarSatellite'] : ['smallCargo-v1', 'gamesol-cargo-v1', 'lightFighter-v1',
   'heavyFighter-v1', 'cruiser-v1', 'battleship-v1', 'gamesol-battlecruiser-v1',
   'bomber-v1', 'destroyer-v1', 'deathstar-v1', 'recycler-v1', 'gamesol-scout-v1',
   'gamesol-colony-v1', 'solarSatellite-v1', 'orbital-hangar-v1'];
@@ -52,9 +55,16 @@ async function verify(origin) {
     assert.equal(bytes.subarray(0, 4).toString(), 'RIFF', ship);
     assert.equal(bytes.subarray(8, 12).toString(), 'WEBP', ship);
     assert.ok(bytes.length > 1000 && bytes.length < 650000, ship);
-    const local = fs.readFileSync(path.join(__dirname, '../src/assets/fleet', ship + '.webp'));
+    const local = fs.readFileSync(path.join(__dirname, restored ? '../src/assets/ui' : '../src/assets/fleet', ship + '.webp'));
     assert.equal(hash(bytes), hash(local), 'Deployed artwork differs: ' + ship);
     assets.push({ file, sha256: hash(bytes) });
+  }
+  if (restored) {
+    assert.ok(assets.some(asset => /FleetVessel-[^/]+\.js$/.test(asset.file)), 'Shared 3D ship module missing');
+    for (const asset of assets) {
+      const local = fs.readFileSync(path.join(__dirname, '../dist', asset.file));
+      assert.equal(asset.sha256, hash(local), 'Deployed asset differs from tested build: ' + asset.file);
+    }
   }
   const rpc = await fetch(origin + '/api/solana-rpc', {
     method: 'POST', headers: { 'content-type': 'application/json' },
@@ -72,8 +82,9 @@ async function verify(origin) {
   const live = await verify(process.argv[3] || process.argv[2]);
   assert.equal(candidate.entry, live.entry);
   assert.deepEqual(candidate.assets, live.assets);
-  const report = { at: new Date().toISOString(), sourceCommit: '229ed1578efd4fd9c19ed037f92c0e7a56aaa333',
-    candidate, live, identicalPublicAssets: true, shipImages: 14, backdropImages: 1, noTransactions: true, passed: true };
-  fs.writeFileSync(path.join(__dirname, '../docs/test-runs/fleet-production-2026-10-26.json'), JSON.stringify(report, null, 2) + '\n');
+  const sourceCommit = require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{cwd:path.join(__dirname,'..'),encoding:'utf8'}).trim();
+  const report = { at: new Date().toISOString(), sourceCommit,
+    candidate, live, identicalPublicAssets: true, matchesLocalBuild: restored, shipImages: 14, restoredOriginals: restored, noTransactions: true, passed: true };
+  fs.writeFileSync(path.join(__dirname, restored ? '../docs/test-runs/restored-fleet-production-2026-10-26.json' : '../docs/test-runs/fleet-production-2026-10-26.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ passed: true, identicalPublicAssets: true, verifiedAssets: candidate.assets.length, shipImages: 14, genesis: live.genesis }));
 })().catch(error => { console.error(error); process.exitCode = 1; });
