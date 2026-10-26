@@ -1,8 +1,19 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 const root=path.join(__dirname,'../src');
 function load(name,imports={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root,name+'.ts'),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports,require:id=>{assert(id in imports,id);return imports[id];},Date,Math,Map,Set,BigInt});return exports;}
-const data=load('universe-data',{'./planet-style':{planetClassForPosition:()=> 'terran'},'./planet-owner':load('planet-owner')});
+const data=load('universe-data',{'./planet-style':{planetClassForPosition:()=> 'terran'},'./planet-owner':load('planet-owner'),'./fleet-identity':load('fleet-identity')});
 const scene=load('mission-scene',{'./universe-data':data});
+
+test('map snapshots preserve actual fleet class without changing destination or timing',()=>{
+  const now=Math.floor(Date.now()/1000);
+  const mission={missionType:1,departTs:now-10,arriveTs:now+90,returnTs:now+190,targetGalaxy:3,targetSystem:294,targetPosition:2,applied:false,speedFactor:100,sLightFighter:3};
+  const source={entity:'home',owner:'owner',name:'Home',galaxy:3,system:293,position:1,planetIndex:0,protectionUntilTs:0,missions:[mission]};
+  const snapshot=data.createUniverseSnapshotFromChainData([source]);
+  assert.equal(snapshot.missions[0].shipClass,'lightFighter');
+  assert.equal(snapshot.missions[0].kind,'attack');
+  assert.deepEqual({...snapshot.missions[0].destinationPosition},{galaxy:3,system:294,position:2});
+  assert.equal(snapshot.missions[0].durationSeconds,100);
+});
 test('empty colony destinations retain authoritative galaxy/system/position and distinct slot IDs',()=>{
   const now=Math.floor(Date.now()/1000),mission=position=>({missionType:5,departTs:now-10,arriveTs:now+90,returnTs:now+190,targetGalaxy:9,targetSystem:427,targetPosition:position,applied:false});
   const snapshot=data.createUniverseSnapshotFromChainData([{entity:'home',owner:'owner',name:'Home',galaxy:9,system:427,position:13,planetIndex:0,metal:0n,crystal:0n,deuterium:0n,protectionUntilTs:0,missions:[mission(1),mission(2)]}]);

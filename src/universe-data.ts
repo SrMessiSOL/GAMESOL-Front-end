@@ -1,5 +1,6 @@
 import { planetClassForPosition, type PlanetClass } from "./planet-style";
 import { shortPlanetOwner } from './planet-owner';
+import { missionShipClass, type ShipClass } from './fleet-identity';
 
 export type UniversePlanet = {
   id: string;
@@ -70,6 +71,7 @@ export type UniverseMission = {
   destinationClearance?: number;
   sampledAt?: number;
   kind: "transport" | "attack" | "espionage" | "colonize";
+  shipClass?: ShipClass;
   phase: "outbound" | "arrived" | "returning" | "returned";
   progress: number;
   etaSeconds: number;
@@ -108,7 +110,7 @@ type ChainPlanetSource = {
   missions?: ChainMission[];
 };
 
-type ChainMission = {
+type ChainMission = Partial<Record<`s${Capitalize<Exclude<ShipClass, 'solarSatellite'>>}`, number>> & {
   missionType: number;
   targetGalaxy: number;
   targetSystem: number;
@@ -237,6 +239,7 @@ export function createUniverseSnapshotFromChainData(
         sourcePosition: { galaxy: source.galaxy, system: source.system, position: source.position },
         sampledAt: now,
         kind: missionKindFromCode(mission.missionType),
+        shipClass: missionShipClass(mission, missionKindFromCode(mission.missionType)),
         phase: mission.applied
           ? now >= mission.returnTs ? "returned" : "returning"
           : now >= mission.arriveTs ? "arrived" : "outbound",

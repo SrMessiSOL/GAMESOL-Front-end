@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const load = require('./frontend-ts-loader.cjs').frontendLoader();
-const { missionTrafficPoints, missionEndpoints, galaxyTravelEndpoints } = load('mission-visibility.ts');
+const { missionTrafficPoints, missionEndpoints, galaxyTravelEndpoints, missionRenderGroups, TRAFFIC_ROUTE_LIMIT } = load('mission-visibility.ts');
 const source = { galaxy: 3, system: 293, position: 1 };
 const target = { galaxy: 4, system: 12, position: 2 };
 const mission = { id: 'flight', sourceId: 'a', destinationId: 'empty', sourcePosition: source, destinationPosition: target, phase: 'outbound' };
@@ -47,4 +47,23 @@ test('galaxy legs connect real systems and project intergalactic entry and exit 
   const local = galaxyTravelEndpoints(source, { ...source, system: 294 }, 3, systemPosition, galaxyPosition);
   assert.equal(local.remoteAt, null); assert.equal(local.start[0], 293); assert.equal(local.end[0], 294);
   assert.equal(galaxyTravelEndpoints(source, { ...source, position: 2 }, 3, systemPosition, galaxyPosition), null);
+});
+
+test('ten thousand missions keep full counts while bounded route groups prevent render explosion', () => {
+  const missions = Array.from({ length: 10000 }, (_, i) => ({ ...mission, id: `m${String(i).padStart(5, '0')}`, sourcePosition: { ...source, system: i % 999 + 1 } }));
+  const state = snapshot(missions), rendered = missionRenderGroups(state, scope('galaxy', 4));
+  assert.equal(rendered.total, 10000); assert.equal(rendered.routes, 999);
+  assert.equal(rendered.groups.length, TRAFFIC_ROUTE_LIMIT);
+  assert.equal(missionTrafficPoints(state, scope('system', 4, 12))[0].arrivals, 10000);
+  const reversed = missionRenderGroups(snapshot([...missions].reverse()), scope('galaxy', 4));
+  assert.equal(rendered.groups.map(g => g.mission.id).join(','), reversed.groups.map(g => g.mission.id).join(','));
+  const shared = missionRenderGroups(snapshot(missions.map(m => ({ ...m, sourcePosition: source }))), scope('galaxy', 4));
+  assert.equal(shared.groups.length, 1); assert.equal(shared.groups[0].count, 10000);
+});
+test('galaxy routes stay in world space and never re-anchor to camera or viewport', () => {
+  const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../src/UniverseLab.tsx'), 'utf8');
+  const renderer = source.slice(source.indexOf('function GalaxyFleetRoute('), source.indexOf('function MissionTrafficLayer('));
+  assert.doesNotMatch(renderer, /\.unproject\(|clippedEnd|setPoints|calculatePosition/);
+  assert.match(renderer, /position=\{remoteAt === 'start' \? start : end\}/);
+  assert.match(renderer, /const curve = useMemo/);
 });

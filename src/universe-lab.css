@@ -822,3 +822,7 @@
 .traffic-beacon-label{white-space:nowrap;padding:6px 8px;border:1px solid #416270;border-radius:4px;background:#10222b;color:#e0f3f4;font:12px Outfit,system-ui,sans-serif;pointer-events:none;letter-spacing:0}
 .mission-vessel-label{display:flex;align-items:center;gap:6px;white-space:nowrap;padding:3px 6px;background:#06141ee6;color:#e4f2f8;font:12px Outfit,system-ui,sans-serif;letter-spacing:0;pointer-events:none}
 .mission-vessel-label small{color:#8fdcc8;font:9px 'DM Mono',monospace;letter-spacing:0}
+.mission-traffic-list>header{padding:4px 8px;color:#a8c7ce;font:11px Outfit,system-ui,sans-serif;letter-spacing:0;overflow-wrap:anywhere}
+.mission-traffic-pagination{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:4px 0;color:#a8c7ce;font-size:11px}
+.mission-traffic-pagination button{display:grid;place-items:center;width:30px;height:30px;padding:0;border:1px solid #31505c;border-radius:4px;background:#10222b;color:#dcecf0}
+.mission-traffic-pagination button:disabled{opacity:.4}

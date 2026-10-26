@@ -20,5 +20,5 @@ test('deployment pinning changes assets only, not wallet origin or server API ro
   const read = name => fs.readFileSync(path.join(__dirname,'..',name),'utf8');
   assert.match(read('vite.config.ts'), /base: deploymentAssetBase\(process.env\)/);
   assert.match(read('vite.config.ts'), /JSON.stringify\('\/api\/solana-rpc'\)/);
-  assert.match(read('src/main.tsx'), /new URL\("\/api\/lazor-paymaster", window.location.origin\)/);
+  assert.match(read('src/game-bootstrap.tsx'), /new URL\("\/api\/lazor-paymaster", window.location.origin\)/);
 });

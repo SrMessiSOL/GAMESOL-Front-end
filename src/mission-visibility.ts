@@ -4,6 +4,28 @@ export type MissionLocation = { galaxy: number; system: number; position: number
 export type TrafficScope = { level: 'system' | 'galaxy' | 'universe'; galaxy: number; system: number };
 export type TrafficPoint = { key: string; location: MissionLocation; departures: number; arrivals: number; waiting: number };
 type MapPoint = [number, number, number];
+export const TRAFFIC_ROUTE_LIMIT = 32;
+export type TrafficFlightGroup = { key: string; mission: UniverseMission; count: number };
+
+export function missionRenderGroups(snapshot: UniverseSnapshot, scope: TrafficScope): { groups: TrafficFlightGroup[]; total: number; routes: number } {
+  const groups = new Map<string, TrafficFlightGroup>();
+  let total = 0;
+  const locationKey = (location: MissionLocation) => scope.level === 'universe' ? `${location.galaxy}`
+    : scope.level === 'galaxy' ? `${location.galaxy}:${location.system}` : `${location.galaxy}:${location.system}:${location.position}`;
+  for (const mission of snapshot.missions) {
+    if (mission.phase !== 'outbound' && mission.phase !== 'returning') continue;
+    const endpoints = missionEndpoints(mission, snapshot.planets);
+    if (!endpoints || !missionVisibleAtScale(endpoints.source, endpoints.target, scope.level)) continue;
+    const local = (location: MissionLocation) => scope.level === 'universe' || (location.galaxy === scope.galaxy && (scope.level !== 'system' || location.system === scope.system));
+    if (!local(endpoints.source) && !local(endpoints.target)) continue;
+    total++;
+    const key = `${locationKey(endpoints.source)}>${locationKey(endpoints.target)}:${mission.kind}:${mission.phase}`;
+    const group = groups.get(key);
+    if (group) { group.count++; if (mission.id < group.mission.id) group.mission = mission; }
+    else groups.set(key, { key, mission, count: 1 });
+  }
+  return { groups: [...groups.values()].sort((a, b) => a.key.localeCompare(b.key)).slice(0, TRAFFIC_ROUTE_LIMIT), total, routes: groups.size };
+}
 
 export function galaxyTravelEndpoints(source: MissionLocation, target: MissionLocation, galaxy: number,
   systemPosition: (location: MissionLocation) => MapPoint, galaxyPosition: (galaxy: number) => MapPoint): { start: MapPoint; end: MapPoint; remoteAt: 'start' | 'end' | null } | null {

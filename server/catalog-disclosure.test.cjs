@@ -24,9 +24,14 @@ test('ship catalog keeps the first fighter, unlocked hulls and owned locked hull
   assert.equal(ships(items, { fleet: {} }, true).length, 4);
 });
 test('defense catalog keeps first defense, unlocked installations and existing defenses', () => {
-  const items = ['rocketLauncher', 'lightLaser', 'smallShieldDome', 'gaussCannon'].map(key => ({ item: { key }, prerequisitesReady: key === 'lightLaser', online: key === 'smallShieldDome' ? 1 : 0 }));
+  const items = ['rocketLauncher', 'lightLaser', 'smallShieldDome', 'gaussCannon'].map((key, index) => ({ item: { key }, index, prerequisitesReady: key === 'lightLaser', online: key === 'smallShieldDome' ? 1 : 0 }));
   assert.deepEqual(Array.from(defenses(items, false), x => x.item.key), ['rocketLauncher', 'lightLaser', 'smallShieldDome']);
   assert.equal(defenses(items, true).length, 4);
+});
+test('unsupported missile entries are not presented as unlocked build options', () => {
+  const items = [{item: {key: 'interceptorMissile'}, index: 8, prerequisitesReady: true, online: 0},
+    {item: {key: 'interplanetaryMissile'}, index: 9, prerequisitesReady: true, online: 0}];
+  assert.equal(defenses(items, false).length, 0);
 });
 test('readiness, inventory and shield totals use unfiltered catalogs', () => {
   assert.match(source, /const shipReadyCount = allShipOptions\.filter/);

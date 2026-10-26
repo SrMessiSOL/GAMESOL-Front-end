@@ -1,3 +1,6 @@
+import { SHIP_ART as fleetArt, SHIP_BACKDROPS } from './ship-catalog';
+import './ship-artwork.css';
+
 const artModules = import.meta.glob("./assets/ui/*.webp", {
   eager: true,
   import: "default",
@@ -38,7 +41,18 @@ export const UI_ART_EXPECTED_KEYS = [
   "igrNetwork",
   "smallCargo",
   "largeCargo",
+  "lightFighter",
+  "heavyFighter",
+  "cruiser",
+  "battleship",
+  "battlecruiser",
+  "bomber",
+  "destroyer",
+  "deathstar",
+  "recycler",
+  "espionageProbe",
   "colonyShip",
+  "solarSatellite",
   "rocketLauncher",
   "lightLaser",
   "heavyLaser",
@@ -56,10 +70,12 @@ function toLookupKey(key: string): string {
 }
 
 export function resolveGameArt(key: string, fallback: string): string {
+  const ship = fleetArt.get(toLookupKey(key));
+  if (ship) return `url("${ship}"), url("${SHIP_BACKDROPS.hangar}")`;
   const resolved = artIndex.get(toLookupKey(key));
   return resolved ? `url("${resolved}")` : fallback;
 }
 
 export function resolveGameArtUrl(key: string): string | null {
-  return artIndex.get(toLookupKey(key)) ?? null;
+  return fleetArt.get(toLookupKey(key)) ?? artIndex.get(toLookupKey(key)) ?? null;
 }

@@ -1321,7 +1321,7 @@ function PlanetDashboard({
           </label>
           {SHIPS.map((ship) => (
             <article key={ship.key} className="ug-unit-card">
-              <div className="ug-unit-art" style={{ backgroundImage: resolveGameArt(ship.key, "none") }} />
+              <div className="ug-unit-art ship-card-art" style={{ backgroundImage: resolveGameArt(ship.key, "none") }} />
               <div className="ug-unit-copy">
                 <h3>{ship.name}</h3>
                 <b>Owned {(activeState.fleet as any)[ship.key]}</b>

@@ -1,0 +1,72 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-26",
+  "sourceDirectory": "src/assets/fleet",
+  "deliveryFormat": "WebP, 1024px width, quality 86; alpha retained; PNG sources preserved",
+  "styleReference": "gamesol-battlecruiser-v1.png",
+  "sharedPrompt": "Use case: stylized-concept, production game spacecraft asset. STYLE REFERENCE is the supplied GAMESOL ship, not an edit target. Create ONE new original spacecraft with off-white ceramic armor, charcoal structural ribs, restrained yellow hazard marks, warm amber running lamps and cyan recessed engines, crisp PBR hard-surface render. Three-quarter overhead view, bow upper right and stern lower left. Full object with generous empty margin on all sides. Real transparent alpha background, no stars, no planet, no ground plane, no cast ground shadow, no text, labels, watermark or extra ships. ",
+  "additionalShips": [
+    {
+      "key": "smallCargo",
+      "prompt": "Compact small cargo shuttle: short broad utility hull, two external rectangular freight pods, small raised command cockpit and two modest rear engines. Clearly a small workhorse, not the six-pod long large cargo ship.",
+      "source": "smallCargo-v1.png",
+      "delivery": "smallCargo-v1.webp"
+    },
+    {
+      "key": "lightFighter",
+      "prompt": "Small agile light fighter interceptor, narrow pointed fuselage, two swept short armored wings, compact cockpit, single cyan engine, two recessed nose cannons. Tight aggressive silhouette, not a capital ship.",
+      "source": "lightFighter-v1.png",
+      "delivery": "lightFighter-v1.webp"
+    },
+    {
+      "key": "heavyFighter",
+      "prompt": "Heavy fighter, clearly distinct from a light fighter: squat armored central cockpit, broad double-delta wings with thick wing roots, two heavy engine nacelles, reinforced nose and four compact weapon hardpoints.",
+      "source": "heavyFighter-v1.png",
+      "delivery": "heavyFighter-v1.webp"
+    },
+    {
+      "key": "cruiser",
+      "prompt": "Medium cruiser, long slender spearhead bow with two recessed lateral weapon channels, a raised central bridge, twin swept engine pylons, two cyan exhausts. Longer than a fighter but lighter than a battleship.",
+      "source": "cruiser-v1.png",
+      "delivery": "cruiser-v1.webp"
+    },
+    {
+      "key": "battleship",
+      "prompt": "Heavy battleship, wide armored wedge prow, stepped central command tower, two massive flanking armor sponsons, three large stern engines, visible twin-barrel turret housings. Strong broad powerful silhouette.",
+      "source": "battleship-v1.png",
+      "delivery": "battleship-v1.webp"
+    },
+    {
+      "key": "bomber",
+      "prompt": "Heavy strategic bomber, thick compact manta-shaped armored body, two short broad reinforced wings, enclosed central bomb bay doors, paired sensor blisters and two large stern nacelles. No visible falling bombs or explosions.",
+      "source": "bomber-v1.png",
+      "delivery": "bomber-v1.webp"
+    },
+    {
+      "key": "destroyer",
+      "prompt": "Advanced destroyer, long broad angular dreadnought with split forked prow, two forward railgun channels, four turret stations, reinforced central spine and four rear engines. Distinct from the pointed-nose cruiser.",
+      "source": "destroyer-v1.png",
+      "delivery": "destroyer-v1.webp"
+    },
+    {
+      "key": "deathstar",
+      "prompt": "Original GAMESOL super-heavy siege fortress, NOT any franchise design: monumental faceted octagonal disk with layered radial armored segments, deep central hexagonal reactor cavity, four major engine clusters at the rear edge, small distributed defensive turrets. No equatorial trench, no spherical moon, no giant circular superlaser dish.",
+      "source": "deathstar-v1.png",
+      "delivery": "deathstar-v1.webp"
+    },
+    {
+      "key": "recycler",
+      "prompt": "Industrial salvage recycler: compact armored tug hull, two forward mechanical grapple arms framing an open salvage intake, rugged cylindrical processing tanks and two rear engines. Arms tucked close to body, no debris or floating objects.",
+      "source": "recycler-v1.png",
+      "delivery": "recycler-v1.webp"
+    },
+    {
+      "key": "solarSatellite",
+      "prompt": "Solar energy satellite, unmanned compact armored central service bus, four broad rectangular dark navy photovoltaic panel wings in a cross arrangement, small amber position lamps and a small cyan service thruster. No guns, no cockpit, clean functional orbital hardware.",
+      "source": "solarSatellite-v1.png",
+      "delivery": "solarSatellite-v1.webp"
+    }
+  ],
+  "existingFour": "Combat cruiser, large cargo, colony and scout prompt specifications are retained in docs/FLEET_ASSETS_LOCAL_2026-10-26.md",
+  "hangarPrompt": "Production bitmap background plate for a premium GAMESOL spaceship hangar card. Wide landscape 3:2 composition. An EMPTY immense orbital drydock interior, realistic science-fiction architecture, graphite metal ribs, off-white structural panels, narrow warm amber service lights, subtle cool cyan light strips, recessed industrial maintenance bays. Open central three-dimensional space for placing a spacecraft cutout later; unobstructed, clean, medium-dark center, detailed edges and ceiling trusses. Three-quarter diagonal view, soft broad overhead studio-style light to match a spacecraft lit from upper left, atmospheric depth without fog obscuring detail, physically coherent premium AAA strategy game environment. No spaceship, no vehicle, no people, no text, no signage, no logos, no UI, no labels. No giant luminous circle, no neon purple, no lens flare. Spaceworthy industrial setting, restrained sophistication."
+}

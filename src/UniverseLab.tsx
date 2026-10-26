@@ -8,7 +8,7 @@ import * as THREE from "three";
 import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, MapPin, Navigation2, TrendingUp, X, Zap, ZoomIn, ZoomOut } from "lucide-react";
 import { createUniverseSnapshotFromChainData, orbitForSystemPosition, pointOnUniverseOrbit, snapshotFromPublicPlanets, type UniverseMission, type UniverseOrbit, type UniversePlanet, type UniverseSnapshot } from "./universe-data";
 import { emptySystemDisplayOrbit, missionDestinationIsLocal, missionJourneyProgress, systemEntryPoint, readableFleetScale } from './mission-scene';
-import { missionEndpoints, missionTrafficPoints, missionVisibleAtScale, galaxyTravelEndpoints, trafficPointLabel, type MissionLocation, type TrafficPoint } from './mission-visibility';
+import { missionEndpoints, missionTrafficPoints, missionVisibleAtScale, missionRenderGroups, galaxyTravelEndpoints, trafficPointLabel, type MissionLocation, type TrafficPoint } from './mission-visibility';
 import { fetchAllianceDirectory, fetchAllianceGovernance, fetchAllPublicPlanets, fetchSystemSovereignties, fetchUniverseMapData, SOVEREIGNTY_WRITES_ENABLED, type AllianceDecisionAccount, type AllianceGovernanceConfigAccount, type AllianceStateAccount, type SystemSovereigntyAccount } from "./game-state";
 import { planetSurfaceStyleForSystem, type PlanetSurfaceStyle } from "./planet-style";
 import { planetBiomeIndex, planetBiomeTexture } from "./planet-biome-assets";
@@ -27,6 +27,7 @@ import { GALAXY_KINDS, galaxyKindForId, galaxySystemLayout, starForSystem, type 
 import cinematicNebulaPanorama from "./assets/universe-lab/starless-deep-space-v4.webp";
 import terranClouds from "./assets/planet-world/terran-clouds-v2.webp";
 import gamesolMark from "./assets/ui/logobg.png";
+import { FleetVessel, strategicFleetScale } from './FleetVessel';
 import usdcCoin from "./assets/ui/usdc.svg";
 import metalResource from "./assets/ui/metalMine.webp";
 import crystalResource from "./assets/ui/crystalMine.webp";
@@ -2306,39 +2307,12 @@ function collisionSafeFleetCurve({
   return fallback;
 }
 
-function MissionFleetVessel({ kind, color }: { kind: UniverseMission["kind"]; color: string }) {
-  const engineCore = useRef<THREE.MeshBasicMaterial>(null!);
-  const escortWing = useRef<THREE.Group>(null!);
-  const capitalScale = kind === "colonize" ? 1.28 : kind === "attack" ? 1.16 : kind === "transport" ? 1.02 : .72;
-  useFrame(({ clock }, delta) => {
-    if (engineCore.current) engineCore.current.opacity = .72 + Math.sin(clock.getElapsedTime() * 11.5) * .16;
-    if (escortWing.current) escortWing.current.rotation.y += delta * .18;
-  });
-  return <group scale={capitalScale}>
-    <mesh castShadow><cylinderGeometry args={[.13, .27, 1.28, 7]} /><meshStandardMaterial color="#a1bccb" emissive="#66899d" emissiveIntensity={.65} metalness={.55} roughness={.3} /></mesh>
-    <mesh position={[0, .18, 0]} castShadow><octahedronGeometry args={[.3, 0]} /><meshPhysicalMaterial color="#243f50" metalness={.86} roughness={.17} clearcoat={.4} /></mesh>
-    <mesh position={[0, -.08, 0]} rotation={[0, 0, Math.PI / 2]} castShadow><boxGeometry args={[.09, 1.16, .36]} /><meshStandardMaterial color="#7898a9" emissive="#486c82" emissiveIntensity={.55} metalness={.6} roughness={.3} /></mesh>
-    <mesh position={[0, .34, .25]}><boxGeometry args={[.22, .56, .035]} /><meshBasicMaterial color={color} transparent opacity={.8} toneMapped={false} /></mesh>
-    {kind !== "espionage" && <>
-      <mesh position={[-.48, -.08, 0]} castShadow><boxGeometry args={[.16, .72, .24]} /><meshStandardMaterial color="#415c6d" metalness={.88} roughness={.22} /></mesh>
-      <mesh position={[.48, -.08, 0]} castShadow><boxGeometry args={[.16, .72, .24]} /><meshStandardMaterial color="#415c6d" metalness={.88} roughness={.22} /></mesh>
-    </>}
-    <group ref={escortWing} position={[0, -.15, 0]}>
-      {Array.from({ length: kind === "attack" ? 4 : 2 }, (_, escort) => {
-        const angle = escort / (kind === "attack" ? 4 : 2) * Math.PI * 2;
-        return <group key={escort} position={[Math.cos(angle) * .72, -.18 + (escort % 2) * .2, Math.sin(angle) * .72]} scale={.26}>
-          <mesh><coneGeometry args={[.18, .72, 4]} /><meshStandardMaterial color="#8fa4ae" metalness={.9} roughness={.2} /></mesh>
-          <mesh position={[0, -.42, 0]}><sphereGeometry args={[.09, 8, 6]} /><meshBasicMaterial color={color} transparent opacity={.9} toneMapped={false} /></mesh>
-        </group>;
-      })}
-    </group>
-    <mesh position={[0, -.84, 0]} rotation={[0, 0, Math.PI]}><coneGeometry args={[.24, 1.28, 24, 1, true]} /><meshBasicMaterial color={color} transparent opacity={.16} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} /></mesh>
-    <mesh position={[0, -.68, 0]}><sphereGeometry args={[.15, 12, 8]} /><meshBasicMaterial ref={engineCore} color={color} transparent opacity={.8} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} /></mesh>
-    <pointLight color={color} intensity={1.5} distance={4.5} decay={2} />
-  </group>;
+function MissionFleetVessel({ kind, shipClass, color, compact = false }: { kind: UniverseMission["kind"]; shipClass?: UniverseMission['shipClass']; color: string; compact?: boolean }) {
+  return <FleetVessel kind={kind} shipClass={shipClass} color={color} compact={compact} />;
 }
 
-function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMission; planets: UniversePlanet[]; starClearance: number }) {
+function FleetRoute({ mission, planets, starClearance, count = 1, compact = false }: { mission: UniverseMission; planets: UniversePlanet[]; starClearance: number; count?: number; compact?: boolean }) {
+  const [hovered, setHovered] = useState(false);
   const source = planets.find((planet) => planet.id === mission.sourceId);
   const target = planets.find((planet) => planet.id === mission.destinationId);
   const externalSource = !source && !!mission.sourceCoordinates;
@@ -2409,9 +2383,9 @@ function FleetRoute({ mission, planets, starClearance }: { mission: UniverseMiss
   if ((!source && !mission.sourceCoordinates) || (!target && !mission.destinationCoordinates && !mission.destinationOrbit)) return null;
   const color = mission.kind === "attack" ? "#ff586d" : mission.kind === "espionage" ? "#d998ff" : mission.kind === "colonize" ? "#ffc866" : "#45f4c1";
   return <group ref={routeGroup} visible={mission.phase === "outbound" || mission.phase === "returning"}>{routePoints.length > 1 && <><Line points={routePoints} color={color} transparent opacity={.12} lineWidth={1.5} /><Line points={routePoints} color={color} transparent opacity={.42} lineWidth={.72} dashed dashScale={3.2} dashSize={.24} gapSize={.34} /></>}
-    <group ref={vessel}>
-      <MissionFleetVessel kind={mission.kind} color={color} />
-      {(externalSource || externalTarget) && <Html center position={[0, 2.6, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{vesselLabel}<small>{inbound ? 'INBOUND' : 'OUTBOUND'}</small></span></Html>}
+    <group ref={vessel} onPointerOver={event => { event.stopPropagation(); setHovered(true); }} onPointerOut={() => setHovered(false)}>
+      <MissionFleetVessel kind={mission.kind} shipClass={mission.shipClass} color={color} compact={compact} />
+      {(!compact || hovered) && (externalSource || externalTarget || count > 1) && <Html center position={[0, 2.6, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{vesselLabel}{count > 1 ? ` · ${count} fleets` : ''}<small>{externalSource || externalTarget ? (inbound ? 'INBOUND' : 'OUTBOUND') : ''}</small></span></Html>}
     </group>
   </group>;
 }
@@ -2438,7 +2412,7 @@ function TrafficBeacon({ point, position, orbit, height = 0, size = 1 }: { point
 }
 
 function StrategicFleetRoute({ mission, start, end, size }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; size: number }) {
-  const dot = useRef<THREE.Mesh>(null!);
+  const dot = useRef<THREE.Group>(null!);
   const epoch = useRef(Date.now() / 1000);
   const curve = useMemo(() => {
     const a = new THREE.Vector3(...start), b = new THREE.Vector3(...end);
@@ -2446,53 +2420,36 @@ function StrategicFleetRoute({ mission, start, end, size }: { mission: UniverseM
     return new THREE.QuadraticBezierCurve3(a, middle, b);
   }, [start[0], start[1], start[2], end[0], end[1], end[2]]);
   const points = useMemo(() => curve.getPoints(40).map(point => point.toArray() as [number, number, number]), [curve]);
-  useFrame(() => {
+  useFrame(({ camera, size: viewport }) => {
     const progress = missionJourneyProgress(mission, Date.now() / 1000, epoch.current);
     dot.current.visible = progress < 1;
     dot.current.position.copy(curve.getPoint(mission.phase === 'returning' ? 1 - progress : progress));
+    dot.current.scale.setScalar(strategicFleetScale(camera.position.distanceTo(dot.current.position), (camera as THREE.PerspectiveCamera).fov || 50, viewport.height, size * 1.8));
+    const tangent = curve.getTangent(mission.phase === 'returning' ? 1 - progress : progress).normalize();
+    if (mission.phase === 'returning') tangent.negate();
+    dot.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
   });
   return <group><Line points={points} color="#6fdbd1" transparent opacity={.48} lineWidth={1} />
-    <mesh ref={dot}><sphereGeometry args={[size, 8, 8]} /><meshBasicMaterial color="#d5fff4" toneMapped={false} /></mesh>
+    <group ref={dot} scale={size * 1.8}><FleetVessel kind={mission.kind} shipClass={mission.shipClass} color="#d5fff4" compact /></group>
   </group>;
 }
 
-function galaxyTrafficLabelPosition(object: THREE.Object3D, camera: THREE.Camera, size: { width: number; height: number }): [number, number] {
-  const point = object.getWorldPosition(new THREE.Vector3()).project(camera);
-  return [THREE.MathUtils.clamp((point.x * .5 + .5) * size.width, 70, size.width - 70),
-    THREE.MathUtils.clamp((-point.y * .5 + .5) * size.height, size.width < 700 ? 180 : 90, size.height - 30)];
-}
-
-function GalaxyFleetRoute({ mission, start, end, remoteAt, remoteGalaxy }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; remoteAt: 'start' | 'end' | null; remoteGalaxy: number }) {
+function GalaxyFleetRoute({ mission, start, end, remoteAt, remoteGalaxy, count = 1, dense = false }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; remoteAt: 'start' | 'end' | null; remoteGalaxy: number; count?: number; dense?: boolean }) {
+  const [hovered, setHovered] = useState(false);
   const vessel = useRef<THREE.Group>(null!);
   const route = useRef<THREE.Group>(null!);
-  const boundary = useRef<THREE.Group>(null!);
   const boundaryRing = useRef<THREE.Mesh>(null!);
   const epoch = useRef(Date.now() / 1000);
-  const lastLineUpdate = useRef(-1);
-  const [points, setPoints] = useState<Array<[number, number, number]>>([]);
+  const curve = useMemo(() => {
+    const a = new THREE.Vector3(...start), b = new THREE.Vector3(...end);
+    const middle = a.clone().lerp(b, .5); middle.y += a.distanceTo(b) * .15;
+    return new THREE.QuadraticBezierCurve3(a, middle, b);
+  }, [start[0], start[1], start[2], end[0], end[1], end[2]]);
+  const points = useMemo(() => curve.getPoints(40).map(point => point.toArray() as [number, number, number]), [curve]);
   const inbound = remoteAt === (mission.phase === 'returning' ? 'end' : 'start');
   const label = remoteAt ? (inbound ? 'Entering galaxy' : 'Leaving galaxy') : 'System transit';
-  useFrame(({ camera, size, clock }) => {
-    const a = new THREE.Vector3(...start), b = new THREE.Vector3(...end);
-    const aScreen = a.clone().project(camera), bScreen = b.clone().project(camera);
-    const visible = (point: THREE.Vector3) => Math.abs(point.x) < 1 && Math.abs(point.y) < 1 && point.z < 1;
-    const clippedEnd = remoteAt ?? (visible(aScreen) && !visible(bScreen) ? 'end' : visible(bScreen) && !visible(aScreen) ? 'start' : null);
-    if (clippedEnd) {
-      const remote = clippedEnd === 'start' ? a : b, local = clippedEnd === 'start' ? b : a;
-      const localScreen = local.clone().project(camera), remoteScreen = remote.clone().project(camera);
-      if (visible(localScreen) && (remoteAt || !visible(remoteScreen))) {
-        const direction = remote.clone().sub(local).applyQuaternion(camera.quaternion.clone().invert());
-        if (Math.abs(direction.x) + Math.abs(direction.y) < .001) direction.x = 1;
-        const extent = Math.max(Math.abs(direction.x), Math.abs(direction.y), .001);
-        remote.set(direction.x / extent * .88, direction.y / extent * .55, localScreen.z).unproject(camera);
-      }
-      if (remoteAt) {
-        boundary.current.position.copy(remote);
-        boundaryRing.current.quaternion.copy(camera.quaternion);
-      }
-    }
-    const middle = a.clone().lerp(b, .5); middle.y += a.distanceTo(b) * .15;
-    const curve = new THREE.QuadraticBezierCurve3(a, middle, b);
+  useFrame(({ camera, size }) => {
+    if (remoteAt) boundaryRing.current.quaternion.copy(camera.quaternion);
     const progress = missionJourneyProgress(mission, Date.now() / 1000, epoch.current);
     route.current.visible = progress < 1;
     const p = mission.phase === 'returning' ? 1 - progress : progress;
@@ -2501,28 +2458,26 @@ function GalaxyFleetRoute({ mission, start, end, remoteAt, remoteGalaxy }: { mis
     if (mission.phase === 'returning') tangent.negate();
     vessel.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
     vessel.current.scale.setScalar(Math.max(.12, readableFleetScale(camera.position.distanceTo(vessel.current.position), (camera as THREE.PerspectiveCamera).fov || 50, size.height) * .55));
-    if (clock.getElapsedTime() - lastLineUpdate.current >= .2 || lastLineUpdate.current < 0) {
-      lastLineUpdate.current = clock.getElapsedTime(); setPoints(curve.getPoints(40).map(point => point.toArray() as [number, number, number]));
-    }
   });
-  return <group ref={route}>
+  return <group ref={route} onPointerOver={event => { event.stopPropagation(); setHovered(true); }} onPointerOut={() => setHovered(false)}>
     {points.length > 1 && <Line points={points} color="#6fdbd1" transparent opacity={.65} lineWidth={1.2} />}
-    <group ref={vessel}><MissionFleetVessel kind={mission.kind} color="#6fdbd1" />
-      <Html center calculatePosition={galaxyTrafficLabelPosition} position={[0, 2.8, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{label}</span></Html>
+    <group ref={vessel}><MissionFleetVessel kind={mission.kind} shipClass={mission.shipClass} color="#6fdbd1" compact />
+      {(!dense || hovered) && <Html center position={[0, 2.8, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{label}{count > 1 ? ` · ${count} fleets` : ''}</span></Html>}
     </group>
-    {remoteAt && <group ref={boundary}><mesh ref={boundaryRing}><torusGeometry args={[.42, .055, 6, 24]} /><meshBasicMaterial color="#a9ebdd" transparent opacity={.9} toneMapped={false} /></mesh>
-      <Html center calculatePosition={galaxyTrafficLabelPosition} position={[0, 1.2, 0]} zIndexRange={[2, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{inbound ? 'From' : 'To'} galaxy {remoteGalaxy}</span></Html>
+    {remoteAt && <group position={remoteAt === 'start' ? start : end}><mesh ref={boundaryRing}><torusGeometry args={[.42, .055, 6, 24]} /><meshBasicMaterial color="#a9ebdd" transparent opacity={.9} toneMapped={false} /></mesh>
+      {(!dense || hovered) && <Html center position={[0, 1.2, 0]} zIndexRange={[2, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label" data-world-position={(remoteAt === 'start' ? start : end).join(',')}>{inbound ? 'From' : 'To'} galaxy {remoteGalaxy}</span></Html>}
     </group>}
   </group>;
 }
 
 function MissionTrafficLayer({ snapshot, level, galaxy, system, planets, star }: { snapshot: UniverseSnapshot; level: ZoomLevel; galaxy: number; system: number; planets: UniversePlanet[]; star: StarDefinition }) {
   const points = useMemo(() => missionTrafficPoints(snapshot, { level, galaxy, system }), [snapshot, level, galaxy, system]);
+  const flights = useMemo(() => missionRenderGroups(snapshot, { level, galaxy, system }), [snapshot, level, galaxy, system]);
   const strategicPosition = (location: MissionLocation): [number, number, number] => level === 'galaxy'
     ? galaxySystemLayout(location.galaxy, location.system).position
     : new THREE.Vector3(...universeGalaxyPosition(location.galaxy)).applyEuler(new THREE.Euler(-.23, .4, -.08)).toArray() as [number, number, number];
   return <group>
-    {points.map(point => {
+    {points.slice(0, 64).map(point => {
       if (level !== 'system') return <TrafficBeacon key={point.key} point={point} position={strategicPosition(point.location)} size={level === 'universe' ? 16 : .28} height={level === 'universe' ? 18 : .5} />;
       if (!point.waiting) return null;
       const planet = planets.find(planet => Number(planet.system.split(':')[2]) === point.location.position);
@@ -2530,13 +2485,13 @@ function MissionTrafficLayer({ snapshot, level, galaxy, system, planets, star }:
       const height = planet ? occupiedSystemPlanetRadius(planet) * 1.7 : emptySystemPlanetRadius(point.location.position, galaxy, system, orbit) * 1.7;
       return <TrafficBeacon key={point.key} point={point} position={pointOnUniverseOrbit(orbit)} orbit={orbit} height={height} size={.8} />;
     })}
-    {level !== 'system' && snapshot.missions.map(mission => {
+    {level !== 'system' && flights.groups.map(({ mission, count, key }) => {
       if (mission.phase !== 'outbound' && mission.phase !== 'returning') return null;
       const endpoints = missionEndpoints(mission, snapshot.planets);
       if (!endpoints || !missionVisibleAtScale(endpoints.source, endpoints.target, level)) return null;
       if (level === 'galaxy') {
         const leg = galaxyTravelEndpoints(endpoints.source, endpoints.target, galaxy, location => galaxySystemLayout(location.galaxy, location.system).position, universeGalaxyPosition);
-        return leg ? <GalaxyFleetRoute key={mission.id} mission={mission} {...leg} remoteGalaxy={leg.remoteAt === 'start' ? endpoints.source.galaxy : endpoints.target.galaxy} /> : null;
+        return leg ? <GalaxyFleetRoute key={key} mission={mission} count={count} dense={flights.total > 16} {...leg} remoteGalaxy={leg.remoteAt === 'start' ? endpoints.source.galaxy : endpoints.target.galaxy} /> : null;
       }
       return <StrategicFleetRoute key={mission.id} mission={mission} start={strategicPosition(endpoints.source)} end={strategicPosition(endpoints.target)} size={level === 'universe' ? 5 : .18} />;
     })}
@@ -2592,7 +2547,8 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
   const systemCompositionKey = `${selectedGalaxy}:${selectedSystem}:${systemFocusPlanet?.id ?? "star"}`;
   const currentSystemMissions = useMemo(() => {
     const planetIds = new Set(currentSystemDisplayPlanets.map((planet) => planet.id));
-    return snapshot.missions.flatMap((mission) => {
+    const traffic = missionRenderGroups(snapshot, { level: 'system', galaxy: selectedGalaxy, system: selectedSystem });
+    return traffic.groups.flatMap(({ mission, count }) => {
       // Arrived fleets are stored on-chain until their mission is resolved, but
       // they should not remain parked in the space scene. Returned fleets are
       // likewise no longer an active flight.
@@ -2602,7 +2558,7 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
       if (!sourceHere && !destinationHere) return [];
       const emptyTarget = destinationHere && !planetIds.has(mission.destinationId) && mission.destinationPosition;
       const destinationOrbit = emptyTarget ? emptySystemDisplayOrbit(emptyTarget.position, selectedGalaxy, selectedSystem, SYSTEM_ORBIT_PRESENTATION_SCALE, systemStarOrbitOffset(currentStar)) : undefined;
-      const localMission = { ...mission, destinationOrbit,
+      const localMission = { ...mission, destinationOrbit, trafficCount: count, compactFleet: traffic.total > 16,
         destinationClearance: destinationOrbit && emptyTarget ? emptySystemPlanetRadius(emptyTarget.position, selectedGalaxy, selectedSystem, destinationOrbit) * 1.08 : undefined };
       if (sourceHere && destinationHere) return [localMission];
 
@@ -2655,7 +2611,7 @@ function SectorScene({ snapshot, selected, level, fullUniverse, galaxySectorStar
         const displayOrbit = planet?.orbit ?? emptySystemDisplayOrbit(position, selectedGalaxy, selectedSystem, SYSTEM_ORBIT_PRESENTATION_SCALE, systemStarOrbitOffset(currentStar));
         return <React.Fragment key={planet?.id ?? `empty-${position}`}><OrbitPath orbit={displayOrbit} faction={planet?.faction} active={planet?.id === selected?.id} />{planet ? <PlanetNode planet={planet} displayOrbit={displayOrbit} active={selected?.id === planet.id} onSelect={() => onSelect(planet)} /> : <EmptyPlanetSlot position={position} galaxy={selectedGalaxy} system={selectedSystem} orbit={displayOrbit} onSelect={() => onEmptySlotSelect({ galaxy: selectedGalaxy, system: selectedSystem, position })} />}</React.Fragment>;
       })}
-      {currentSystemMissions.map((mission) => <FleetRoute key={mission.id} mission={mission} planets={currentSystemDisplayPlanets} starClearance={systemStarClearanceRadius(currentStar) + 1.8} />)}
+      {currentSystemMissions.map((mission) => <FleetRoute key={mission.id} mission={mission} count={mission.trafficCount} compact={mission.compactFleet} planets={currentSystemDisplayPlanets} starClearance={systemStarClearanceRadius(currentStar) + 1.8} />)}
     </group>}
     <MissionTrafficLayer snapshot={snapshot} level={level} galaxy={selectedGalaxy} system={selectedSystem} planets={currentSystemDisplayPlanets} star={currentStar} />
     <OrbitControls ref={controls} enablePan enableDamping dampingFactor={0.08} minDistance={cameraMinDistance} maxDistance={cameraMaxDistance} maxPolarAngle={Math.PI * 0.82} minPolarAngle={Math.PI * 0.22} autoRotate={false} />
@@ -2900,6 +2856,12 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
             sourcePosition: { galaxy: demoGalaxy, system: demoSystem === 999 ? 998 : demoSystem + 1, position: 1 },
             destinationPosition: { galaxy: demoGalaxy, system: demoSystem, position: 2 },
             kind: 'colonize', phase: 'outbound', progress: .35, etaSeconds: 23400, durationSeconds: 36000, sampledAt: Date.now() / 1000 });
+          const trafficLoad = Math.max(0, Math.min(10_000, Math.trunc(Number(demoParams?.get('traffic-load')) || 0)));
+          if (trafficLoad) fixture.missions = Array.from({ length: trafficLoad }, (_, index) => ({
+            ...fixture.missions[index % fixture.missions.length], id: `stress-${index}`, sourceId: `stress-source-${index}`,
+            sourcePosition: { galaxy: demoGalaxy, system: ((demoSystem + 1 + index % 998) % 999) + 1, position: 1 },
+            destinationId: fixture.planets[1].id, destinationPosition: { galaxy: demoGalaxy, system: demoSystem, position: 2 },
+          }));
         }
         if (localColonyDemo) {
           fixture.planets = fixture.planets.slice(0, 1);
@@ -3174,6 +3136,12 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
     }
     return snapshot.planets;
   }, [snapshot, zoomLevel, selectedGalaxy, selectedSystem]);
+  const navigationTraffic = useMemo(() => snapshot ? missionTrafficPoints(snapshot, { level: zoomLevel, galaxy: selectedGalaxy, system: selectedSystem }) : [], [snapshot, zoomLevel, selectedGalaxy, selectedSystem]);
+  const trafficSummary = useMemo(() => snapshot ? missionRenderGroups(snapshot, { level: zoomLevel, galaxy: selectedGalaxy, system: selectedSystem }) : null, [snapshot, zoomLevel, selectedGalaxy, selectedSystem]);
+  const [trafficPage, setTrafficPage] = useState(0);
+  useEffect(() => setTrafficPage(0), [zoomLevel, selectedGalaxy, selectedSystem]);
+  const trafficPageCount = Math.max(1, Math.ceil(navigationTraffic.length / 24));
+  const currentTrafficPage = Math.min(trafficPage, trafficPageCount - 1);
   useEffect(() => {
     if (zoomLevel !== "system") {
       systemEntryFocusRef.current = "";
@@ -3403,7 +3371,7 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
       />}
     </div>
     <div className={`scene-optics is-${zoomLevel}`} aria-hidden="true" />
-    {localSystemDemo && <aside className="system-demo-banner" role="status"><div><b>{demoParams?.get("system-demo") === "traffic" ? "LOCAL TRAFFIC CHECK" : localColonyDemo ? "LOCAL COLONY ROUTE CHECK" : "LOCAL FULL-SYSTEM SIMULATION"}</b><span>{demoParams?.get("system-demo") === "traffic" ? "2 TEST WORLDS · 3 ROUTES · NO ON-CHAIN DATA" : localColonyDemo ? "1 COLONY SHIP · EMPTY SLOT 2 · NO ON-CHAIN DATA" : "15 TEST WORLDS · 4 ALLIANCES · 24 ACTIVE FLEETS · COLLISION-SAFE ORBITS · NO ON-CHAIN DATA"}</span><nav className="system-demo-alliance-legend" aria-label="Simulated alliances">{SYSTEM_DEMO_ALLIANCES.map((alliance) => <i key={alliance.tag}><em style={{ background: FACTION_COLORS[alliance.faction] }} />{alliance.tag}</i>)}</nav></div><a href={window.location.pathname}>EXIT DEMO</a></aside>}
+    {localSystemDemo && <aside className="system-demo-banner" role="status"><div><b>{demoParams?.get("system-demo") === "traffic" ? "LOCAL TRAFFIC CHECK" : localColonyDemo ? "LOCAL COLONY ROUTE CHECK" : "LOCAL FULL-SYSTEM SIMULATION"}</b><span>{demoParams?.get("system-demo") === "traffic" ? `2 TEST WORLDS · ${snapshot.missions.length} TEST FLEETS · NO ON-CHAIN DATA` : localColonyDemo ? "1 COLONY SHIP · EMPTY SLOT 2 · NO ON-CHAIN DATA" : "15 TEST WORLDS · 4 ALLIANCES · 24 ACTIVE FLEETS · COLLISION-SAFE ORBITS · NO ON-CHAIN DATA"}</span><nav className="system-demo-alliance-legend" aria-label="Simulated alliances">{SYSTEM_DEMO_ALLIANCES.map((alliance) => <i key={alliance.tag}><em style={{ background: FACTION_COLORS[alliance.faction] }} />{alliance.tag}</i>)}</nav></div><a href={window.location.pathname}>EXIT DEMO</a></aside>}
     <header className="universe-topbar">
       <a href="/" className="universe-brand" aria-label="GAMESOL home"><img src={gamesolMark} alt="GAMESOL" /></a>
       <div className="navigation-console">
@@ -3436,13 +3404,15 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
       <dl>
         {zoomLevel === "universe" ? <><div><dt>GALAXIES</dt><dd>999</dd></div><div><dt>STAR SYSTEMS</dt><dd>998,001</dd></div><div><dt>ON-CHAIN WORLDS</dt><dd>{snapshot.planets.length}</dd></div></> : zoomLevel === "galaxy" ? <><div><dt>SYSTEMS</dt><dd>999</dd></div><div><dt>INHABITED</dt><dd>{galaxySystems.filter((system) => system.occupied).length}</dd></div><div><dt>GALAXY TYPE</dt><dd>{galaxyKindForId(selectedGalaxy)}</dd></div></> : <><div><dt>ORBITAL SLOTS</dt><dd>15</dd></div><div><dt>INHABITED</dt><dd>{occupiedPlanetCount}</dd></div><div><dt>SOVEREIGNTY</dt><dd>{sovereigntyActive ? "CONTROLLED" : "UNCLAIMED"}</dd></div></>}
       </dl>
-      {missionTrafficPoints(snapshot, { level: zoomLevel, galaxy: selectedGalaxy, system: selectedSystem }).length > 0 && <section className="mission-traffic-list" aria-label="Fleet departure and arrival points">
-        {missionTrafficPoints(snapshot, { level: zoomLevel, galaxy: selectedGalaxy, system: selectedSystem }).map((point) => <button key={point.key} type="button" onClick={() => {
+      {navigationTraffic.length > 0 && <section className="mission-traffic-list" aria-label="Fleet departure and arrival points">
+        {trafficSummary && <header>{trafficSummary.total.toLocaleString()} in flight · {trafficSummary.routes.toLocaleString()} routes{trafficSummary.routes > trafficSummary.groups.length ? ` · ${trafficSummary.groups.length} mapped` : ''}</header>}
+        {navigationTraffic.slice(currentTrafficPage * 24, (currentTrafficPage + 1) * 24).map((point) => <button key={point.key} type="button" onClick={() => {
           setSelectedGalaxy(point.location.galaxy); setSelectedSystem(point.location.system);
           setZoomLevel(zoomLevel === "universe" ? "galaxy" : "system");
           if (zoomLevel === "system") selectOrbitalPosition(point.location.position);
         }}><strong>{point.key}</strong><span>{trafficPointLabel(point)}</span></button>)}
       </section>}
+      {trafficPageCount > 1 && <nav className="mission-traffic-pagination" aria-label="Traffic pages"><button type="button" title="Previous traffic page" aria-label="Previous traffic page" disabled={currentTrafficPage === 0} onClick={() => setTrafficPage(currentTrafficPage - 1)}><ChevronLeft size={16} /></button><span>{currentTrafficPage + 1} / {trafficPageCount}</span><button type="button" title="Next traffic page" aria-label="Next traffic page" disabled={currentTrafficPage + 1 >= trafficPageCount} onClick={() => setTrafficPage(currentTrafficPage + 1)}><ChevronRight size={16} /></button></nav>}
       {zoomLevel === "system" && <nav className="system-orbit-scanner" aria-label="System orbital positions">
         <header><span>ORBITAL SCAN</span><small><i className="is-inhabited" /> INHABITED <i /> EMPTY</small></header>
         <div>{Array.from({ length: PLANETS_PER_SYSTEM }, (_, index) => {
