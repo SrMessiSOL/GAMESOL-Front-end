@@ -1,0 +1,32 @@
+[
+  {
+    "passed": true,
+    "bounds": [
+      414,
+      116,
+      950,
+      496
+    ],
+    "mode": "desktop",
+    "hullSamples": 21919,
+    "viewport": [
+      1280,
+      900
+    ]
+  },
+  {
+    "passed": true,
+    "bounds": [
+      84,
+      60,
+      356,
+      256
+    ],
+    "mode": "mobile",
+    "hullSamples": 6039,
+    "viewport": [
+      390,
+      844
+    ]
+  }
+]

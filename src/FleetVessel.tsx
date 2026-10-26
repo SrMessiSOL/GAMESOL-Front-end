@@ -105,6 +105,21 @@ function model(ship:ShipClass):Model {
   [...structure,...plating,...glass,...accents,...engines,...compactParts].forEach(g=>g.dispose());return result;
 }
 export const FLEET_MODELS=Object.fromEntries(Object.keys(FLEET_CLASS_HULLS).map(key=>[key,model(key as ShipClass)])) as Record<ShipClass,Model>;
+// Strategic display lengths, not literal kilometres: preserve hierarchy without hiding probes.
+export const SHIP_VISUAL_LENGTH:Record<ShipClass,number>={
+  espionageProbe:.4,solarSatellite:.85,lightFighter:.75,heavyFighter:1,
+  smallCargo:1.25,recycler:1.8,largeCargo:2.25,cruiser:2.5,bomber:2.75,
+  colonyShip:2.7,battlecruiser:3,battleship:3.25,destroyer:4.25,deathstar:8,
+};
+export const SHIP_MODEL_SCALE=Object.fromEntries(Object.entries(FLEET_MODELS).map(([key,parts])=>{
+  const bounds=new THREE.Box3();
+  for(const geometry of [FLEET_CLASS_HULLS[key as ShipClass],...Object.values(parts)]){
+    if(!geometry.getAttribute('position').count)continue;
+    geometry.computeBoundingBox();bounds.union(geometry.boundingBox!);
+  }
+  const size=bounds.getSize(new THREE.Vector3());
+  return [key,SHIP_VISUAL_LENGTH[key as ShipClass]/Math.max(size.x,size.y,size.z)];
+})) as Record<ShipClass,number>;
 function armorPanels(){
   const data=new Uint8Array(128*128*4);
   for(let y=0;y<128;y++)for(let x=0;x<128;x++){
@@ -120,9 +135,9 @@ const glass=new THREE.MeshStandardMaterial({color:'#153b53',metalness:.6,roughne
 const distant=new THREE.MeshBasicMaterial({color:'#a5b5bd'});
 const engines=Object.fromEntries(['#70dcff','#ff586d','#d998ff','#ffc866','#45f4c1','#6fdbd1','#d5fff4'].map(color=>[color,new THREE.MeshBasicMaterial({color,toneMapped:false})]));
 const defaults:Record<FleetHull,ShipClass>={attack:'battlecruiser',transport:'largeCargo',colonize:'colonyShip',espionage:'espionageProbe'};
-export function FleetVessel({kind,shipClass,color='#70dcff',compact=false}:{kind:FleetHull;shipClass?:ShipClass;color?:string;compact?:boolean}){
+export function FleetVessel({kind,shipClass,color='#70dcff',compact=false,presentation='fleet'}:{kind:FleetHull;shipClass?:ShipClass;color?:string;compact?:boolean;presentation?:'fleet'|'inspection'}){
   const key=shipClass??defaults[kind],parts=FLEET_MODELS[key];
-  return <group dispose={null}>
+  return <group dispose={null} scale={presentation==='inspection'?1:SHIP_MODEL_SCALE[key]}>
     <mesh geometry={compact?parts.compact:FLEET_CLASS_HULLS[key]} material={compact ? distant : armor}/>
     {!compact&&<><mesh geometry={parts.structure} material={frame}/><mesh geometry={parts.plating} material={armor}/><mesh geometry={parts.glass} material={glass}/><mesh geometry={parts.accents} material={gold}/></>}
     <mesh geometry={parts.engines} material={engines[color]??engines['#70dcff']}/>

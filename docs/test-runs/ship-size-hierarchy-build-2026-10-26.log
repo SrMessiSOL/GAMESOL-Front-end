@@ -1,0 +1,123 @@
+
+> gamesol-passkey-universe@0.2.0 build
+> tsc && vite build --mode passkey
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vite.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+vite v8.3.5 building client environment for passkey...
+transforming...
+✓ 3012 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                             3.18 kB │ gzip:   1.55 kB
+dist/assets/logo-Cbvyb7dP.jpg                              14.18 kB
+dist/assets/15-B0UP8u4_.png                                18.85 kB
+dist/assets/starless-deep-space-v4-B_TUOxVN.webp           23.32 kB
+dist/assets/stellar-flare-v2-BW94kct_.webp                 24.17 kB
+dist/assets/logobg-vL1b2bM4.png                            77.86 kB
+dist/assets/lightFighter-CXiVF5q8.webp                    144.70 kB
+dist/assets/antiBallisticMissile-eMD5M54S.webp            183.69 kB
+dist/assets/orbital-hangar-v1-DqJ9WLdF.webp               201.41 kB
+dist/assets/smallCargo-CjXhtqUE.webp                      201.59 kB
+dist/assets/solarPlant-v2-CSSSuglh.jpg                    203.47 kB
+dist/assets/crystalMine-v2-DzCRINL4.jpg                   209.96 kB
+dist/assets/metalMine-v2-CJJ4BSiN.jpg                     210.85 kB
+dist/assets/stellar-corona-BhEGU_FH.webp                  223.39 kB
+dist/assets/deuteriumSynthesizer-v2-CCfqzuYW.jpg          228.39 kB
+dist/assets/metalStorage-D32z-W0d.webp                    233.32 kB
+dist/assets/ionCannon-DBhAAeaz.webp                       233.85 kB
+dist/assets/heavyLaser-CVZ8xpAw.webp                      235.84 kB
+dist/assets/cinematic-nebula-panorama-v2-BUmZRL3z.webp    238.70 kB
+dist/assets/terran-clouds-v2-wU36tc06.webp                241.94 kB
+dist/assets/deuteriumTank-B_sDBaHe.webp                   248.46 kB
+dist/assets/interplanetaryMissile-Bq4a7_ez.webp           251.99 kB
+dist/assets/battleship-C7lzlTJo.webp                      253.74 kB
+dist/assets/impulseDrive-DflXpqe7.webp                    264.20 kB
+dist/assets/gaussCannon-CgoEIGCV.webp                     269.23 kB
+dist/assets/igrNetwork-BNRQxLFJ.webp                      274.06 kB
+dist/assets/naniteFactory-BdCnzEhw.webp                   274.10 kB
+dist/assets/smallShieldDome-CVGAEnDM.webp                 274.14 kB
+dist/assets/lightLaser-gPXM2vgk.webp                      282.72 kB
+dist/assets/combustionDrive-DNzkUcrR.webp                 285.90 kB
+dist/assets/deuteriumSynthesizer-BqG2PiMv.webp            290.48 kB
+dist/assets/researchLab-CrOJowN-.webp                     291.20 kB
+dist/assets/largeShieldDome-Bw-l_7sS.webp                 297.21 kB
+dist/assets/heavyFighter-Fq0wXIZ1.webp                    317.95 kB
+dist/assets/plasmaTurret-C-w9iPTW.webp                    324.02 kB
+dist/assets/cruiser-BtepYjo-.webp                         336.60 kB
+dist/assets/largeCargo-z_OHlhvH.webp                      338.02 kB
+dist/assets/bomber-BVjEyTT_.webp                          340.23 kB
+dist/assets/destroyer-CLe6HthD.webp                       341.96 kB
+dist/assets/astrophysics-8Mps9fH8.webp                    343.33 kB
+dist/assets/espionageProbe-BkMUNEqj.webp                  350.80 kB
+dist/assets/amethyst-giant-CuZrfYC_.jpg                   353.48 kB
+dist/assets/fusionReactor-Bs-_hSCY.webp                   358.86 kB
+dist/assets/crystalStorage-3RIgYotk.webp                  360.90 kB
+dist/assets/roboticsFactory-BTLYN4LV.webp                 366.80 kB
+dist/assets/colonyShip-9IRWppPi.webp                      371.37 kB
+dist/assets/weaponsTechnology-B8cFLCM0.webp               378.09 kB
+dist/assets/shipyard-CCS9orUO.webp                        382.25 kB
+dist/assets/viridian-giant-XgyxHtHB.jpg                   382.56 kB
+dist/assets/solarPlant-CP10ZpsZ.webp                      389.33 kB
+dist/assets/battlecruiser-CwbMCFTf.webp                   394.95 kB
+dist/assets/computerTech-Bvl-0N38.webp                    405.99 kB
+dist/assets/recycler-DwYXF9ro.webp                        406.34 kB
+dist/assets/deathStar-BzANkMrt.webp                       421.43 kB
+dist/assets/azure-jJSXEtOy.jpg                            422.24 kB
+dist/assets/energyTech-D3fYZCAH.webp                      424.05 kB
+dist/assets/metalMine-Cs_TsGqj.webp                       424.70 kB
+dist/assets/ochre-GTNYuD8g.jpg                            426.22 kB
+dist/assets/cloud-forest-DEn9q3bd.jpg                     428.72 kB
+dist/assets/dune-Cz5eAIpe.jpg                             430.15 kB
+dist/assets/cinder-D1oGU4ob.jpg                           430.71 kB
+dist/assets/armorTechnology-CZ40PgYc.webp                 433.26 kB
+dist/assets/slate-rcGWCx2o.jpg                            437.75 kB
+dist/assets/hyperspaceDrive-Bfrnexa2.webp                 439.73 kB
+dist/assets/solarSatellite-8DjsWc-K.webp                  450.10 kB
+dist/assets/shieldingTechnology-h-j1VBWP.webp             452.23 kB
+dist/assets/crystalMine-DH-FG16O.webp                     452.89 kB
+dist/assets/archipelago-zGjXG8o9.jpg                      454.15 kB
+dist/assets/rocketLauncher-Df3V-62G.webp                  466.06 kB
+dist/assets/obsidian-BE61XfWQ.jpg                         472.22 kB
+dist/assets/frost-Bs1xpYXE.jpg                            475.20 kB
+dist/assets/verdant-Be9BoqJE.jpg                          487.32 kB
+dist/assets/lagoon-CsNkfv7G.jpg                           531.65 kB
+dist/assets/magma-CV3lZevX.jpg                            534.03 kB
+dist/assets/glacier-RMRpctp4.jpg                          544.52 kB
+dist/assets/spiral-galaxy-BxL2J0iY.png                  1,606.38 kB
+dist/assets/ocean-world-albedo-wPo-vP9U.png             3,163.15 kB
+dist/assets/index-0cE1X60W.css                              1.54 kB │ gzip:   0.81 kB
+dist/assets/ship-artwork-DGjOuyic.css                       2.03 kB │ gzip:   0.75 kB
+dist/assets/PublicWorld-CiphZg20.css                        7.59 kB │ gzip:   2.11 kB
+dist/assets/game-bootstrap-CjYO6ei5.css                    13.91 kB │ gzip:   3.76 kB
+dist/assets/UniverseGame-BDRr-Urc.css                     132.08 kB │ gzip:  25.07 kB
+dist/assets/UniverseLab-hCfQqz71.css                      136.35 kB │ gzip:  24.28 kB
+dist/assets/PlanetWorld-C97hAW43.css                      244.75 kB │ gzip:  39.17 kB
+dist/assets/starless-deep-space-v4-Qaz7Z3U5.js              0.10 kB │ gzip:   0.11 kB
+dist/assets/CryptoUfos-DV0OgSM-.js                          0.21 kB │ gzip:   0.16 kB
+dist/assets/createLucideIcon-DSTZ_IPK.js                    1.38 kB │ gzip:   0.77 kB
+dist/assets/ship-artwork-asIOfcqs.js                        1.77 kB │ gzip:   0.78 kB
+dist/assets/usdc-BuwOi-NP.js                                2.01 kB │ gzip:   0.95 kB
+dist/assets/cinematic-nebula-panorama-v2-CgYFivkw.js        2.23 kB │ gzip:   1.15 kB
+dist/assets/jsx-runtime-Dn_YclF2.js                         7.96 kB │ gzip:   3.07 kB
+dist/assets/PublicWorld-CiSQZZrG.js                        10.31 kB │ gzip:   4.06 kB
+dist/assets/ui-art-BjglTtGb.js                             26.82 kB │ gzip:   7.63 kB
+dist/assets/UniverseGame-B2HYLDda.js                       96.99 kB │ gzip:  26.30 kB
+dist/assets/index-BWcgvYbi.js                             136.14 kB │ gzip:  44.69 kB
+dist/assets/game-bootstrap-BJTzraNk.js                    181.07 kB │ gzip:  49.43 kB
+dist/assets/App-D2oV8wlM.js                               401.42 kB │ gzip:  95.90 kB
+dist/assets/PlanetWorld-D-yhb_4Q.js                       482.38 kB │ gzip: 142.93 kB
+dist/assets/UniverseLab-D6KNBXfM.js                       548.12 kB │ gzip: 130.23 kB
+dist/assets/logobg-DnYTqPqe.js                            614.03 kB │ gzip: 168.77 kB
+dist/assets/FleetVessel-CQeieXqZ.js                       823.32 kB │ gzip: 219.42 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[INEFFECTIVE_DYNAMIC_IMPORT] src/CryptoUfos.tsx is dynamically imported by src/game-bootstrap.tsx but also statically imported by src/PlanetWorld.tsx, src/UfoExpeditions.tsx, src/UniverseGame.tsx, src/game-bootstrap.tsx, dynamic import will not move module into another chunk.
+
+✓ built in 2.80s

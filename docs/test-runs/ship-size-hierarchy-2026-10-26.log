@@ -1,0 +1,48 @@
+✔ strategic fleet scale remains readable, bounded and finite across camera distances (0.9769ms)
+✔ all four fleet roles have distinct finite lightweight +Y hull geometry (0.6769ms)
+✔ distant fleets use at most three meshes and share geometry/materials across instances (1.0308ms)
+✔ public, system, galaxy and universe share the fleet model without new lights or movement authority (4.4674ms)
+✔ all fourteen catalog classes have distinct finite bounded navigation hulls (1.9411ms)
+✔ original spherical hulls, cargo stacks and colony habitat retain their volumes (0.3472ms)
+✔ all class-specific distant silhouettes stay below 300 triangles with shared two-mesh rendering (1.7485ms)
+✔ fleet sizes follow one normalized class hierarchy in detailed and compact rendering (2.0693ms)
+✔ catalog delivers every enabled class once using separate optimized artwork (155.9354ms)
+✔ live mission artwork is dimension-bounded instead of using intrinsic image size (2.8478ms)
+✔ mission hull selection uses real positive ship counts and never invents satellites in flight (16.3137ms)
+✔ colony escorts can carry resources within transport capacity and initial storage (3.0077ms)
+✔ cargo checks reject invalid amounts and retain transport and espionage rules (0.6107ms)
+✔ actual colony launch screen exposes cargo and requires one colony ship before signing (8.4801ms)
+✔ map snapshots preserve actual fleet class without changing destination or timing (2.977ms)
+✔ empty colony destinations retain authoritative galaxy/system/position and distinct slot IDs (0.5943ms)
+✔ empty endpoint uses exactly the visible slot orbit, including presentation scale and star clearance (0.5305ms)
+✔ mission progress advances only since its snapshot, not since the scene mounted (0.3069ms)
+✔ actual route and slot renderer share the orbit helper and allow destinations without a planet account (5.3067ms)
+✔ cross-system entry stays just outside the orbital boundary instead of hundreds of units away (0.6709ms)
+✔ real fleet stays readable at desktop and mobile zoom without unbounded scaling (3.5343ms)
+✔ empty destination exposes an arrival point independently of departure system (4.1447ms)
+✔ galaxy and universe preserve both endpoints at the appropriate scale (0.7827ms)
+✔ return legs reverse departure and arrival; resolved legs wait at the correct endpoint (0.5546ms)
+✔ all missions are counted and malformed coordinates fail closed (0.349ms)
+✔ galaxy legs connect real systems and project intergalactic entry and exit at both ends (0.4141ms)
+✔ ten thousand missions keep full counts while bounded route groups prevent render explosion (146.0881ms)
+✔ galaxy routes stay in world space and never re-anchor to camera or viewport (2.5834ms)
+✔ public entry isolates wallet initialization while retaining game routing (6.3638ms)
+✔ public page unlocks native document scrolling without changing game overflow (2.9092ms)
+✔ public journey keeps reduced motion, artwork fallback and no signing surface (2.0877ms)
+✔ portrait scenes fit the horizontal field without changing desktop camera distances (2.2226ms)
+✔ hidden tabs do not consume the scene loading timeout or remove readiness gates (4.4848ms)
+✔ scene changes cover first, wait for render readiness, then reveal (0.6077ms)
+✔ late callbacks and rapid duplicate requests cannot change the active destination (0.3472ms)
+✔ slow or failed destinations never silently reveal an unfinished scene (0.3972ms)
+✔ a timed-out scene recovers only after its own renderer reports readiness (0.3221ms)
+✔ camera easing clamps its endpoints and moves monotonically without overshoot (0.726ms)
+✔ reduced motion eliminates travel animation without bypassing readiness (3.5482ms)
+✔ both world surfaces signal readiness and the map does not recreate its canvas per level (13.7137ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2004.9902

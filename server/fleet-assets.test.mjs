@@ -100,6 +100,26 @@ test('all class-specific distant silhouettes stay below 300 triangles with share
   }
 });
 
+test('fleet sizes follow one normalized class hierarchy in detailed and compact rendering',()=>{
+  const lengths=exports.SHIP_VISUAL_LENGTH,scales=exports.SHIP_MODEL_SCALE;
+  assert.ok(lengths.deathstar/lengths.lightFighter>10);
+  assert.equal(lengths.deathstar/lengths.espionageProbe,20);
+  assert.ok(lengths.destroyer>lengths.battleship&&lengths.battleship>lengths.cruiser);
+  assert.ok(lengths.largeCargo>lengths.smallCargo&&lengths.heavyFighter>lengths.lightFighter);
+  for(const [key,parts]of Object.entries(exports.FLEET_MODELS)){
+    const bounds=new (require('three').Box3)();
+    for(const geometry of [exports.FLEET_CLASS_HULLS[key],...Object.values(parts)]){
+      if(!geometry.getAttribute('position').count)continue;
+      geometry.computeBoundingBox();bounds.union(geometry.boundingBox);
+    }
+    const size=bounds.getSize(new (require('three').Vector3)());
+    assert.ok(Math.abs(Math.max(size.x,size.y,size.z)*scales[key]-lengths[key])<1e-6,key);
+    const detailed=exports.FleetVessel({kind:'attack',shipClass:key}),compact=exports.FleetVessel({kind:'attack',shipClass:key,compact:true});
+    assert.equal(detailed.props.scale,scales[key]);assert.equal(compact.props.scale,scales[key]);
+    assert.equal(exports.FleetVessel({kind:'attack',shipClass:key,presentation:'inspection'}).props.scale,1);
+  }
+});
+
 test('catalog delivers every enabled class once using separate optimized artwork', () => {
   const catalog=fs.readFileSync(new URL('../src/ship-catalog.ts',import.meta.url),'utf8');
   const keys=[...catalog.matchAll(/\{key:'([^']+)'/g)].map(m=>m[1]);

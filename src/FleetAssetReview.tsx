@@ -21,19 +21,25 @@ function Turntable({ compact, rotate, shipClass }: { compact: boolean; rotate: b
     if (rotate) time.current += Math.min(delta, .05) * .4;
     if (models.current) models.current.rotation.y = Math.sin(time.current) * .3;
   });
-  return <group ref={models} rotation={[.2,-.35,-.35]} scale={1.5}><FleetVessel kind="attack" shipClass={shipClass} compact={compact} /></group>;
+  return <group ref={models} rotation={[.2,-.35,-.35]} scale={1.5}><FleetVessel kind="attack" shipClass={shipClass} compact={compact} presentation="inspection" /></group>;
 }
 export default function FleetAssetReview() {
   const [compact, setCompact] = useState(false);
   const [rotate, setRotate] = useState(true);
-  const [mode, setMode] = useState<'artwork'|'models'|'shipyard'>('artwork');
+  const [mode, setMode] = useState<'artwork'|'models'|'scale'|'shipyard'>('artwork');
   const [scene, setScene] = useState<'hangar'|'space'>('hangar');
   const [selected, setSelected] = useState<ShipClass>('battlecruiser');
   return <main className="fleet-asset-review">
-    <header><a href="/">GAMESOL</a><h1>Fleet asset review</h1><nav aria-label="Review mode">{(['artwork','models','shipyard'] as const).map(value=><button key={value} aria-pressed={mode===value} onClick={()=>setMode(value)}>{value}</button>)}</nav></header>
+    <header><a href="/">GAMESOL</a><h1>Fleet asset review</h1><nav aria-label="Review mode">{(['artwork','models','scale','shipyard'] as const).map(value=><button key={value} aria-pressed={mode===value} onClick={()=>{setMode(value);if(value==='scale')setSelected('deathstar');}}>{value}</button>)}</nav></header>
     <div className="fleet-review-body">
-      <div className="fleet-review-tools"><label>Environment<select disabled={mode==='shipyard'} value={mode==='shipyard'?'hangar':scene} onChange={e=>setScene(e.target.value as 'hangar'|'space')}><option value="hangar">Orbital hangar</option><option value="space">Deep space</option></select></label>{mode==='models'&&<><label>Ship class<select value={selected} onChange={e=>setSelected(e.target.value as ShipClass)}>{SHIP_CATALOG.map(ship=><option key={ship.key} value={ship.key}>{ship.name}</option>)}</select></label><label><input type="checkbox" checked={compact} onChange={e=>setCompact(e.target.checked)} /> Distant silhouette</label><label><input type="checkbox" checked={rotate} onChange={e=>setRotate(e.target.checked)} /> Rotate</label></>}</div>
+      <div className="fleet-review-tools"><label>Environment<select disabled={mode==='shipyard'} value={mode==='shipyard'?'hangar':scene} onChange={e=>setScene(e.target.value as 'hangar'|'space')}><option value="hangar">Orbital hangar</option><option value="space">Deep space</option></select></label>{(mode==='models'||mode==='scale')&&<><label>Ship class<select value={selected} onChange={e=>setSelected(e.target.value as ShipClass)}>{SHIP_CATALOG.map(ship=><option key={ship.key} value={ship.key}>{ship.name}</option>)}</select></label><label><input type="checkbox" checked={compact} onChange={e=>setCompact(e.target.checked)} /> Distant silhouette</label>{mode==='models'&&<label><input type="checkbox" checked={rotate} onChange={e=>setRotate(e.target.checked)} /> Rotate</label>}</>}</div>
       {mode==='artwork'&&<div className="fleet-review-catalog">{SHIP_CATALOG.map(ship=><article key={ship.key}><ShipArtwork shipKey={ship.key} label={ship.name} scene={scene}/><h2>{ship.name}</h2><p>{ship.role}</p></article>)}</div>}
+      {mode==='scale'&&<div className="fleet-review-scale"><div className="fleet-review-scene" style={{backgroundImage:`url("${SHIP_BACKDROPS.space}")`}}><Canvas dpr={[1,1.5]} camera={{position:[0,0,14],fov:48}}>
+        <ambientLight intensity={1.2}/><directionalLight position={[-3,5,6]} intensity={3}/>
+        <group position={[-4,0,0]} rotation={[.2,-.3,-.35]}><FleetVessel kind="attack" shipClass="lightFighter" compact={compact}/></group>
+        <group position={[2,0,0]} rotation={[.2,-.3,-.35]}><FleetVessel kind="attack" shipClass={selected} compact={compact}/></group>
+        <OrbitControls makeDefault enablePan={false} minDistance={12} maxDistance={24}/>
+      </Canvas></div><div className="fleet-review-scale-key"><span>Light Fighter</span><span>{SHIP_CATALOG.find(ship=>ship.key===selected)?.name}</span></div></div>}
       {mode==='models'&&<div className="fleet-review-model-layout"><div className="fleet-review-scene" style={{backgroundImage:`url("${SHIP_BACKDROPS[scene]}")`}}><Canvas dpr={[1,1.5]} camera={{position:[2.5,3,6],fov:48}}>
         <ambientLight intensity={1.2} /><directionalLight position={[-3,5,6]} intensity={3} /><directionalLight position={[5,-2,3]} intensity={1.7} color="#68b9dc" />
         <Turntable compact={compact} rotate={rotate} shipClass={selected} />
