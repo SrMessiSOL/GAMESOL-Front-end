@@ -1,0 +1,158 @@
+Vercel CLI 50.0.1
+Retrieving project…
+Deploying srmessisols-projects/frontend
+Uploading [--------------------] (0.0B/54KB)
+Uploading [========------------] (22.2KB/54KB)
+Uploading [============--------] (34.2KB/54KB)
+Uploading [===============-----] (42.5KB/54KB)
+Uploading [====================] (54.0KB/54KB)
+Inspect: https://vercel.com/srmessisols-projects/frontend/EsFYLNV9FboBR52Woo2RYX6bVJVv [4s]
+Production: https://frontend-5b6267t5q-srmessisols-projects.vercel.app [4s]
+Building...
+Building...
+Building: Running build in Washington, D.C., USA (East) – iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Downloading 822 deployment files...
+Building: Restored build cache from previous deployment (3J8ukYo9CzveABUFsnsmt6Eujama)
+Building: Running "vercel build"
+Building: Vercel CLI 65.1.0
+Building: Running "install" command: `npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund`...
+Building: npm warn Unknown env config "cache-dir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+Building: npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+Building: npm warn deprecated three-mesh-bvh@0.7.8: Deprecated due to three.js version incompatibility. Please use v0.8.0, instead.
+Building: added 432 packages in 11s
+Building: npm warn Unknown env config "cache-dir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+Building: > gamesol-passkey-universe@0.2.0 build
+Building: > tsc && vite build --mode passkey
+Building: You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+Building: vite v8.0.16 building client environment for passkey...
+Building: transforming...✓ 3001 modules transformed.
+Building: rendering chunks...
+Building: computing gzip size...
+Building: dist/index.html                                             3.62 kB │ gzip:   1.64 kB
+Building: dist/assets/logo-Cbvyb7dP.jpg                              14.18 kB
+Building: dist/assets/15-B0UP8u4_.png                                18.85 kB
+Building: dist/assets/starless-deep-space-v4-B_TUOxVN.webp           23.32 kB
+Building: dist/assets/stellar-flare-v2-BW94kct_.webp                 24.17 kB
+Building: dist/assets/logobg-vL1b2bM4.png                            77.86 kB
+Building: dist/assets/lightFighter-CXiVF5q8.webp                    144.70 kB
+Building: dist/assets/antiBallisticMissile-eMD5M54S.webp            183.69 kB
+Building: dist/assets/orbital-hangar-v1-DqJ9WLdF.webp               201.41 kB
+Building: dist/assets/smallCargo-CjXhtqUE.webp                      201.59 kB
+Building: dist/assets/solarPlant-v2-CSSSuglh.jpg                    203.47 kB
+Building: dist/assets/crystalMine-v2-DzCRINL4.jpg                   209.96 kB
+Building: dist/assets/metalMine-v2-CJJ4BSiN.jpg                     210.85 kB
+Building: dist/assets/stellar-corona-BhEGU_FH.webp                  223.39 kB
+Building: dist/assets/deuteriumSynthesizer-v2-CCfqzuYW.jpg          228.39 kB
+Building: dist/assets/metalStorage-D32z-W0d.webp                    233.32 kB
+Building: dist/assets/ionCannon-DBhAAeaz.webp                       233.85 kB
+Building: dist/assets/heavyLaser-CVZ8xpAw.webp                      235.84 kB
+Building: dist/assets/cinematic-nebula-panorama-v2-BUmZRL3z.webp    238.70 kB
+Building: dist/assets/terran-clouds-v2-wU36tc06.webp                241.94 kB
+Building: dist/assets/deuteriumTank-B_sDBaHe.webp                   248.46 kB
+Building: dist/assets/interplanetaryMissile-Bq4a7_ez.webp           251.99 kB
+Building: dist/assets/battleship-C7lzlTJo.webp                      253.74 kB
+Building: dist/assets/impulseDrive-DflXpqe7.webp                    264.20 kB
+Building: dist/assets/gaussCannon-CgoEIGCV.webp                     269.23 kB
+Building: dist/assets/igrNetwork-BNRQxLFJ.webp                      274.06 kB
+Building: dist/assets/naniteFactory-BdCnzEhw.webp                   274.10 kB
+Building: dist/assets/smallShieldDome-CVGAEnDM.webp                 274.14 kB
+Building: dist/assets/lightLaser-gPXM2vgk.webp                      282.72 kB
+Building: dist/assets/combustionDrive-DNzkUcrR.webp                 285.90 kB
+Building: dist/assets/deuteriumSynthesizer-BqG2PiMv.webp            290.48 kB
+Building: dist/assets/researchLab-CrOJowN-.webp                     291.20 kB
+Building: dist/assets/largeShieldDome-Bw-l_7sS.webp                 297.21 kB
+Building: dist/assets/heavyFighter-Fq0wXIZ1.webp                    317.95 kB
+Building: dist/assets/plasmaTurret-C-w9iPTW.webp                    324.02 kB
+Building: dist/assets/cruiser-BtepYjo-.webp                         336.60 kB
+Building: dist/assets/largeCargo-z_OHlhvH.webp                      338.02 kB
+Building: dist/assets/bomber-BVjEyTT_.webp                          340.23 kB
+Building: dist/assets/destroyer-CLe6HthD.webp                       341.96 kB
+Building: dist/assets/astrophysics-8Mps9fH8.webp                    343.33 kB
+Building: dist/assets/espionageProbe-BkMUNEqj.webp                  350.80 kB
+Building: dist/assets/amethyst-giant-CuZrfYC_.jpg                   353.48 kB
+Building: dist/assets/fusionReactor-Bs-_hSCY.webp                   358.86 kB
+Building: dist/assets/crystalStorage-3RIgYotk.webp                  360.90 kB
+Building: dist/assets/roboticsFactory-BTLYN4LV.webp                 366.80 kB
+Building: dist/assets/colonyShip-9IRWppPi.webp                      371.37 kB
+Building: dist/assets/weaponsTechnology-B8cFLCM0.webp               378.09 kB
+Building: dist/assets/shipyard-CCS9orUO.webp                        382.25 kB
+Building: dist/assets/viridian-giant-XgyxHtHB.jpg                   382.56 kB
+Building: dist/assets/solarPlant-CP10ZpsZ.webp                      389.33 kB
+Building: dist/assets/battlecruiser-CwbMCFTf.webp                   394.95 kB
+Building: dist/assets/computerTech-Bvl-0N38.webp                    405.99 kB
+Building: dist/assets/recycler-DwYXF9ro.webp                        406.34 kB
+Building: dist/assets/deathStar-BzANkMrt.webp                       421.43 kB
+Building: dist/assets/azure-jJSXEtOy.jpg                            422.24 kB
+Building: dist/assets/energyTech-D3fYZCAH.webp                      424.05 kB
+Building: dist/assets/metalMine-Cs_TsGqj.webp                       424.70 kB
+Building: dist/assets/ochre-GTNYuD8g.jpg                            426.22 kB
+Building: dist/assets/cloud-forest-DEn9q3bd.jpg                     428.72 kB
+Building: dist/assets/dune-Cz5eAIpe.jpg                             430.15 kB
+Building: dist/assets/cinder-D1oGU4ob.jpg                           430.71 kB
+Building: dist/assets/armorTechnology-CZ40PgYc.webp                 433.26 kB
+Building: dist/assets/slate-rcGWCx2o.jpg                            437.75 kB
+Building: dist/assets/hyperspaceDrive-Bfrnexa2.webp                 439.73 kB
+Building: dist/assets/solarSatellite-8DjsWc-K.webp                  450.10 kB
+Building: dist/assets/shieldingTechnology-h-j1VBWP.webp             452.23 kB
+Building: dist/assets/crystalMine-DH-FG16O.webp                     452.89 kB
+Building: dist/assets/archipelago-zGjXG8o9.jpg                      454.15 kB
+Building: dist/assets/rocketLauncher-Df3V-62G.webp                  466.06 kB
+Building: dist/assets/obsidian-BE61XfWQ.jpg                         472.22 kB
+Building: dist/assets/frost-Bs1xpYXE.jpg                            475.20 kB
+Building: dist/assets/verdant-Be9BoqJE.jpg                          487.32 kB
+Building: dist/assets/lagoon-CsNkfv7G.jpg                           531.65 kB
+Building: dist/assets/magma-CV3lZevX.jpg                            534.03 kB
+Building: dist/assets/glacier-RMRpctp4.jpg                          544.52 kB
+Building: dist/assets/spiral-galaxy-BxL2J0iY.png                  1,606.38 kB
+Building: dist/assets/ocean-world-albedo-wPo-vP9U.png             3,163.15 kB
+Building: dist/assets/game-bootstrap-BB7_Gc41.css                     1.10 kB │ gzip:   0.51 kB
+Building: dist/assets/index-0cE1X60W.css                              1.54 kB │ gzip:   0.81 kB
+Building: dist/assets/ship-artwork-CshIHwKM.css                       2.14 kB │ gzip:   0.79 kB
+Building: dist/assets/PublicWorld-CiphZg20.css                        7.59 kB │ gzip:   2.11 kB
+Building: dist/assets/CryptoUfos-DSoN4y5m.css                        12.81 kB │ gzip:   3.34 kB
+Building: dist/assets/UniverseGame-BDRr-Urc.css                     132.08 kB │ gzip:  25.07 kB
+Building: dist/assets/UniverseLab-hCfQqz71.css                      136.35 kB │ gzip:  24.28 kB
+Building: dist/assets/PlanetWorld-Chyml2Ns.css                      244.50 kB │ gzip:  39.13 kB
+Building: dist/assets/useConnection-BT3sBHUC.js                       0.15 kB │ gzip:   0.14 kB
+Building: dist/assets/starless-deep-space-v4-S0RAwTzf.js              0.22 kB │ gzip:   0.15 kB
+Building: dist/assets/x-zHXyq0oU.js                                   0.24 kB │ gzip:   0.20 kB
+Building: dist/assets/createLucideIcon-CZ5bH6FW.js                    1.38 kB │ gzip:   0.77 kB
+Building: dist/assets/usdc-bFfq62Ef.js                                2.13 kB │ gzip:   0.99 kB
+Building: dist/assets/cinematic-nebula-panorama-v2-mGk5RBoi.js        2.29 kB │ gzip:   1.19 kB
+Building: dist/assets/ship-artwork-B36F5qRG.js                        2.64 kB │ gzip:   0.84 kB
+Building: dist/assets/users-COPRzV2A.js                               2.96 kB │ gzip:   1.22 kB
+Building: dist/assets/jsx-runtime-B_R34ikJ.js                         7.88 kB │ gzip:   3.03 kB
+Building: dist/assets/PublicWorld-DzKHmhyD.js                        10.43 kB │ gzip:   4.11 kB
+Building: dist/assets/game-bootstrap-C5jliRAy.js                     11.83 kB │ gzip:   5.21 kB
+Building: dist/assets/ui-art-TS4wyt_-.js                             26.62 kB │ gzip:   7.71 kB
+Building: dist/assets/CryptoUfos-Qpmg901i.js                         43.17 kB │ gzip:  13.75 kB
+Building: dist/assets/UniverseGame-R0CEMNhb.js                       94.46 kB │ gzip:  25.16 kB
+Building: dist/assets/player-funded-session-BpZW9VMJ.js             129.31 kB │ gzip:  33.23 kB
+Building: dist/assets/index-Dgvbo8HU.js                             136.13 kB │ gzip:  44.78 kB
+Building: dist/assets/App-De8r-9jZ.js                               401.75 kB │ gzip:  95.95 kB
+Building: dist/assets/PlanetWorld-DYkZK5ry.js                       482.22 kB │ gzip: 142.70 kB
+Building: dist/assets/UniverseLab-CT_0IE5Q.js                       594.74 kB │ gzip: 142.41 kB
+Building: dist/assets/logobg-BDfmFSEJ.js                            604.50 kB │ gzip: 167.79 kB
+Building: dist/assets/FleetVessel-C9j4s5-0.js                       823.32 kB │ gzip: 219.34 kB
+Building: ✓ built in 2.90s
+Building: [plugin builtin:vite-reporter]
+Building: (!) Some chunks are larger than 500 kB after minification. Consider:
+Building: - Using dynamic import() to code-split the application
+Building: - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+Building: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+Building: Installing dependencies...
+Building: npm warn Unknown env config "cache-dir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+Building: up to date in 1s
+Building: 58 packages are looking for funding
+Building: run `npm fund` for details
+Building: Warning: Node.js functions are compiled from ESM to CommonJS. If this is not intended, add "type": "module" to your package.json file.
+Building: Compiling "solana-rpc.js" from ESM to CommonJS...
+Building: Build Completed in /vercel/output [51s]
+Building: Deploying outputs...
+Building: Deployment completed
+Building: Creating build cache...
+[2K[1A[2K[GProduction: https://frontend-5b6267t5q-srmessisols-projects.vercel.app [1m]
+Completing...
+https://frontend-5b6267t5q-srmessisols-projects.vercel.app

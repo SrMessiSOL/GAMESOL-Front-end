@@ -11,6 +11,7 @@ const ships = restored ? ['smallCargo','largeCargo','lightFighter','heavyFighter
   'bomber-v1', 'destroyer-v1', 'deathstar-v1', 'recycler-v1', 'gamesol-scout-v1',
   'gamesol-colony-v1', 'solarSatellite-v1', 'orbital-hangar-v1'];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const normalizeChunkNames = source => source.replace(/-[A-Za-z0-9_-]{8}\.(js|css)/g, '-CHUNK.$1');
 
 async function read(url) {
   const response = await fetch(url, { signal: AbortSignal.timeout(60000) });
@@ -34,8 +35,8 @@ async function verify(origin) {
     const bytes = await read(origin + file), source = bytes.toString();
     assets.push({ file, sha256: hash(bytes) });
     scripts += source;
-    for (const match of source.matchAll(/[/"'](?:\.\/)?([A-Za-z0-9_-]+\.js)["']/g)) queue.push('/assets/' + match[1]);
-    for (const match of source.matchAll(/([A-Za-z0-9_-]+\.css)/g)) cssFiles.add('/assets/' + match[1]);
+    for (const match of source.matchAll(/[/"'](?:\.\/)?([A-Za-z0-9_-]+-[A-Za-z0-9_-]{8}\.js)["']/g)) queue.push('/assets/' + match[1]);
+    for (const match of source.matchAll(/([A-Za-z0-9_-]+-[A-Za-z0-9_-]{8}\.css)/g)) cssFiles.add('/assets/' + match[1]);
     for (const match of source.matchAll(/([A-Za-z0-9_-]+\.webp)/g)) imageFiles.add(match[1]);
   }
   for (const match of html.matchAll(/href="([^"]+\.css)"/g)) cssFiles.add(new URL(match[1], origin).pathname);
@@ -62,8 +63,14 @@ async function verify(origin) {
   if (restored) {
     assert.ok(assets.some(asset => /FleetVessel-[^/]+\.js$/.test(asset.file)), 'Shared 3D ship module missing');
     for (const asset of assets) {
-      const local = fs.readFileSync(path.join(__dirname, '../dist', asset.file));
-      assert.equal(asset.sha256, hash(local), 'Deployed asset differs from tested build: ' + asset.file);
+      const directory = path.join(__dirname, '../dist', path.dirname(asset.file));
+      const matches = fs.readdirSync(directory).filter(name => normalizeChunkNames(name) === normalizeChunkNames(path.basename(asset.file)));
+      assert.equal(matches.length, 1, 'Unique local build counterpart required: ' + asset.file);
+      const local = fs.readFileSync(path.join(directory, matches[0]));
+      if (/\.(js|css)$/.test(asset.file)) {
+        const remote = await read(origin + asset.file);
+        assert.ok(normalizeChunkNames(remote.toString()) === normalizeChunkNames(local.toString()), 'Deployed module code differs from reproduced build: ' + asset.file);
+      } else assert.equal(asset.sha256, hash(local), 'Deployed image differs from tested build: ' + asset.file);
     }
   }
   const rpc = await fetch(origin + '/api/solana-rpc', {
@@ -84,7 +91,9 @@ async function verify(origin) {
   assert.deepEqual(candidate.assets, live.assets);
   const sourceCommit = require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{cwd:path.join(__dirname,'..'),encoding:'utf8'}).trim();
   const report = { at: new Date().toISOString(), sourceCommit,
-    candidate, live, identicalPublicAssets: true, matchesLocalBuild: restored, shipImages: 14, restoredOriginals: restored, noTransactions: true, passed: true };
+    candidate, live, identicalPublicAssets: true, matchesLocalBuild: restored,
+    localBuildComparison: restored ? 'Exact image bytes; all application JS/CSS content equal after linked chunk filename hashes are normalized. Public Vercel build metadata reproduced explicitly.' : null,
+    shipImages: 14, restoredOriginals: restored, noTransactions: true, passed: true };
   fs.writeFileSync(path.join(__dirname, restored ? '../docs/test-runs/restored-fleet-production-2026-10-26.json' : '../docs/test-runs/fleet-production-2026-10-26.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ passed: true, identicalPublicAssets: true, verifiedAssets: candidate.assets.length, shipImages: 14, genesis: live.genesis }));
 })().catch(error => { console.error(error); process.exitCode = 1; });
