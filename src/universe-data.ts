@@ -61,6 +61,7 @@ export function pointOnUniverseOrbit(orbit: UniverseOrbit, angle = orbit.phase):
 
 export type UniverseMission = {
   id: string;
+  ownerAddress?: string;
   sourceId: string;
   destinationId: string;
   sourceCoordinates?: [number, number, number];
@@ -233,6 +234,7 @@ export function createUniverseSnapshotFromChainData(
       const destinationId = coordinateMap.get(key) ?? `G${mission.targetGalaxy}S${mission.targetSystem}P${mission.targetPosition}`;
       missions.push({
         id: `${source.entity}-${slot}`,
+        ownerAddress: source.owner,
         sourceId: source.entity,
         destinationId,
         destinationPosition: { galaxy: mission.targetGalaxy, system: mission.targetSystem, position: mission.targetPosition },

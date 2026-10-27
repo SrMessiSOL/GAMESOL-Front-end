@@ -27,7 +27,9 @@ import { GALAXY_KINDS, galaxyKindForId, galaxySystemLayout, starForSystem, type 
 import cinematicNebulaPanorama from "./assets/universe-lab/starless-deep-space-v4.webp";
 import terranClouds from "./assets/planet-world/terran-clouds-v2.webp";
 import gamesolMark from "./assets/ui/logobg.png";
-import { FleetVessel, strategicFleetScale } from './FleetVessel';
+import { strategicFleetScale } from './FleetVessel';
+import { TravelFleetVessel, TravelCosmeticsProvider, useTravelCosmetics } from './TravelFleetVessel';
+import { GAME_STATE_PROGRAM_ID } from './game-state';
 import usdcCoin from "./assets/ui/usdc.svg";
 import metalResource from "./assets/ui/metalMine.webp";
 import crystalResource from "./assets/ui/crystalMine.webp";
@@ -2307,11 +2309,11 @@ function collisionSafeFleetCurve({
   return fallback;
 }
 
-function MissionFleetVessel({ kind, shipClass, color, compact = false }: { kind: UniverseMission["kind"]; shipClass?: UniverseMission['shipClass']; color: string; compact?: boolean }) {
-  return <FleetVessel kind={kind} shipClass={shipClass} color={color} compact={compact} />;
+function MissionFleetVessel({ kind, shipClass, ownerAddress, color, compact = false }: { kind: UniverseMission["kind"]; shipClass?: UniverseMission['shipClass']; ownerAddress?:string; color: string; compact?: boolean }) {
+  return <TravelFleetVessel kind={kind} shipClass={shipClass} ownerAddress={ownerAddress} color={color} compact={compact} />;
 }
 
-function FleetRoute({ mission, planets, starClearance, count = 1, compact = false }: { mission: UniverseMission; planets: UniversePlanet[]; starClearance: number; count?: number; compact?: boolean }) {
+export function FleetRoute({ mission, planets, starClearance, count = 1, compact = false }: { mission: UniverseMission; planets: UniversePlanet[]; starClearance: number; count?: number; compact?: boolean }) {
   const [hovered, setHovered] = useState(false);
   const source = planets.find((planet) => planet.id === mission.sourceId);
   const target = planets.find((planet) => planet.id === mission.destinationId);
@@ -2384,7 +2386,7 @@ function FleetRoute({ mission, planets, starClearance, count = 1, compact = fals
   const color = mission.kind === "attack" ? "#ff586d" : mission.kind === "espionage" ? "#d998ff" : mission.kind === "colonize" ? "#ffc866" : "#45f4c1";
   return <group ref={routeGroup} visible={mission.phase === "outbound" || mission.phase === "returning"}>{routePoints.length > 1 && <><Line points={routePoints} color={color} transparent opacity={.12} lineWidth={1.5} /><Line points={routePoints} color={color} transparent opacity={.42} lineWidth={.72} dashed dashScale={3.2} dashSize={.24} gapSize={.34} /></>}
     <group ref={vessel} onPointerOver={event => { event.stopPropagation(); setHovered(true); }} onPointerOut={() => setHovered(false)}>
-      <MissionFleetVessel kind={mission.kind} shipClass={mission.shipClass} color={color} compact={compact} />
+      <MissionFleetVessel kind={mission.kind} shipClass={mission.shipClass} ownerAddress={mission.ownerAddress} color={color} compact={compact} />
       {(!compact || hovered) && (externalSource || externalTarget || count > 1) && <Html center position={[0, 2.6, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{vesselLabel}{count > 1 ? ` · ${count} fleets` : ''}<small>{externalSource || externalTarget ? (inbound ? 'INBOUND' : 'OUTBOUND') : ''}</small></span></Html>}
     </group>
   </group>;
@@ -2411,7 +2413,7 @@ function TrafficBeacon({ point, position, orbit, height = 0, size = 1 }: { point
   </group>;
 }
 
-function StrategicFleetRoute({ mission, start, end, size }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; size: number }) {
+export function StrategicFleetRoute({ mission, start, end, size }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; size: number }) {
   const dot = useRef<THREE.Group>(null!);
   const epoch = useRef(Date.now() / 1000);
   const curve = useMemo(() => {
@@ -2430,11 +2432,11 @@ function StrategicFleetRoute({ mission, start, end, size }: { mission: UniverseM
     dot.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
   });
   return <group><Line points={points} color="#6fdbd1" transparent opacity={.48} lineWidth={1} />
-    <group ref={dot} scale={size * 1.8}><FleetVessel kind={mission.kind} shipClass={mission.shipClass} color="#d5fff4" compact /></group>
+    <group ref={dot} scale={size * 1.8}><TravelFleetVessel kind={mission.kind} shipClass={mission.shipClass} ownerAddress={mission.ownerAddress} color="#d5fff4" compact /></group>
   </group>;
 }
 
-function GalaxyFleetRoute({ mission, start, end, remoteAt, remoteGalaxy, count = 1, dense = false }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; remoteAt: 'start' | 'end' | null; remoteGalaxy: number; count?: number; dense?: boolean }) {
+export function GalaxyFleetRoute({ mission, start, end, remoteAt, remoteGalaxy, count = 1, dense = false }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; remoteAt: 'start' | 'end' | null; remoteGalaxy: number; count?: number; dense?: boolean }) {
   const [hovered, setHovered] = useState(false);
   const vessel = useRef<THREE.Group>(null!);
   const route = useRef<THREE.Group>(null!);
@@ -2461,7 +2463,7 @@ function GalaxyFleetRoute({ mission, start, end, remoteAt, remoteGalaxy, count =
   });
   return <group ref={route} onPointerOver={event => { event.stopPropagation(); setHovered(true); }} onPointerOut={() => setHovered(false)}>
     {points.length > 1 && <Line points={points} color="#6fdbd1" transparent opacity={.65} lineWidth={1.2} />}
-    <group ref={vessel}><MissionFleetVessel kind={mission.kind} shipClass={mission.shipClass} color="#6fdbd1" compact />
+    <group ref={vessel}><MissionFleetVessel kind={mission.kind} shipClass={mission.shipClass} ownerAddress={mission.ownerAddress} color="#6fdbd1" compact />
       {(!dense || hovered) && <Html center position={[0, 2.8, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{label}{count > 1 ? ` · ${count} fleets` : ''}</span></Html>}
     </group>
     {remoteAt && <group position={remoteAt === 'start' ? start : end}><mesh ref={boundaryRing}><torusGeometry args={[.42, .055, 6, 24]} /><meshBasicMaterial color="#a9ebdd" transparent opacity={.9} toneMapped={false} /></mesh>
@@ -3138,6 +3140,7 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
   }, [snapshot, zoomLevel, selectedGalaxy, selectedSystem]);
   const navigationTraffic = useMemo(() => snapshot ? missionTrafficPoints(snapshot, { level: zoomLevel, galaxy: selectedGalaxy, system: selectedSystem }) : [], [snapshot, zoomLevel, selectedGalaxy, selectedSystem]);
   const trafficSummary = useMemo(() => snapshot ? missionRenderGroups(snapshot, { level: zoomLevel, galaxy: selectedGalaxy, system: selectedSystem }) : null, [snapshot, zoomLevel, selectedGalaxy, selectedSystem]);
+  const travelInventories=useTravelCosmetics(connection,GAME_STATE_PROGRAM_ID,(trafficSummary?.groups??[]).flatMap(({mission})=>mission.ownerAddress?[mission.ownerAddress]:[]));
   const [trafficPage, setTrafficPage] = useState(0);
   useEffect(() => setTrafficPage(0), [zoomLevel, selectedGalaxy, selectedSystem]);
   const trafficPageCount = Math.max(1, Math.ceil(navigationTraffic.length / 24));
@@ -3326,7 +3329,7 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
     }
   };
   if (!snapshot) return <div className="universe-loading">CALIBRATING NAVIGATION ARRAY</div>;
-  return <main className={`universe-lab${embedded ? " embedded" : ""}${productionUi ? " production-ui" : ""}`}>
+  return <TravelCosmeticsProvider inventories={travelInventories}><main className={`universe-lab${embedded ? " embedded" : ""}${productionUi ? " production-ui" : ""}`}>
     <SceneTransition state={mapTransit.state} />
     <div className="universe-scene">
       {graphicsMode === "3d" ? <Suspense fallback={null}>
@@ -3579,5 +3582,5 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
       </div>}
       {!SOVEREIGNTY_WRITES_ENABLED && <div className="sovereignty-lock">CLAIM ACTIONS LOCKED UNTIL EXPERIMENTAL PROGRAM UPGRADE</div>}
     </aside>}
-  </main>;
+  </main></TravelCosmeticsProvider>;
 }

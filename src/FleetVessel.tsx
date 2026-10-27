@@ -133,13 +133,22 @@ const frame=new THREE.MeshStandardMaterial({color:'#30373c',metalness:.7,roughne
 const gold=new THREE.MeshStandardMaterial({color:'#c6a558',metalness:.5,roughness:.45});
 const glass=new THREE.MeshStandardMaterial({color:'#153b53',metalness:.6,roughness:.19,emissive:'#3989a1',emissiveIntensity:.4});
 const distant=new THREE.MeshBasicMaterial({color:'#a5b5bd'});
+// Shared cosmetic materials never change hull geometry, scale or mission indicators.
+const skinMaterials=[{armor,gold,distant},...[
+  ['#dde8eb','#22cbbf'],['#552d36','#e5e9ed'],['#e0bb52','#26353b'],
+].map(([hull,trim])=>({
+  armor:new THREE.MeshStandardMaterial({color:hull,map:armor.map,metalness:.65,roughness:.48}),
+  gold:new THREE.MeshStandardMaterial({color:trim,metalness:.5,roughness:.45}),
+  distant:new THREE.MeshBasicMaterial({color:hull}),
+}))];
 const engines=Object.fromEntries(['#70dcff','#ff586d','#d998ff','#ffc866','#45f4c1','#6fdbd1','#d5fff4'].map(color=>[color,new THREE.MeshBasicMaterial({color,toneMapped:false})]));
 const defaults:Record<FleetHull,ShipClass>={attack:'battlecruiser',transport:'largeCargo',colonize:'colonyShip',espionage:'espionageProbe'};
-export function FleetVessel({kind,shipClass,color='#70dcff',compact=false,presentation='fleet'}:{kind:FleetHull;shipClass?:ShipClass;color?:string;compact?:boolean;presentation?:'fleet'|'inspection'}){
+export function FleetVessel({kind,shipClass,color='#70dcff',compact=false,presentation='fleet',skin=0}:{kind:FleetHull;shipClass?:ShipClass;color?:string;compact?:boolean;presentation?:'fleet'|'inspection';skin?:number}){
   const key=shipClass??defaults[kind],parts=FLEET_MODELS[key];
+  const paint=skinMaterials[skin]??skinMaterials[0];
   return <group dispose={null} scale={presentation==='inspection'?1:SHIP_MODEL_SCALE[key]}>
-    <mesh geometry={compact?parts.compact:FLEET_CLASS_HULLS[key]} material={compact ? distant : armor}/>
-    {!compact&&<><mesh geometry={parts.structure} material={frame}/><mesh geometry={parts.plating} material={armor}/><mesh geometry={parts.glass} material={glass}/><mesh geometry={parts.accents} material={gold}/></>}
+    <mesh geometry={compact?parts.compact:FLEET_CLASS_HULLS[key]} material={compact ? paint.distant : paint.armor}/>
+    {!compact&&<><mesh geometry={parts.structure} material={frame}/><mesh geometry={parts.plating} material={paint.armor}/><mesh geometry={parts.glass} material={glass}/><mesh geometry={parts.accents} material={paint.gold}/></>}
     <mesh geometry={parts.engines} material={engines[color]??engines['#70dcff']}/>
   </group>;
 }

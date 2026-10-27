@@ -57,13 +57,34 @@ test('distant fleets use at most three meshes and share geometry/materials acros
 test('public, system, galaxy and universe share the fleet model without new lights or movement authority', () => {
   const source = fs.readFileSync(new URL('../src/FleetVessel.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /pointLight|useFrame|fetch\(|sendTransaction/);
-  assert.match(source, /compact \? distant : armor/);
+  assert.match(source, /compact \? paint.distant : paint.armor/);
   const game = fs.readFileSync(new URL('../src/UniverseLab.tsx', import.meta.url), 'utf8');
-  assert.match(game, /return <FleetVessel kind=\{kind\} shipClass=\{shipClass\} color=\{color\} compact=\{compact\}/);
-  assert.match(game, /ref=\{dot\} scale=\{size \* 1\.8\}><FleetVessel/);
+  assert.match(game, /return <TravelFleetVessel kind=\{kind\} shipClass=\{shipClass\} ownerAddress=\{ownerAddress\} color=\{color\} compact=\{compact\}/);
+  assert.match(game, /ref=\{dot\} scale=\{size \* 1\.8\}><TravelFleetVessel/);
   assert.match(game, /if \(mission.phase === 'returning'\) tangent.negate\(\)/);
   const publicPage = fs.readFileSync(new URL('../src/PublicWorld.tsx', import.meta.url), 'utf8');
   assert.match(publicPage, /<FleetVessel/);
+});
+
+test('all cosmetic palettes preserve scale, geometry, mesh budget and mission engine color', () => {
+  function meshes(node) {
+    if (!node || typeof node !== 'object') return [];
+    if (Array.isArray(node)) return node.flatMap(meshes);
+    return [...(node.type==='mesh'?[node]:[]),...meshes(node.props?.children)];
+  }
+  for(const shipClass of Object.keys(exports.FLEET_MODELS))for(const compact of [false,true]){
+    const original=exports.FleetVessel({kind:'attack',shipClass,compact});
+    const base=meshes(original);
+    for(const skin of [1,2,3]){
+      const node=exports.FleetVessel({kind:'attack',shipClass,compact,skin});
+      const painted=meshes(node);
+      assert.equal(node.props.scale,original.props.scale);
+      assert.equal(painted.length,base.length);
+      painted.forEach((part,i)=>assert.equal(part.props.geometry,base[i].props.geometry));
+      assert.equal(painted.at(-1).props.material,base.at(-1).props.material);
+      assert.notEqual(painted[0].props.material,base[0].props.material);
+    }
+  }
 });
 
 test('all fourteen catalog classes have distinct finite bounded navigation hulls', () => {

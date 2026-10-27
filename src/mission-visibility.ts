@@ -19,7 +19,7 @@ export function missionRenderGroups(snapshot: UniverseSnapshot, scope: TrafficSc
     const local = (location: MissionLocation) => scope.level === 'universe' || (location.galaxy === scope.galaxy && (scope.level !== 'system' || location.system === scope.system));
     if (!local(endpoints.source) && !local(endpoints.target)) continue;
     total++;
-    const key = `${locationKey(endpoints.source)}>${locationKey(endpoints.target)}:${mission.kind}:${mission.phase}`;
+    const key = `${locationKey(endpoints.source)}>${locationKey(endpoints.target)}:${mission.kind}:${mission.phase}:${mission.ownerAddress??'unknown'}:${mission.shipClass??mission.kind}`;
     const group = groups.get(key);
     if (group) { group.count++; if (mission.id < group.mission.id) group.mission = mission; }
     else groups.set(key, { key, mission, count: 1 });

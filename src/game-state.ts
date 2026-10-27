@@ -3710,6 +3710,12 @@ export class GameClient {
     return this.sendInstruction(instructions);
   }
 
+  async sendShipCosmeticInstructions(commander: PublicKey, instructions: TransactionInstruction[]): Promise<string> {
+    if (!commander.equals(this.provider.wallet.publicKey)) throw new Error('Switch to this commander before changing ship cosmetics.');
+    // Purchases deliberately require the passkey path, not Quick Play allowance.
+    return this.sendInstruction(instructions);
+  }
+
   async sendUfoInstructions(commander: PublicKey, instructions: TransactionInstruction[]): Promise<string> {
     if (!commander.equals(this.provider.wallet.publicKey)) throw new Error('UFO utility requires the active game commander.');
     if (this.gameplayVaultExecutor) return this.gameplayVaultExecutor.execute(instructions, 'session');
