@@ -1,0 +1,156 @@
+{
+  "at": "2026-10-27T02:29:28.559Z",
+  "origin": "https://frontend-a4czo5a36-srmessisols-projects.vercel.app",
+  "entry": "/assets/index-SSlpqekr.js",
+  "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "assets": [
+    {
+      "file": "/assets/index-SSlpqekr.js",
+      "sha256": "058f833bf411344977500671d87ec172d210c4f1e142882203dbd32fbc8ecd15"
+    },
+    {
+      "file": "/assets/game-bootstrap-BgDy5FeW.js",
+      "sha256": "9bd9423f72fe5222ea4c8b84151a3c4c646586389e6bde5fdcc63dd11e2f4832"
+    },
+    {
+      "file": "/assets/jsx-runtime-B_R34ikJ.js",
+      "sha256": "0ad18e5bc37d1d2c75edb74bd331fee4fc0e2669fe9b0148fd5e55f50243bbd1"
+    },
+    {
+      "file": "/assets/logobg-Db3XYeoM.js",
+      "sha256": "2d80084211f627c66e13db0c09381f24f39dc1509973ce955d954a4c4dd58329"
+    },
+    {
+      "file": "/assets/player-funded-session-uU2s_N9f.js",
+      "sha256": "cb83c7ace819fd51dc1a730c58af420140fd7e8bb25188e815013f741e8180e2"
+    },
+    {
+      "file": "/assets/useConnection-BT3sBHUC.js",
+      "sha256": "51cc46d2658592091a735fa56ec14371c20925aba05691e6139c72f7fba24bee"
+    },
+    {
+      "file": "/assets/CryptoUfos-D_Yjkuku.js",
+      "sha256": "4b6abeed28e841ba6f1ef33700a8d6ff86dad4f4aab379d7a74459ddf318a2df"
+    },
+    {
+      "file": "/assets/createLucideIcon-CZ5bH6FW.js",
+      "sha256": "21244166089b76c19b93f0d02e29ca622581e8c19cb8cb3440aba7ac421b2c7b"
+    },
+    {
+      "file": "/assets/x-zHXyq0oU.js",
+      "sha256": "a83f18171f6a06f089cc10b5d113a3ead3c98a5b8484e2e074d8c5f52afb3903"
+    },
+    {
+      "file": "/assets/PublicWorld-B7Gq37c8.js",
+      "sha256": "a5e82b90eb45b2074c6c7f0fb8f88a1fd9fae2e4969f9a227850c43b89923898"
+    },
+    {
+      "file": "/assets/cinematic-nebula-panorama-v2-CGWkSlj-.js",
+      "sha256": "4f1d0de5acd12e6422b6caf097245cb4d7285a62083e93828a8609be65cc435b"
+    },
+    {
+      "file": "/assets/FleetVessel-BNK-ybQ2.js",
+      "sha256": "29bb45524b9b8488ef2053cdb6a4a1f9dfc669df75264aef4d4eb9f3c7fe94c2"
+    },
+    {
+      "file": "/assets/ship-artwork-CTWDXs_p.js",
+      "sha256": "adbe994390f5e331346cc73315b39e16443f9c62e58bcfef40a91b086298cce0"
+    },
+    {
+      "file": "/assets/starless-deep-space-v4-CPVJMCZ9.js",
+      "sha256": "fbfeea4cb132c513ae9695ef7d95ecbc82d66ab90fb653b26e37234760a8ef9b"
+    },
+    {
+      "file": "/assets/UniverseGame-B3wVGRB_.js",
+      "sha256": "d16de76255c53aa0ed4da42175fc04dd7943e00d8d535f8a77a82f23ed974505"
+    },
+    {
+      "file": "/assets/UniverseLab-DZQuG_wA.js",
+      "sha256": "bcf3d5601cfa3d036659072e8227921110822cfd486befa92a97f7d0e57541de"
+    },
+    {
+      "file": "/assets/usdc-Ygiug8jy.js",
+      "sha256": "c40a2157370d08afaeaaa52a515f7a0b78d73dde595cf9bfa14052b0601c5a08"
+    },
+    {
+      "file": "/assets/users-COPRzV2A.js",
+      "sha256": "71f029cc5ecbaf7736d3e21778a2d5426ecd35267ed85ab51fafb34498b4a513"
+    },
+    {
+      "file": "/assets/ui-art-CtjdEGfz.js",
+      "sha256": "1970eacfd5be8b27269a288af4e3467f7c54d34eea859ba9f1ec507963eb66d4"
+    },
+    {
+      "file": "/assets/App-CWVslL35.js",
+      "sha256": "d1c6e079e0b48d63553a4023f2513e815fa69271efd9c90e77d48a1039e6c320"
+    },
+    {
+      "file": "/assets/script.js",
+      "sha256": "f8fab9c328c3bb26a19136f45ee6bc79370152e20e5a4adcde7a63408df17a41"
+    },
+    {
+      "file": "/assets/PlanetWorld-DlP4zIiC.js",
+      "sha256": "1ec3b2696ff3df13301e0c495f4822822ca70332f025bd82f3a08df7fc10e3d1"
+    },
+    {
+      "file": "/assets/index-0cE1X60W.css",
+      "sha256": "46b6e09ae1655a28677e7607e0eb63bd4a40b3e533a95434a0d8e795c5bae080"
+    },
+    {
+      "file": "/assets/CryptoUfos-DSoN4y5m.css",
+      "sha256": "94da07ce1816b40b70f7c8cf83ed1d388f44f9dd7c7362889dbb188842955999"
+    },
+    {
+      "file": "/assets/game-bootstrap-BB7_Gc41.css",
+      "sha256": "2df1735609088163ac133633ae282dce809d2bd52a8fa083ae15a84ba690e520"
+    },
+    {
+      "file": "/assets/ship-artwork-LQk4NLFL.css",
+      "sha256": "df7f8e93d1b292f925f6d451f69a793ed3c5b78a79928d8ae8ca1158fd690a34"
+    },
+    {
+      "file": "/assets/PublicWorld-CiphZg20.css",
+      "sha256": "403b5b6968e64348fa3b63f728174509e8deec7c70a17e936d2b947cae41e539"
+    },
+    {
+      "file": "/assets/UniverseLab-hCfQqz71.css",
+      "sha256": "326b64fae5b3e910444c7300841038266f819fbe74914e0561b68763f230ab6d"
+    },
+    {
+      "file": "/assets/UniverseGame-BDRr-Urc.css",
+      "sha256": "32caeb9690705371bf3aec6671894b832d1939fd585972491698035103f73ce2"
+    },
+    {
+      "file": "/assets/PlanetWorld-_aEocTbS.css",
+      "sha256": "c969b208efe2d2292cda2bb2067a847cdd720a6f74604d4cba57260b75f468b5"
+    },
+    {
+      "file": "/assets/style.css",
+      "sha256": "f8fab9c328c3bb26a19136f45ee6bc79370152e20e5a4adcde7a63408df17a41"
+    }
+  ],
+  "player": "G6tRKz9XQpL5eFPnV3aqz3nJXhy8DQkUAfaz7aL27s6r",
+  "owned": 10,
+  "equipped": [
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "balance": "96501000",
+  "travelBattlecruiserSkin": 1,
+  "travelLightFighterSkin": 3,
+  "unknownOwnerSkin": 0,
+  "passed": true,
+  "noTransactions": true
+}
