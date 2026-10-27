@@ -1,0 +1,369 @@
+{
+  "at": "2026-10-26T23:59:52.088Z",
+  "sourceCommit": "794d6f578fa8372f1bfa635f0019af2e241af2a1",
+  "candidate": {
+    "origin": "https://frontend-lb21wd1pg-srmessisols-projects.vercel.app",
+    "entry": "https://frontend-lb21wd1pg-srmessisols-projects.vercel.app/assets/index-6bgvEQnT.js",
+    "assets": [
+      {
+        "file": "/assets/App-Cn4N7HhL.js",
+        "sha256": "873acd0744ff3094e4abd5706c11cd9467193d65c2d063e9aee64b7380a69942"
+      },
+      {
+        "file": "/assets/battlecruiser-CwbMCFTf.webp",
+        "sha256": "e84820e4b048a322e99123f9228cbe04ef9820c32bb076529eed5ce58caf6786"
+      },
+      {
+        "file": "/assets/battleship-C7lzlTJo.webp",
+        "sha256": "87ff46ad6cc6d016e8ba25b888eaabf80a0eb0c64f789959f8fd3abf98a08214"
+      },
+      {
+        "file": "/assets/bomber-BVjEyTT_.webp",
+        "sha256": "ff8a937e3c0698950b692e0d851acc3caf3eb2e5ae88ebc2d58941468b4fe17c"
+      },
+      {
+        "file": "/assets/cinematic-nebula-panorama-v2-DKkWt7tT.js",
+        "sha256": "6c4d54140a977021cdfd0e1d3f124e8b0313fd917156501e28dde98dfcad2a2b"
+      },
+      {
+        "file": "/assets/colonyShip-9IRWppPi.webp",
+        "sha256": "d9f4012f44e83bfe1799c5ebfb37b4257433120052672957bd618178f2923a71"
+      },
+      {
+        "file": "/assets/createLucideIcon-CZ5bH6FW.js",
+        "sha256": "21244166089b76c19b93f0d02e29ca622581e8c19cb8cb3440aba7ac421b2c7b"
+      },
+      {
+        "file": "/assets/cruiser-BtepYjo-.webp",
+        "sha256": "c6b05a1282599839978f57374b954f7f24274e11f24ce30c0149ae11bd79b4bd"
+      },
+      {
+        "file": "/assets/CryptoUfos-D60YjPuk.js",
+        "sha256": "a50ab18728321bd003492552553bbfccf1553a73312e55809b13d28138081220"
+      },
+      {
+        "file": "/assets/CryptoUfos-DSoN4y5m.css",
+        "sha256": "94da07ce1816b40b70f7c8cf83ed1d388f44f9dd7c7362889dbb188842955999"
+      },
+      {
+        "file": "/assets/deathStar-BzANkMrt.webp",
+        "sha256": "f7d9973487bee871fce170663ab9733f767f8760ec89f311b12dac1c83857c5e"
+      },
+      {
+        "file": "/assets/destroyer-CLe6HthD.webp",
+        "sha256": "73f455e38662f27692e9f31522c46e554f58acab5dbaab7f5f548578946852c2"
+      },
+      {
+        "file": "/assets/espionageProbe-BkMUNEqj.webp",
+        "sha256": "7b67c264b804233561e1f94ff4df2aefd71c37803ee8ae6ec5effdf478cc837c"
+      },
+      {
+        "file": "/assets/FleetVessel-Bz8eCfJ2.js",
+        "sha256": "3f05d381cb0b6860d64582e66e030310bb9ab5b1b4216d737bc10fd7a4daee39"
+      },
+      {
+        "file": "/assets/game-bootstrap-BB7_Gc41.css",
+        "sha256": "2df1735609088163ac133633ae282dce809d2bd52a8fa083ae15a84ba690e520"
+      },
+      {
+        "file": "/assets/game-bootstrap-CjdkBSuq.js",
+        "sha256": "2f7acd46e08a810134147ed6c0e19820cf0056427e5713ee244bca0711d702da"
+      },
+      {
+        "file": "/assets/heavyFighter-Fq0wXIZ1.webp",
+        "sha256": "7fcd72ec074837bbd4953f7d9e2a282a3ef7f081df40d053f34a6fe81a872700"
+      },
+      {
+        "file": "/assets/index-0cE1X60W.css",
+        "sha256": "46b6e09ae1655a28677e7607e0eb63bd4a40b3e533a95434a0d8e795c5bae080"
+      },
+      {
+        "file": "/assets/index-6bgvEQnT.js",
+        "sha256": "29dbfaddb380a985a89b86ecc18da28fd7ed5533913dc3aa7561b0fa2e2c875e"
+      },
+      {
+        "file": "/assets/jsx-runtime-B_R34ikJ.js",
+        "sha256": "0ad18e5bc37d1d2c75edb74bd331fee4fc0e2669fe9b0148fd5e55f50243bbd1"
+      },
+      {
+        "file": "/assets/largeCargo-z_OHlhvH.webp",
+        "sha256": "0be5128daea4e4d244e369d9e07e70ab6bf7145c38b5039ed5303c7e04dfb88c"
+      },
+      {
+        "file": "/assets/lightFighter-CXiVF5q8.webp",
+        "sha256": "b50bc65eb0fa6675adf1824aafa538e59de2772b8f0d96d416b13a58040f8a24"
+      },
+      {
+        "file": "/assets/logobg-DKTY8VmN.js",
+        "sha256": "2fa8303bf201471dbf952bb32b905ba9b334ebf6ca626bb2dcb04c041772b921"
+      },
+      {
+        "file": "/assets/PlanetWorld-Chyml2Ns.css",
+        "sha256": "8d46aa4b35c5f620e6bc45ece1fcf6c110041745fbb56cc1dd709622952e6aa8"
+      },
+      {
+        "file": "/assets/PlanetWorld-DBlsKxoI.js",
+        "sha256": "04585d936a6fed90907b2e22f8307ed500abf2a95b8bae638efaa79f147cf05d"
+      },
+      {
+        "file": "/assets/player-funded-session-Ce1KKBRu.js",
+        "sha256": "14eb156c37ae9787d32ee947eea0af5b2a8e13e6c1306c27bbe9328395355e4e"
+      },
+      {
+        "file": "/assets/PublicWorld-BD-FnXeR.js",
+        "sha256": "6a86003c1f924860cc2fd338337cffe51de9a2147c60a98533da586353e80fb4"
+      },
+      {
+        "file": "/assets/PublicWorld-CiphZg20.css",
+        "sha256": "403b5b6968e64348fa3b63f728174509e8deec7c70a17e936d2b947cae41e539"
+      },
+      {
+        "file": "/assets/recycler-DwYXF9ro.webp",
+        "sha256": "aa9991c64b9d0bbb7f0a50b8c5a0799958e34d372bafaf8e402ad2048f20e2d6"
+      },
+      {
+        "file": "/assets/ship-artwork-B1bnbpeT.css",
+        "sha256": "643df6193d0c9a49de05f970767242be79959f3f4514aa9c5438e7b12d90a3e4"
+      },
+      {
+        "file": "/assets/ship-artwork-D2R40rKP.js",
+        "sha256": "053bc753f762adb740977e0acb74c209bffa82e63c047b399970bfca6336493f"
+      },
+      {
+        "file": "/assets/smallCargo-CjXhtqUE.webp",
+        "sha256": "18cd31e986a38dcdef80bb529d7dbd11c2b8a541601dfa8e82434e9574c14585"
+      },
+      {
+        "file": "/assets/solarSatellite-8DjsWc-K.webp",
+        "sha256": "427f686aaa89770ea2e1966dede7ac9665a0bd0e99d495a9afa9b36d8af22285"
+      },
+      {
+        "file": "/assets/starless-deep-space-v4-Drczd8ql.js",
+        "sha256": "8d0d8af0f68753a70a4baf16a3b6ebe4cb47874395135ac2851e293be7a95f99"
+      },
+      {
+        "file": "/assets/ui-art-DINAuToz.js",
+        "sha256": "c8ef555ed65345a8d8dab5a8ee5180d0c6b904a2cba29f5ee4faa5c7c9e21e02"
+      },
+      {
+        "file": "/assets/UniverseGame-0daY3sNk.js",
+        "sha256": "70dd852597f8bcae07c855801561383bd71ebb3e41792d8246719c09a8cb8ecc"
+      },
+      {
+        "file": "/assets/UniverseGame-BDRr-Urc.css",
+        "sha256": "32caeb9690705371bf3aec6671894b832d1939fd585972491698035103f73ce2"
+      },
+      {
+        "file": "/assets/UniverseLab-hCfQqz71.css",
+        "sha256": "326b64fae5b3e910444c7300841038266f819fbe74914e0561b68763f230ab6d"
+      },
+      {
+        "file": "/assets/UniverseLab-ixSelWWa.js",
+        "sha256": "6d1e52e0c1a3cba8b4437fff2d2f3bdb39dec52357bb4aa42b3f7aa25fb4450c"
+      },
+      {
+        "file": "/assets/usdc-Cg99SCyQ.js",
+        "sha256": "818ad9cb8e54760195ae152bc50087b530b6334a7748fb059103339976118530"
+      },
+      {
+        "file": "/assets/useConnection-BT3sBHUC.js",
+        "sha256": "51cc46d2658592091a735fa56ec14371c20925aba05691e6139c72f7fba24bee"
+      },
+      {
+        "file": "/assets/users-COPRzV2A.js",
+        "sha256": "71f029cc5ecbaf7736d3e21778a2d5426ecd35267ed85ab51fafb34498b4a513"
+      },
+      {
+        "file": "/assets/x-zHXyq0oU.js",
+        "sha256": "a83f18171f6a06f089cc10b5d113a3ead3c98a5b8484e2e074d8c5f52afb3903"
+      }
+    ],
+    "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+  },
+  "live": {
+    "origin": "https://chained-universe.vercel.app",
+    "entry": "https://frontend-lb21wd1pg-srmessisols-projects.vercel.app/assets/index-6bgvEQnT.js",
+    "assets": [
+      {
+        "file": "/assets/App-Cn4N7HhL.js",
+        "sha256": "873acd0744ff3094e4abd5706c11cd9467193d65c2d063e9aee64b7380a69942"
+      },
+      {
+        "file": "/assets/battlecruiser-CwbMCFTf.webp",
+        "sha256": "e84820e4b048a322e99123f9228cbe04ef9820c32bb076529eed5ce58caf6786"
+      },
+      {
+        "file": "/assets/battleship-C7lzlTJo.webp",
+        "sha256": "87ff46ad6cc6d016e8ba25b888eaabf80a0eb0c64f789959f8fd3abf98a08214"
+      },
+      {
+        "file": "/assets/bomber-BVjEyTT_.webp",
+        "sha256": "ff8a937e3c0698950b692e0d851acc3caf3eb2e5ae88ebc2d58941468b4fe17c"
+      },
+      {
+        "file": "/assets/cinematic-nebula-panorama-v2-DKkWt7tT.js",
+        "sha256": "6c4d54140a977021cdfd0e1d3f124e8b0313fd917156501e28dde98dfcad2a2b"
+      },
+      {
+        "file": "/assets/colonyShip-9IRWppPi.webp",
+        "sha256": "d9f4012f44e83bfe1799c5ebfb37b4257433120052672957bd618178f2923a71"
+      },
+      {
+        "file": "/assets/createLucideIcon-CZ5bH6FW.js",
+        "sha256": "21244166089b76c19b93f0d02e29ca622581e8c19cb8cb3440aba7ac421b2c7b"
+      },
+      {
+        "file": "/assets/cruiser-BtepYjo-.webp",
+        "sha256": "c6b05a1282599839978f57374b954f7f24274e11f24ce30c0149ae11bd79b4bd"
+      },
+      {
+        "file": "/assets/CryptoUfos-D60YjPuk.js",
+        "sha256": "a50ab18728321bd003492552553bbfccf1553a73312e55809b13d28138081220"
+      },
+      {
+        "file": "/assets/CryptoUfos-DSoN4y5m.css",
+        "sha256": "94da07ce1816b40b70f7c8cf83ed1d388f44f9dd7c7362889dbb188842955999"
+      },
+      {
+        "file": "/assets/deathStar-BzANkMrt.webp",
+        "sha256": "f7d9973487bee871fce170663ab9733f767f8760ec89f311b12dac1c83857c5e"
+      },
+      {
+        "file": "/assets/destroyer-CLe6HthD.webp",
+        "sha256": "73f455e38662f27692e9f31522c46e554f58acab5dbaab7f5f548578946852c2"
+      },
+      {
+        "file": "/assets/espionageProbe-BkMUNEqj.webp",
+        "sha256": "7b67c264b804233561e1f94ff4df2aefd71c37803ee8ae6ec5effdf478cc837c"
+      },
+      {
+        "file": "/assets/FleetVessel-Bz8eCfJ2.js",
+        "sha256": "3f05d381cb0b6860d64582e66e030310bb9ab5b1b4216d737bc10fd7a4daee39"
+      },
+      {
+        "file": "/assets/game-bootstrap-BB7_Gc41.css",
+        "sha256": "2df1735609088163ac133633ae282dce809d2bd52a8fa083ae15a84ba690e520"
+      },
+      {
+        "file": "/assets/game-bootstrap-CjdkBSuq.js",
+        "sha256": "2f7acd46e08a810134147ed6c0e19820cf0056427e5713ee244bca0711d702da"
+      },
+      {
+        "file": "/assets/heavyFighter-Fq0wXIZ1.webp",
+        "sha256": "7fcd72ec074837bbd4953f7d9e2a282a3ef7f081df40d053f34a6fe81a872700"
+      },
+      {
+        "file": "/assets/index-0cE1X60W.css",
+        "sha256": "46b6e09ae1655a28677e7607e0eb63bd4a40b3e533a95434a0d8e795c5bae080"
+      },
+      {
+        "file": "/assets/index-6bgvEQnT.js",
+        "sha256": "29dbfaddb380a985a89b86ecc18da28fd7ed5533913dc3aa7561b0fa2e2c875e"
+      },
+      {
+        "file": "/assets/jsx-runtime-B_R34ikJ.js",
+        "sha256": "0ad18e5bc37d1d2c75edb74bd331fee4fc0e2669fe9b0148fd5e55f50243bbd1"
+      },
+      {
+        "file": "/assets/largeCargo-z_OHlhvH.webp",
+        "sha256": "0be5128daea4e4d244e369d9e07e70ab6bf7145c38b5039ed5303c7e04dfb88c"
+      },
+      {
+        "file": "/assets/lightFighter-CXiVF5q8.webp",
+        "sha256": "b50bc65eb0fa6675adf1824aafa538e59de2772b8f0d96d416b13a58040f8a24"
+      },
+      {
+        "file": "/assets/logobg-DKTY8VmN.js",
+        "sha256": "2fa8303bf201471dbf952bb32b905ba9b334ebf6ca626bb2dcb04c041772b921"
+      },
+      {
+        "file": "/assets/PlanetWorld-Chyml2Ns.css",
+        "sha256": "8d46aa4b35c5f620e6bc45ece1fcf6c110041745fbb56cc1dd709622952e6aa8"
+      },
+      {
+        "file": "/assets/PlanetWorld-DBlsKxoI.js",
+        "sha256": "04585d936a6fed90907b2e22f8307ed500abf2a95b8bae638efaa79f147cf05d"
+      },
+      {
+        "file": "/assets/player-funded-session-Ce1KKBRu.js",
+        "sha256": "14eb156c37ae9787d32ee947eea0af5b2a8e13e6c1306c27bbe9328395355e4e"
+      },
+      {
+        "file": "/assets/PublicWorld-BD-FnXeR.js",
+        "sha256": "6a86003c1f924860cc2fd338337cffe51de9a2147c60a98533da586353e80fb4"
+      },
+      {
+        "file": "/assets/PublicWorld-CiphZg20.css",
+        "sha256": "403b5b6968e64348fa3b63f728174509e8deec7c70a17e936d2b947cae41e539"
+      },
+      {
+        "file": "/assets/recycler-DwYXF9ro.webp",
+        "sha256": "aa9991c64b9d0bbb7f0a50b8c5a0799958e34d372bafaf8e402ad2048f20e2d6"
+      },
+      {
+        "file": "/assets/ship-artwork-B1bnbpeT.css",
+        "sha256": "643df6193d0c9a49de05f970767242be79959f3f4514aa9c5438e7b12d90a3e4"
+      },
+      {
+        "file": "/assets/ship-artwork-D2R40rKP.js",
+        "sha256": "053bc753f762adb740977e0acb74c209bffa82e63c047b399970bfca6336493f"
+      },
+      {
+        "file": "/assets/smallCargo-CjXhtqUE.webp",
+        "sha256": "18cd31e986a38dcdef80bb529d7dbd11c2b8a541601dfa8e82434e9574c14585"
+      },
+      {
+        "file": "/assets/solarSatellite-8DjsWc-K.webp",
+        "sha256": "427f686aaa89770ea2e1966dede7ac9665a0bd0e99d495a9afa9b36d8af22285"
+      },
+      {
+        "file": "/assets/starless-deep-space-v4-Drczd8ql.js",
+        "sha256": "8d0d8af0f68753a70a4baf16a3b6ebe4cb47874395135ac2851e293be7a95f99"
+      },
+      {
+        "file": "/assets/ui-art-DINAuToz.js",
+        "sha256": "c8ef555ed65345a8d8dab5a8ee5180d0c6b904a2cba29f5ee4faa5c7c9e21e02"
+      },
+      {
+        "file": "/assets/UniverseGame-0daY3sNk.js",
+        "sha256": "70dd852597f8bcae07c855801561383bd71ebb3e41792d8246719c09a8cb8ecc"
+      },
+      {
+        "file": "/assets/UniverseGame-BDRr-Urc.css",
+        "sha256": "32caeb9690705371bf3aec6671894b832d1939fd585972491698035103f73ce2"
+      },
+      {
+        "file": "/assets/UniverseLab-hCfQqz71.css",
+        "sha256": "326b64fae5b3e910444c7300841038266f819fbe74914e0561b68763f230ab6d"
+      },
+      {
+        "file": "/assets/UniverseLab-ixSelWWa.js",
+        "sha256": "6d1e52e0c1a3cba8b4437fff2d2f3bdb39dec52357bb4aa42b3f7aa25fb4450c"
+      },
+      {
+        "file": "/assets/usdc-Cg99SCyQ.js",
+        "sha256": "818ad9cb8e54760195ae152bc50087b530b6334a7748fb059103339976118530"
+      },
+      {
+        "file": "/assets/useConnection-BT3sBHUC.js",
+        "sha256": "51cc46d2658592091a735fa56ec14371c20925aba05691e6139c72f7fba24bee"
+      },
+      {
+        "file": "/assets/users-COPRzV2A.js",
+        "sha256": "71f029cc5ecbaf7736d3e21778a2d5426ecd35267ed85ab51fafb34498b4a513"
+      },
+      {
+        "file": "/assets/x-zHXyq0oU.js",
+        "sha256": "a83f18171f6a06f089cc10b5d113a3ead3c98a5b8484e2e074d8c5f52afb3903"
+      }
+    ],
+    "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+  },
+  "identicalPublicAssets": true,
+  "matchesLocalBuild": true,
+  "localBuildComparison": "Exact image bytes; all application JS/CSS content equal after linked chunk filename hashes are normalized. Public Vercel build metadata reproduced explicitly.",
+  "shipImages": 14,
+  "restoredOriginals": true,
+  "noTransactions": true,
+  "passed": true
+}

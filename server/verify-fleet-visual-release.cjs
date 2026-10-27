@@ -94,6 +94,6 @@ async function verify(origin) {
     candidate, live, identicalPublicAssets: true, matchesLocalBuild: restored,
     localBuildComparison: restored ? 'Exact image bytes; all application JS/CSS content equal after linked chunk filename hashes are normalized. Public Vercel build metadata reproduced explicitly.' : null,
     shipImages: 14, restoredOriginals: restored, noTransactions: true, passed: true };
-  fs.writeFileSync(path.join(__dirname, restored ? '../docs/test-runs/restored-fleet-production-2026-10-26.json' : '../docs/test-runs/fleet-production-2026-10-26.json'), JSON.stringify(report, null, 2) + '\n');
+  fs.writeFileSync(path.join(__dirname, process.env.GAMESOL_RELEASE_RECEIPT || (restored ? '../docs/test-runs/restored-fleet-production-2026-10-26.json' : '../docs/test-runs/fleet-production-2026-10-26.json')), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ passed: true, identicalPublicAssets: true, verifiedAssets: candidate.assets.length, shipImages: 14, genesis: live.genesis }));
 })().catch(error => { console.error(error); process.exitCode = 1; });
