@@ -814,6 +814,15 @@
 .universe-lab.production-ui .empire-heading>button{width:42px;height:42px;min-width:42px;border-radius:9px}
 .universe-lab.production-ui .empire-heading>button svg{width:18px;height:18px;stroke-width:1.8}
 .universe-lab.production-ui .empire-heading>button:focus-visible{outline:2px solid var(--gds-focus);outline-offset:3px}
+.universe-view-context-body{min-height:0;max-height:calc(100dvh - 200px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#456576 #081724;color-scheme:dark}
+.universe-view-context-body[hidden]{display:none}
+@media(max-width:700px){
+  .universe-lab .universe-view-context{display:flex;flex-direction:column;max-height:min(40dvh,320px)}
+  .universe-view-context>header{flex-shrink:0}
+  .universe-view-context>header button{min-width:44px;min-height:44px}
+  .universe-view-context-body{max-height:calc(min(40dvh,320px) - 56px);overflow-y:auto;touch-action:pan-y}
+  .universe-view-context-title p{display:none}
+}
 @media(max-width:700px){.universe-lab.production-ui .empire-heading>button{width:46px;height:46px;min-width:46px}}
 .mission-traffic-list{display:grid;gap:4px;max-height:112px;overflow:auto;margin:8px 0;min-width:0}
 .mission-traffic-list button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:36px;padding:6px 8px;border:1px solid #31505c;border-radius:4px;background:#10222b;color:#dcecf0;text-align:left;font:12px Outfit,system-ui,sans-serif;letter-spacing:0}

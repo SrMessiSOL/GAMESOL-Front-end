@@ -25,6 +25,7 @@ export function systemEntryPoint(id: string, outerOrbit: number): [number, numbe
 }
 
 export function readableFleetScale(distance: number, verticalFov: number, viewportHeight: number): number {
-  const unitsPerPixel = 2 * Math.tan(verticalFov * Math.PI / 360) * distance / Math.max(1, viewportHeight);
-  return Math.max(1, Math.min(16, unitsPerPixel * 14));
+  if (![distance, verticalFov, viewportHeight].every(Number.isFinite)) return 1;
+  const unitsPerPixel = 2 * Math.tan(verticalFov * Math.PI / 360) * Math.max(0, distance) / Math.max(1, viewportHeight);
+  return Math.max(1, Math.min(128, unitsPerPixel * 24));
 }

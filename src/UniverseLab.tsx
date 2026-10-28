@@ -2377,17 +2377,17 @@ export function FleetRoute({ mission, planets, starClearance, count = 1, compact
       ? 0
       : mission.phase === "returning" ? 1 - journeyProgress : journeyProgress;
     vessel.current.position.copy(route.getPointAt(routeProgress));
-    vessel.current.scale.setScalar(readableFleetScale(camera.position.distanceTo(vessel.current.position), (camera as THREE.PerspectiveCamera).fov || 50, size.height));
+    vessel.current.scale.setScalar(readableFleetScale(camera.position.distanceTo(vessel.current.position), (camera as THREE.PerspectiveCamera).fov || 50, size.height) * (compact ? .65 : 1));
     const direction = route.getTangentAt(Math.max(0, Math.min(.9999, routeProgress))).normalize();
     if (mission.phase === "returning") direction.multiplyScalar(-1);
     vessel.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
   });
   if ((!source && !mission.sourceCoordinates) || (!target && !mission.destinationCoordinates && !mission.destinationOrbit)) return null;
   const color = mission.kind === "attack" ? "#ff586d" : mission.kind === "espionage" ? "#d998ff" : mission.kind === "colonize" ? "#ffc866" : "#45f4c1";
-  return <group ref={routeGroup} visible={mission.phase === "outbound" || mission.phase === "returning"}>{routePoints.length > 1 && <><Line points={routePoints} color={color} transparent opacity={.12} lineWidth={1.5} /><Line points={routePoints} color={color} transparent opacity={.42} lineWidth={.72} dashed dashScale={3.2} dashSize={.24} gapSize={.34} /></>}
+  return <group ref={routeGroup} visible={mission.phase === "outbound" || mission.phase === "returning"}>{routePoints.length > 1 && <><Line points={routePoints} color={color} transparent opacity={.22} lineWidth={1.5} /><Line points={routePoints} color={color} transparent opacity={.65} lineWidth={.9} dashed dashScale={3.2} dashSize={.24} gapSize={.34} /></>}
     <group ref={vessel} onPointerOver={event => { event.stopPropagation(); setHovered(true); }} onPointerOut={() => setHovered(false)}>
       <MissionFleetVessel kind={mission.kind} shipClass={mission.shipClass} ownerAddress={mission.ownerAddress} color={color} compact={compact} />
-      {(!compact || hovered) && (externalSource || externalTarget || count > 1) && <Html center position={[0, 2.6, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{vesselLabel}{count > 1 ? ` · ${count} fleets` : ''}<small>{externalSource || externalTarget ? (inbound ? 'INBOUND' : 'OUTBOUND') : ''}</small></span></Html>}
+      {(hovered || (!compact && (externalSource || externalTarget || count > 1))) && <Html center position={[0, 2.6, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}><span className="mission-vessel-label">{vesselLabel}{count > 1 ? ` · ${count} fleets` : ''}<small>{externalSource || externalTarget ? (inbound ? 'INBOUND' : 'OUTBOUND') : ''}</small></span></Html>}
     </group>
   </group>;
 }
@@ -2413,7 +2413,7 @@ function TrafficBeacon({ point, position, orbit, height = 0, size = 1 }: { point
   </group>;
 }
 
-export function StrategicFleetRoute({ mission, start, end, size }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; size: number }) {
+export function StrategicFleetRoute({ mission, start, end, size, dense = false }: { mission: UniverseMission; start: [number, number, number]; end: [number, number, number]; size: number; dense?: boolean }) {
   const dot = useRef<THREE.Group>(null!);
   const epoch = useRef(Date.now() / 1000);
   const curve = useMemo(() => {
@@ -2426,7 +2426,7 @@ export function StrategicFleetRoute({ mission, start, end, size }: { mission: Un
     const progress = missionJourneyProgress(mission, Date.now() / 1000, epoch.current);
     dot.current.visible = progress < 1;
     dot.current.position.copy(curve.getPoint(mission.phase === 'returning' ? 1 - progress : progress));
-    dot.current.scale.setScalar(strategicFleetScale(camera.position.distanceTo(dot.current.position), (camera as THREE.PerspectiveCamera).fov || 50, viewport.height, size * 1.8));
+    dot.current.scale.setScalar(strategicFleetScale(camera.position.distanceTo(dot.current.position), (camera as THREE.PerspectiveCamera).fov || 50, viewport.height, size * 1.8) * (dense ? .7 : 1));
     const tangent = curve.getTangent(mission.phase === 'returning' ? 1 - progress : progress).normalize();
     if (mission.phase === 'returning') tangent.negate();
     dot.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
@@ -2459,7 +2459,7 @@ export function GalaxyFleetRoute({ mission, start, end, remoteAt, remoteGalaxy, 
     const tangent = curve.getTangent(p).normalize();
     if (mission.phase === 'returning') tangent.negate();
     vessel.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
-    vessel.current.scale.setScalar(Math.max(.12, readableFleetScale(camera.position.distanceTo(vessel.current.position), (camera as THREE.PerspectiveCamera).fov || 50, size.height) * .55));
+    vessel.current.scale.setScalar(Math.max(.12, readableFleetScale(camera.position.distanceTo(vessel.current.position), (camera as THREE.PerspectiveCamera).fov || 50, size.height) * .85) * (dense ? .7 : 1));
   });
   return <group ref={route} onPointerOver={event => { event.stopPropagation(); setHovered(true); }} onPointerOut={() => setHovered(false)}>
     {points.length > 1 && <Line points={points} color="#6fdbd1" transparent opacity={.65} lineWidth={1.2} />}
@@ -2495,7 +2495,7 @@ function MissionTrafficLayer({ snapshot, level, galaxy, system, planets, star }:
         const leg = galaxyTravelEndpoints(endpoints.source, endpoints.target, galaxy, location => galaxySystemLayout(location.galaxy, location.system).position, universeGalaxyPosition);
         return leg ? <GalaxyFleetRoute key={key} mission={mission} count={count} dense={flights.total > 16} {...leg} remoteGalaxy={leg.remoteAt === 'start' ? endpoints.source.galaxy : endpoints.target.galaxy} /> : null;
       }
-      return <StrategicFleetRoute key={mission.id} mission={mission} start={strategicPosition(endpoints.source)} end={strategicPosition(endpoints.target)} size={level === 'universe' ? 5 : .18} />;
+      return <StrategicFleetRoute key={mission.id} mission={mission} start={strategicPosition(endpoints.source)} end={strategicPosition(endpoints.target)} size={level === 'universe' ? 5 : .18} dense={flights.total > 16} />;
     })}
   </group>;
 }
@@ -2682,6 +2682,15 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
   const empireOpenedByControlRef = useRef(false);
   const empireRestoreFocusRef = useRef(false);
   const [viewContextOpen, setViewContextOpen] = useState(() => typeof window === "undefined" || !window.matchMedia("(max-width: 700px)").matches);
+  const viewContextId = React.useId();
+  const viewContextToggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 700px)');
+    const collapseOnMobile = () => { if (mobile.matches) setViewContextOpen(false); };
+    collapseOnMobile();
+    mobile.addEventListener('change', collapseOnMobile);
+    return () => mobile.removeEventListener('change', collapseOnMobile);
+  }, []);
   const [zoomLevel, commitZoomLevel] = useState<ZoomLevel>(initialGalaxy && initialSystem || localSystemDemo ? "system" : "universe");
   const mapTransit = useSceneTransit();
   const setZoomLevel = (level: ZoomLevel) => {
@@ -3397,8 +3406,11 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
         <b aria-hidden="true">{marketDirectoryLoading ? "..." : unresolvedMarketCount}</b>
       </button>
     </header>
-    <aside className={`universe-view-context is-${zoomLevel}${viewContextOpen ? "" : " is-collapsed"}${(ownedPlanets.length > 0 && hudOpen) || sovereigntyPanelOpen ? " is-obscured" : ""}`} aria-live="polite">
-      <header><span>LIVE NAVIGATION · SOLANA DEVNET</span><div><i /><button type="button" aria-label={viewContextOpen ? "Hide live navigation details" : "Show live navigation details"} title={viewContextOpen ? "Hide navigation details" : "Show navigation details"} aria-expanded={viewContextOpen} onClick={() => setViewContextOpen((open) => !open)}>{viewContextOpen ? <ChevronUp /> : <ChevronDown />}</button></div></header>
+    <aside className={`universe-view-context is-${zoomLevel}${viewContextOpen ? "" : " is-collapsed"}${(ownedPlanets.length > 0 && hudOpen) || sovereigntyPanelOpen ? " is-obscured" : ""}`} aria-live="polite" onKeyDown={event => {
+      if (event.key === 'Escape' && viewContextOpen) { event.stopPropagation(); setViewContextOpen(false); viewContextToggle.current?.focus(); }
+    }}>
+      <header><span>LIVE NAVIGATION · SOLANA DEVNET</span><div><i /><button ref={viewContextToggle} type="button" aria-label={viewContextOpen ? "Hide live navigation details" : "Show live navigation details"} title={viewContextOpen ? "Hide navigation details" : "Show navigation details"} aria-expanded={viewContextOpen} aria-controls={viewContextId} onClick={() => setViewContextOpen((open) => !open)}>{viewContextOpen ? <ChevronUp /> : <ChevronDown />}</button></div></header>
+      <div id={viewContextId} className="universe-view-context-body" hidden={!viewContextOpen}>
       <div className="universe-view-context-title">
         <small>{zoomLevel === "universe" ? "KNOWN SPACE" : zoomLevel === "galaxy" ? `GALAXY ${String(selectedGalaxy).padStart(3, "0")}` : `G ${selectedGalaxy} · S ${selectedSystem}`}</small>
         <h2>{zoomLevel === "universe" ? "The GAMESOL Universe" : zoomLevel === "galaxy" ? galaxyKindForId(selectedGalaxy) : selectedStar.label}</h2>
@@ -3438,6 +3450,7 @@ export default function UniverseLab({ embedded = false, productionUi = false, in
         </section>}
       </nav>}
       <footer><span><i>{zoomLevel === "universe" ? "01" : zoomLevel === "galaxy" ? "02" : "03"}</i>{zoomLevel === "universe" ? "SELECT A GALAXY" : zoomLevel === "galaxy" ? "SELECT A STAR SYSTEM" : "SELECT A WORLD"}</span><b>{zoomLevel === "system" ? "INSPECT AN ORBIT · LEVEL OUT TO RETURN" : "SELECT A LIGHT SOURCE · SCROLL TO CHANGE SCALE"}</b></footer>
+      </div>
     </aside>
     {marketHubOpen && typeof document !== "undefined" && createPortal(<div className="gds-workspace-backdrop market-hub-backdrop" onMouseDown={() => setMarketHubOpen(false)}>
       <div onMouseDown={(event) => event.stopPropagation()}>

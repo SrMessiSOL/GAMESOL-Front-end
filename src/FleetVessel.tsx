@@ -7,7 +7,7 @@ type Vec3 = [number, number, number];
 export function strategicFleetScale(distance: number, verticalFov: number, height: number, minimum: number) {
   if (![distance, verticalFov, height, minimum].every(Number.isFinite)) return 1;
   const unitsPerPixel = 2 * Math.tan(verticalFov * Math.PI / 360) * Math.max(0, distance) / Math.max(1, height);
-  return Math.min(128, Math.max(1, minimum, unitsPerPixel * 9));
+  return Math.min(128, Math.max(1, minimum, unitsPerPixel * 22));
 }
 function hull(points: number[][], depth: number) {
   const shape = new THREE.Shape();
@@ -132,14 +132,14 @@ const armor=new THREE.MeshStandardMaterial({color:'#92999b',map:armorPanels(),me
 const frame=new THREE.MeshStandardMaterial({color:'#30373c',metalness:.7,roughness:.46,emissive:'#485662',emissiveIntensity:.16});
 const gold=new THREE.MeshStandardMaterial({color:'#c6a558',metalness:.5,roughness:.45});
 const glass=new THREE.MeshStandardMaterial({color:'#153b53',metalness:.6,roughness:.19,emissive:'#3989a1',emissiveIntensity:.4});
-const distant=new THREE.MeshBasicMaterial({color:'#a5b5bd'});
+const distant=new THREE.MeshBasicMaterial({color:'#a5b5bd',toneMapped:false});
 // Shared cosmetic materials never change hull geometry, scale or mission indicators.
 const skinMaterials=[{armor,gold,distant},...[
   ['#dde8eb','#22cbbf'],['#552d36','#e5e9ed'],['#e0bb52','#26353b'],
 ].map(([hull,trim])=>({
   armor:new THREE.MeshStandardMaterial({color:hull,map:armor.map,metalness:.65,roughness:.48}),
   gold:new THREE.MeshStandardMaterial({color:trim,metalness:.5,roughness:.45}),
-  distant:new THREE.MeshBasicMaterial({color:hull}),
+  distant:new THREE.MeshBasicMaterial({color:hull,toneMapped:false}),
 }))];
 const engines=Object.fromEntries(['#70dcff','#ff586d','#d998ff','#ffc866','#45f4c1','#6fdbd1','#d5fff4'].map(color=>[color,new THREE.MeshBasicMaterial({color,toneMapped:false})]));
 const defaults:Record<FleetHull,ShipClass>={attack:'battlecruiser',transport:'largeCargo',colonize:'colonyShip',espionage:'espionageProbe'};

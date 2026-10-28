@@ -57,7 +57,10 @@ test('cross-system entry stays just outside the orbital boundary instead of hund
 test('real fleet stays readable at desktop and mobile zoom without unbounded scaling',()=>{
   assert.equal(scene.readableFleetScale(2,50,1000),1);
   assert(scene.readableFleetScale(150,50,844)>1);
-  assert.equal(scene.readableFleetScale(10000,50,320),16);
+  assert.equal(scene.readableFleetScale(10000,50,320),128);
+  assert.equal(scene.readableFleetScale(NaN,50,320),1);
+  assert.equal(scene.readableFleetScale(-1,50,320),1);
+  assert(scene.readableFleetScale(1000,50,844)>16);
   const source=fs.readFileSync(path.join(root,'UniverseLab.tsx'),'utf8');
   assert.match(source,/vessel\.current\.scale\.setScalar\(readableFleetScale/);
   assert.match(source,/if \(!point\.waiting\) return null/);
