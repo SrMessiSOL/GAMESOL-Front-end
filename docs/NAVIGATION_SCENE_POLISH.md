@@ -21,3 +21,14 @@ Scope: frontend only; devnet; scheduled automation remains PAUSED.
 - Screenshots retained locally under `test-runs/navigation-scene/`.
 
 No mission launched, purchase made, token spent, authority changed, or program deployed for this UI verification.
+
+## Published verification
+
+- App commit: `e1d9e14`, branch `feat/crypto-ufos-wallet-link`.
+- Deployment: `https://frontend-674twv7xs-srmessisols-projects.vercel.app`.
+- Public alias: `https://chained-universe.vercel.app/app`.
+- Public alias and immutable deployment serve identical hashes for all 31 application assets checked by the existing release verifier.
+- Devnet genesis verified; cosmetics owned mask 10 and equipped Ion Battlecruiser retained. Read-only balance check: 96.501 test USDC; no transactions submitted.
+- Live Chrome desktop and 390x845 phone screenshots checked. Phone collapsed panel 58px, expanded 323px, scrollable body 264px with 396px content. Document width 390px. No console errors observed.
+- Live account had zero in-flight routes; moving traffic coverage above used development fixtures, not a new live flight.
+- Scheduled checklist automation configuration rechecked: PAUSED.
